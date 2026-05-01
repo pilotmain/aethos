@@ -28,6 +28,7 @@ def publish(event: dict[str, Any]) -> None:
     ev["payload"] = _normalize_payload(ev.get("payload"))
     ev.setdefault("mission_id", None)
     ev.setdefault("agent", None)
+    ev.setdefault("task_id", None)
     EVENTS.append(ev)
     for cb in list(SUBSCRIBERS):
         try:

@@ -68,6 +68,9 @@ def process_supervisor_cycle() -> dict:
         )
         if getattr(settings, "nexa_autonomous_mode", False):
             result["autonomous_mode"] = True
+            from app.services.autonomy.planner import autonomous_planner
+
+            result["autonomous_planner"] = autonomous_planner(db)
         if settings.operator_auto_approve_queued_dev_jobs:
             pending = jobs.repo.list_by_status(db, "needs_approval", worker_type="dev_executor")
             for job in pending:

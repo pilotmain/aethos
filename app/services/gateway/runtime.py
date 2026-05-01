@@ -35,10 +35,13 @@ class NexaGateway:
     def _try_structured_route(self, gctx: GatewayContext, text: str, db: Session) -> dict[str, Any] | None:
         """Dev runs, missions, and dev hints only — ``None`` means generic chat."""
         from app.services.dev_runtime.gateway_hint import maybe_dev_gateway_hint
-        from app.services.dev_runtime.run_dev_gateway import handle_run_dev_gateway
+        from app.services.dev_runtime.run_dev_gateway import handle_run_dev_gateway, try_scheduled_dev_mission
         from app.services.missions.parser import parse_mission
 
         uid = gctx.user_id
+        sched_out = try_scheduled_dev_mission(gctx, text, db)
+        if sched_out is not None:
+            return sched_out
         dev_out = handle_run_dev_gateway(text, uid, db)
         if dev_out is not None:
             return dev_out
@@ -112,6 +115,7 @@ class NexaGateway:
         from app.services.intent_classifier import get_intent
         from app.services.loop_tracking_service import reset_focus_after_completion
         from app.services.memory_aware_routing import apply_memory_aware_route_adjustment
+        from app.services.memory.memory_index import MemoryIndex
         from app.services.memory_service import MemoryService
         from app.services.orchestrator_service import OrchestratorService
         from app.services.telegram_onboarding import is_weak_input, start_message
@@ -122,6 +126,14 @@ class NexaGateway:
         orchestrator = OrchestratorService()
         memory_service = MemoryService()
         settings = get_settings()
+
+        def _attach_memory_brain(beh_ctx_inner: Any) -> None:
+            if isinstance(beh_ctx_inner.memory, dict):
+                beh_ctx_inner.memory["memory_context"] = MemoryIndex().recent_for_prompt(uid, max_chars=3500)
+                if isinstance(gctx.memory, dict):
+                    for _k, _v in gctx.memory.items():
+                        if _k != "via_gateway":
+                            beh_ctx_inner.memory.setdefault(_k, _v)
 
         cctx = get_or_create_context(db, uid)
         snap = build_context_snapshot(cctx, db)
@@ -149,6 +161,7 @@ class NexaGateway:
                 reset_focus_after_completion(db, u, focus_title)
 
         beh_ctx = build_context(db, uid, memory_service, orchestrator)
+        _attach_memory_brain(beh_ctx)
 
         if user_row.is_new and intent == "general_chat" and is_weak_input(raw):
             sm = start_message()
@@ -174,6 +187,7 @@ class NexaGateway:
                 }
             orchestrator.users.mark_user_onboarded(db, uid)
             beh_ctx_after = build_context(db, uid, memory_service, orchestrator)
+            _attach_memory_brain(beh_ctx_after)
             reply = self.compose_llm_reply(
                 raw,
                 intent,

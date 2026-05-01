@@ -379,6 +379,8 @@ class Settings(BaseSettings):
     nexa_slack_route_inbound: bool = False
     # Autonomy — tighten scheduler + heartbeat expectations (documentary; gates optional hooks).
     nexa_autonomous_mode: bool = False
+    # Phase 43 — when True with ``nexa_autonomous_mode``, DB long-running ticks invoke the gateway.
+    nexa_long_running_gateway_tick: bool = False
 
     # Phase 23 — AI dev OS (workspace commands, allowlist).
     nexa_dev_allowed_commands: str = (

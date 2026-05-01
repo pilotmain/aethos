@@ -8,7 +8,8 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from app.models.nexa_scheduler_job import NexaSchedulerJob
-from app.services.dev_runtime.service import run_dev_mission
+from app.services.gateway.context import GatewayContext
+from app.services.gateway.runtime import NexaGateway
 
 # Recognized scheduler payload ``type`` (or ``dev_job`` + ``job_kind``).
 SCHEDULER_DEV_JOB_TYPES = frozenset(
@@ -64,31 +65,16 @@ def execute_dev_mission_job(db: Session, row: NexaSchedulerJob) -> bool:
     if not uid or not wid:
         return True
 
-    kind = str(payload.get("type") or "dev_mission")
-    goal = str(payload.get("goal") or "").strip() or DEFAULT_GOALS.get(kind, "Scheduled dev mission")
-
-    max_it = payload.get("max_iterations")
-    if max_it is None:
-        max_it = 3 if "fix" in kind else 1
-
-    pref = payload.get("preferred_agent") or "local_stub"
-    allow_write = bool(payload.get("allow_write", False))
-
-    run_dev_mission(
-        db,
+    gctx = GatewayContext.from_channel(
         uid,
-        wid,
-        goal,
-        auto_pr=False,
-        preferred_agent=str(pref),
-        allow_write=allow_write,
-        allow_commit=False,
-        allow_push=False,
-        cost_budget_usd=0.0,
-        max_iterations=int(max_it),
-        schedule=None,
-        from_scheduler=True,
+        "scheduler",
+        {
+            "via_gateway": True,
+            "scheduler_job_id": row.id,
+            "scheduled_dev_mission": payload,
+        },
     )
+    NexaGateway().handle_message(gctx, "", db=db)
     return True
 
 

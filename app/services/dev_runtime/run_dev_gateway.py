@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.services.dev_runtime.service import run_dev_mission
 from app.services.dev_runtime.workspace import list_workspaces
+from app.services.gateway.context import GatewayContext
 
 
 def parse_run_dev_goal(text: str) -> str | None:
@@ -47,6 +48,70 @@ def _format_dev_run_chat(res: dict[str, Any]) -> str:
     err = res.get("error") or res.get("status") or "failed"
     tail = json.dumps(res.get("steps") or [], default=str)[:1200]
     return f"Dev run did not complete cleanly (`{rid}`): {err}. Steps (truncated): {tail}"
+
+
+def try_scheduled_dev_mission(
+    gctx: GatewayContext,
+    _text: str,
+    db: Session,
+) -> dict[str, Any] | None:
+    """
+    Scheduler-only path: :attr:`~app.services.gateway.context.GatewayContext.extras` carries
+    ``scheduled_dev_mission`` JSON payload so dev execution stays inside :meth:`NexaGateway.handle_message`.
+    """
+    payload = gctx.extras.get("scheduled_dev_mission")
+    if not isinstance(payload, dict):
+        return None
+    uid = (gctx.user_id or "").strip()
+    wid = str(payload.get("workspace_id") or "").strip()
+    if not uid or not wid:
+        return None
+
+    from app.services.events.unified_event import emit_unified_event
+    from app.services.scheduler.dev_jobs import DEFAULT_GOALS
+    from app.services.tasks.unified_task import NexaTask
+
+    kind = str(payload.get("type") or "dev_mission")
+    goal = str(payload.get("goal") or "").strip() or DEFAULT_GOALS.get(kind, "Scheduled dev mission")
+    max_it = payload.get("max_iterations")
+    if max_it is None:
+        max_it = 3 if "fix" in kind else 1
+    pref = payload.get("preferred_agent") or "local_stub"
+    allow_write = bool(payload.get("allow_write", False))
+    jid = gctx.extras.get("scheduler_job_id")
+    task = NexaTask.from_scheduler_dev_payload(payload, job_id=str(jid) if jid else None)
+    emit_unified_event(
+        "task.dev.scheduled_start",
+        task_id=task.id,
+        user_id=uid,
+        payload={"workspace_id": wid, "channel": gctx.channel},
+    )
+    res = run_dev_mission(
+        db,
+        uid,
+        wid,
+        goal,
+        auto_pr=False,
+        preferred_agent=str(pref),
+        allow_write=allow_write,
+        allow_commit=False,
+        allow_push=False,
+        cost_budget_usd=0.0,
+        max_iterations=int(max_it),
+        schedule=None,
+        from_scheduler=True,
+    )
+    emit_unified_event(
+        "task.dev.scheduled_done",
+        task_id=task.id,
+        user_id=uid,
+        payload={"ok": bool(res.get("ok")), "run_id": str(res.get("run_id") or "")},
+    )
+    return {
+        "mode": "chat",
+        "text": _format_dev_run_chat(res),
+        "dev_run": res,
+    }
 
 
 def handle_run_dev_gateway(text: str, user_id: str, db: Session) -> dict[str, Any] | None:
@@ -99,4 +164,4 @@ def handle_run_dev_gateway(text: str, user_id: str, db: Session) -> dict[str, An
     }
 
 
-__all__ = ["handle_run_dev_gateway", "parse_run_dev_goal"]
+__all__ = ["handle_run_dev_gateway", "parse_run_dev_goal", "try_scheduled_dev_mission"]

@@ -221,6 +221,31 @@ def tick_eligible_db_sessions(db: Session) -> list[dict[str, Any]]:
                 "source": "database",
             },
         )
+        try:
+            from app.core.config import get_settings
+
+            st = get_settings()
+            if getattr(st, "nexa_autonomous_mode", False) and getattr(st, "nexa_long_running_gateway_tick", False):
+                from app.services.gateway.context import GatewayContext
+                from app.services.gateway.runtime import NexaGateway
+
+                goal = (row.goal or "").strip() or "Continue the long-running session."
+                gctx = GatewayContext.from_channel(
+                    row.user_id,
+                    "long_running",
+                    {
+                        "via_gateway": True,
+                        "long_running_session_key": row.session_key,
+                        "iteration": row.iteration,
+                    },
+                )
+                NexaGateway().handle_message(
+                    gctx,
+                    f"[long_running tick {row.iteration}] {goal[:4000]}",
+                    db=db,
+                )
+        except Exception:
+            _log.warning("long_running.gateway_invoke_failed", exc_info=True)
         out.append(
             {
                 "ok": True,
