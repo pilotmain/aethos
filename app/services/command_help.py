@@ -1,23 +1,17 @@
-"""Nexa-Next command and workflow reference for natural-language 'what can you do' style questions."""
+"""Nexa-Next intent-first reference for natural-language ‘what can you do’ questions (no slash-first UX)."""
 
 
 def format_command_help_response() -> str:
-    return """Nexa — commands & workflows
+    return """Nexa-Next — intent first
 
-Chat:
-— @nexa — default assistant (plain chat works too)
-— create agent: … — describe a custom agent (parsed server-side); saved agents are @your-handle
+Describe what you want in plain language. Useful phrases:
 
-Structured work:
-— run mission: … — multi-step missions (tasks, artifacts)
-— run dev: … — dev runtime on a registered workspace (tests, coding tasks)
-— schedule task … — recurring work when scheduling is enabled
+run mission: "…" — multi-step missions (tasks, artifacts)
+run dev: "…" — dev runtime on a registered workspace (tests, coding tasks)
+create agent: … — describe a custom agent (parsed server-side); saved agents use @your-handle
+show memory — what Nexa remembers (web memory APIs)
+show system status — host health and channels
 
-Memory & status:
-— show memory — what Nexa remembers (web memory APIs on nexa-next)
-— show system status — host health and channels
-
-URLs:
 Paste a public https:// link for read-only summaries when web access is enabled on the host.
 
-You can also speak naturally — Nexa routes into missions, dev runs, or chat."""
+Nexa routes missions, dev runs, memory, and chat — you do not need to memorize slash commands."""

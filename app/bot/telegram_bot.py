@@ -527,45 +527,11 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             body = help_message(False, None)
         await update.message.reply_text(
             body
-            + "\n\n**Nexa** — /command (roster & status), /learning\n\nCommands:\n"
-            "/today — today's plan\n"
-            "/overwhelmed — smaller plan\n"
-            "/prefs — preferences\n"
-            "/memory — soul.md + memory.md help; /memory soul, /memory add …, /memory reload\n"
-            "/forget <query> — remove matching memory/tasks/check-ins\n"
-            "/soul — show soul rules\n"
-            "/soul <text> — append a soul rule\n"
-            "/command — agent roster, `run dev:` / `run mission:` hints, /command status for live state\n"
-            "/agents — same as /command (legacy alias)\n"
-            "/learning — pending learnings; /learning approve <id> or /learning reject <id>\n"
-            "/key, /keys — your own OpenAI or Anthropic key (BYOK, encrypted; does not change roles or Dev/Ops); /key set, /key list, /key delete\n"
-            "/usage, /usage recent — today’s LLM usage (estimates; /usage recent for a short list)\n"
-            "/updates — latest Nexa release notes (user-facing; see repository CHANGELOG for full history)\n"
-            "/context — current topic; /context clear; /context set <topic>\n"
-            "/doc — export last assistant message to PDF, Word, Markdown, or text (/doc create pdf, /doc recent)\n"
-            "/host — host executor status (allowlisted local jobs; chat never runs shell)\n"
-            "/permissions — local access grants; /permissions grant <id>, /permissions revoke <id>\n"
-            "/workspace — safe folders for the host executor; /workspace list | add <path> | revoke <id>\n"
-            "/projects — Nexa workspace projects (named folders); /project use <id>, /project add <path> <name>\n"
-            "/jobs — recent autonomous jobs\n"
-            "/job <id|latest> — inspect one job (or type job #12 / any update on job #12? in chat)\n"
-            "/approve <id> — approve a queued autonomous job\n"
-            "/approve review <id> — validate a finished dev job\n"
-            "/approve commit <id> — allow final commit for a reviewed dev job\n"
-            "/deny <id> — deny a queued autonomous job\n"
-            "/cancel <id> — cancel a job\n"
-            "approve job #123 — approve a queued autonomous job\n"
-            "approve review job #123 — run validation on a ready-for-review dev job\n"
-            "approve commit job #123 — allow commit after review passes\n"
-            "deny job #123 — cancel a queued autonomous job\n"
-            "\n"
-            "Web & research (read-only public tools when the host enables them):\n"
-            "Paste a public https:// link, or: “check https://example.com” in normal chat.\n"
-            "run dev: … and run mission: … route into the dev and mission systems on the host.\n"
-            "\n"
-            "Dev ideas: /improve /fix /build /refactor + text\n"
-            "Natural language: describe the change; Nexa routes to the dev queue when a worker is set up.\n"
-            "Dev: /improve, /dev create-cursor-task …, /dev doctor, /dev git, /dev queue, /dev health, /dev run-tests, /dev review-last-change. /dev-status"
+            + "\n\n"
+            + format_command_help_response().strip()
+            + "\n\n"
+            + "_Describe what you want in plain language first._\n"
+            + "_Optional Telegram shortcuts (operators): `/command` — roster, memory, keys, approvals, dev tools._"
         )
     finally:
         db.close()
@@ -751,14 +717,18 @@ async def context_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         if sub == "set" and len(args) >= 2:
             topic = " ".join(args[1:]).strip()[:500]
             if not topic:
-                await update.message.reply_text("Use: /context set <topic>")
+                await update.message.reply_text(
+                    "Use **context set** followed by a topic (send Telegram’s context command, then set …)."
+                )
                 return
             set_manual_topic(db, cctx, topic)
             await update.message.reply_text(
                 f"Set active topic (manual): {cctx.active_topic or topic}"
             )
             return
-        await update.message.reply_text("Use: /context  |  /context clear  |  /context set <topic>")
+        await update.message.reply_text(
+            "Use **context** with no args for status, **context clear**, or **context set** <topic>."
+        )
     finally:
         db.close()
 
@@ -2246,7 +2216,7 @@ async def _handle_incoming_text_impl(update: Update, context: ContextTypes.DEFAU
                         context.user_data["pending_dev_revision_job_id"] = None
                     await update.message.reply_text(
                         "I could not save that revision (state changed or the job is not open for changes). "
-                        "Try **Request changes** again on the last approval message, or `/jobs`."
+                        "Try **Request changes** again on the last approval message, or ask to list recent jobs."
                     )
                     return
     
@@ -2580,7 +2550,7 @@ async def _handle_incoming_text_impl(update: Update, context: ContextTypes.DEFAU
                     )
                     if not j_ov:
                         await update.message.reply_text(
-                            "No `failed` dev job with failed tests found. Use /jobs, or use this after the worker "
+                            "No `failed` dev job with failed tests found. List recent jobs first, or use this after the worker "
                             "reports a test failure."
                         )
                         return
@@ -2976,7 +2946,7 @@ async def _handle_incoming_text_impl(update: Update, context: ContextTypes.DEFAU
                         else:
                             await update.message.reply_text(
                                 f"Job #{jid} not found for you (wrong id or different account). "
-                                "Use /jobs to list recent job numbers."
+                                "Ask to list recent job numbers or say **recent jobs**."
                             )
                     else:
                         j = job_service.get_latest(db, app_user_id)
@@ -2989,7 +2959,7 @@ async def _handle_incoming_text_impl(update: Update, context: ContextTypes.DEFAU
                         else:
                             await update.message.reply_text(
                                 "No job # in that text and you have no dev jobs in the list yet. "
-                                "Start one with /improve … or ask the Dev Agent (e.g. tell cursor to …), or use /jobs. "
+                                "Start one with /improve … or describe the coding task (`run dev:` on web). Ask for your jobs list anytime. "
                                 "I do not store these jobs in the same memory as your plan/task notes."
                             )
                     return
