@@ -6,6 +6,7 @@ from sqlalchemy import func, select
 
 from app.models.nexa_next_runtime import NexaArtifact
 from app.services.artifacts.store import read_artifacts
+from app.services.gateway.context import GatewayContext
 from app.services.gateway.runtime import NexaGateway
 
 
@@ -15,7 +16,8 @@ def test_researcher_produces_artifact_analyst_and_qa_receive_prior_outputs(nexa_
 Researcher: find robotics breakthroughs here today
 Analyst: write forecast using Researcher output here today
 QA: review Analyst output carefully today"""
-    out = NexaGateway().handle_message(text, "u_handoff")
+    gctx = GatewayContext.from_channel("u_handoff", "web", {})
+    out = NexaGateway().handle_message(gctx, text)
     assert out["status"] == "completed"
 
     agents = out["result"]
@@ -49,7 +51,8 @@ QA: review Analyst output carefully today"""
 def test_artifact_store_accumulates_per_mission(nexa_runtime_clean) -> None:
     text = """Researcher: find robotics research topics here
 Analyst: write forecast summary here"""
-    out = NexaGateway().handle_message(text, "u2")
+    gctx = GatewayContext.from_channel("u2", "web", {})
+    out = NexaGateway().handle_message(gctx, text)
     assert out["status"] == "completed"
     mid = out["result"][0]["mission_id"]
     assert len(read_artifacts(nexa_runtime_clean, mid)) == 2

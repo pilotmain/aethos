@@ -1,4 +1,4 @@
-"""Natural-language job approval routes (Phase 36) — invoked from NexaGateway only."""
+"""Natural-language job approval routes — invoked from NexaGateway only (Phase 37 ctx)."""
 
 from __future__ import annotations
 
@@ -8,6 +8,8 @@ from typing import Any
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
+from app.services.gateway.approval_resume import resume_after_approval
+from app.services.gateway.context import GatewayContext
 from app.services.logging.logger import get_logger
 
 _log = get_logger("gateway.approval")
@@ -29,32 +31,46 @@ def _job_service():
     return _JOB_SERVICE
 
 
-def try_gateway_approval_route(
-    text: str,
-    user_id: str,
+def _merge_resume(
+    payload: dict[str, Any],
     db: Session,
-    *,
-    channel: str,
-    metadata: dict[str, Any],
+    ctx: GatewayContext,
+    job: Any,
+    decision: str,
+) -> dict[str, Any]:
+    payload["approval_resume"] = resume_after_approval(db, ctx, job, decision)
+    ctx.approval_state = {
+        "job_id": getattr(job, "id", None),
+        "status": getattr(job, "status", None),
+        "decision": decision,
+    }
+    return payload
+
+
+def try_gateway_approval_route(
+    ctx: GatewayContext,
+    text: str,
+    db: Session,
 ) -> dict[str, Any] | None:
     """
     Match NL approval / dev-job decisions. Returns a gateway-shaped dict or None.
 
-    Owner-only paths require ``metadata["telegram_owner"] is True`` for Telegram or
-    equivalent capability flags for other channels.
+    Owner paths use ``ctx.permissions`` (``owner``, ``telegram_role``).
     """
     raw = (text or "").strip()
     if not raw:
         return None
 
+    user_id = ctx.user_id
+    channel = ctx.channel
     tstrip = raw
     tlow = tstrip.lower()
-    meta = dict(metadata or {})
-    tg_role = meta.get("telegram_role")
-    is_owner = bool(meta.get("telegram_owner"))
-    telegram_uid = meta.get("telegram_user_id")
-    telegram_username = meta.get("telegram_username")
-    chat_id = meta.get("telegram_chat_id")
+
+    tg_role = ctx.permissions.get("telegram_role")
+    is_owner = bool(ctx.permissions.get("owner"))
+    telegram_uid = ctx.extras.get("telegram_user_id")
+    telegram_username = ctx.extras.get("telegram_username")
+    chat_id = ctx.extras.get("telegram_chat_id")
 
     from app.services.telegram_access_audit import log_access_denied
     from app.services.user_capabilities import ACCESS_RESTRICTED, is_owner_role
@@ -75,13 +91,11 @@ def try_gateway_approval_route(
                 _log.warning("approval audit log failed", exc_info=True)
         return {"mode": "chat", "text": ACCESS_RESTRICTED, "intent": "access_denied"}
 
-    # Web channel payloads are already scoped to the authenticated user (Mission Control).
     if channel == "web":
         effective_owner = True
     else:
         effective_owner = is_owner or (tg_role is not None and is_owner_role(tg_role))
 
-    # --- approve despite failed tests (Telegram-specific side effect) ---
     if tlow == "approve despite failed tests":
         if not effective_owner:
             return _deny_gateway(family="approve", reason="not_owner", preview=None)
@@ -124,7 +138,7 @@ def try_gateway_approval_route(
                     "result_text": rtxt,
                 }
             )
-        return {
+        base = {
             "mode": "chat",
             "text": (
                 "Okay — I will allow approval despite failed tests. Review the branch and diff on the host before you tap Approve."
@@ -132,6 +146,7 @@ def try_gateway_approval_route(
             "intent": "approval",
             "side_effects": side,
         }
+        return _merge_resume(base, db, ctx, o, "override_failed_tests")
 
     mhr = re.match(r"^approve high risk job\s*#?(\d+)\s*$", tlow)
     if mhr:
@@ -141,21 +156,21 @@ def try_gateway_approval_route(
             j = _job_service().approve_high_risk(db, user_id, int(mhr.group(1)))
         except HTTPException as he:
             return _http_err_chat(he)
-        return {
+        base = {
             "mode": "chat",
             "text": (
                 f"Job #{j.id} is now `{j.status}`. Reply: `approve job #{j.id}` to run the dev worker."
             ),
             "intent": "approval",
         }
+        return _merge_resume(base, db, ctx, j, "approve_high_risk")
 
-    # One-word autonomous approve/reject — Telegram only (ambiguous on web/chat).
     if channel == "telegram" and tlow in {"approve", "yes"} and tstrip.count(" ") == 0:
         if not effective_owner:
             return _deny_gateway(family="approve", reason="one_word_approve", preview=None)
         j_approve = _job_service().mark_autonomous_approved(db, user_id)
         if j_approve:
-            return {
+            base = {
                 "mode": "chat",
                 "text": (
                     f"Approved job #{j_approve.id} for commit. "
@@ -163,6 +178,7 @@ def try_gateway_approval_route(
                 ),
                 "intent": "approval",
             }
+            return _merge_resume(base, db, ctx, j_approve, "approve_autonomous")
         return None
 
     if channel == "telegram" and tlow == "reject" and tstrip.count(" ") == 0:
@@ -170,7 +186,7 @@ def try_gateway_approval_route(
             return _deny_gateway(family="reject", reason="one_word", preview=None)
         j_rej = _job_service().mark_autonomous_rejected(db, user_id)
         if j_rej:
-            return {
+            base = {
                 "mode": "chat",
                 "text": (
                     f"Job #{j_rej.id} rejected. Working tree was reset to the pre-agent snapshot where possible. "
@@ -178,6 +194,7 @@ def try_gateway_approval_route(
                 ),
                 "intent": "approval",
             }
+            return _merge_resume(base, db, ctx, j_rej, "reject_autonomous")
         return None
 
     approve_match = re.match(r"^(approve|deny)\s+job\s*#?(\d+)$", tlow)
@@ -202,7 +219,7 @@ def try_gateway_approval_route(
             tool = ed.get("tool_key") or pl.get("preferred_dev_tool") or "—"
             mode = ed.get("mode") or pl.get("dev_execution_mode") or "—"
             pk = (pl.get("project_key") or "nexa") or "nexa"
-            return {
+            base = {
                 "mode": "chat",
                 "text": (
                     f"Dev Agent accepted job #{job.id}.\n\n"
@@ -213,7 +230,9 @@ def try_gateway_approval_route(
                 ),
                 "intent": "approval",
             }
-        return {"mode": "chat", "text": f"Job #{job.id} is now {job.status}.", "intent": "approval"}
+            return _merge_resume(base, db, ctx, job, decision)
+        base = {"mode": "chat", "text": f"Job #{job.id} is now {job.status}.", "intent": "approval"}
+        return _merge_resume(base, db, ctx, job, decision)
 
     approve_review_match = re.match(r"^approve\s+review\s+job\s*#?(\d+)$", tlow)
     if approve_review_match:
@@ -223,7 +242,8 @@ def try_gateway_approval_route(
             job = _job_service().approve_review(db, user_id, int(approve_review_match.group(1)))
         except HTTPException as he:
             return _http_err_chat(he)
-        return {"mode": "chat", "text": f"Job #{job.id} is now {job.status}.", "intent": "approval"}
+        base = {"mode": "chat", "text": f"Job #{job.id} is now {job.status}.", "intent": "approval"}
+        return _merge_resume(base, db, ctx, job, "approve_review")
 
     approve_commit_match = re.match(r"^approve\s+commit\s+job\s*#?(\d+)$", tlow)
     if approve_commit_match:
@@ -233,7 +253,8 @@ def try_gateway_approval_route(
             job = _job_service().approve_commit(db, user_id, int(approve_commit_match.group(1)))
         except HTTPException as he:
             return _http_err_chat(he)
-        return {"mode": "chat", "text": f"Job #{job.id} is now {job.status}.", "intent": "approval"}
+        base = {"mode": "chat", "text": f"Job #{job.id} is now {job.status}.", "intent": "approval"}
+        return _merge_resume(base, db, ctx, job, "approve_commit")
 
     return None
 

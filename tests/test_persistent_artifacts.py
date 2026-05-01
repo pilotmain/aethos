@@ -4,12 +4,14 @@ from __future__ import annotations
 
 from app.core.db import SessionLocal
 from app.services.artifacts.store import read_artifacts
+from app.services.gateway.context import GatewayContext
 from app.services.gateway.runtime import NexaGateway
 
 
 def test_artifacts_readable_after_new_db_session(nexa_runtime_clean) -> None:
     text = """Researcher: find robotics persistence proof here today"""
-    out = NexaGateway().handle_message(text, "u_persist")
+    gctx = GatewayContext.from_channel("u_persist", "web", {})
+    out = NexaGateway().handle_message(gctx, text)
     assert out["status"] == "completed"
     mission_id = out["result"][0]["mission_id"]
 

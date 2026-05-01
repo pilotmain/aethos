@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 
 from app.services.artifacts.store import clear_store_for_tests
+from app.services.gateway.context import GatewayContext
 from app.services.gateway.runtime import NexaGateway
 from app.services.mission_control.nexa_next_state import STATE
 from app.services.privacy_firewall.audit import LOG as AUDIT_LOG
@@ -43,7 +44,8 @@ def test_gateway_safe_mission_completes(db_session) -> None:
     AUDIT_LOG.clear()
 
     text = """Researcher: find robotics trends here today"""
-    out = NexaGateway().handle_message(text, "u_priv")
+    gctx = GatewayContext.from_channel("u_priv", "web", {})
+    out = NexaGateway().handle_message(gctx, text)
     assert out["status"] == "completed"
 
 
@@ -54,7 +56,8 @@ def test_gateway_blocks_secret_in_task(db_session) -> None:
     AUDIT_LOG.clear()
 
     text = """Researcher: use key sk-12345678901234567890 here please"""
-    out = NexaGateway().handle_message(text, "u_priv")
+    gctx = GatewayContext.from_channel("u_priv", "web", {})
+    out = NexaGateway().handle_message(gctx, text)
     assert out["status"] == "completed"
     agent_row = out["result"][0]
     assert agent_row["output"]["type"] == "blocked"

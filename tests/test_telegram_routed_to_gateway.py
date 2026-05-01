@@ -10,19 +10,21 @@ from app.services.channels.telegram_gateway_reply import (
     format_telegram_gateway_reply,
     telegram_gateway_should_hand_off,
 )
+from app.services.gateway.context import GatewayContext
 from app.services.gateway.runtime import NexaGateway
 
 
 def test_gateway_chat_uses_composed_path(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         "app.services.gateway.runtime.NexaGateway.handle_full_chat",
-        lambda self, text, user_id, **kw: {
+        lambda self, gctx, text, **kw: {
             "mode": "chat",
             "text": "composed-reply",
             "intent": "general_chat",
         },
     )
-    gw = NexaGateway().handle_message("hello world tea cozy", "u_test_gateway_compose")
+    ctx = GatewayContext.from_channel("u_test_gateway_compose", "web", {})
+    gw = NexaGateway().handle_message(ctx, "hello world tea cozy")
     assert gw.get("mode") == "chat"
     assert gw.get("text") == "composed-reply"
 

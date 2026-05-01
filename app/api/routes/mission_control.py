@@ -256,9 +256,11 @@ def mission_control_gateway_run(
     text = str(payload.get("text") or "")
     user_id = str(payload.get("user_id") or "dev_user")
 
+    from app.services.gateway.context import GatewayContext
     from app.services.gateway.runtime import NexaGateway
 
-    return NexaGateway().handle_message(text, user_id, db=db)
+    ctx = GatewayContext.from_channel(user_id, "web", {"via_gateway": True})
+    return NexaGateway().handle_message(ctx, text, db=db)
 
 
 @router.post("/replay/{mission_id}")
@@ -268,6 +270,7 @@ def mission_control_replay_mission(
     app_user_id: str = Depends(get_valid_web_user_id),
 ) -> dict:
     """Re-run stored mission input text through the gateway (same privacy guarantees)."""
+    from app.services.gateway.context import GatewayContext
     from app.services.gateway.runtime import NexaGateway
 
     m = db.get(NexaMission, mission_id)
@@ -279,7 +282,8 @@ def mission_control_replay_mission(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Mission has no stored input_text (created before replay support)",
         )
-    return NexaGateway().handle_message(raw, app_user_id, db=db)
+    ctx = GatewayContext.from_channel(app_user_id, "web", {"via_gateway": True})
+    return NexaGateway().handle_message(ctx, raw, db=db)
 
 
 def _not_found() -> HTTPException:

@@ -8,6 +8,7 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
+from app.services.gateway.context import GatewayContext
 from app.services.logging.logger import get_logger
 from app.services.metrics.runtime import record_mission_completed, record_mission_timeout
 
@@ -21,7 +22,8 @@ class NexaGateway:
     """
     Central gateway: owns admission for web, Telegram, and future channels.
 
-    Channels must call ``handle_message`` rather than invoking agents/tools directly.
+    Channels must call :meth:`handle_message` with a :class:`GatewayContext` rather than
+    invoking agents/tools directly.
     """
 
     def compose_llm_reply(self, *args: Any, **kwargs: Any) -> str:
@@ -30,99 +32,65 @@ class NexaGateway:
 
         return build_response(*args, **kwargs)
 
-    def _try_structured_route(
-        self, text: str, user_id: str, db: Session
-    ) -> dict[str, Any] | None:
+    def _try_structured_route(self, gctx: GatewayContext, text: str, db: Session) -> dict[str, Any] | None:
         """Dev runs, missions, and dev hints only — ``None`` means generic chat."""
         from app.services.dev_runtime.gateway_hint import maybe_dev_gateway_hint
         from app.services.dev_runtime.run_dev_gateway import handle_run_dev_gateway
         from app.services.missions.parser import parse_mission
 
-        dev_out = handle_run_dev_gateway(text, user_id, db)
+        uid = gctx.user_id
+        dev_out = handle_run_dev_gateway(text, uid, db)
         if dev_out is not None:
             return dev_out
 
         mission = parse_mission(text)
         if mission:
-            return self._run_mission(mission, user_id, db, source_text=text)
+            return self._run_mission(mission, uid, db, source_text=text)
 
-        hint = maybe_dev_gateway_hint(text, user_id, db)
+        hint = maybe_dev_gateway_hint(text, uid, db)
         if hint is not None:
             return hint
         return None
 
     def try_structured_turn(
         self,
+        gctx: GatewayContext,
         text: str,
-        user_id: str,
         *,
         db: Session,
-        channel: str = "web",
-        metadata: dict[str, Any] | None = None,
     ) -> dict[str, Any] | None:
         """Telegram runs this before feature-specific handlers so missions/dev stay first."""
-        _ = channel
-        _ = metadata
-        return self._try_structured_route(text, user_id, db)
+        return self._try_structured_route(gctx, text, db)
 
     def try_approval_only(
         self,
+        gctx: GatewayContext,
         text: str,
-        user_id: str,
         *,
         db: Session,
-        channel: str = "web",
-        metadata: dict[str, Any] | None = None,
     ) -> dict[str, Any] | None:
         """NL job approvals — Telegram calls this after structured turn; web uses :meth:`handle_message`."""
-        admission = dict(metadata or {})
-        admission.setdefault("via_gateway", True)
-        return self._try_approval_route(text, user_id, db, channel, admission)
+        return self._try_approval_route(gctx, text, db)
 
-    def _try_approval_route(
-        self,
-        text: str,
-        user_id: str,
-        db: Session,
-        channel: str,
-        admission: dict[str, Any],
-    ) -> dict[str, Any] | None:
+    def _try_approval_route(self, gctx: GatewayContext, text: str, db: Session) -> dict[str, Any] | None:
         from app.services.gateway.approval_flow import try_gateway_approval_route
 
-        return try_gateway_approval_route(
-            text,
-            user_id,
-            db,
-            channel=channel,
-            metadata=admission,
-        )
+        return try_gateway_approval_route(gctx, text, db)
 
     def continue_after_structured(
         self,
+        gctx: GatewayContext,
         text: str,
-        user_id: str,
         *,
         db: Session,
-        channel: str = "web",
-        metadata: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Telegram: structured routing already ran; run approval NL + full chat."""
-        admission = dict(metadata or {})
-        admission.setdefault("via_gateway", True)
-        approval = self._try_approval_route(text, user_id, db, channel, admission)
+        approval = self._try_approval_route(gctx, text, db)
         if approval is not None:
             return approval
-        return self.handle_full_chat(text, user_id, db=db, channel=channel, metadata=admission)
+        return self.handle_full_chat(gctx, text, db=db)
 
-    def handle_full_chat(
-        self,
-        text: str,
-        user_id: str,
-        *,
-        db: Session,
-        channel: str = "web",
-        metadata: dict[str, Any] | None = None,
-    ) -> dict[str, Any]:
+    def handle_full_chat(self, gctx: GatewayContext, text: str, *, db: Session) -> dict[str, Any]:
         """
         LLM / behavior chat path (formerly Telegram-only ``behavior_engine`` fall-through).
 
@@ -148,18 +116,19 @@ class NexaGateway:
         from app.services.orchestrator_service import OrchestratorService
         from app.services.telegram_onboarding import is_weak_input, start_message
 
-        meta = dict(metadata or {})
+        uid = gctx.user_id
+        channel = gctx.channel
         raw = (text or "").strip()
         orchestrator = OrchestratorService()
         memory_service = MemoryService()
         settings = get_settings()
 
-        user_row = orchestrator.users.get_or_create(db, user_id)
-        cctx = get_or_create_context(db, user_id)
+        cctx = get_or_create_context(db, uid)
         snap = build_context_snapshot(cctx, db)
+
         rt = route_agent(raw, context_snapshot=snap)
         rt = apply_memory_aware_route_adjustment(rt, raw, snap, db)
-        routing_agent_key = str(meta.get("routing_agent_key") or rt.get("agent_key") or "nexa")
+        routing_agent_key = str(gctx.extras.get("routing_agent_key") or rt.get("agent_key") or "nexa")
 
         intent = get_intent(raw, conversation_snapshot=snap)
         _log.info(
@@ -169,15 +138,17 @@ class NexaGateway:
             channel,
         )
 
+        user_row = orchestrator.users.get_or_create(db, uid)
+
         if intent == "status_update":
-            u = orchestrator.users.get(db, user_id)
+            u = orchestrator.users.get(db, uid)
             if u is not None:
-                plan_data = orchestrator.get_today_plan(db, user_id)
+                plan_data = orchestrator.get_today_plan(db, uid)
                 titles = [t.title for t in plan_data["tasks"]] if plan_data else []
                 focus_title = titles[0] if titles else u.last_focus_task
                 reset_focus_after_completion(db, u, focus_title)
 
-        ctx = build_context(db, user_id, memory_service, orchestrator)
+        beh_ctx = build_context(db, uid, memory_service, orchestrator)
 
         if user_row.is_new and intent == "general_chat" and is_weak_input(raw):
             sm = start_message()
@@ -190,7 +161,7 @@ class NexaGateway:
             )
             result = orchestrator.generate_plan_from_text(
                 db,
-                user_id,
+                uid,
                 raw,
                 input_source=channel,
                 intent="brain_dump",
@@ -198,18 +169,18 @@ class NexaGateway:
             if result.get("needs_more_context"):
                 return {
                     "mode": "chat",
-                    "text": apply_tone(no_tasks_response(), ctx.memory),
+                    "text": apply_tone(no_tasks_response(), beh_ctx.memory),
                     "intent": intent,
                 }
-            orchestrator.users.mark_user_onboarded(db, user_id)
-            ctx_after = build_context(db, user_id, memory_service, orchestrator)
+            orchestrator.users.mark_user_onboarded(db, uid)
+            beh_ctx_after = build_context(db, uid, memory_service, orchestrator)
             reply = self.compose_llm_reply(
                 raw,
                 intent,
-                ctx_after,
+                beh_ctx_after,
                 plan_result=result,
                 db=db,
-                app_user_id=user_id,
+                app_user_id=uid,
                 conversation_snapshot=snap,
                 routing_agent_key=routing_agent_key,
             )
@@ -228,10 +199,10 @@ class NexaGateway:
         reply = self.compose_llm_reply(
             raw,
             intent,
-            ctx,
+            beh_ctx,
             plan_result=None,
             db=db,
-            app_user_id=user_id,
+            app_user_id=uid,
             conversation_snapshot=snap,
             routing_agent_key=routing_agent_key,
         )
@@ -239,20 +210,17 @@ class NexaGateway:
 
     def handle_message(
         self,
+        gctx: GatewayContext,
         text: str,
-        user_id: str,
         *,
         db: Session | None = None,
-        channel: str = "web",
-        metadata: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        admission = dict(metadata or {})
-        admission.setdefault("via_gateway", True)
+        gctx.extras.setdefault("via_gateway", True)
         _log.debug(
-            "gateway admission channel=%s via_gateway=%s keys=%s",
-            channel,
-            admission.get("via_gateway"),
-            sorted(admission.keys()),
+            "gateway admission channel=%s permission_keys=%s extra_keys=%s",
+            gctx.channel,
+            sorted(gctx.permissions.keys()),
+            sorted(gctx.extras.keys()),
         )
         from app.core.db import SessionLocal
         from app.services.plugins.registry import load_plugins
@@ -260,15 +228,13 @@ class NexaGateway:
         load_plugins()
 
         def _route(db_inner: Session) -> dict[str, Any]:
-            structured = self._try_structured_route(text, user_id, db_inner)
+            structured = self._try_structured_route(gctx, text, db_inner)
             if structured is not None:
                 return structured
-            approval = self._try_approval_route(text, user_id, db_inner, channel, admission)
+            approval = self._try_approval_route(gctx, text, db_inner)
             if approval is not None:
                 return approval
-            return self.handle_full_chat(
-                text, user_id, db=db_inner, channel=channel, metadata=admission
-            )
+            return self.handle_full_chat(gctx, text, db=db_inner)
 
         if db is not None:
             return _route(db)

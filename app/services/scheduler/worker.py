@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from app.core.db import SessionLocal
 from app.models.nexa_scheduler_job import NexaSchedulerJob
+from app.services.gateway.context import GatewayContext
 from app.services.gateway.runtime import NexaGateway
 from app.services.logging.logger import get_logger
 from app.services.scheduler.dev_jobs import execute_dev_mission_job
@@ -32,7 +33,8 @@ def execute_scheduled_job(job_id: str) -> None:
         if not uid:
             return
         try:
-            NexaGateway().handle_message(text, uid, db=db)
+            gctx = GatewayContext.from_channel(uid, "scheduler", {"via_gateway": True})
+            NexaGateway().handle_message(gctx, text, db=db)
         except Exception:
             _log.exception("scheduler job failed id=%s", job_id)
 

@@ -5,6 +5,7 @@ from __future__ import annotations
 from sqlalchemy import func, select
 
 from app.models.nexa_next_runtime import NexaMission
+from app.services.gateway.context import GatewayContext
 from app.services.gateway.runtime import NexaGateway
 from app.services.missions.parser import parse_loose_mission, parse_mission
 
@@ -48,7 +49,8 @@ def test_gateway_runs_loose_and_updates_state(nexa_runtime_clean) -> None:
     text = """Researcher: find robotics trends here
 Analyst: write forecast summary here"""
     gw = NexaGateway()
-    out = gw.handle_message(text, "u_phase2")
+    gctx = GatewayContext.from_channel("u_phase2", "web", {})
+    out = gw.handle_message(gctx, text)
     assert out["status"] == "completed"
     n = nexa_runtime_clean.scalar(select(func.count()).select_from(NexaMission))
     assert n >= 1

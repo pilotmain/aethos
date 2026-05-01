@@ -8,34 +8,26 @@ from unittest.mock import MagicMock
 import pytest
 
 from app.services.gateway.approval_flow import try_gateway_approval_route
+from app.services.gateway.context import GatewayContext
 from app.services.gateway.runtime import NexaGateway
 
 
 @pytest.mark.usefixtures("nexa_runtime_clean")
 def test_gateway_handles_approve_job_line_web(db_session) -> None:
-    out = NexaGateway().handle_message(
-        "approve job #999999",
-        "u_appr_web",
-        db=db_session,
-        channel="web",
-        metadata={"via_gateway": True},
-    )
+    ctx = GatewayContext.from_channel("u_appr_web", "web", {"via_gateway": True})
+    out = NexaGateway().handle_message(ctx, "approve job #999999", db=db_session)
     assert out.get("mode") == "chat"
     text = (out.get("text") or "").lower()
     assert "not found" in text
 
 
 def test_try_approval_returns_none_for_chitchat(db_session) -> None:
-    assert (
-        try_gateway_approval_route(
-            "hello there",
-            "u1",
-            db_session,
-            channel="telegram",
-            metadata={"telegram_owner": False, "telegram_role": "blocked"},
-        )
-        is None
+    ctx = GatewayContext.from_channel(
+        "u1",
+        "telegram",
+        {"telegram_owner": False, "telegram_role": "blocked"},
     )
+    assert try_gateway_approval_route(ctx, "hello there", db_session) is None
 
 
 def test_compose_llm_reply_delegates(monkeypatch: pytest.MonkeyPatch) -> None:

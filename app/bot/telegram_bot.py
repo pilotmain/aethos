@@ -15,6 +15,7 @@ from app.services.agent_orchestrator import handle_agent_mention
 from app.services.agent_router import route_agent
 from app.services.agent_status_text import format_agents_status
 from app.services.agent_telegram_copy import format_agents_list, format_command_center
+from app.services.gateway.context import GatewayContext
 from app.services.gateway.runtime import NexaGateway
 from app.services.legacy_behavior_utils import apply_tone, build_context, no_tasks_response
 from app.services.channel_gateway.telegram_adapter import (
@@ -1831,6 +1832,19 @@ async def _handle_incoming_text_impl(update: Update, context: ContextTypes.DEFAU
                 tlow = tstrip.lower()
                 tlow = re.sub(r"^(/[a-z0-9_]+)@[A-Za-z0-9_]+", r"\1", tlow, count=1)
                 tnorm = tlow.rstrip("!?. ")
+
+                _gateway_ctx = GatewayContext.from_channel(
+                    app_user_id,
+                    "telegram",
+                    {
+                        "telegram_update_id": getattr(update, "update_id", None),
+                        "telegram_chat_id": telegram_chat_id,
+                        "telegram_user_id": int(effu.id),
+                        "telegram_username": effu.username,
+                        "telegram_role": tg_role,
+                        "telegram_owner": is_owner_role(tg_role),
+                    },
+                )
     
                 # Natural-language "why" (optional; not every turn)
                 _ASK_WHY_PHRASES = frozenset(
@@ -1857,20 +1871,7 @@ async def _handle_incoming_text_impl(update: Update, context: ContextTypes.DEFAU
                     from app.services.channels.telegram_gateway_reply import (
                         format_telegram_gateway_reply,
                     )
-                    gw_struct = NexaGateway().try_structured_turn(
-                        tstrip,
-                        app_user_id,
-                        db=db,
-                        channel="telegram",
-                        metadata={
-                            "telegram_update_id": getattr(update, "update_id", None),
-                            "telegram_chat_id": telegram_chat_id,
-                            "telegram_user_id": int(effu.id),
-                            "telegram_username": effu.username,
-                            "telegram_role": tg_role,
-                            "telegram_owner": is_owner_role(tg_role),
-                        },
-                    )
+                    gw_struct = NexaGateway().try_structured_turn(_gateway_ctx, tstrip, db=db)
                     if gw_struct is not None:
                         reply_gw = format_telegram_gateway_reply(gw_struct)
                         cctx_gw = get_or_create_context(db, app_user_id)
@@ -1888,20 +1889,7 @@ async def _handle_incoming_text_impl(update: Update, context: ContextTypes.DEFAU
                         return
 
                 if not tstrip.startswith("/") and tstrip:
-                    gw_appr = NexaGateway().try_approval_only(
-                        tstrip,
-                        app_user_id,
-                        db=db,
-                        channel="telegram",
-                        metadata={
-                            "telegram_update_id": getattr(update, "update_id", None),
-                            "telegram_chat_id": telegram_chat_id,
-                            "telegram_user_id": int(effu.id),
-                            "telegram_username": effu.username,
-                            "telegram_role": tg_role,
-                            "telegram_owner": is_owner_role(tg_role),
-                        },
-                    )
+                    gw_appr = NexaGateway().try_approval_only(_gateway_ctx, tstrip, db=db)
                     if gw_appr is not None:
                         from app.services.channels.telegram_gateway_reply import (
                             format_telegram_gateway_reply,
@@ -3138,21 +3126,8 @@ async def _handle_incoming_text_impl(update: Update, context: ContextTypes.DEFAU
                             return f"{a.rstrip()}\n\n{m}"
                         return m
 
-                    gw_chat = NexaGateway().continue_after_structured(
-                        text,
-                        app_user_id,
-                        db=db,
-                        channel="telegram",
-                        metadata={
-                            "routing_agent_key": routed_key,
-                            "telegram_update_id": getattr(update, "update_id", None),
-                            "telegram_chat_id": telegram_chat_id,
-                            "telegram_user_id": int(effu.id),
-                            "telegram_username": effu.username,
-                            "telegram_role": tg_role,
-                            "telegram_owner": is_owner_role(tg_role),
-                        },
-                    )
+                    _gateway_ctx.extras["routing_agent_key"] = routed_key
+                    gw_chat = NexaGateway().continue_after_structured(_gateway_ctx, text, db=db)
                     for se in gw_chat.get("side_effects") or []:
                         if se.get("kind") == "telegram_send_approval_card":
                             from app.services.aider_autonomous_loop import (

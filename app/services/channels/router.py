@@ -6,6 +6,7 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
+from app.services.gateway.context import GatewayContext
 from app.services.gateway.runtime import NexaGateway
 
 
@@ -18,7 +19,8 @@ def route_inbound(
     metadata: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """All channels must call this (or :meth:`NexaGateway.handle_message` directly)."""
-    return NexaGateway().handle_message(text, user_id, db=db, channel=channel, metadata=metadata)
+    ctx = GatewayContext.from_channel(user_id, channel, metadata)
+    return NexaGateway().handle_message(ctx, text, db=db)
 
 
 __all__ = ["route_inbound"]

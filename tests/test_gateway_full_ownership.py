@@ -7,6 +7,7 @@ import inspect
 import pytest
 
 from app.bot import telegram_bot as telegram_bot_module
+from app.services.gateway.context import GatewayContext
 from app.services.gateway.runtime import NexaGateway
 
 
@@ -22,12 +23,13 @@ def test_gateway_handle_message_calls_full_chat_when_no_structured_turn(
 ) -> None:
     calls: list[tuple[str, str]] = []
 
-    def track(self: NexaGateway, text: str, user_id: str, **kw: object) -> dict:
-        calls.append((text, user_id))
+    def track(self: NexaGateway, gctx: GatewayContext, text: str, **kw: object) -> dict:
+        calls.append((text, gctx.user_id))
         return {"mode": "chat", "text": f"echo:{text}", "intent": "general_chat"}
 
     monkeypatch.setattr(NexaGateway, "handle_full_chat", track)
-    out = NexaGateway().handle_message("just chatting", "u_phase35", db=db_session)
+    ctx = GatewayContext.from_channel("u_phase35", "web", {})
+    out = NexaGateway().handle_message(ctx, "just chatting", db=db_session)
     assert calls == [("just chatting", "u_phase35")]
     assert out.get("text") == "echo:just chatting"
 

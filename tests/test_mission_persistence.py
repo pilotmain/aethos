@@ -5,13 +5,15 @@ from __future__ import annotations
 from sqlalchemy import func, select
 
 from app.models.nexa_next_runtime import NexaMission, NexaMissionTask
+from app.services.gateway.context import GatewayContext
 from app.services.gateway.runtime import NexaGateway
 
 
 def test_mission_and_tasks_saved(nexa_runtime_clean) -> None:
     text = """Researcher: find robotics mission db row here
 Analyst: write forecast summary here"""
-    out = NexaGateway().handle_message(text, "u_mission")
+    gctx = GatewayContext.from_channel("u_mission", "web", {})
+    out = NexaGateway().handle_message(gctx, text)
     assert out["status"] == "completed"
     mid = out["result"][0]["mission_id"]
 

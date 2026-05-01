@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from app.services.artifacts.store import clear_store_for_tests
+from app.services.gateway.context import GatewayContext
 from app.services.gateway.runtime import NexaGateway
 from app.services.mission_control.nexa_next_state import STATE
 from app.services.providers.gateway import call_provider
@@ -83,7 +84,8 @@ def test_gateway_mission_with_email_redacts_and_completes(nexa_runtime_clean) ->
 Researcher: find robotics breakthroughs for john@example.com.
 Analyst: write forecast mentioning Researcher.
 QA: review risks mentioning Analyst."""
-    out = NexaGateway().handle_message(text, "dev_user")
+    gctx = GatewayContext.from_channel("dev_user", "web", {})
+    out = NexaGateway().handle_message(gctx, text)
     assert out["status"] == "completed"
     assert STATE["privacy_events"]
     assert STATE["provider_events"]

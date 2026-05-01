@@ -27,7 +27,10 @@ Analyst: summarize in one sentence."""
 def _one(idx: int) -> tuple[int, str]:
     from app.services.gateway.runtime import NexaGateway
 
-    out = NexaGateway().handle_message(MISSION_TEXT, f"smoke_user_{idx}")
+    from app.services.gateway.context import GatewayContext
+
+    gctx = GatewayContext.from_channel(f"smoke_user_{idx}", "web", {})
+    out = NexaGateway().handle_message(gctx, MISSION_TEXT)
     status = str(out.get("status") or "")
     return idx, status
 
