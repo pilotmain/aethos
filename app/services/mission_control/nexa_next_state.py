@@ -517,6 +517,13 @@ def build_execution_snapshot(db: Session, *, user_id: str | None = None) -> dict
                 "created_at": r.created_at.isoformat() if r.created_at else None,
                 "completed_at": r.completed_at.isoformat() if r.completed_at else None,
                 "error": r.error,
+                "adapter_used": (r.result_json or {}).get("adapter_used")
+                if isinstance(r.result_json, dict)
+                else None,
+                "preferred_agent": (r.result_json or {}).get("preferred_agent")
+                if isinstance(r.result_json, dict)
+                else None,
+                "privacy_note": "Secrets redacted in stored step output.",
             }
             for r in dr_rows
         ]

@@ -11,10 +11,16 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from app.models.dev_runtime import NexaDevRun, NexaDevStep, NexaDevWorkspace
-from app.services.dev_runtime.coding_agents.local_stub import LocalStubCodingAgent
-from app.services.dev_runtime.git_tools import git_status
+from app.services.dev_runtime.coding_agents.base import CodingAgentRequest
+from app.services.dev_runtime.coding_agents.registry import choose_adapter
+from app.services.dev_runtime.git_tools import (
+    changed_files,
+    create_commit,
+    git_status,
+    prepare_pr_summary as ws_prepare_pr_summary,
+)
+from app.services.dev_runtime.github_pr import create_pull_request
 from app.services.dev_runtime.planner import build_dev_plan
-from app.services.dev_runtime.pr import prepare_pr_summary
 from app.services.dev_runtime.privacy import PrivacyBlockedError, redact_output_for_storage
 from app.services.dev_runtime.executor import run_dev_command
 from app.services.dev_runtime.tester import pick_test_command
@@ -45,7 +51,19 @@ def run_dev_mission(
     goal: str,
     *,
     auto_pr: bool = False,
+    preferred_agent: str | None = None,
+    allow_write: bool = False,
+    allow_commit: bool = False,
+    allow_push: bool = False,
+    cost_budget_usd: float = 0.0,
+    schedule: dict[str, Any] | None = None,
+    from_scheduler: bool = False,
 ) -> dict[str, Any]:
+    _ = schedule  # scheduling is handled at the HTTP layer
+    if from_scheduler:
+        allow_commit = False
+        allow_push = False
+
     ws = get_workspace(db, user_id, workspace_id)
     if ws is None:
         raise ValueError("workspace_not_found")
@@ -75,6 +93,7 @@ def run_dev_mission(
     repo = Path(ws.repo_path)
     steps_out: list[dict[str, Any]] = []
     context_accum: dict[str, Any] = {}
+    adapter_used_name = "local_stub"
 
     try:
         run.status = "running"
@@ -83,7 +102,7 @@ def run_dev_mission(
         run.plan_json = plan
         db.commit()
 
-        agent = LocalStubCodingAgent()
+        adapter_impl = choose_adapter(preferred_agent)
 
         for step in plan:
             stype = str(step.get("type") or "")
@@ -108,7 +127,7 @@ def run_dev_mission(
                 cmd_ran = "git status"
                 row.command = cmd_ran
                 out_text = _format_cmd_result(gs)
-                artifact = {"git_status": gs}
+                artifact = {"git_status": gs, "changed_files": changed_files(repo)}
             elif stype == "test":
                 cmd_ran = pick_test_command(repo)
                 row.command = cmd_ran
@@ -116,14 +135,52 @@ def run_dev_mission(
                 out_text = _format_cmd_result(te)
                 artifact = {"command_result": te}
             elif stype == "edit":
-                artifact = agent.run(ws, goal, {"steps_so_far": context_accum})
+                req = CodingAgentRequest(
+                    user_id=user_id,
+                    run_id=rid,
+                    workspace_id=workspace_id,
+                    repo_path=str(repo),
+                    goal=goal,
+                    context={"steps_so_far": context_accum},
+                    max_iterations=3,
+                    allow_write=allow_write,
+                    allow_commit=allow_commit,
+                    allow_push=allow_push,
+                    cost_budget_usd=float(cost_budget_usd or 0.0),
+                )
+                ca = adapter_impl.run(req)
+                adapter_used_name = ca.provider
+                summary_safe = redact_output_for_storage(ca.summary or "")
+                err_safe = redact_output_for_storage(ca.error or "") if ca.error else None
+                artifact = {
+                    "ok": ca.ok,
+                    "adapter": ca.provider,
+                    "summary": summary_safe,
+                    "changed_files": list(ca.changed_files or []),
+                    "commands_run": list(ca.commands_run or []),
+                    "test_result": ca.test_result,
+                    "error": err_safe,
+                }
+                cmd_ran = (ca.commands_run[0] if ca.commands_run else None) or f"adapter:{ca.provider}"
+                row.command = cmd_ran
                 out_text = json.dumps(artifact, ensure_ascii=False, default=str)[:100_000]
             elif stype == "summary":
-                pr = prepare_pr_summary(goal, {"steps": steps_out})
+                run_blob: dict[str, Any] = {
+                    "goal": goal,
+                    "steps": steps_out,
+                    "adapter_used": adapter_used_name,
+                    "preferred_agent": preferred_agent,
+                    "allow_write": allow_write,
+                    "allow_commit": allow_commit,
+                    "allow_push": allow_push,
+                }
+                pr_ui = ws_prepare_pr_summary(ws, run_blob)
+                gh = create_pull_request(goal=goal, run_result=run_blob, workspace_id=workspace_id)
                 if auto_pr:
-                    pr["auto_pr_requested"] = True
-                artifact = pr
-                out_text = json.dumps(pr, ensure_ascii=False)[:50_000]
+                    pr_ui["auto_pr_requested"] = True
+                    pr_ui["github_pr_stub"] = gh
+                artifact = pr_ui
+                out_text = json.dumps(pr_ui, ensure_ascii=False)[:50_000]
             else:
                 out_text = "unknown_step_type"
 
@@ -149,11 +206,36 @@ def run_dev_mission(
                 payload={"run_id": rid, "step_type": stype, "step_id": row.id},
             )
 
+        cf_end = changed_files(repo)
+        commit_result: dict[str, Any] | None = None
+        if allow_commit:
+            commit_result = create_commit(
+                repo,
+                f"nexa dev: {(goal or '').strip()[:120]}",
+                allow_commit=True,
+            )
+
+        push_result: dict[str, Any] | None = None
+        if allow_push:
+            push_result = {
+                "ok": False,
+                "error": "push_not_implemented_use_manual_git_push",
+            }
+
         run.result_json = {
             "steps": steps_out,
             "workspace_id": workspace_id,
             "repo_path": str(repo),
             "auto_pr": auto_pr,
+            "preferred_agent": (preferred_agent or "").strip() or None,
+            "adapter_used": adapter_used_name,
+            "allow_write": allow_write,
+            "allow_commit": allow_commit,
+            "allow_push": allow_push,
+            "cost_budget_usd": float(cost_budget_usd or 0.0),
+            "changed_files_end": cf_end,
+            "commit_result": commit_result,
+            "push_result": push_result,
         }
         run.status = "completed"
         run.completed_at = _utc_now()
@@ -172,6 +254,7 @@ def run_dev_mission(
             "run_id": rid,
             "status": run.status,
             "steps": steps_out,
+            "adapter_used": adapter_used_name,
         }
 
     except PrivacyBlockedError as exc:

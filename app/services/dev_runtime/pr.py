@@ -9,7 +9,7 @@ def prepare_pr_summary(goal: str, result_json: dict[str, Any] | None) -> dict[st
     """Produce a PR-ready summary blob for UI / export (no network)."""
     return {
         "title": (goal or "Dev mission")[:200],
-        "body": "Automated dev run summary (Phase 23). Review tests and diffs locally before opening a PR.",
+        "body": "Automated dev run summary (Phase 24). Review tests and diffs locally before opening a PR.",
         "result_excerpt": str(result_json)[:4000] if result_json else "",
     }
 

@@ -19,6 +19,13 @@ _RE_PHONE_LOOSE = re.compile(r"\b\+?\d{10,15}\b")
 _RE_JWT = re.compile(r"\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b")
 _RE_SK_AWS = re.compile(r"\b(AKIA|ASIA)[0-9A-Z]{16}\b")
 _RE_GITHUB_PAT = re.compile(r"\bghp_[A-Za-z0-9]{36,}\b")
+_RE_GITHUB_PAT_FINE = re.compile(r"\bgithub_pat_[A-Za-z0-9_]{20,}\b")
+_RE_NPM_TOKEN = re.compile(r"\bnpm_[A-Za-z0-9]{36,}\b")
+_RE_PEM_PRIVATE_KEY = re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----")
+# Assignment-shaped secrets (`.env` lines or embedded in repr/logs).
+_RE_DOTENV_ASSIGNMENT = re.compile(
+    r"\b[A-Z][A-Z0-9_]{3,}=[^\s\r\n,\"']{12,}\b"
+)
 _RE_SLACK_BOT = re.compile(r"\bxoxb-[0-9]{8,}-[0-9]{8,}-[A-Za-z0-9]{10,}\b")
 _RE_API_KEY_SYM = re.compile(r"\bapi_key_[A-Za-z0-9_]{8,}\b")
 
@@ -131,6 +138,14 @@ def _detect_ingress(raw: str) -> dict[str, Any]:
         secrets_h = True
     if _RE_GITHUB_PAT.search(raw):
         secrets_h = True
+    if _RE_GITHUB_PAT_FINE.search(raw):
+        secrets_h = True
+    if _RE_NPM_TOKEN.search(raw):
+        secrets_h = True
+    if _RE_PEM_PRIVATE_KEY.search(raw):
+        secrets_h = True
+    if _RE_DOTENV_ASSIGNMENT.search(raw):
+        secrets_h = True
     if _RE_SLACK_BOT.search(raw):
         secrets_h = True
     if _RE_API_KEY_SYM.search(raw):
@@ -146,6 +161,14 @@ def _detect_ingress(raw: str) -> dict[str, Any]:
             kinds.append("aws_access_key")
         if _RE_GITHUB_PAT.search(raw):
             kinds.append("github_pat")
+        if _RE_GITHUB_PAT_FINE.search(raw):
+            kinds.append("github_fine_grained_pat")
+        if _RE_NPM_TOKEN.search(raw):
+            kinds.append("npm_token")
+        if _RE_PEM_PRIVATE_KEY.search(raw):
+            kinds.append("pem_private_key")
+        if _RE_DOTENV_ASSIGNMENT.search(raw):
+            kinds.append("dotenv_assignment")
         if _RE_SLACK_BOT.search(raw):
             kinds.append("slack_bot_token")
         if _RE_API_KEY_SYM.search(raw):
@@ -182,6 +205,14 @@ def _detect_egress(raw: str) -> dict[str, Any]:
         kinds_h.append("openai_key")
     if _RE_GITHUB_PAT.search(raw):
         kinds_h.append("github_pat")
+    if _RE_GITHUB_PAT_FINE.search(raw):
+        kinds_h.append("github_fine_grained_pat")
+    if _RE_NPM_TOKEN.search(raw):
+        kinds_h.append("npm_token")
+    if _RE_PEM_PRIVATE_KEY.search(raw):
+        kinds_h.append("pem_private_key")
+    if _RE_DOTENV_ASSIGNMENT.search(raw):
+        kinds_h.append("dotenv_assignment")
     if _RE_SLACK_BOT.search(raw):
         kinds_h.append("slack_bot_token")
     if _RE_API_KEY_SYM.search(raw):

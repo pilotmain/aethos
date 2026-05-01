@@ -86,6 +86,66 @@ def cmd_settings_set(uid: str, pairs: list[str]) -> int:
     return 0 if code1 == 200 else 1
 
 
+def cmd_dev_workspace_add(uid: str, name: str, path: str) -> int:
+    payload = json.dumps({"name": name, "repo_path": path}).encode()
+    code, body = _req("POST", "/api/v1/dev/workspaces", uid=uid, body=payload)
+    print(body[:24000])
+    return 0 if code == 200 else 1
+
+
+def cmd_dev_run(
+    uid: str,
+    *,
+    workspace_id: str,
+    goal: str,
+    agent: str | None,
+    allow_write: bool,
+    allow_commit: bool,
+    auto_pr: bool,
+) -> int:
+    body_obj: dict[str, Any] = {
+        "workspace_id": workspace_id,
+        "goal": goal,
+        "allow_write": allow_write,
+        "allow_commit": allow_commit,
+        "auto_pr": auto_pr,
+    }
+    if agent:
+        body_obj["preferred_agent"] = agent
+    code, body = _req("POST", "/api/v1/dev/runs", uid=uid, body=json.dumps(body_obj).encode())
+    print(body[:24000])
+    return 0 if code == 200 else 1
+
+
+def cmd_dev_schedule(
+    uid: str,
+    *,
+    workspace_id: str,
+    goal: str,
+    cron: str | None,
+    interval_seconds: int | None,
+    agent: str | None,
+) -> int:
+    sched: dict[str, Any] = {}
+    if cron:
+        sched["cron"] = cron
+    elif interval_seconds is not None:
+        sched["interval_seconds"] = interval_seconds
+    else:
+        print("Provide --cron or --interval-seconds", file=sys.stderr)
+        return 1
+    body_obj: dict[str, Any] = {
+        "workspace_id": workspace_id,
+        "goal": goal,
+        "schedule": sched,
+    }
+    if agent:
+        body_obj["preferred_agent"] = agent
+    code, body = _req("POST", "/api/v1/dev/runs", uid=uid, body=json.dumps(body_obj).encode())
+    print(body[:24000])
+    return 0 if code == 200 else 1
+
+
 def cmd_replay(uid: str, mission_id: str) -> int:
     mid = urllib.parse.quote(mission_id, safe="")
     code, body = _req(
@@ -128,6 +188,27 @@ def main() -> int:
         help="e.g. privacy_mode=strict theme=dark auto_refresh=true",
     )
 
+    sp_dev = sub.add_parser("dev", help="POST /api/v1/dev/* (workspaces + runs)")
+    dev_sub = sp_dev.add_subparsers(dest="dev_cmd", required=True)
+    sp_dws = dev_sub.add_parser("workspace-add", help="POST /dev/workspaces")
+    sp_dws.add_argument("--name", required=True)
+    sp_dws.add_argument("--path", required=True, dest="repo_path")
+    sp_drn = dev_sub.add_parser("run", help="POST /dev/runs")
+    sp_drn.add_argument("--workspace", required=True, dest="workspace_id")
+    sp_drn.add_argument("--goal", required=True)
+    sp_drn.add_argument("--agent", default=None)
+    sp_drn.add_argument("--allow-write", action="store_true")
+    sp_drn.add_argument("--allow-commit", action="store_true")
+    sp_drn.add_argument("--auto-pr", action="store_true")
+    sp_dsc = dev_sub.add_parser("schedule", help="POST /dev/runs with schedule payload")
+    sp_dsc.add_argument("--workspace", required=True, dest="workspace_id")
+    sp_dsc.add_argument("--goal", required=True)
+    sp_dsc.add_argument("--cron", default=None)
+    sp_dsc.add_argument("--interval-seconds", type=int, default=None, dest="interval_seconds")
+    sp_dsc.add_argument("--agent", default=None)
+
+    sub.add_parser("run-dev", help="Deprecated alias; use: nexa dev run …")
+
     args = p.parse_args()
     uid = str(args.user_id)
 
@@ -156,6 +237,36 @@ def main() -> int:
             return cmd_settings_get(uid)
         if args.settings_cmd == "set":
             return cmd_settings_set(uid, list(args.pairs))
+
+    if args.cmd == "dev":
+        if args.dev_cmd == "workspace-add":
+            return cmd_dev_workspace_add(uid, str(args.name), str(args.repo_path))
+        if args.dev_cmd == "run":
+            return cmd_dev_run(
+                uid,
+                workspace_id=str(args.workspace_id),
+                goal=str(args.goal),
+                agent=args.agent,
+                allow_write=bool(args.allow_write),
+                allow_commit=bool(args.allow_commit),
+                auto_pr=bool(args.auto_pr),
+            )
+        if args.dev_cmd == "schedule":
+            return cmd_dev_schedule(
+                uid,
+                workspace_id=str(args.workspace_id),
+                goal=str(args.goal),
+                cron=args.cron,
+                interval_seconds=args.interval_seconds,
+                agent=args.agent,
+            )
+
+    if args.cmd == "run-dev":
+        print(
+            "Use: nexa dev run --workspace <workspace_id> --goal \"…\" [--agent aider]",
+            file=sys.stderr,
+        )
+        return 2
 
     return 1
 

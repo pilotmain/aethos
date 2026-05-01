@@ -354,12 +354,27 @@ class Settings(BaseSettings):
 
     # Phase 23 — AI dev OS (workspace commands, allowlist).
     nexa_dev_allowed_commands: str = (
-        "git status,git diff,git branch,git log --oneline -n 20,"
+        "git status,git status --porcelain,git diff,git diff --name-only,"
+        "git branch,git log --oneline -n 20,"
         "npm test,npm run test,pytest,python -m pytest"
     )
     # Comma-separated absolute path prefixes; empty → nexa_workspace_root + repo root (see workspace validator).
     nexa_dev_workspace_roots: str = ""
     nexa_dev_command_timeout_seconds: int = 180
+
+    # Phase 24 — coding-agent adapters + GitHub PR stub
+    nexa_aider_enabled: bool = True
+    nexa_aider_command: str = "aider"
+    nexa_cursor_agent_enabled: bool = False
+    cursor_api_key: str | None = None
+    nexa_cursor_agent_require_cost_budget: bool = True
+    nexa_cursor_agent_max_cost_usd: float = 2.0
+    nexa_claude_code_enabled: bool = False
+    nexa_claude_code_command: str = "claude"
+    nexa_codex_enabled: bool = False
+    nexa_codex_command: str = "codex"
+    nexa_github_pr_enabled: bool = False
+    github_token: str | None = None
 
     @field_validator("nexa_user_privacy_mode", mode="before")
     @classmethod

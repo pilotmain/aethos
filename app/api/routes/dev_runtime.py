@@ -1,7 +1,8 @@
-"""Phase 23 — dev workspaces + runs API."""
+"""Phase 23–24 — dev workspaces + runs API."""
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -14,8 +15,10 @@ from app.core.security import get_valid_web_user_id
 from app.models.dev_runtime import NexaDevRun, NexaDevStep
 from app.services.dev_runtime.service import run_dev_mission
 from app.services.dev_runtime.workspace import list_workspaces, register_workspace
+from app.services.scheduler.service import NexaSchedulerService
 
 router = APIRouter(prefix="/dev", tags=["dev-runtime"])
+_scheduler = NexaSchedulerService()
 
 
 class WorkspaceCreate(BaseModel):
@@ -29,6 +32,12 @@ class DevRunCreate(BaseModel):
     workspace_id: str = Field(..., min_length=1, max_length=64)
     goal: str = Field(..., min_length=1, max_length=50_000)
     auto_pr: bool = False
+    preferred_agent: str | None = Field(default=None, max_length=64)
+    allow_write: bool = False
+    allow_commit: bool = False
+    allow_push: bool = False
+    cost_budget_usd: float = Field(default=0, ge=0, le=1_000_000)
+    schedule: dict[str, Any] | None = None
 
 
 def _workspace_row(w: Any) -> dict[str, Any]:
@@ -61,6 +70,51 @@ def _run_row(r: NexaDevRun, *, steps: list[dict[str, Any]] | None = None) -> dic
     if steps is not None:
         out["steps"] = steps
     return out
+
+
+def _schedule_dev_mission(db: Session, app_user_id: str, body: DevRunCreate) -> dict[str, Any]:
+    sched = body.schedule or {}
+    cron = str(sched.get("cron") or "").strip()
+    interval = sched.get("interval_seconds")
+    payload = {
+        "type": "dev_mission",
+        "workspace_id": body.workspace_id,
+        "goal": body.goal,
+        "preferred_agent": body.preferred_agent or "local_stub",
+        "allow_write": bool(body.allow_write),
+    }
+    mission_text = json.dumps(payload)
+    label = f"dev:{body.workspace_id[:24]}"
+    if cron:
+        row = _scheduler.create_job(
+            db,
+            user_id=app_user_id,
+            mission_text=mission_text,
+            kind="cron",
+            cron_expression=cron,
+            interval_seconds=None,
+            label=label,
+        )
+    elif interval is not None:
+        row = _scheduler.create_job(
+            db,
+            user_id=app_user_id,
+            mission_text=mission_text,
+            kind="interval",
+            interval_seconds=int(interval),
+            cron_expression=None,
+            label=label,
+        )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="schedule requires cron or interval_seconds",
+        )
+    return {
+        "ok": True,
+        "scheduler_job_id": row.id,
+        "dev_mission_payload": payload,
+    }
 
 
 @router.post("/workspaces")
@@ -112,6 +166,13 @@ def post_run(
     db: Session = Depends(get_db),
     app_user_id: str = Depends(get_valid_web_user_id),
 ) -> dict[str, Any]:
+    if body.schedule:
+        try:
+            return _schedule_dev_mission(db, app_user_id, body)
+        except HTTPException:
+            raise
+        except Exception as exc:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     try:
         return run_dev_mission(
             db,
@@ -119,6 +180,39 @@ def post_run(
             body.workspace_id,
             body.goal,
             auto_pr=body.auto_pr,
+            preferred_agent=body.preferred_agent,
+            allow_write=body.allow_write,
+            allow_commit=body.allow_commit,
+            allow_push=body.allow_push,
+            cost_budget_usd=float(body.cost_budget_usd or 0),
+            schedule=None,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+
+@router.post("/runs/{run_id}/retry")
+def post_retry_run(
+    run_id: str,
+    db: Session = Depends(get_db),
+    app_user_id: str = Depends(get_valid_web_user_id),
+) -> dict[str, Any]:
+    r = db.get(NexaDevRun, run_id)
+    if r is None or r.user_id != app_user_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="run_not_found")
+    rj = r.result_json if isinstance(r.result_json, dict) else {}
+    try:
+        return run_dev_mission(
+            db,
+            app_user_id,
+            r.workspace_id,
+            r.goal,
+            auto_pr=bool(rj.get("auto_pr", False)),
+            preferred_agent=rj.get("preferred_agent"),
+            allow_write=bool(rj.get("allow_write", False)),
+            allow_commit=bool(rj.get("allow_commit", False)),
+            allow_push=bool(rj.get("allow_push", False)),
+            cost_budget_usd=float(rj.get("cost_budget_usd") or 0),
         )
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc

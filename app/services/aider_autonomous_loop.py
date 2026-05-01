@@ -347,7 +347,11 @@ def format_approval_message(job, review: str) -> str:
         ov = (
             "\nCaution: you used `approve despite failed tests` — review the host branch and diff before committing.\n"
         )
-    return (
+    tail = (
+        "\n\nActions: Approve / Reject / Request changes / Show diff "
+        "(buttons below, or the same in chat.)"
+    )
+    header = (
         f"Job #{job.id} — ready for approval\n"
         f"({ul})\n\n"
         f"Branch: {br}\n"
@@ -355,9 +359,14 @@ def format_approval_message(job, review: str) -> str:
         f"Tests: {ts}\n"
         f"Risk: {risk}"
         f"{ov}\n\n"
-        f"Summary:\n{preview}\n\n"
-        "Actions: Approve / Reject / Request changes / Show diff (buttons below, or the same in chat.)"
-    )[:3900]
+        f"Summary:\n"
+    )
+    max_total = 3900
+    room = max_total - len(header) - len(tail)
+    if room < 80:
+        room = 80
+    preview_fit = preview if len(preview) <= room else preview[: max(room - 1, 0)] + "…"
+    return (header + preview_fit + tail)[:max_total]
 
 
 def get_git_diff_capped(max_len: int = 3000) -> str:
