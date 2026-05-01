@@ -131,6 +131,8 @@ cmd_start() {
 
   export API_BASE_URL="http://127.0.0.1:${API_PORT}"
   export NEXA_WEB_ORIGINS="http://localhost:${WEB_PORT},http://127.0.0.1:${WEB_PORT}"
+  # Forces SQLite in app when .env points at Postgres that is not running (see app/core/config.py).
+  export NEXA_NEXT_LOCAL_SIDECAR=1
 
   if [ -f "$API_PIDF" ]; then
     old="$(cat "$API_PIDF" 2>/dev/null || true)"

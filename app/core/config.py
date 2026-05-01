@@ -58,6 +58,11 @@ else:
     load_dotenv(_ENV_FILE, override=True)
     _normalize_term_for_subprocesses()
 
+# scripts/nexa_next_local_all.sh sets NEXA_NEXT_LOCAL_SIDECAR=1 so the API can boot when .env
+# points at Postgres that is not running locally (override uses repo-root SQLite).
+if (os.environ.get("NEXA_NEXT_LOCAL_SIDECAR") or "").strip().lower() in ("1", "true", "yes"):
+    os.environ["DATABASE_URL"] = f"sqlite:///{(_PROJECT_ROOT / 'overwhelm_reset.db').resolve()}"
+
 
 def ensure_subprocess_term_env() -> None:
     """Re-run TERM fix (e.g. in dev executor main) after any late env changes."""
