@@ -21,7 +21,17 @@ def test_mission_control_state_shape() -> None:
     r = c.get("/api/v1/mission-control/state")
     assert r.status_code == 200
     body = r.json()
-    for key in ("missions", "tasks", "artifacts", "events"):
+    for key in (
+        "missions",
+        "tasks",
+        "artifacts",
+        "events",
+        "privacy_indicator",
+        "provider_transparency",
+        "metrics",
+        "runtime",
+        "agent_performance",
+    ):
         assert key in body
 
 

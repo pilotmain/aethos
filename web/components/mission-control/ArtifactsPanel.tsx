@@ -128,7 +128,8 @@ export function ArtifactsPanel() {
                   {rows.map((row) => (
                     <li
                       key={row.id}
-                      className="rounded-md border border-zinc-800/60 bg-zinc-950/80 p-2.5 font-mono text-[11px] text-zinc-300"
+                      title={summarizeArtifact(row.artifact).slice(0, 600)}
+                      className="rounded-md border border-zinc-800/60 bg-zinc-950/80 p-2.5 font-mono text-[11px] text-zinc-300 transition-colors duration-200 hover:border-zinc-600 hover:bg-zinc-900/80"
                     >
                       <div className="mb-1 flex flex-wrap items-center gap-2 text-zinc-500">
                         <FileJson className="h-3.5 w-3.5" />

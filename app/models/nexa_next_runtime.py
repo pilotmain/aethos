@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import Boolean, DateTime, Integer, JSON, String, Text
+from sqlalchemy import Boolean, DateTime, Float, Integer, JSON, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.db import Base
@@ -37,6 +37,8 @@ class NexaMissionTask(Base):
     status: Mapped[str] = mapped_column(String(32), default="queued")
     depends_on: Mapped[Any] = mapped_column(JSON, default=list)
     output_json: Mapped[Any | None] = mapped_column(JSON, nullable=True)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    duration_ms: Mapped[float | None] = mapped_column(Float(), nullable=True)
 
 
 class NexaExternalCall(Base):

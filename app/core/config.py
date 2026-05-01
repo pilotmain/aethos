@@ -332,6 +332,9 @@ class Settings(BaseSettings):
     nexa_data_retention_days: int = 7
     nexa_retention_sweep_interval_seconds: int = 3600
 
+    # Phase 13 — strict privacy lockdown (external providers off; local_stub only)
+    nexa_strict_privacy_mode: bool = False
+
     model_config = SettingsConfigDict(
         env_file=_EnvFile,
         env_file_encoding="utf-8",

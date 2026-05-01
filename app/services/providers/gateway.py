@@ -33,10 +33,15 @@ def call_provider(request: ProviderRequest) -> ProviderResponse:
     td = TOOLS.get(tool_key)
     raw_policy = td.pii_policy if td else None
 
-    def audit(blocked: bool, error: str | None) -> None:
+    def audit(
+        blocked: bool,
+        error: str | None,
+        *,
+        provider_override: str | None = None,
+    ) -> None:
         persist_external_call(
             request.db,
-            provider=request.provider,
+            provider=provider_override or request.provider,
             agent=request.agent_handle or "",
             mission_id=request.mission_id,
             user_id=request.user_id,
@@ -69,6 +74,23 @@ def call_provider(request: ProviderRequest) -> ProviderResponse:
         add_provider_event(ev)
         audit(True, err)
         _log.warning("provider blocked: %s", err)
+        return ProviderResponse(
+            ok=False,
+            provider=request.provider,
+            model=request.model,
+            output=None,
+            redactions=redactions,
+            blocked=True,
+            error=err,
+        )
+
+    if s.nexa_strict_privacy_mode and request.provider not in ("local_stub",):
+        err = "strict_privacy_mode"
+        ev = {"provider": request.provider, "agent": request.agent_handle or "", "status": err}
+        log_event({"type": "provider_blocked", **ev})
+        add_provider_event(ev)
+        audit(True, err)
+        _log.warning("provider blocked (strict privacy): %s", err)
         return ProviderResponse(
             ok=False,
             provider=request.provider,
@@ -136,6 +158,7 @@ def call_provider(request: ProviderRequest) -> ProviderResponse:
     max_retries = max(1, min(10, int(s.nexa_provider_max_retries or 3)))
     out: dict[str, Any] | str | None = None
     last_err: Exception | None = None
+    effective_provider = request.provider
 
     for attempt in range(max_retries):
         t0 = time.perf_counter()
@@ -171,33 +194,63 @@ def call_provider(request: ProviderRequest) -> ProviderResponse:
             last_err = exc
             _log.warning("provider retryable failure attempt=%s/%s: %s", attempt + 1, max_retries, exc)
             if attempt + 1 >= max_retries:
-                err = str(exc)
-                audit(False, err)
-                return ProviderResponse(
-                    ok=False,
-                    provider=request.provider,
-                    model=request.model,
-                    output=None,
-                    redactions=redactions,
-                    error=err,
-                )
+                break
             time.sleep(0.25 * (attempt + 1))
 
-    ev_ok = {
-        "provider": request.provider,
+    if out is None and request.provider in ("openai", "anthropic") and last_err is not None:
+        if not s.nexa_strict_privacy_mode and not s.nexa_disable_external_calls:
+            try:
+                _log.warning(
+                    "provider fallback local_stub after remote failure agent=%s err=%s",
+                    request.agent_handle,
+                    last_err,
+                )
+                t0 = time.perf_counter()
+                out = call_local_stub(merged)
+                effective_provider = "local_stub"
+                record_provider_call(latency_ms=(time.perf_counter() - t0) * 1000)
+                add_provider_event(
+                    {
+                        "provider": "local_stub",
+                        "agent": request.agent_handle or "",
+                        "status": "fallback",
+                        "fallback_from": request.provider,
+                        "mission_id": request.mission_id,
+                    }
+                )
+                last_err = None
+            except Exception as fb_exc:
+                last_err = fb_exc
+
+    if out is None:
+        err = str(last_err) if last_err else "provider_failed"
+        audit(False, err)
+        return ProviderResponse(
+            ok=False,
+            provider=request.provider,
+            model=request.model,
+            output=None,
+            redactions=redactions,
+            error=err,
+        )
+
+    ev_ok: dict[str, Any] = {
+        "provider": effective_provider,
         "agent": request.agent_handle or "",
         "status": "completed",
         "mission_id": request.mission_id,
         "purpose": request.purpose,
     }
+    if effective_provider == "local_stub" and request.provider != "local_stub":
+        ev_ok["fallback_from"] = request.provider
     log_event({"type": "provider_call", **ev_ok})
     add_provider_event(ev_ok)
 
-    audit(False, None)
+    audit(False, None, provider_override=effective_provider)
 
     return ProviderResponse(
         ok=True,
-        provider=request.provider,
+        provider=effective_provider,
         model=request.model,
         output=out,
         redactions=redactions,

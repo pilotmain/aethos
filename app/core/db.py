@@ -630,6 +630,22 @@ def _migrate_nexa_missions_input_text() -> None:
         conn.execute(text(f"ALTER TABLE nexa_missions ADD COLUMN input_text {tt} NULL"))
 
 
+def _migrate_nexa_tasks_timing() -> None:
+    """Phase 13 — task-level latency for reliability metrics."""
+    insp = inspect(engine)
+    if "nexa_tasks" not in insp.get_table_names():
+        return
+    cols = {c["name"] for c in insp.get_columns("nexa_tasks")}
+    dialect = engine.dialect.name
+    dt = "TIMESTAMP WITH TIME ZONE" if dialect == "postgresql" else "DATETIME"
+    fl = "DOUBLE PRECISION" if dialect == "postgresql" else "REAL"
+    with engine.begin() as conn:
+        if "started_at" not in cols:
+            conn.execute(text(f"ALTER TABLE nexa_tasks ADD COLUMN started_at {dt} NULL"))
+        if "duration_ms" not in cols:
+            conn.execute(text(f"ALTER TABLE nexa_tasks ADD COLUMN duration_ms {fl} NULL"))
+
+
 def ensure_schema() -> None:
     import app.models  # noqa: F401 — register all models (incl. TaskPattern) on Base.metadata
 
@@ -655,6 +671,7 @@ def ensure_schema() -> None:
     _migrate_nexa_workspace_projects()
     _migrate_conversation_context_blocked_host()
     _migrate_nexa_missions_input_text()
+    _migrate_nexa_tasks_timing()
 
 
 def get_db() -> Generator[Session, None, None]:

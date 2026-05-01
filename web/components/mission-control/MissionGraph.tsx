@@ -23,6 +23,7 @@ type TaskRow = {
   mission_id?: string;
   agent_handle?: string;
   output?: unknown;
+  status?: string;
 };
 
 function graphHttpUrl(): string {
@@ -54,6 +55,7 @@ function formatTaskOutput(output: unknown): string {
 export function MissionGraph() {
   const [graph, setGraph] = useState<MissionGraphPayload>({ nodes: [], edges: [] });
   const [outputs, setOutputs] = useState<Record<string, string>>({});
+  const [runningIds, setRunningIds] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [wsStatus, setWsStatus] = useState<string>("connecting");
@@ -65,14 +67,19 @@ export function MissionGraph() {
       const data = (await r.json()) as { tasks?: TaskRow[] };
       const tasks = Array.isArray(data.tasks) ? data.tasks : [];
       const m: Record<string, string> = {};
+      const run = new Set<string>();
       for (const t of tasks) {
         const mid = String(t.mission_id || "").trim();
         const h = String(t.agent_handle || "").trim();
         if (!mid || !h) continue;
         const id = `${mid}:${h}`;
         m[id] = formatTaskOutput(t.output);
+        if (String(t.status || "").toLowerCase() === "running") {
+          run.add(id);
+        }
       }
       setOutputs(m);
+      setRunningIds(run);
     } catch {
       /* ignore */
     }
@@ -153,6 +160,7 @@ export function MissionGraph() {
             handle={n.handle}
             status={n.status}
             lastOutput={outputs[n.id] ?? null}
+            active={runningIds.has(n.id)}
           />
         ))}
       </div>

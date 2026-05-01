@@ -9,16 +9,25 @@ import { MissionBuilderPanel } from "@/components/mission-control/MissionBuilder
 import { MissionControlLiveEvents } from "@/components/mission-control/MissionControlLiveEvents";
 import { MissionControlPage } from "@/components/mission-control/MissionControlPage";
 import { MissionGraph } from "@/components/mission-control/MissionGraph";
+import { OfflineModeBanner } from "@/components/mission-control/OfflineModeBanner";
+import { PrivacyIndicatorBadge } from "@/components/mission-control/PrivacyIndicatorBadge";
+import { ProviderTransparencyPanel } from "@/components/mission-control/ProviderTransparencyPanel";
 import { isConfigured } from "@/lib/config";
+import { useMissionControlSnapshot } from "@/lib/mission-control/useMissionControlSnapshot";
 
 /**
- * Phase 12 — Mission Control v2 shell: graph + live/replay + builder tools + artifacts + legacy dashboard.
+ * Phase 12–13 — Mission Control shell: privacy-first indicators, graph, replay, artifacts, dashboard.
  */
 export function MissionControlLayout() {
   const [configured, setConfigured] = useState(false);
+  const { data: snap, loading: snapLoading, error: snapErr } = useMissionControlSnapshot(10000);
+
   useEffect(() => {
     setConfigured(isConfigured());
   }, []);
+
+  const offline = snap?.runtime?.offline_mode;
+  const strict = snap?.runtime?.strict_privacy_mode;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-zinc-950 via-zinc-950 to-black text-zinc-100">
@@ -41,10 +50,13 @@ export function MissionControlLayout() {
                 for authenticated APIs.
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1 rounded-md border border-emerald-500/30 bg-emerald-950/30 px-2 py-1 text-emerald-100">
-                <Radio className="h-3 w-3" aria-hidden />
-                Session ready
-              </span>
+              <>
+                <PrivacyIndicatorBadge indicator={snap?.privacy_indicator} />
+                <span className="inline-flex items-center gap-1 rounded-md border border-emerald-500/30 bg-emerald-950/30 px-2 py-1 text-emerald-100">
+                  <Radio className="h-3 w-3" aria-hidden />
+                  Session ready
+                </span>
+              </>
             )}
             <Link href="/" className="text-zinc-400 underline-offset-4 hover:text-zinc-200 hover:underline">
               Home
@@ -54,6 +66,19 @@ export function MissionControlLayout() {
       </header>
 
       <main className="mx-auto max-w-[1600px] space-y-6 px-4 py-6">
+        {snapErr && configured ? (
+          <p className="rounded-lg border border-rose-500/35 bg-rose-950/30 px-3 py-2 text-xs text-rose-100">{snapErr}</p>
+        ) : null}
+        {(offline || strict) && configured ? (
+          <OfflineModeBanner offline={offline} strictMode={strict} />
+        ) : null}
+
+        <ProviderTransparencyPanel
+          transparency={snap?.provider_transparency}
+          metrics={snap?.metrics}
+          loading={snapLoading && configured}
+        />
+
         {/* Primary split: agents left, events right */}
         <div className="grid gap-4 lg:grid-cols-2 lg:items-stretch">
           <MissionGraph />

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import time
+from datetime import datetime, timezone
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -59,10 +60,12 @@ def run_until_complete(
                 continue
 
             pk = agent.get("task_pk")
+            started_at = datetime.now(timezone.utc)
             if pk is not None:
                 row = db.get(NexaMissionTask, pk)
                 if row is not None:
                     row.status = "running"
+                    row.started_at = started_at
                     db.commit()
 
             publish(
@@ -74,7 +77,9 @@ def run_until_complete(
             )
 
             agent["status"] = "running"
+            t0 = time.perf_counter()
             agent["output"] = run_agent(agent, db)
+            dur_ms = (time.perf_counter() - t0) * 1000.0
             agent["status"] = "completed"
 
             if pk is not None:
@@ -82,6 +87,7 @@ def run_until_complete(
                 if row is not None:
                     row.status = "completed"
                     row.output_json = agent["output"]
+                    row.duration_ms = dur_ms
                     db.commit()
 
             publish(
