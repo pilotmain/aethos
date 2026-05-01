@@ -10,7 +10,7 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
-from app.models.dev_runtime import NexaDevRun, NexaDevStep, NexaDevWorkspace
+from app.models.dev_runtime import NexaDevRun, NexaDevStep
 from app.services.dev_runtime.coding_agents.base import CodingAgentRequest, CodingAgentResult
 from app.services.dev_runtime.coding_agents.registry import choose_adapter
 from app.services.dev_runtime.git_tools import (

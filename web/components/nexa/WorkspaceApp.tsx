@@ -34,6 +34,7 @@ import { webDownloadBlob, webFetch, downloadBlobToFile } from "@/lib/api";
 import { DEFAULT_API_BASE, isConfigured, readConfig } from "@/lib/config";
 import type {
   ChannelsStatusResponse,
+  CustomAgentsListOut,
   DecisionSummary,
   LlmUsageRecent,
   LlmUsageRecentResponse,
@@ -259,31 +260,25 @@ function decisionCollapsedLine(d: DecisionSummary): string {
   return `${a} · ${t} · ${(d.risk || "low").toLowerCase()} risk`;
 }
 
-const AGENT_CHIPS: { id: string; insert: string }[] = [
-  { id: "dev", insert: "@dev " },
-  { id: "ops", insert: "@ops " },
-  { id: "strategy", insert: "@strategy " },
-  { id: "research", insert: "@research " },
-  { id: "reset", insert: "@reset " },
+/** Composer hints — Phase 26: no legacy Nexa slash list; click fills the composer. */
+const SLASH_HINTS: { cmd: string; help: string; fill: string }[] = [
+  { cmd: "run mission", help: "structured multi-step mission", fill: "Mission: \n\nDeveloper: " },
+  { cmd: "create agent", help: "describe a new user agent", fill: "create agent " },
+  { cmd: "run dev task", help: "dev runtime (needs a registered workspace)", fill: "run dev: " },
+  { cmd: "schedule task", help: "recurring or cron work", fill: "schedule task " },
+  { cmd: "show memory", help: "what Nexa remembers", fill: "show memory" },
+  { cmd: "show system status", help: "host health and channels", fill: "show system status" },
 ];
 
-const SLASH_HINTS: { cmd: string; help: string }[] = [
-  { cmd: "/agents", help: "list agents" },
-  { cmd: "/memory", help: "memory tools" },
-  { cmd: "/dev health", help: "dev worker status" },
-  { cmd: "/dev queue", help: "job queue" },
-  { cmd: "/project default", help: "current project" },
-];
-
-const RESEARCH_URL_CHIP = { fill: "@research check https://", help: "read a public page" };
-const BROWSER_PREVIEW_CHIP = { fill: "@research browser preview https://", help: "owner · headless browser (if enabled on host)" };
-const WEB_SEARCH_CHIP = { fill: "@research search the web for ", help: "optional tool search (if enabled on host)" };
+const RESEARCH_URL_CHIP = { fill: "Summarize https://", help: "read a public page (read-only)" };
+const BROWSER_PREVIEW_CHIP = { fill: "Browser preview https://", help: "owner · headless browser (if enabled on host)" };
+const WEB_SEARCH_CHIP = { fill: "Search the web for ", help: "optional tool search (if enabled on host)" };
 
 /** Phase 1+ public web — same server path as Telegram; no new tab. */
 const PUBLIC_URL_CHIPS: { fill: string; help: string }[] = [
   { fill: "Summarize https://", help: "visible text (read-only)" },
   { fill: "Check https:// and tell me what is on the page", help: "normal chat + URL" },
-  { fill: "@research compare ", help: "compare (uses web search when enabled)" },
+  { fill: "Compare ", help: "compare sources (uses web search when enabled)" },
 ];
 
 const NEEDS_ACTION_STATUSES = new Set([
@@ -435,6 +430,35 @@ function WorkspaceBody() {
       /* ignore */
     }
   }, [commandHintsOpen]);
+
+  const [composerAgentChips, setComposerAgentChips] = useState<
+    { id: string; insert: string; label: string }[]
+  >([{ id: "nexa", insert: "@nexa ", label: "@nexa" }]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const uid = readConfig().userId;
+    if (!uid) {
+      return;
+    }
+    void (async () => {
+      try {
+        const out = await webFetch<CustomAgentsListOut>("/agents");
+        const rows = out.agents ?? [];
+        setComposerAgentChips([
+          { id: "nexa", insert: "@nexa ", label: "@nexa" },
+          ...rows.map((a) => {
+            const h = (a.handle || "").replace(/^@/, "");
+            return { id: `agent-${h}`, insert: `@${h} `, label: `@${h}` };
+          }),
+        ]);
+      } catch {
+        setComposerAgentChips([{ id: "nexa", insert: "@nexa ", label: "@nexa" }]);
+      }
+    })();
+  }, []);
 
   useEffect(() => {
     const p = sp.get("p");
@@ -1608,11 +1632,12 @@ function WorkspaceBody() {
     setErr("");
     setMessages((m) => [...m, { id: id(), role: "user", content: t }]);
     setSending(true);
-    if (t.toLowerCase().includes("@dev") || t.toLowerCase().includes("dev ")) {
-      setSendingActivity("Planning dev job…");
-    } else if (t.toLowerCase().includes("http://") || t.toLowerCase().includes("https://")) {
+    const tl = t.toLowerCase();
+    if (tl.startsWith("run dev")) {
+      setSendingActivity("Running dev mission…");
+    } else if (tl.includes("http://") || tl.includes("https://")) {
       setSendingActivity("Reading or fetching…");
-    } else if (t.toLowerCase().includes("@research") && t.toLowerCase().includes("search")) {
+    } else if (tl.includes("search the web") || (tl.includes("search") && tl.includes("http"))) {
       setSendingActivity("Searching web…");
     } else if (t.trim().startsWith("/")) {
       setSendingActivity("Running command…");
@@ -2099,9 +2124,9 @@ function WorkspaceBody() {
               <p className="mt-3 text-zinc-500">Try:</p>
               <ul className="mt-2 list-none space-y-1.5 pl-0 text-left text-sm text-zinc-400">
                 <li>• Ask a normal question</li>
-                <li>• @dev add a README note</li>
-                <li>• /memory</li>
-                <li>• /agents</li>
+                <li>• run dev: fix failing tests (with a dev workspace)</li>
+                <li>• create agent — describe how it should behave</li>
+                <li>• show memory or show system status</li>
                 <li>• Open System to check health</li>
                 <li>
                   •{" "}
@@ -2476,7 +2501,7 @@ function WorkspaceBody() {
 
         <div className="border-t border-white/10 bg-gradient-to-b from-zinc-950/80 to-black/90 py-3">
           <div className={`mx-auto mb-2 flex min-w-0 flex-wrap gap-1.5 ${CHAT_COMPOSER_MAX}`}>
-            {AGENT_CHIPS.map((c) => (
+            {composerAgentChips.map((c) => (
               <button
                 key={c.id}
                 type="button"
@@ -2487,7 +2512,7 @@ function WorkspaceBody() {
                 }}
                 className="rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 text-[11px] text-zinc-300 hover:border-emerald-500/30 hover:bg-white/10 hover:text-zinc-100"
               >
-                {c.insert.trim()}
+                {c.label}
               </button>
             ))}
           </div>
@@ -2522,7 +2547,7 @@ function WorkspaceBody() {
                       <button
                         type="button"
                         onClick={() => {
-                          setInput(`${h.cmd} `);
+                          setInput(h.fill);
                           setSuggest([]);
                           inputRef.current?.focus();
                         }}
@@ -2578,7 +2603,7 @@ function WorkspaceBody() {
               value={input}
               onChange={(e) => onType(e.target.value)}
               onKeyDown={handleComposerKeyDown}
-              placeholder="Type a message, @dev …, or paste a public URL and ask Nexa to check or summarize it."
+              placeholder="Type a message, @nexa or a user agent, run dev: …, or paste a public URL."
             />
             <div className="mt-1.5 flex justify-end gap-2">
               <p className="self-center pr-1 text-[10px] text-zinc-500">Enter to send · Shift+Enter for new line</p>
@@ -2677,11 +2702,11 @@ function WorkspaceBody() {
                     <JobInlineCard job={jobById[focusJobId]!} onUpdated={mergeJob} onNotify={showToast} />
                   </div>
                 ) : (
-                  <p className="mt-1 text-xs text-zinc-500">Select a job below or ask @dev in chat.</p>
+                  <p className="mt-1 text-xs text-zinc-500">Select a job below or ask Nexa in chat.</p>
                 )}
                 {jobPanelList === null && <p className="mt-3 text-xs text-zinc-500">Syncing full job list…</p>}
                 {jobPanelList !== null && allJobsForPanel.length === 0 && (
-                  <p className="mt-2 text-sm text-zinc-500">No active jobs yet. Ask @dev to create one.</p>
+                  <p className="mt-2 text-sm text-zinc-500">No active jobs yet. Ask Nexa to create one.</p>
                 )}
                 {allJobsForPanel.length > 0 && (
                   <div className="mt-4 space-y-4 text-xs">

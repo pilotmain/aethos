@@ -37,22 +37,30 @@ class NexaGateway:
 
         load_plugins()
 
-        mission = parse_mission(text)
+        def _route(db_inner: Session) -> dict[str, Any]:
+            from app.services.dev_runtime.run_dev_gateway import handle_run_dev_gateway
 
-        if not mission:
-            if db is not None:
+            dev_out = handle_run_dev_gateway(text, user_id, db_inner)
+            if dev_out is not None:
+                return dev_out
+
+            mission = parse_mission(text)
+
+            if not mission:
                 from app.services.dev_runtime.gateway_hint import maybe_dev_gateway_hint
 
-                hint = maybe_dev_gateway_hint(text, user_id, db)
+                hint = maybe_dev_gateway_hint(text, user_id, db_inner)
                 if hint is not None:
                     return hint
-            return {"mode": "chat", "text": "No mission detected"}
+                return {"mode": "chat", "text": "No mission detected"}
+
+            return self._run_mission(mission, user_id, db_inner, source_text=text)
 
         if db is not None:
-            return self._run_mission(mission, user_id, db, source_text=text)
+            return _route(db)
 
         with SessionLocal() as session:
-            return self._run_mission(mission, user_id, session, source_text=text)
+            return _route(session)
 
     def _run_mission(
         self,

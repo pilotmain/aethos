@@ -1,16 +1,14 @@
 const SEEDS = [
-  "@dev add a README section about installation",
-  "@dev fix failing tests in the test suite",
-  "@dev update project documentation for new env vars",
-  "@dev refactor duplicate code in services",
-  "@ops list recent dev jobs",
-  "@ops show worker status",
-  "@dev status",
+  "run dev: fix failing tests in the test suite",
+  "run dev: review the repo and suggest improvements",
+  "create agent for API documentation review",
+  "show memory",
+  "show system status",
   "/help",
 ] as const;
 
 /**
- * When the user is typing, suggest a few @dev / @ops / slash commands (lightweight, no network).
+ * When the user is typing, suggest a few dev / mission phrases (lightweight, no network).
  */
 export function getInputSuggestions(typed: string, limit = 4): string[] {
   const q = (typed || "").trim();
@@ -19,18 +17,20 @@ export function getInputSuggestions(typed: string, limit = 4): string[] {
   }
   const low = q.toLowerCase();
   const out = (SEEDS as readonly string[]).filter(
-    (s) => s.toLowerCase().includes(low) || (low.startsWith("@") && s.toLowerCase().startsWith(low)),
+    (s) =>
+      s.toLowerCase().includes(low) ||
+      (low.startsWith("run") && s.toLowerCase().startsWith(low)),
   );
   if (out.length) {
     return out.slice(0, limit);
   }
   if (low.includes("readme") || low.includes("read")) {
-    return ["@dev add README note", "@dev create README section", "@dev update documentation"].slice(0, limit);
+    return ["add a README section about installation", "update project documentation for new env vars"].slice(0, limit);
   }
   if (low.includes("test") || low.includes("fix")) {
-    return ["@dev fix the failing tests", "@dev run tests and report"].slice(0, limit);
+    return ["run dev: fix the failing tests", "run dev: run tests and report"].slice(0, limit);
   }
-  return ["@dev " + q].slice(0, limit);
+  return [`run dev: ${q}`].slice(0, limit);
 }
 
 export function jobNeedsBadge(status: string): { label: string; tone: "emerald" | "amber" | "zinc" | "rose" } {

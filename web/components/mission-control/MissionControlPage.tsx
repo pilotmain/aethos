@@ -21,10 +21,7 @@ import { webFetch } from "@/lib/api";
 import { isConfigured } from "@/lib/config";
 import { LuminousNode } from "@/components/mission-control/LuminousNode";
 import { MaintenancePanel } from "@/components/mission-control/MaintenancePanel";
-import {
-  MISSION_MAP_UNGROUPED_KEY,
-  orchestrationToMissionMapGroups,
-} from "@/components/mission-control/missionMap";
+import { orchestrationToMissionMapGroups } from "@/components/mission-control/missionMap";
 import type {
   CustomAgent,
   CustomAgentsListOut,
@@ -55,15 +52,7 @@ function cardShell(children: ReactNode) {
   );
 }
 
-function MissionMapStrip({
-  summary,
-  onClearSpawnGroup,
-  spawnBusyKey,
-}: {
-  summary: MissionControlSummary;
-  onClearSpawnGroup?: (spawnGroupId: string) => void | Promise<void>;
-  spawnBusyKey?: string | null;
-}) {
+function MissionMapStrip({ summary }: { summary: MissionControlSummary }) {
   const groups = orchestrationToMissionMapGroups(summary);
   if (groups.length === 0) return null;
   return (
@@ -74,20 +63,6 @@ function MissionMapStrip({
           <div key={g.groupKey}>
             <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
               <p className="text-[10px] font-medium uppercase tracking-wide text-zinc-600">{g.heading}</p>
-              {g.groupKey !== MISSION_MAP_UNGROUPED_KEY && onClearSpawnGroup ? (
-                <button
-                  type="button"
-                  disabled={spawnBusyKey === g.groupKey}
-                  onClick={() => void onClearSpawnGroup(g.groupKey)}
-                  className="rounded border border-rose-500/35 bg-rose-500/10 px-2 py-1 text-[10px] font-medium text-rose-100/95 hover:bg-rose-500/20 disabled:opacity-50"
-                >
-                  {spawnBusyKey === g.groupKey ? (
-                    <Loader2 className="inline h-3 w-3 animate-spin" aria-hidden />
-                  ) : (
-                    "Clear spawn group"
-                  )}
-                </button>
-              ) : null}
             </div>
             <div className="flex flex-wrap gap-3">
               {g.nodes.map((n) => (
@@ -115,7 +90,6 @@ export function MissionControlPage() {
   const [customAgentsErr, setCustomAgentsErr] = useState<string | null>(null);
   const [agentBusy, setAgentBusy] = useState<string | null>(null);
   const [assignmentBusy, setAssignmentBusy] = useState<number | null>(null);
-  const [spawnBusyKey, setSpawnBusyKey] = useState<string | null>(null);
   const [reportBusy, setReportBusy] = useState(false);
   const [jobRowBusy, setJobRowBusy] = useState<number | null>(null);
   const [attentionBusyId, setAttentionBusyId] = useState<string | null>(null);
@@ -191,31 +165,6 @@ export function MissionControlPage() {
       setErr((e as Error).message);
     } finally {
       setReportBusy(false);
-    }
-  };
-
-  const onClearSpawnGroup = async (spawnGroupId: string) => {
-    if (
-      !window.confirm(
-        `Clear all assignments and heartbeats for spawn group ${spawnGroupId}? This cannot be undone.`,
-      )
-    ) {
-      return;
-    }
-    setErr(null);
-    setSpawnBusyKey(spawnGroupId);
-    setNotice(null);
-    try {
-      await webFetch(
-        `/mission-control/spawn-groups/${encodeURIComponent(spawnGroupId)}/clear`,
-        { method: "POST" },
-      );
-      setNotice(`Cleared spawn group ${spawnGroupId}.`);
-      await load();
-    } catch (e) {
-      setErr((e as Error).message);
-    } finally {
-      setSpawnBusyKey(null);
     }
   };
 
@@ -752,11 +701,7 @@ export function MissionControlPage() {
               <Users className="h-4 w-4 text-cyan-400/80" aria-hidden />
               Agent team & assignments
             </h2>
-            <MissionMapStrip
-              summary={data}
-              onClearSpawnGroup={onClearSpawnGroup}
-              spawnBusyKey={spawnBusyKey}
-            />
+            <MissionMapStrip summary={data} />
             {cardShell(
               <div className="space-y-3 text-sm">
                 {data.orchestration.organization ? (
