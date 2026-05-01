@@ -30,6 +30,7 @@ from app.services.dev_preflight import (
     write_preflight_json,
 )
 from app.services.dev_worktree_guards import ensure_clean_worktree, is_mainish
+from app.services.gateway.approval_persistence import persist_job_waiting_approval
 from app.services.handoff_paths import AGENT_TASKS_DIR, PROJECT_ROOT
 from app.services.secret_scan import scan_combined_diff_for_secrets
 from app.services.telegram_dev_ux import compact_review_for_telegram, user_friendly_status
@@ -886,6 +887,14 @@ def run_aider_autonomous_for_approved_job(
                 db, event_type="job.waiting_approval", actor="system", user_id=uid, job_id=j.id, message="Waiting for user approval"
             )
             j = job_service.repo.get(db, j.id) or j
+            persist_job_waiting_approval(
+                db,
+                j,
+                ctx=None,
+                resume_kind="host_worker_poll",
+                original_action="autonomous_dev_review",
+                risk=(getattr(j, "risk_level", None) or "normal"),
+            )
             _notify_approval(db, job_service, j, format_approval_message(j, final))
         else:
             j = job_service.repo.update(

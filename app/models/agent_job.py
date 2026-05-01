@@ -58,3 +58,7 @@ class AgentJob(Base, TimestampMixin):
     artifact_dir: Mapped[str | None] = mapped_column(String(2000), nullable=True)
     # Whose Telegram approval opened commit (same format as user_id) — commit guard
     approved_by_user_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # Phase 38 — persistent approval gate (survives API restart while waiting)
+    awaiting_approval: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    approval_context_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    approval_decision: Mapped[str | None] = mapped_column(String(64), nullable=True)

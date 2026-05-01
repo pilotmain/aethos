@@ -17,6 +17,7 @@ import { PrivacyIndicatorBadge } from "@/components/mission-control/PrivacyIndic
 import { DevOpsPanel } from "@/components/mission-control/DevOpsPanel";
 import { Phase22Overview } from "@/components/mission-control/Phase22Overview";
 import { ProviderTransparencyPanel } from "@/components/mission-control/ProviderTransparencyPanel";
+import { TokenEconomyPanel } from "@/components/mission-control/TokenEconomyPanel";
 import type { UiTheme } from "@/components/settings/UserSettingsPanel";
 import { UserSettingsPanel } from "@/components/settings/UserSettingsPanel";
 import { formatMissionControlApiError, webFetch } from "@/lib/api";
@@ -263,6 +264,13 @@ export function MissionControlLayout() {
             metrics={snap?.metrics}
             loading={snapLoading && configured}
           />
+
+          {configured ? (
+            <TokenEconomyPanel
+              tokenEconomy={snap?.token_economy as Record<string, unknown> | undefined}
+              loading={snapLoading && configured}
+            />
+          ) : null}
 
           {configured ? <Phase22Overview shellLight={shellLight} /> : null}
 

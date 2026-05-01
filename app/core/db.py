@@ -646,6 +646,24 @@ def _migrate_nexa_tasks_timing() -> None:
             conn.execute(text(f"ALTER TABLE nexa_tasks ADD COLUMN duration_ms {fl} NULL"))
 
 
+def _migrate_agent_jobs_phase38_approval_persistence() -> None:
+    """Phase 38 — awaiting_approval + approval_context_json + approval_decision."""
+    insp = inspect(engine)
+    if "agent_jobs" not in insp.get_table_names():
+        return
+    cols = {c["name"] for c in insp.get_columns("agent_jobs")}
+    dialect = engine.dialect.name
+    jt = "JSONB" if dialect == "postgresql" else "TEXT"
+    df_false = "BOOLEAN NOT NULL DEFAULT FALSE" if dialect == "postgresql" else "BOOLEAN NOT NULL DEFAULT 0"
+    with engine.begin() as conn:
+        if "awaiting_approval" not in cols:
+            conn.execute(text(f"ALTER TABLE agent_jobs ADD COLUMN awaiting_approval {df_false}"))
+        if "approval_context_json" not in cols:
+            conn.execute(text(f"ALTER TABLE agent_jobs ADD COLUMN approval_context_json {jt} NULL"))
+        if "approval_decision" not in cols:
+            conn.execute(text("ALTER TABLE agent_jobs ADD COLUMN approval_decision VARCHAR(64) NULL"))
+
+
 def _migrate_nexa_dev_steps_phase25() -> None:
     """Phase 25 — iteration + structured JSON on dev steps."""
     insp = inspect(engine)
@@ -694,6 +712,7 @@ def ensure_schema() -> None:
     _migrate_nexa_missions_input_text()
     _migrate_nexa_tasks_timing()
     _migrate_nexa_dev_steps_phase25()
+    _migrate_agent_jobs_phase38_approval_persistence()
 
 
 def get_db() -> Generator[Session, None, None]:

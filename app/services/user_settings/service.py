@@ -22,7 +22,15 @@ def effective_privacy_mode(db: Session | None, user_id: str | None) -> UserPriva
 
 
 def _default_ui_preferences() -> dict[str, Any]:
-    return {"theme": "dark", "auto_refresh": True}
+    return {
+        "theme": "dark",
+        "auto_refresh": True,
+        # Phase 38 — token economy (None = use server env defaults)
+        "token_budget_per_request": None,
+        "daily_cost_budget_usd": None,
+        "show_payload_summary": True,
+        "allow_large_context": False,
+    }
 
 
 def get_settings_document(

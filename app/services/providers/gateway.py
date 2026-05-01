@@ -32,9 +32,19 @@ from app.services.providers.local_stub_provider import call_local_stub
 from app.services.providers.openai_provider import call_openai
 from app.services.providers.rate_limit import allow_provider_request
 from app.services.providers.types import ProviderRequest, ProviderResponse
+from app.services.token_economy.audit import record_token_audit
+from app.services.token_economy.budget import check_budget, record_usage
+from app.services.token_economy.counter import estimate_payload_tokens
 from app.services.tools.registry import TOOLS
 
 _log = get_logger("gateway")
+
+
+def _rough_cost_estimate_usd(provider: str, tokens: int) -> float:
+    if provider == "local_stub":
+        return 0.0
+    per_1k = 0.0025 if provider == "anthropic" else 0.0006
+    return (max(0, tokens) / 1000.0) * per_1k
 
 _POST_SECRET_MSG = (
     "CRITICAL: Secret-shaped material detected in provider output — outbound blocked."
@@ -234,6 +244,54 @@ def call_provider(request: ProviderRequest) -> ProviderResponse:
             "payload_keys": sorted(merged.keys()),
         }
     )
+
+    token_est = estimate_payload_tokens(merged)
+    payload_summary_payload = {
+        "payload_keys": sorted(merged.keys()),
+        "estimated_tokens": token_est,
+    }
+    cost_est_pre = _rough_cost_estimate_usd(request.provider, token_est)
+    uid_budget = request.user_id or ""
+    budget_err = check_budget(
+        request.db,
+        uid_budget,
+        token_estimate=token_est,
+        provider=request.provider,
+    )
+    if budget_err:
+        record_token_audit(
+            user_id=uid_budget,
+            provider=request.provider,
+            model=request.model,
+            token_estimate=token_est,
+            redactions=list(redactions),
+            payload_summary=payload_summary_payload,
+            cost_estimate=cost_est_pre,
+            blocked=True,
+            block_reason=budget_err,
+        )
+        ev_b = {
+            "provider": request.provider,
+            "agent": request.agent_handle or "",
+            "status": budget_err,
+            "mission_id": request.mission_id,
+        }
+        log_event({"type": "provider_blocked", **ev_b})
+        add_provider_event(_tag_ev(ev_b, request.user_id))
+        audit(True, budget_err)
+        _log.warning("provider blocked (token budget): %s", budget_err)
+        return ProviderResponse(
+            ok=False,
+            provider=request.provider,
+            model=request.model,
+            output=None,
+            redactions=redactions,
+            blocked=True,
+            error=budget_err,
+            token_estimate=token_est,
+            cost_estimate_usd=cost_est_pre,
+            payload_summary=payload_summary_payload,
+        )
 
     frozen_payload = FrozenPayloadDict(merged)
 
@@ -476,6 +534,24 @@ def call_provider(request: ProviderRequest) -> ProviderResponse:
 
     audit(False, None, provider_override=effective_provider)
 
+    record_usage(
+        uid_budget,
+        tokens=token_est,
+        cost_usd=_rough_cost_estimate_usd(effective_provider, token_est),
+        provider=effective_provider,
+    )
+    record_token_audit(
+        user_id=uid_budget,
+        provider=effective_provider,
+        model=request.model,
+        token_estimate=token_est,
+        redactions=list(redactions),
+        payload_summary=payload_summary_payload,
+        cost_estimate=_rough_cost_estimate_usd(effective_provider, token_est),
+        blocked=False,
+        block_reason=None,
+    )
+
     return ProviderResponse(
         ok=True,
         provider=effective_provider,
@@ -484,6 +560,9 @@ def call_provider(request: ProviderRequest) -> ProviderResponse:
         redactions=redactions,
         blocked=False,
         error=None,
+        token_estimate=token_est,
+        cost_estimate_usd=_rough_cost_estimate_usd(effective_provider, token_est),
+        payload_summary=payload_summary_payload,
     )
 
 

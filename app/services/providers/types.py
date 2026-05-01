@@ -31,3 +31,6 @@ class ProviderResponse:
     redactions: list[dict[str, Any]] = field(default_factory=list)
     blocked: bool = False
     error: str | None = None
+    token_estimate: int | None = None
+    cost_estimate_usd: float | None = None
+    payload_summary: dict[str, Any] | None = None

@@ -576,6 +576,12 @@ def build_execution_snapshot(
         "dev_runs": dev_runs_out,
     }
 
+    uid_early = (user_id or "").strip()
+    if uid_early:
+        from app.services.token_economy.budget import snapshot_for_user
+
+        exec_payload["token_economy"] = snapshot_for_user(uid_early)
+
     uid = (user_id or "").strip()
     if uid:
         from app.services.mission_control.read_model import build_mission_control_dashboard

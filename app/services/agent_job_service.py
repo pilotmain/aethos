@@ -471,6 +471,16 @@ class AgentJobService:
             job_id=out.id,
             message="User approved review despite failed tests (explicit phrase)",
         )
+        from app.services.gateway.approval_persistence import persist_job_waiting_approval
+
+        persist_job_waiting_approval(
+            db,
+            out,
+            ctx=None,
+            resume_kind="host_worker_poll",
+            original_action="override_failed_tests",
+            risk="failed_tests_override",
+        )
         return out
 
     def retry_dev_job(self, db: Session, user_id: str, job_id: int) -> "AgentJob | None":

@@ -36,6 +36,7 @@ from app.api.routes import (
     nexa_skills_api,
     permissions,
     plans,
+    providers_usage,
     report_watcher,
     slack,
     sms,
@@ -187,6 +188,7 @@ app.include_router(web.router, prefix=settings.api_v1_prefix)
 app.include_router(permissions.router, prefix=settings.api_v1_prefix)
 app.include_router(trust.router, prefix=settings.api_v1_prefix)
 app.include_router(user_settings.router, prefix=settings.api_v1_prefix)
+app.include_router(providers_usage.router, prefix=settings.api_v1_prefix)
 app.include_router(mission_control.router, prefix=settings.api_v1_prefix)
 app.include_router(dev_runtime.router, prefix=settings.api_v1_prefix)
 app.include_router(agent_runtime_api.router, prefix=settings.api_v1_prefix)

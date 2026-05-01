@@ -8,6 +8,7 @@ from typing import Any
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
+from app.services.gateway.approval_persistence import finalize_job_after_gateway_approval
 from app.services.gateway.approval_resume import resume_after_approval
 from app.services.gateway.context import GatewayContext
 from app.services.logging.logger import get_logger
@@ -44,6 +45,7 @@ def _merge_resume(
         "status": getattr(job, "status", None),
         "decision": decision,
     }
+    finalize_job_after_gateway_approval(db, job, ctx.user_id, decision)
     return payload
 
 

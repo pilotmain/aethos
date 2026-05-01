@@ -333,6 +333,11 @@ class Settings(BaseSettings):
     nexa_release_version: str = "phase-11"
     nexa_provider_timeout_seconds: float = 15.0
     nexa_provider_max_retries: int = 3
+    # Phase 38 — token economy (provider gateway + Mission Control)
+    nexa_token_budget_per_request: int = 8000
+    nexa_token_budget_per_day: int = 100_000
+    nexa_cost_budget_per_day_usd: float = 5.0
+    nexa_block_over_token_budget: bool = True
     nexa_mission_max_runtime_seconds: int = 60
     nexa_data_retention_days: int = 7
     nexa_retention_sweep_interval_seconds: int = 3600
