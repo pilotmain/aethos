@@ -117,7 +117,7 @@ export function MissionControlPage() {
     setCustomAgentsErr(null);
     try {
       const [summaryRes, agentsRes] = await Promise.allSettled([
-        webFetch<MissionControlSummary>(`/mission-control/summary?hours=${SUMMARY_HOURS}`),
+        webFetch<MissionControlSummary>(`/mission-control/state?hours=${SUMMARY_HOURS}`),
         webFetch<CustomAgentsListOut>(`/custom-agents`),
       ]);
       if (summaryRes.status === "fulfilled") {

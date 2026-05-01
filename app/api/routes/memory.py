@@ -1,61 +1,60 @@
-from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
+"""Legacy REST prefix ``/api/v1/memory`` — removed (HTTP 410).
 
-from app.core.db import get_db
-from app.core.security import get_current_user_id
-from app.schemas.memory import (
-    AgentMemoryState,
-    MemoryForgetRequest,
-    MemoryForgetResult,
-    MemoryNoteDeleteRequest,
-    MemoryNoteRead,
-    MemoryNoteUpdateRequest,
-    MemoryRememberRequest,
-    PreferencesRead,
-    PreferencesUpdate,
-    SoulUpdateRequest,
-)
-from app.services.memory_service import MemoryService
+Agent memory (preferences, soul, notes) lives under ``/api/v1/web/memory/…``.
+Persistent Nexa memory documents: ``/api/v1/nexa-memory``.
+"""
+
+from __future__ import annotations
+
+from fastapi import APIRouter, HTTPException, status
 
 router = APIRouter(prefix="/memory", tags=["memory"])
-service = MemoryService()
+
+_DETAIL = (
+    "Legacy endpoint removed. Use GET/POST /api/v1/nexa-memory for persistent memory documents; "
+    "use /api/v1/web/memory/… for agent preferences, state, notes, soul, forget (authenticated web paths)."
+)
 
 
-@router.get("", response_model=PreferencesRead)
-def get_memory(db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id)):
-    return service.get_preferences(db, user_id)
+def _gone() -> None:
+    raise HTTPException(status_code=status.HTTP_410_GONE, detail=_DETAIL)
 
 
-@router.put("/preferences", response_model=PreferencesRead)
-def update_preferences(payload: PreferencesUpdate, db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id)):
-    return service.update_preferences(db, user_id, payload)
+@router.get("")
+def memory_root_gone() -> None:
+    _gone()
 
 
-@router.get("/state", response_model=AgentMemoryState)
-def get_memory_state(db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id)):
-    return service.get_state(db, user_id)
+@router.put("/preferences")
+def memory_preferences_gone() -> None:
+    _gone()
 
 
-@router.post("/remember", response_model=MemoryNoteRead)
-def remember(payload: MemoryRememberRequest, db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id)):
-    return service.remember_note(db, user_id, payload.content, category=payload.category, source="api")
+@router.get("/state")
+def memory_state_gone() -> None:
+    _gone()
 
 
-@router.patch("/notes", response_model=MemoryNoteRead)
-def update_note(payload: MemoryNoteUpdateRequest, db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id)):
-    return service.update_note(db, user_id, payload.key, payload.content, category=payload.category, source="api")
+@router.post("/remember")
+def memory_remember_gone() -> None:
+    _gone()
+
+
+@router.patch("/notes")
+def memory_notes_patch_gone() -> None:
+    _gone()
 
 
 @router.post("/notes/delete")
-def delete_note(payload: MemoryNoteDeleteRequest, db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id)):
-    return {"deleted": service.delete_note(db, user_id, payload.key)}
+def memory_notes_delete_gone() -> None:
+    _gone()
 
 
-@router.post("/forget", response_model=MemoryForgetResult)
-def forget(payload: MemoryForgetRequest, db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id)):
-    return service.forget(db, user_id, payload.query)
+@router.post("/forget")
+def memory_forget_gone() -> None:
+    _gone()
 
 
-@router.put("/soul", response_model=str)
-def update_soul(payload: SoulUpdateRequest, db: Session = Depends(get_db), user_id: str = Depends(get_current_user_id)):
-    return service.update_soul_markdown(db, user_id, payload.content, source="api")
+@router.put("/soul")
+def memory_soul_gone() -> None:
+    _gone()

@@ -11,8 +11,8 @@ Phase 15 — locked contracts (stable JSON/WebSocket; do not rename or remove):
 - ``GET /mission-control/export/{mission_id}`` — Phase 20 export mission bundle (authenticated).
 - ``POST /mission-control/import`` — Phase 20 import mission bundle (authenticated).
 
-Orchestration summary (distinct from execution state) remains at
-``GET /mission-control/summary``.
+Unified Mission Control payload (execution + dashboard) is ``GET /mission-control/state``.
+``GET /mission-control/summary`` is gone (HTTP 410 — use ``/state``).
 """
 
 from __future__ import annotations
@@ -49,7 +49,6 @@ from app.services.mission_control.nexa_next_state import (
     apply_integrity_alert_override,
     build_execution_snapshot,
 )
-from app.services.mission_control.read_model import build_mission_control_summary
 from app.services.mission_control.ui_state import dismiss_attention_item
 
 router = APIRouter(prefix="/mission-control", tags=["mission-control"])
@@ -131,21 +130,21 @@ def mc_reset_hard(
 
 
 @router.get("/summary")
-def mission_control_summary(
-    db: Session = Depends(get_db),
-    app_user_id: str = Depends(get_valid_web_user_id),
-    hours: int = Query(24, ge=1, le=168, description="Look-back window for trust activity and aggregations"),
-) -> dict:
-    return build_mission_control_summary(db, app_user_id, hours=hours)
+def mission_control_summary_deprecated() -> None:
+    raise HTTPException(
+        status_code=status.HTTP_410_GONE,
+        detail="Removed — use GET /api/v1/mission-control/state (single Mission Control payload).",
+    )
 
 
 @router.get("/state")
 def mission_control_state(
     db: Session = Depends(get_db),
-    user_id: str | None = Query(None, description="Filter missions/tasks/artifacts to this user"),
+    app_user_id: str = Depends(get_valid_web_user_id),
+    hours: int = Query(24, ge=1, le=168, description="Trust/dashboard look-back window (hours)"),
 ) -> dict:
-    """Nexa-Next execution state — DB-backed missions, tasks, artifacts, plus event bus and privacy streams."""
-    return build_execution_snapshot(db, user_id=user_id)
+    """Unified Mission Control state — execution snapshot plus orchestration/trust dashboard."""
+    return build_execution_snapshot(db, user_id=app_user_id, hours=hours)
 
 
 @router.post("/override-alert")
@@ -195,10 +194,11 @@ def mission_control_import_mission(
 @router.get("/graph")
 def mission_control_graph(
     db: Session = Depends(get_db),
-    user_id: str | None = Query(None, description="Same scope as /state"),
+    app_user_id: str = Depends(get_valid_web_user_id),
+    hours: int = Query(24, ge=1, le=168, description="Same dashboard window as /state"),
 ) -> dict:
     """Agent/task nodes and dependency edges for Mission Control visualization."""
-    state = build_execution_snapshot(db, user_id=user_id)
+    state = build_execution_snapshot(db, user_id=app_user_id, hours=hours)
     return build_graph_cached(state)
 
 

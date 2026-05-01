@@ -19,7 +19,7 @@ from app.services.trust_audit_constants import ACCESS_SENSITIVE_EGRESS_WARNING, 
 
 def test_mission_control_state_shape(api_client: tuple[TestClient, str]) -> None:
     client, _uid = api_client
-    r = client.get("/api/v1/mission-control/state")
+    r = client.get("/api/v1/mission-control/state?hours=24")
     assert r.status_code == 200
     body = r.json()
     assert "missions" in body and isinstance(body["missions"], list)
@@ -29,23 +29,23 @@ def test_mission_control_state_shape(api_client: tuple[TestClient, str]) -> None
     assert "privacy_events" in body and isinstance(body["privacy_events"], list)
     assert "provider_events" in body and isinstance(body["provider_events"], list)
     assert "last_updated" in body
+    assert "overview" in body
+    assert "orchestration" in body
+    assert "maintenance" in body
+    assert "sql_purge_enabled" in body["maintenance"]
 
 
-def test_summary_shape(api_client: tuple[TestClient, str]) -> None:
+def test_unified_state_dashboard_shape(api_client: tuple[TestClient, str]) -> None:
     client, _uid = api_client
-    r = client.get("/api/v1/mission-control/summary")
+    r = client.get("/api/v1/mission-control/state?hours=24")
     assert r.status_code == 200
     body = r.json()
-    assert "overview" in body
     assert "attention" in body
     assert "active_work" in body
     assert "pending_approvals" in body
     assert "risk_summary" in body
     assert "channels" in body
     assert "recommendations" in body
-    assert "orchestration" in body
-    assert "maintenance" in body
-    assert "sql_purge_enabled" in body["maintenance"]
     orch = body["orchestration"]
     assert isinstance(orch.get("assignments"), list)
     ov = body["overview"]
@@ -86,7 +86,7 @@ def test_pending_approval_in_attention(api_client: tuple[TestClient, str]) -> No
     finally:
         db.close()
 
-    r = client.get("/api/v1/mission-control/summary?hours=24")
+    r = client.get("/api/v1/mission-control/state?hours=24")
     assert r.status_code == 200
     body = r.json()
     assert body["overview"]["pending_approvals"] >= 1
@@ -112,7 +112,7 @@ def test_blocked_trust_in_attention(api_client: tuple[TestClient, str]) -> None:
     finally:
         db.close()
 
-    r = client.get("/api/v1/mission-control/summary?hours=24")
+    r = client.get("/api/v1/mission-control/state?hours=24")
     assert r.status_code == 200
     titles = " ".join(x.get("title", "") for x in r.json()["attention"])
     assert "Blocked" in titles or "blocked" in titles.lower()
@@ -145,7 +145,7 @@ def test_scoring_prioritizes_approvals(api_client: tuple[TestClient, str]) -> No
     finally:
         db.close()
 
-    r = client.get("/api/v1/mission-control/summary?hours=24")
+    r = client.get("/api/v1/mission-control/state?hours=24")
     att = r.json()["attention"]
     assert len(att) >= 2
     assert score_mission_item({"type": "pending_approval"}) > score_mission_item({"type": "sensitive_warning"})
@@ -181,7 +181,7 @@ def test_missing_channel_recommendation(monkeypatch: pytest.MonkeyPatch, api_cli
         lambda _db, rows, organization_id=None: rows,
     )
 
-    r = client.get("/api/v1/mission-control/summary")
+    r = client.get("/api/v1/mission-control/state?hours=24")
     assert r.status_code == 200
     recs = r.json().get("recommendations") or []
     texts = " ".join(str(x.get("title", "")) for x in recs)
@@ -196,7 +196,7 @@ def test_quiet_state_safe(api_client: tuple[TestClient, str]) -> None:
         db.commit()
     finally:
         db.close()
-    r = client.get("/api/v1/mission-control/summary?hours=1")
+    r = client.get("/api/v1/mission-control/state?hours=1")
     assert r.status_code == 200
     body = r.json()
     assert body.get("quiet") is True
@@ -225,7 +225,7 @@ def test_orchestration_includes_db_assignment_id(api_client: tuple[TestClient, s
         expect_id = row.id
     finally:
         db.close()
-    r = client.get("/api/v1/mission-control/summary?hours=24")
+    r = client.get("/api/v1/mission-control/state?hours=24")
     assert r.status_code == 200
     assigns = (r.json().get("orchestration") or {}).get("assignments") or []
     match = [a for a in assigns if int(a.get("id") or 0) == expect_id]
@@ -237,7 +237,13 @@ def test_requires_identity() -> None:
     app.dependency_overrides.clear()
     try:
         client = TestClient(app)
-        r = client.get("/api/v1/mission-control/summary")
+        r = client.get("/api/v1/mission-control/state")
         assert r.status_code == 401
     finally:
         pass
+
+
+def test_summary_endpoint_is_gone(api_client: tuple[TestClient, str]) -> None:
+    client, _uid = api_client
+    r = client.get("/api/v1/mission-control/summary")
+    assert r.status_code == 410

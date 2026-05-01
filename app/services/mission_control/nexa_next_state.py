@@ -401,8 +401,13 @@ def update_state(result: list[dict[str, Any]]) -> None:
     STATE["last_updated"] = datetime.now(timezone.utc).isoformat()
 
 
-def build_execution_snapshot(db: Session, *, user_id: str | None = None) -> dict[str, Any]:
-    """Mission Control execution view: DB-backed missions/tasks/artifacts + bus + ephemeral streams."""
+def build_execution_snapshot(
+    db: Session,
+    *,
+    user_id: str | None = None,
+    hours: int = 24,
+) -> dict[str, Any]:
+    """Mission Control unified view: execution snapshot plus orchestration/trust dashboard (when ``user_id`` set)."""
     q = select(NexaMission).order_by(NexaMission.created_at.desc())
     if user_id:
         q = q.where(NexaMission.user_id == user_id)
@@ -544,7 +549,7 @@ def build_execution_snapshot(db: Session, *, user_id: str | None = None) -> dict
             for r in dr_rows
         ]
 
-    return {
+    exec_payload: dict[str, Any] = {
         "missions": missions_out,
         "tasks": tasks_out,
         "artifacts": artifacts_out,
@@ -570,3 +575,12 @@ def build_execution_snapshot(db: Session, *, user_id: str | None = None) -> dict
         "dev_workspaces": dev_workspaces_out,
         "dev_runs": dev_runs_out,
     }
+
+    uid = (user_id or "").strip()
+    if uid:
+        from app.services.mission_control.read_model import build_mission_control_dashboard
+
+        dash = build_mission_control_dashboard(db, uid, hours=hours)
+        return {**exec_payload, **dash}
+
+    return exec_payload

@@ -445,7 +445,7 @@ function WorkspaceBody() {
     }
     void (async () => {
       try {
-        const out = await webFetch<CustomAgentsListOut>("/agents");
+        const out = await webFetch<CustomAgentsListOut>("/custom-agents");
         const rows = out.agents ?? [];
         setComposerAgentChips([
           { id: "nexa", insert: "@nexa ", label: "@nexa" },
@@ -2770,7 +2770,7 @@ function WorkspaceBody() {
                 {!mem && !memErr && <p className="text-zinc-500">Loading…</p>}
                 {mem && (
                   <div>
-                    <p className="text-xs text-zinc-500">Memory is synced from the API. Add short notes from chat (e.g. <code className="text-zinc-400">/memory</code>).</p>
+                    <p className="text-xs text-zinc-500">Memory is synced from the API (see Memory panel and nexa-memory documents).</p>
                     <label className="mt-3 block text-xs text-zinc-500">
                       Search memory
                       <input

@@ -25,7 +25,7 @@ def test_state_has_provider_transparency() -> None:
     from app.main import app
 
     c = TestClient(app)
-    r = c.get("/api/v1/mission-control/state")
+    r = c.get("/api/v1/mission-control/state", headers={"X-User-Id": "web_prov_transparency"})
     assert r.status_code == 200
     pt = r.json().get("provider_transparency") or {}
     assert "by_provider" in pt

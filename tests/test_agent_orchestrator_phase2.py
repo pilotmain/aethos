@@ -25,7 +25,7 @@ from app.services.agent_team.service import (
     list_assignments_for_user,
 )
 from app.services.content_provenance import InstructionSource, apply_trusted_instruction_source
-from app.services.mission_control.read_model import build_mission_control_summary
+from app.services.mission_control.read_model import build_mission_control_dashboard
 from app.services.nexa_safety_policy import stamp_host_payload
 from app.services.permission_request_flow import (
     request_permission_from_chat,
@@ -325,7 +325,7 @@ def test_mission_control_lists_assignment_status(db_session) -> None:
     db_session.add(row)
     db_session.commit()
 
-    summary = build_mission_control_summary(db_session, uid, hours=24)
+    summary = build_mission_control_dashboard(db_session, uid, hours=24)
     orch = summary.get("orchestration") or {}
     assigns = orch.get("assignments") or []
     assert isinstance(assigns, list) and assigns

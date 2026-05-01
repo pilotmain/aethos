@@ -1,6 +1,6 @@
 """Mission Control — what is stored where, and optional SQL purge for one user.
 
-The Mission Control *read model* (`build_mission_control_summary`) aggregates:
+The Mission Control dashboard slice (`build_mission_control_dashboard`) aggregates:
 
 **Database (per ``user_id``)**
 

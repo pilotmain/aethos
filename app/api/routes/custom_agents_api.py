@@ -29,7 +29,6 @@ from app.services.custom_agents import (
 )
 
 router = APIRouter(prefix="/custom-agents", tags=["custom-agents"])
-agents_router = APIRouter(prefix="/agents", tags=["agents"])
 
 _PREVIEW_LEN = 2400
 
@@ -64,15 +63,6 @@ def list_custom_agents_api(
     db: Session = Depends(get_db),
     app_user_id: str = Depends(get_valid_web_user_id),
 ) -> CustomAgentsListOut:
-    return _list_agents_out(db, app_user_id)
-
-
-@agents_router.get("", response_model=CustomAgentsListOut)
-def list_agents_api(
-    db: Session = Depends(get_db),
-    app_user_id: str = Depends(get_valid_web_user_id),
-) -> CustomAgentsListOut:
-    """Alias for ``GET /custom-agents`` — dynamic user agents only (no static registry)."""
     return _list_agents_out(db, app_user_id)
 
 

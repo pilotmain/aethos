@@ -16,7 +16,7 @@ from app.models.agent_team import AgentAssignment, AgentOrganization
 from app.models.user import User
 from app.services.agent_team.service import get_or_create_default_organization
 from app.services.mission_control.cleanup_actions import delete_or_hide_assignment
-from app.services.mission_control.read_model import build_mission_control_summary
+from app.services.mission_control.read_model import build_mission_control_dashboard
 from app.services.mission_control.ui_state import dismiss_attention_item, is_attention_dismissed
 
 
@@ -62,14 +62,14 @@ def test_assignment_delete_hides_from_summary(db_session) -> None:
     db_session.commit()
     db_session.refresh(row)
 
-    summ_before = build_mission_control_summary(db_session, uid, hours=24)
+    summ_before = build_mission_control_dashboard(db_session, uid, hours=24)
     ids_before = [a["id"] for a in summ_before["orchestration"]["assignments"]]
     assert row.id in ids_before
 
     out = delete_or_hide_assignment(db_session, user_id=uid, assignment_id=row.id, hard_delete=False)
     assert out.get("ok") is True
 
-    summ_after = build_mission_control_summary(db_session, uid, hours=24)
+    summ_after = build_mission_control_dashboard(db_session, uid, hours=24)
     ids_after = [a["id"] for a in summ_after["orchestration"]["assignments"]]
     assert row.id not in ids_after
 
@@ -287,7 +287,7 @@ def test_assignment_delete_post_alias(api_client, db_session) -> None:
 
     # API uses its own DB session; expire cached rows before re-querying in this session.
     db_session.expire_all()
-    summ = build_mission_control_summary(db_session, uid, hours=24)
+    summ = build_mission_control_dashboard(db_session, uid, hours=24)
     ids_after = [a["id"] for a in summ["orchestration"]["assignments"]]
     assert row.id not in ids_after
 
@@ -348,7 +348,7 @@ def test_job_dismiss_api(api_client, db_session) -> None:
     assert r.json()["dismissed"] is True
 
     db_session.expire_all()
-    summ = build_mission_control_summary(db_session, uid, hours=24)
+    summ = build_mission_control_dashboard(db_session, uid, hours=24)
     job_ids_in_attention = [
         x.get("job_id") for x in summ["attention"] if x.get("type") == "failed_job"
     ]

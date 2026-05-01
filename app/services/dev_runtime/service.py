@@ -87,8 +87,13 @@ def run_dev_mission(
     if ws is None:
         raise ValueError("workspace_not_found")
 
-    max_loop_iters = max_iterations if max_iterations is not None else 3
-    max_loop_iters = max(1, min(int(max_loop_iters), 20))
+    if max_iterations is not None:
+        mi = int(max_iterations)
+        if mi < 1 or mi > 20:
+            raise ValueError("max_iterations out of range (1–20)")
+        max_loop_iters = mi
+    else:
+        max_loop_iters = 3
 
     rid = str(uuid.uuid4())
     run = NexaDevRun(

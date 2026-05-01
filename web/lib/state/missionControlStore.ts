@@ -4,7 +4,7 @@
  */
 
 import { webFetch } from "@/lib/api";
-import { DEFAULT_API_BASE, isConfigured, readConfig } from "@/lib/config";
+import { isConfigured } from "@/lib/config";
 
 export const MC_MAX_UI_EVENTS = 500;
 
@@ -28,14 +28,6 @@ export function subscribeMissionStore(cb: () => void): () => void {
   return () => listeners.delete(cb);
 }
 
-function graphHttpUrl(): string {
-  const c = readConfig();
-  const base = (c.apiBase?.trim() || DEFAULT_API_BASE).replace(/\/$/, "");
-  const uid = (c.userId || "").trim();
-  const q = uid ? `?user_id=${encodeURIComponent(uid)}` : "";
-  return `${base}/api/v1/mission-control/graph${q}`;
-}
-
 /** Parallel fetch graph + authenticated state (single coordinated refresh). */
 export async function refreshMissionControlStore(): Promise<void> {
   if (!isConfigured()) {
@@ -44,13 +36,10 @@ export async function refreshMissionControlStore(): Promise<void> {
     notify();
     return;
   }
-  const uid = readConfig().userId;
   try {
     const [gr, st] = await Promise.all([
-      fetch(graphHttpUrl()).then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status))))),
-      webFetch<Record<string, unknown>>(
-        `/mission-control/state?user_id=${encodeURIComponent(uid)}`,
-      ),
+      webFetch<MissionGraphPayload>("/mission-control/graph"),
+      webFetch<Record<string, unknown>>("/mission-control/state?hours=24"),
     ]);
     graph = {
       nodes: Array.isArray((gr as MissionGraphPayload).nodes) ? (gr as MissionGraphPayload).nodes : [],

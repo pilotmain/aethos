@@ -110,11 +110,12 @@ def _attention_sort_key(item: dict[str, Any]) -> tuple[int, str]:
     return (-int(item.get("score") or 0), ts)
 
 
-def build_mission_control_summary(db: Session, user_id: str, *, hours: int = 24) -> dict[str, Any]:
+def build_mission_control_dashboard(db: Session, user_id: str, *, hours: int = 24) -> dict[str, Any]:
     """
-    Build Mission Control JSON for ``GET /api/v1/mission-control/summary``.
+    Orchestration + trust + jobs dashboard slice for Mission Control UI.
 
-    Aggregates trust activity, jobs, pending permissions, channel status, and gateway failures.
+    Used only from :func:`~app.services.mission_control.nexa_next_state.build_execution_snapshot`
+    (single combined payload at ``GET /mission-control/state``).
     """
     uid = (user_id or "").strip()[:64]
     dismissed_mc = dismissed_attention_ids(uid)

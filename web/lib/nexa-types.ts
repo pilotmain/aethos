@@ -195,7 +195,7 @@ export type ChannelsStatusResponse = {
   channels: ChannelStatus[];
 };
 
-/** GET /api/v1/mission-control/summary */
+/** Orchestration slice included in GET /api/v1/mission-control/state */
 export type OrchestrationSummary = {
   organization: { id: number; name: string; enabled: boolean } | null;
   roles: {

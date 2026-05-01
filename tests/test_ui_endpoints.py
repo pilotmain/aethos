@@ -9,7 +9,7 @@ from app.main import app
 
 def test_mission_control_graph_shape() -> None:
     c = TestClient(app)
-    r = c.get("/api/v1/mission-control/graph")
+    r = c.get("/api/v1/mission-control/graph", headers={"X-User-Id": "web_mc_ui_test"})
     assert r.status_code == 200
     body = r.json()
     assert "nodes" in body and isinstance(body["nodes"], list)
@@ -18,7 +18,7 @@ def test_mission_control_graph_shape() -> None:
 
 def test_mission_control_state_shape() -> None:
     c = TestClient(app)
-    r = c.get("/api/v1/mission-control/state")
+    r = c.get("/api/v1/mission-control/state", headers={"X-User-Id": "web_mc_ui_test"})
     assert r.status_code == 200
     body = r.json()
     for key in (
@@ -43,16 +43,23 @@ def test_mission_control_events_timeline_is_list() -> None:
     assert isinstance(r.json(), list)
 
 
-def test_mission_control_summary_requires_user_header() -> None:
-    """Authenticated Mission Control summary — matches browser ``X-User-Id`` requirement."""
+def test_mission_control_state_requires_user_header() -> None:
+    """Mission Control state — requires ``X-User-Id`` like the browser."""
     c = TestClient(app)
-    r = c.get("/api/v1/mission-control/summary")
+    r = c.get("/api/v1/mission-control/state")
     assert r.status_code == 401
 
 
-def test_mission_control_summary_ok_with_dev_user_header() -> None:
+def test_mission_control_summary_returns_gone() -> None:
     c = TestClient(app)
     r = c.get("/api/v1/mission-control/summary", headers={"X-User-Id": "web_mc_ui_test"})
+    assert r.status_code == 410
+
+
+def test_mission_control_state_ok_with_dev_user_header() -> None:
+    c = TestClient(app)
+    r = c.get("/api/v1/mission-control/state", headers={"X-User-Id": "web_mc_ui_test"})
     assert r.status_code == 200
     body = r.json()
     assert isinstance(body, dict)
+    assert "missions" in body and "overview" in body

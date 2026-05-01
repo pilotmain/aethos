@@ -4,6 +4,9 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
+# Phase 27 — stable SQLite for pytest when Postgres from .env is unavailable in CI.
+export NEXA_NEXT_LOCAL_SIDECAR="${NEXA_NEXT_LOCAL_SIDECAR:-1}"
+
 pytest "$@"
 python scripts/verify_no_direct_providers.py
 

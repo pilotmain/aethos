@@ -18,7 +18,18 @@ from app.models.access_permission import AccessPermission
 from app.models.conversation_context import ConversationContext
 from app.repositories.telegram_repo import TelegramRepository
 from app.schemas.agent_job import AgentJobApprovalRequest, AgentJobRead
-from app.schemas.memory import AgentMemoryState
+from app.schemas.memory import (
+    AgentMemoryState,
+    MemoryForgetRequest,
+    MemoryForgetResult,
+    MemoryNoteDeleteRequest,
+    MemoryNoteRead,
+    MemoryNoteUpdateRequest,
+    MemoryRememberRequest,
+    PreferencesRead,
+    PreferencesUpdate,
+    SoulUpdateRequest,
+)
 from app.schemas.web_ui import (
     DecisionSummaryOut,
     FlowSummaryItemOut,
@@ -495,6 +506,72 @@ def web_memory_state(
     app_user_id: str = Depends(get_valid_web_user_id),
 ) -> AgentMemoryState:
     return _memory_service.get_state(db, app_user_id)
+
+
+@router.get("/memory", response_model=PreferencesRead)
+def web_memory_preferences(
+    db: Session = Depends(get_db),
+    app_user_id: str = Depends(get_valid_web_user_id),
+) -> PreferencesRead:
+    return _memory_service.get_preferences(db, app_user_id)
+
+
+@router.put("/memory/preferences", response_model=PreferencesRead)
+def web_memory_update_preferences(
+    payload: PreferencesUpdate,
+    db: Session = Depends(get_db),
+    app_user_id: str = Depends(get_valid_web_user_id),
+) -> PreferencesRead:
+    return _memory_service.update_preferences(db, app_user_id, payload)
+
+
+@router.post("/memory/remember", response_model=MemoryNoteRead)
+def web_memory_remember(
+    payload: MemoryRememberRequest,
+    db: Session = Depends(get_db),
+    app_user_id: str = Depends(get_valid_web_user_id),
+) -> MemoryNoteRead:
+    return _memory_service.remember_note(
+        db, app_user_id, payload.content, category=payload.category, source="api"
+    )
+
+
+@router.patch("/memory/notes", response_model=MemoryNoteRead)
+def web_memory_update_note(
+    payload: MemoryNoteUpdateRequest,
+    db: Session = Depends(get_db),
+    app_user_id: str = Depends(get_valid_web_user_id),
+) -> MemoryNoteRead:
+    return _memory_service.update_note(
+        db, app_user_id, payload.key, payload.content, category=payload.category, source="api"
+    )
+
+
+@router.post("/memory/notes/delete")
+def web_memory_delete_note(
+    payload: MemoryNoteDeleteRequest,
+    db: Session = Depends(get_db),
+    app_user_id: str = Depends(get_valid_web_user_id),
+) -> dict[str, bool]:
+    return {"deleted": _memory_service.delete_note(db, app_user_id, payload.key)}
+
+
+@router.post("/memory/forget", response_model=MemoryForgetResult)
+def web_memory_forget(
+    payload: MemoryForgetRequest,
+    db: Session = Depends(get_db),
+    app_user_id: str = Depends(get_valid_web_user_id),
+) -> MemoryForgetResult:
+    return _memory_service.forget(db, app_user_id, payload.query)
+
+
+@router.put("/memory/soul", response_model=str)
+def web_memory_update_soul(
+    payload: SoulUpdateRequest,
+    db: Session = Depends(get_db),
+    app_user_id: str = Depends(get_valid_web_user_id),
+) -> str:
+    return _memory_service.update_soul_markdown(db, app_user_id, payload.content, source="api")
 
 
 @router.get("/release-notes", response_model=WebReleaseNotesOut)

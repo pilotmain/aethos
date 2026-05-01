@@ -61,7 +61,7 @@ def test_summary_empty_after_reset_hard(monkeypatch, db_session, tmp_path) -> No
     )
     assert r.status_code == 200, r.text
 
-    s = c.get("/api/v1/mission-control/summary?hours=24", headers={"X-User-Id": uid})
+    s = c.get("/api/v1/mission-control/state?hours=24", headers={"X-User-Id": uid})
     assert s.status_code == 200, s.text
     body = s.json()
     orch = body.get("orchestration") or {}

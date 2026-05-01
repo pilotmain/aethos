@@ -18,7 +18,7 @@ def test_replay_mission_with_stored_input(api_client):
     )
     assert run.status_code == 200
 
-    st = client.get("/api/v1/mission-control/state", params={"user_id": uid})
+    st = client.get("/api/v1/mission-control/state", headers={"X-User-Id": uid})
     assert st.status_code == 200
     missions = st.json().get("missions") or []
     assert missions

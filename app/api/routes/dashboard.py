@@ -517,7 +517,7 @@ def dashboard_page(user_id: str = Query(default="")) -> str:
           api("/api/v1/jobs"),
           api("/api/v1/tasks"),
           api("/api/v1/checkins/pending"),
-          api("/api/v1/memory/state"),
+          api("/api/v1/web/memory/state"),
           api("/api/v1/plans/today").catch(() => null),
           api("/api/v1/internal/system-health"),
         ]);
@@ -645,7 +645,7 @@ def dashboard_page(user_id: str = Query(default="")) -> str:
       try {{
         const value = $(`note-${{cssSafe(key)}}`).value.trim();
         if (!value) throw new Error("Note content cannot be empty.");
-        await api(`/api/v1/memory/notes`, {{
+        await api(`/api/v1/web/memory/notes`, {{
           method: "PATCH",
           body: JSON.stringify({{ key, content: value }})
         }});
@@ -658,7 +658,7 @@ def dashboard_page(user_id: str = Query(default="")) -> str:
 
     async function deleteNote(key) {{
       try {{
-        await api(`/api/v1/memory/notes/delete`, {{
+        await api(`/api/v1/web/memory/notes/delete`, {{
           method: "POST",
           body: JSON.stringify({{ key }})
         }});
@@ -675,7 +675,7 @@ def dashboard_page(user_id: str = Query(default="")) -> str:
       try {{
         const content = $("memoryNoteInput").value.trim();
         if (!content) throw new Error("Enter a memory note first.");
-        await api("/api/v1/memory/remember", {{
+        await api("/api/v1/web/memory/remember", {{
           method: "POST",
           body: JSON.stringify({{ content, category: "operator_note" }})
         }});
@@ -711,7 +711,7 @@ def dashboard_page(user_id: str = Query(default="")) -> str:
       try {{
         const query = $("forgetQuery").value.trim();
         if (!query) throw new Error("Enter something to forget first.");
-        const result = await api("/api/v1/memory/forget", {{
+        const result = await api("/api/v1/web/memory/forget", {{
           method: "POST",
           body: JSON.stringify({{ query }})
         }});
@@ -725,8 +725,8 @@ def dashboard_page(user_id: str = Query(default="")) -> str:
       try {{
         const rule = $("soulRule").value.trim();
         if (!rule) throw new Error("Enter a soul rule first.");
-        const current = await api("/api/v1/memory/state");
-        await api("/api/v1/memory/soul", {{
+        const current = await api("/api/v1/web/memory/state");
+        await api("/api/v1/web/memory/soul", {{
           method: "PUT",
           body: JSON.stringify({{ content: `${{current.soul_markdown}}\\n- ${{rule}}` }})
         }});

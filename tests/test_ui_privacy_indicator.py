@@ -33,7 +33,7 @@ def test_state_endpoint_includes_privacy_indicator() -> None:
     from app.main import app
 
     c = TestClient(app)
-    r = c.get("/api/v1/mission-control/state")
+    r = c.get("/api/v1/mission-control/state", headers={"X-User-Id": "web_privacy_indicator"})
     assert r.status_code == 200
     pi = r.json().get("privacy_indicator") or {}
     assert pi.get("level") in ("safe", "redacted", "blocked")

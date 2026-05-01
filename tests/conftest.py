@@ -2,6 +2,11 @@
 
 from __future__ import annotations
 
+import os
+
+# Phase 27 — CI/local tests must not require Postgres; matches scripts that set this sidcar flag.
+os.environ["NEXA_NEXT_LOCAL_SIDECAR"] = "1"
+
 import uuid
 
 import pytest
