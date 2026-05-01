@@ -68,12 +68,14 @@ def select_tool_for_agent(agent: dict[str, Any]) -> str:
     h = str(agent.get("handle", "")).lower()
     if "research" in h or "researcher" in h:
         return "research"
-    if "analyst" in h:
+    if "analyst" in h or "trader" in h:
         return "analysis"
     if h.startswith("qa") or "_qa" in h or h.endswith("_qa") or h == "qa":
         return "qa_review"
 
     blob = f"{h} {agent.get('role', '')} {agent.get('task', '')}".lower()
+    if TOOLS.get("web_search") and ("web search" in blob or "search the web" in blob):
+        return "web_search"
     # Prefer explicit analyst/forecast/review cues before generic task words ("researcher" contains "research").
     if any(k in blob for k in ("forecast", "market", " write forecast", "forecast ")):
         return "analysis"
@@ -95,3 +97,18 @@ def get_provider_for_tool(tool_name: str) -> str:
 
 def list_tools() -> dict[str, ToolDescriptor]:
     return dict(TOOLS)
+
+
+def register_tool(descriptor: ToolDescriptor) -> None:
+    """Merge or replace a tool descriptor (used by plugins at startup)."""
+    TOOLS[descriptor.name] = descriptor
+
+
+__all__ = [
+    "ToolDescriptor",
+    "TOOLS",
+    "select_tool_for_agent",
+    "get_provider_for_tool",
+    "list_tools",
+    "register_tool",
+]

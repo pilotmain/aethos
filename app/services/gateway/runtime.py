@@ -30,6 +30,9 @@ class NexaGateway:
         _ = channel, metadata
         from app.core.db import SessionLocal
         from app.services.missions.parser import parse_mission
+        from app.services.plugins.registry import load_plugins
+
+        load_plugins()
 
         mission = parse_mission(text)
 

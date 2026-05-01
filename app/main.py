@@ -53,6 +53,9 @@ async def lifespan(app: FastAPI):
 
     ensure_nexa_secret_key()
     get_settings.cache_clear()
+    from app.services.plugins.registry import load_plugins
+
+    load_plugins()
     s = get_settings()
     log_sanitized_nexa_config("api")
     print_env_validation_at_startup("api")

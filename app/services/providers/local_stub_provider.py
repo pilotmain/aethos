@@ -67,6 +67,13 @@ def call_local_stub(payload: dict[str, Any]) -> dict[str, Any]:
     if payload.get("tool") in ("heartbeat", "mission_update"):
         return {"type": str(payload.get("tool")), "ok": True}
 
+    if payload.get("tool") == "web_search":
+        return {
+            "type": "web_search",
+            "stub": True,
+            "items": [{"title": "(stub)", "snippet": task[:280]}],
+        }
+
     if payload.get("tool") == "artifact_write":
         return {"type": "artifact_write", "path": "(stub)", "bytes": 0}
 
