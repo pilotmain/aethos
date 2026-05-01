@@ -1,6 +1,6 @@
 """
 Lightweight multi-step flow: remember goal + step list in ConversationContext, chat only.
-No auto-chains, no new UI, no background execution. User-driven; dev/jobs still use normal approval.
+No auto-chains, no new UI, no background execution. User-driven; dev jobs still use normal approval.
 """
 
 from __future__ import annotations

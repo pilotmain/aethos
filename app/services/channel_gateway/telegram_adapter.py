@@ -103,7 +103,6 @@ def register_telegram_handlers(application: Application) -> None:
     application.add_handler(CommandHandler("overwhelmed", tb.overwhelmed))
     application.add_handler(CommandHandler("prefs", tb.prefs))
     application.add_handler(CommandHandler("memory", tb.memory_cmd))
-    application.add_handler(CommandHandler("context", tb.context_cmd))
     application.add_handler(CommandHandler("doc", tb.doc_cmd))
     application.add_handler(CommandHandler("command", tb.command_cmd))
     application.add_handler(CommandHandler("forget", tb.forget_cmd))
@@ -120,10 +119,8 @@ def register_telegram_handlers(application: Application) -> None:
     application.add_handler(CommandHandler("workspace", tb.workspace_cmd))
     application.add_handler(CommandHandler("projects", tb.nexa_projects_list_cmd))
     application.add_handler(CommandHandler("project", tb.nexa_project_cmd))
-    application.add_handler(CommandHandler("jobs", tb.jobs_cmd))
     application.add_handler(CommandHandler("projects", tb.projects_cmd))
     application.add_handler(CommandHandler("project", tb.project_cmd))
-    application.add_handler(CommandHandler("job", tb.job_cmd))
     application.add_handler(
         CallbackQueryHandler(tb.permission_inline_callback, pattern=r"^perm:(grant|deny):\d+$")
     )

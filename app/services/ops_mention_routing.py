@@ -1,4 +1,4 @@
-"""Map @ops … messages to the same view as /dev health, queue, and /jobs."""
+"""Map @ops … messages to the same view as dev health and the job queue."""
 
 from __future__ import annotations
 

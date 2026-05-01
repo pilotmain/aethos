@@ -713,9 +713,7 @@ def _qa_mvp_for_job(
         lines.append("\n**Recent test log (tail):**\n" + test_snip[:2500])
     else:
         lines.append("\nI don’t see test output for that job yet (or artifacts are on another host).")
-    lines.append(
-        f"\n**Commands:** `/job {job.id}` — `/job {job.id} tests` — `/job {job.id} logs`"
-    )
+    lines.append(f"\n**Next:** ask about job #{job.id} for tests output or logs (web app or chat).")
     lines.append(f"\n_Interpretation: {interpret}_")
     return "\n".join(lines)[:10_000]
 

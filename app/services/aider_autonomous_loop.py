@@ -197,9 +197,8 @@ def notify_dev_job_failed_telegram(
         f"Stage: {st}\n"
         f"Worker: {get_worker_id()}\n\n"
         f"Reason: {r}\n\n"
-        f"Useful commands:\n"
-        f"• /job {jid} logs  • /job {jid} tests  • /job {jid} files  • /job {jid} diff\n"
-        f"• /job {jid} retry  • /dev health"
+        f"Useful:\n"
+        f"• Ask about job #{jid} for logs, tests, files, or diff • retry after fixes • dev health status\n"
     )[:3900]
     if send_telegram_message(chat, text, max_len=4000):
         j2 = job_service.repo.get(db, job.id) or job
@@ -811,7 +810,7 @@ def run_aider_autonomous_for_approved_job(
             summary_fail = (
                 f"**Tests did not pass.** The feature branch is left as-is (not reverted) so you can review.\n\n"
                 f"• Type `approve despite failed tests` to move to approval and commit on your own review.\n"
-                f"• Or `/job {j.id} retry` after fixes.\n\n"
+                f"• Or ask to retry job #{j.id} after fixes.\n\n"
                 f"{(test_out or '')[:8000]}"
             )[:12_000]
             jf = job_service.mark_failed(

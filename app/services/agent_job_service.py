@@ -525,8 +525,9 @@ class AgentJobService:
             self.mark_failed(
                 db,
                 row,
-                "Worker lock expired. Job may have been interrupted. Use /job {id} retry or cancel.".replace(
-                    "{id}", str(row.id)
+                (
+                    f"Worker lock expired. Job may have been interrupted. Retry or cancel job #{row.id} "
+                    "from chat or the web app."
                 ),
                 failure_stage="stale_lock",
             )

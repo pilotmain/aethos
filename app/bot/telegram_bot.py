@@ -31,12 +31,9 @@ from app.services.command_help import format_command_help_response
 from app.services.conversation_context_service import (
     apply_topic_intent_to_context,
     build_context_snapshot,
-    format_context_ux_status,
     get_last_assistant_text,
     get_last_decision_from_context,
     get_or_create_context,
-    hard_clear_conversation_state_commit,
-    set_manual_topic,
     set_pending_project,
     short_reply_for_topic_intent,
     update_context_after_turn,
@@ -695,44 +692,6 @@ async def prefs(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         db.close()
 
 
-async def context_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    db = SessionLocal()
-    try:
-        link = telegram_service.get_link(db, update.effective_user.id)
-        if not link:
-            await update.message.reply_text("Use /start first.")
-            return
-        cctx = get_or_create_context(db, link.app_user_id)
-        args = [str(a) for a in (context.args or [])]
-        if not args:
-            await update.message.reply_text(format_context_ux_status(cctx))
-            return
-        sub = (args[0] or "").lower()
-        if sub == "clear":
-            hard_clear_conversation_state_commit(db, cctx)
-            await update.message.reply_text(
-                "Cleared: active topic, active agent, manual override, and rolling conversation summary in Nexa."
-            )
-            return
-        if sub == "set" and len(args) >= 2:
-            topic = " ".join(args[1:]).strip()[:500]
-            if not topic:
-                await update.message.reply_text(
-                    "Use **context set** followed by a topic (send Telegram’s context command, then set …)."
-                )
-                return
-            set_manual_topic(db, cctx, topic)
-            await update.message.reply_text(
-                f"Set active topic (manual): {cctx.active_topic or topic}"
-            )
-            return
-        await update.message.reply_text(
-            "Use **context** with no args for status, **context clear**, or **context set** <topic>."
-        )
-    finally:
-        db.close()
-
-
 async def doc_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not update.message or not update.effective_user:
         return
@@ -1239,36 +1198,6 @@ async def nexa_project_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         db.close()
 
 
-async def jobs_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    db = SessionLocal()
-    try:
-        link = telegram_service.get_link(db, update.effective_user.id)
-        if not link:
-            await update.message.reply_text("Use /start first.")
-            return
-        tr = get_telegram_role(update.effective_user.id, db)
-        if not can_list_dev_jobs_commands(tr):
-            _deny(
-                db, telegram_id=update.effective_user.id, app_user=link.app_user_id,
-                uname=update.effective_user.username, family="jobs", reason=tr, preview=None,
-            )
-            await update.message.reply_text(ACCESS_RESTRICTED)
-            return
-        from app.services.telegram_dev_ux import format_job_row_short
-
-        rows = job_service.list_jobs(db, link.app_user_id, limit=5)
-        if not rows:
-            await update.message.reply_text("No jobs yet.")
-            return
-        compact = "Recent jobs:\n\n" + "\n\n".join(
-            format_job_row_short(j) for j in rows
-        )
-        for piece in _split_telegram_text(compact, max_len=4000):
-            await update.message.reply_text(piece)
-    finally:
-        db.close()
-
-
 async def projects_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     from app.services.telegram_project_commands import format_projects_list_for_user
 
@@ -1393,132 +1322,6 @@ async def project_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         await update.message.reply_text(
             "I did not understand that. Try `/project` with no args for help."
         )
-    finally:
-        db.close()
-
-
-async def job_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    db = SessionLocal()
-    try:
-        link = telegram_service.get_link(db, update.effective_user.id)
-        if not link:
-            await update.message.reply_text("Use /start first.")
-            return
-        tr = get_telegram_role(update.effective_user.id, db)
-        if not can_list_dev_jobs_commands(tr):
-            _deny(
-                db, telegram_id=update.effective_user.id, app_user=link.app_user_id,
-                uname=update.effective_user.username, family="job", reason=tr, preview=None,
-            )
-            await update.message.reply_text(ACCESS_RESTRICTED)
-            return
-        if not context.args:
-            await update.message.reply_text(
-                "Use `/job <id>`, `/job <id> diff|logs|tests|files`, `/job <id> retry`, or `/job latest`"
-            )
-            return
-        n_arg = len(context.args)
-        raw0 = context.args[0].strip()
-        t1 = (context.args[1].lower() if n_arg >= 2 else "")
-        if n_arg >= 2 and t1 == "diff":
-            raw = raw0.lower()
-            if raw == "latest":
-                await update.message.reply_text("Use /job <id> diff with a numeric id.")
-                return
-            jid = int(raw0.strip().lstrip("#"))
-            job = job_service.get_job(db, link.app_user_id, jid)
-            if not job:
-                await update.message.reply_text("Job not found.")
-                return
-            for piece in _split_telegram_text(
-                _git_job_diff_summary(job)[:12_000], max_len=4000
-            ):
-                await update.message.reply_text(piece)
-            return
-        if n_arg >= 2 and t1 == "retry":
-            jid = int(raw0.strip().lstrip("#"))
-            rj = job_service.retry_dev_job(db, link.app_user_id, jid)
-            if rj:
-                await update.message.reply_text(
-                    f"Job #{rj.id} re-queued (status: approved). The worker will pick it up. "
-                    f"Use /job {rj.id} to check."
-                )
-            else:
-                await update.message.reply_text(
-                    "Cannot retry this job. Only failed, blocked, or `changes_requested` dev jobs, "
-                    "or it is not your job number."
-                )
-            return
-        if n_arg >= 2 and t1 in ("logs", "tests", "files"):
-            from pathlib import Path
-
-            jid = int(raw0.strip().lstrip("#"))
-            job = job_service.get_job(db, link.app_user_id, jid)
-            if not job:
-                await update.message.reply_text("Job not found.")
-                return
-            ad = (
-                (getattr(job, "artifact_dir", None) or "").strip()
-                or (getattr(job, "failure_artifact_dir", None) or "").strip()
-            )
-            if not ad:
-                await update.message.reply_text(
-                    "No `artifact_dir` on this job (run the dev worker on the same host to capture logs)."
-                )
-                return
-            base = Path(ad)
-            if not base.is_dir():
-                await update.message.reply_text(f"Artifact path is missing on this machine: {ad}")
-                return
-            if t1 == "logs":
-                out = []
-                for name, label in (
-                    ("agent_stdout.log", "agent stdout (tail)"),
-                    ("agent_stderr.log", "agent stderr (tail)"),
-                ):
-                    p = base / name
-                    if p.is_file():
-                        tail = p.read_text(encoding="utf-8", errors="replace")[-3500:]
-                        out.append(f"— {label} —\n{tail}")
-                await update.message.reply_text(
-                    "\n\n".join(out) if out else f"No agent_*.log in {base}."
-                )
-                return
-            if t1 == "tests":
-                out = []
-                for name in ("tests_stdout.log", "tests_stderr.log"):
-                    p = base / name
-                    if p.is_file():
-                        tail = p.read_text(encoding="utf-8", errors="replace")[-4000:]
-                        out.append(f"— {name} —\n{tail}")
-                body = "\n\n".join(out) if out else f"No test logs in {base}."
-                for piece in _split_telegram_text(body, max_len=4000):
-                    await update.message.reply_text(piece)
-                return
-            for name in ("changed_files.txt", "diff_stat.txt"):
-                p = base / name
-                if p.is_file():
-                    body = f"— {name} —\n" + p.read_text(encoding="utf-8", errors="replace")[:4000]
-                    for piece in _split_telegram_text(body, max_len=4000):
-                        await update.message.reply_text(piece)
-            return
-        raw = raw0.lower()
-        if raw == "latest":
-            job = job_service.get_latest(db, link.app_user_id)
-        else:
-            job = job_service.get_job(db, link.app_user_id, int(raw.lstrip("#")))
-        if not job:
-            await update.message.reply_text("Job not found.")
-            return
-        from app.services.telegram_dev_ux import format_job_detail_telegram
-
-        body = (
-            format_job_detail_telegram(job)
-            if (getattr(job, "worker_type", None) or "") == "dev_executor"
-            else _format_job_line(job)
-        )
-        for piece in _split_telegram_text(body[:12_000], max_len=4000):
-            await update.message.reply_text(piece)
     finally:
         db.close()
 
@@ -2209,7 +2012,7 @@ async def _handle_incoming_text_impl(update: Update, context: ContextTypes.DEFAU
                         nrev = (dict(ar.payload_json or {}) or {}).get("revision_count", 1)
                         await update.message.reply_text(
                             f"Saved revision #{nrev} and re-queued job #{ar.id} (approved). "
-                            f"The host worker will run the agent on the same branch. `/job {ar.id}` for status."
+                            f"The host worker will run the agent on the same branch. Track job #{ar.id} in chat or on the web app."
                         )
                         return
                     if context.user_data is not None:
@@ -2953,7 +2756,7 @@ async def _handle_incoming_text_impl(update: Update, context: ContextTypes.DEFAU
                         if j:
                             await update.message.reply_text(
                                 f"No job # in that message. Your most recent autonomous / dev job is below — "
-                                f"for a specific id, say job #{j.id} or /job {j.id}. (Daily tasks/notes are separate.)\n\n"
+                                f"for a specific id, say job #{j.id} or ask about job {j.id}. (Daily tasks/notes are separate.)\n\n"
                                 f"{_format_job_line(j)}"
                             )
                         else:

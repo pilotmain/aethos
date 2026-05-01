@@ -842,7 +842,7 @@ def try_apply_host_executor_turn(
             sys_evt = (
                 (
                     "local_action",
-                    f"Local action queued — Job #{job.id} ({title0}). Approve below or in /jobs.",
+                    f"Local action queued — Job #{job.id} ({title0}). Approve below or ask for recent jobs in chat.",
                 ),
             )
             return NextActionApplicationResult(

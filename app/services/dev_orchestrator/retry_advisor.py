@@ -20,7 +20,7 @@ def advise_retry(job) -> str:
     if "tests failed" in error or stage == "tests":
         return (
             "The change ran but tests failed.\n\n"
-            "Use `/job <id> tests` to inspect, then retry or request changes."
+            "Inspect test output for that job, then retry or request changes."
         )
 
     if "timeout" in error:
@@ -29,7 +29,8 @@ def advise_retry(job) -> str:
             "Try a smaller task or switch the project to ide_handoff mode."
         )
 
+    jid = getattr(job, "id", "")
     return (
-        "You can retry this job, but review the logs first:\n"
-        f"`/job {getattr(job, 'id', '')} logs`"
+        "You can retry this job, but review the logs first (ask about job #"
+        f"{jid} in chat or use the web app)."
     ).strip()

@@ -40,7 +40,7 @@ def compact_review_for_telegram(review: str, max_chars: int = 3200) -> str:
 
 
 def format_job_row_short(job) -> str:
-    """One block per job for /jobs (up to 5)."""
+    """One block per job in a short list (e.g. dev queue, up to 5)."""
     st = (getattr(job, "status", None) or "").strip()
     t = (getattr(job, "title", None) or "—")[:120]
     top = f"#{getattr(job, 'id', '?')} {user_friendly_status(st)} ({st}) {t}"
@@ -106,7 +106,7 @@ def format_grouped_dev_queue(jobs) -> str:
     def _sub(xs: list, title: str, none_msg: str) -> str:
         if not xs:
             return f"**{title}**\n{none_msg}"
-        more = f"\n…+{len(xs) - n_max} more (use /jobs)" if len(xs) > n_max else ""
+        more = f"\n…+{len(xs) - n_max} more (ask in chat for the full list)" if len(xs) > n_max else ""
         body = "\n\n".join(format_job_row_short(x) for x in xs[:n_max])
         return f"**{title}**\n{body}{more}"
 
@@ -118,11 +118,11 @@ def format_grouped_dev_queue(jobs) -> str:
         _sub(need, "Needs you", "— (none)"),
     ]
     if fail:
-        extra = f"\n…+{len(fail) - n_fail} more (use /jobs)" if len(fail) > n_fail else ""
+        extra = f"\n…+{len(fail) - n_fail} more (ask in chat for more)" if len(fail) > n_fail else ""
         fbody = "\n\n".join(format_job_row_short(x) for x in fail[:n_fail]) + extra
         out_lines += [
             "",
-            f"**Recent failures (may be old; /job <id> for time + reason)**\n{fbody}",
+            f"**Recent failures (may be old; ask about a job # for time + reason)**\n{fbody}",
         ]
     if other:
         out_lines += ["", _sub(other, "Other statuses", "— (none)")]
@@ -130,7 +130,7 @@ def format_grouped_dev_queue(jobs) -> str:
 
 
 def format_job_detail_telegram(job) -> str:
-    """/job <id> — structured block for dev_executor jobs."""
+    """Structured block for dev_executor jobs (Telegram detail view)."""
     w = getattr(job, "worker_type", None) or ""
     st = (getattr(job, "status", None) or "").strip()
     ul = user_friendly_status(st)
@@ -160,12 +160,12 @@ def format_job_detail_telegram(job) -> str:
             lines.append("Retry advice:")
             lines.append(advise_retry(job))
 
+    jid = getattr(job, "id", "?")
     lines.append("")
     lines.append(
         "Actions: `approve` / `reject` / `show diff` (when job needs approval) — or buttons on the last approval message. "
-        "Try `/job {id} diff`, `/job {id} retry`, or type `approve despite failed tests` if the job shows failed tests and you still want to review a commit path.".replace(
-            "{id}", str(job.id)
-        )
+        f"Ask about job #{jid} for diff or retry, or type `approve despite failed tests` if the job shows failed tests "
+        "and you still want to review a commit path."
     )
     return "\n".join(lines)[:12_000]
 

@@ -219,7 +219,7 @@ def _mutate_topic_set(ctx: ConversationContext, new_topic: str) -> None:
 
 
 def set_manual_topic(db: Session, ctx: ConversationContext, new_topic: str) -> None:
-    """/context set <topic> — same semantics as a natural-language topic switch, persisted."""
+    """Persist a manual topic (same semantics as a natural-language topic switch)."""
     _mutate_topic_set(ctx, new_topic)
     try:
         db.add(ctx)
@@ -246,7 +246,7 @@ def _mutate_topic_clear(ctx: ConversationContext) -> None:
 
 
 def hard_clear_conversation_state(ctx: ConversationContext) -> None:
-    """Clears topic, active agent, manual override, and rolling summary/turns (/context clear)."""
+    """Clears topic, active agent, manual override, and rolling summary/turns (topic reset)."""
     ctx.active_topic = None
     ctx.active_project = None
     ctx.active_project_id = None
