@@ -132,6 +132,18 @@ async def lifespan(app: FastAPI):
                 id="nexa_retention",
                 replace_existing=True,
             )
+        if getattr(s, "nexa_heartbeat_enabled", False) and int(
+            getattr(s, "nexa_heartbeat_interval_seconds", 300) or 300
+        ) > 0:
+            from app.services.scheduler.heartbeat import run_heartbeat_cycle
+
+            scheduler.add_job(
+                run_heartbeat_cycle,
+                "interval",
+                seconds=max(30, int(getattr(s, "nexa_heartbeat_interval_seconds", 300) or 300)),
+                id="nexa_heartbeat",
+                replace_existing=True,
+            )
         scheduler.start()
     try:
         from app.core.db import SessionLocal

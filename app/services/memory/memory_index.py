@@ -6,6 +6,7 @@ import json
 import re
 from typing import Any
 
+from app.services.memory.embedding import cosine_similarity, embed_text
 from app.services.memory.memory_store import MemoryStore
 
 
@@ -42,6 +43,25 @@ class MemoryIndex:
             if pat.search(blob.lower()):
                 hits.append(e)
         return hits
+
+    def semantic_search(self, user_id: str, query: str, *, limit: int = 12) -> list[dict[str, Any]]:
+        """
+        Rank entries by cosine similarity of deterministic pseudo-embeddings (Phase 39).
+
+        Replace ``embed_text`` with Ollama embeddings for full semantic recall.
+        """
+        q = (query or "").strip()
+        if not q:
+            return []
+        qv = embed_text(q)
+        scored: list[tuple[float, dict[str, Any]]] = []
+        for e in self.store.list_entries(user_id, limit=500):
+            blob = f"{e.get('title', '')}\n{e.get('preview', '')}"
+            sv = embed_text(blob[:8000])
+            score = cosine_similarity(qv, sv)
+            scored.append((score, e))
+        scored.sort(key=lambda x: x[0], reverse=True)
+        return [e for _, e in scored[:limit]]
 
 
 __all__ = ["MemoryIndex"]

@@ -35,7 +35,8 @@ def record_usage(user_id: str, *, tokens: int, cost_usd: float, provider: str) -
     )
     u["tokens_today"] = int(u.get("tokens_today", 0)) + int(max(0, tokens))
     u["cost_usd_today"] = float(u.get("cost_usd_today", 0.0)) + float(max(0.0, cost_usd))
-    if (provider or "").strip().lower() in ("local_stub", ""):
+    pl = (provider or "").strip().lower()
+    if pl in ("local_stub", "ollama", ""):
         u["local_calls"] = int(u.get("local_calls", 0)) + 1
     else:
         u["external_calls"] = int(u.get("external_calls", 0)) + 1
@@ -103,8 +104,9 @@ def check_budget(
     daily_cost_cap = float(cost_pref) if cost_pref is not None else float(s.nexa_cost_budget_per_day_usd or 5.0)
     cost_today = float(u.get("cost_usd_today", 0.0))
     # Rough next-call upper bound using env pricing (actual charged in gateway)
-    rough_next = 0.0 if provider == "local_stub" else max(0.0, (token_estimate / 1000.0) * 0.002)
-    if cost_today + rough_next > daily_cost_cap and provider != "local_stub":
+    pl = (provider or "").strip().lower()
+    rough_next = 0.0 if pl in ("local_stub", "ollama") else max(0.0, (token_estimate / 1000.0) * 0.002)
+    if cost_today + rough_next > daily_cost_cap and pl not in ("local_stub", "ollama"):
         if s.nexa_block_over_token_budget:
             _blocked_store()
             return "cost_budget_per_day"

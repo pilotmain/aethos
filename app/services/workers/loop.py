@@ -18,6 +18,60 @@ from app.services.workers.runner import run_agent
 _log = get_logger("worker")
 
 
+def _use_parallel_waves() -> bool:
+    s = get_settings()
+    is_sqlite = (s.database_url or "").startswith("sqlite")
+    return bool(s.nexa_mission_parallel_tasks) and (
+        not is_sqlite or bool(getattr(s, "nexa_mission_parallel_allow_sqlite", False))
+    )
+
+
+def run_parallel_agents(
+    agents: list[dict[str, Any]],
+    db: Session,
+    *,
+    completed: set[str],
+    deadline: float | None = None,
+) -> set[str]:
+    """
+    Execute every agent whose dependencies are satisfied (one wave).
+
+    Independent tasks in the wave run concurrently when parallel missions are enabled (Phase 39).
+    Returns handles completed in this wave.
+    """
+    ready = [
+        a
+        for a in agents
+        if a["status"] == "queued"
+        and not any(dep not in completed for dep in a["depends_on"])
+    ]
+    if not ready:
+        return set()
+    done: set[str] = set()
+    use_parallel = _use_parallel_waves() and len(ready) > 1
+
+    if use_parallel:
+        max_workers = min(8, len(ready))
+        handle_map = {a["handle"]: a for a in agents}
+        snapshots = [dict(a) for a in ready]
+        with ThreadPoolExecutor(max_workers=max_workers) as pool:
+            futures = [pool.submit(_run_agent_thread, snap, deadline=deadline) for snap in snapshots]
+            for fut in as_completed(futures):
+                ag_done = fut.result()
+                h = str(ag_done.get("handle") or "")
+                tgt = handle_map.get(h)
+                if tgt is None:
+                    continue
+                tgt["status"] = ag_done.get("status")
+                tgt["output"] = ag_done.get("output")
+                done.add(h)
+    else:
+        for agent in ready:
+            if _run_single_agent(agent, db, deadline=deadline):
+                done.add(agent["handle"])
+    return done
+
+
 def _run_single_agent(agent: dict[str, Any], db: Session, *, deadline: float | None) -> bool:
     """Execute one agent on ``db``. Returns False if deadline exceeded before completion."""
     if deadline is not None and time.monotonic() > deadline:
@@ -90,11 +144,6 @@ def run_until_complete(
         deadline = time.monotonic() + float(max_runtime_seconds)
 
     mission_id = agents[0].get("mission_id") if agents else None
-    s = get_settings()
-    use_parallel = bool(
-        getattr(s, "nexa_mission_parallel_tasks", False)
-        and not (s.database_url or "").startswith("sqlite")
-    )
 
     while True:
         if deadline is not None and time.monotonic() > deadline:
@@ -107,43 +156,9 @@ def run_until_complete(
             )
             return agents, True
 
-        ready = [
-            a
-            for a in agents
-            if a["status"] == "queued"
-            and not any(dep not in completed for dep in a["depends_on"])
-        ]
-        if not ready:
-            break
-
-        progress = False
-
-        if use_parallel and len(ready) > 1:
-            max_workers = min(8, len(ready))
-            handle_map = {a["handle"]: a for a in agents}
-            snapshots = [dict(a) for a in ready]
-            with ThreadPoolExecutor(max_workers=max_workers) as pool:
-                futures = [
-                    pool.submit(_run_agent_thread, snap, deadline=deadline) for snap in snapshots
-                ]
-                for fut in as_completed(futures):
-                    ag_done = fut.result()
-                    h = str(ag_done.get("handle") or "")
-                    tgt = handle_map.get(h)
-                    if tgt is None:
-                        continue
-                    tgt["status"] = ag_done.get("status")
-                    tgt["output"] = ag_done.get("output")
-                    completed.add(h)
-                    progress = True
-        else:
-            for agent in ready:
-                if not _run_single_agent(agent, db, deadline=deadline):
-                    continue
-                completed.add(agent["handle"])
-                progress = True
-
-        if not progress:
+        wave_done = run_parallel_agents(agents, db, completed=completed, deadline=deadline)
+        completed.update(wave_done)
+        if not wave_done:
             break
 
     return agents, False
@@ -168,4 +183,4 @@ def _cancel_remaining(agents: list[dict[str, Any]], db: Session, *, mission_id: 
         db.commit()
 
 
-__all__ = ["run_until_complete"]
+__all__ = ["run_until_complete", "run_parallel_agents"]

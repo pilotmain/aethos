@@ -97,6 +97,8 @@ def get_provider_for_tool(tool_name: str) -> str:
         p = td.provider
     s = get_settings()
     if getattr(s, "nexa_local_first", False) and p in ("openai", "anthropic"):
+        if getattr(s, "nexa_ollama_enabled", False) and (getattr(s, "nexa_ollama_base_url", None) or "").strip():
+            return "ollama"
         return "local_stub"
     return p
 

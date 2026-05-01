@@ -29,6 +29,7 @@ from app.services.privacy_firewall.immutable import FrozenPayloadDict
 from app.services.providers.anthropic_provider import call_anthropic
 from app.services.providers.external_audit import persist_external_call
 from app.services.providers.local_stub_provider import call_local_stub
+from app.services.providers.ollama_provider import call_ollama
 from app.services.providers.openai_provider import call_openai
 from app.services.providers.rate_limit import allow_provider_request
 from app.services.providers.types import ProviderRequest, ProviderResponse
@@ -39,9 +40,12 @@ from app.services.tools.registry import TOOLS
 
 _log = get_logger("gateway")
 
+# Treated like local_stub for privacy gates and zero marginal API cost.
+_LOCAL_TRUSTED_PROVIDERS = frozenset({"local_stub", "ollama"})
+
 
 def _rough_cost_estimate_usd(provider: str, tokens: int) -> float:
-    if provider == "local_stub":
+    if provider in ("local_stub", "ollama"):
         return 0.0
     per_1k = 0.0025 if provider == "anthropic" else 0.0006
     return (max(0, tokens) / 1000.0) * per_1k
@@ -128,7 +132,7 @@ def call_provider(request: ProviderRequest) -> ProviderResponse:
             error=err,
         )
 
-    if s.nexa_disable_external_calls and request.provider not in ("local_stub",):
+    if s.nexa_disable_external_calls and request.provider not in _LOCAL_TRUSTED_PROVIDERS:
         err = "external_calls_disabled"
         ev = {"provider": request.provider, "agent": request.agent_handle or "", "status": err}
         log_event({"type": "provider_blocked", **ev})
@@ -145,7 +149,7 @@ def call_provider(request: ProviderRequest) -> ProviderResponse:
             error=err,
         )
 
-    if s.nexa_strict_privacy_mode and request.provider not in ("local_stub",):
+    if s.nexa_strict_privacy_mode and request.provider not in _LOCAL_TRUSTED_PROVIDERS:
         err = "strict_privacy_mode"
         ev = {"provider": request.provider, "agent": request.agent_handle or "", "status": err}
         log_event({"type": "provider_blocked", **ev})
@@ -162,7 +166,7 @@ def call_provider(request: ProviderRequest) -> ProviderResponse:
             error=err,
         )
 
-    if user_privacy == "paranoid" and request.provider not in ("local_stub",):
+    if user_privacy == "paranoid" and request.provider not in _LOCAL_TRUSTED_PROVIDERS:
         err = "user_privacy_paranoid"
         ev = {"provider": request.provider, "agent": request.agent_handle or "", "status": err}
         log_event({"type": "provider_blocked", **ev})
@@ -295,7 +299,7 @@ def call_provider(request: ProviderRequest) -> ProviderResponse:
 
     frozen_payload = FrozenPayloadDict(merged)
 
-    if request.provider not in ("local_stub", "openai", "anthropic"):
+    if request.provider not in ("local_stub", "openai", "anthropic", "ollama"):
         err = f"unknown provider: {request.provider}"
         audit(False, err)
         return ProviderResponse(
@@ -320,6 +324,15 @@ def call_provider(request: ProviderRequest) -> ProviderResponse:
                 out = call_local_stub(frozen_payload)
             elif request.provider == "openai":
                 out = call_openai(frozen_payload)
+            elif request.provider == "ollama":
+                base = (s.nexa_ollama_base_url or "").strip() or "http://127.0.0.1:11434"
+                om = (request.model or s.nexa_ollama_default_model or "llama3").strip()
+                out = call_ollama(
+                    dict(frozen_payload),
+                    base_url=base,
+                    model=om,
+                    timeout_seconds=float(s.nexa_provider_timeout_seconds or 15.0),
+                )
             else:
                 out = call_anthropic(frozen_payload)
             record_provider_call(latency_ms=(time.perf_counter() - t0) * 1000)
@@ -350,7 +363,33 @@ def call_provider(request: ProviderRequest) -> ProviderResponse:
                 break
             time.sleep(0.25 * (attempt + 1))
 
-    if out is None and request.provider in ("openai", "anthropic") and last_err is not None:
+    ollama_soft_fail = (
+        request.provider == "ollama" and isinstance(out, dict) and out.get("error")
+    )
+    if ollama_soft_fail and not s.nexa_strict_privacy_mode and not s.nexa_disable_external_calls:
+        try:
+            _log.warning("ollama error payload; falling back to local_stub: %s", out.get("error"))
+            t0 = time.perf_counter()
+            out = call_local_stub(frozen_payload)
+            effective_provider = "local_stub"
+            record_provider_call(latency_ms=(time.perf_counter() - t0) * 1000)
+            add_provider_event(
+                _tag_ev(
+                    {
+                        "provider": "local_stub",
+                        "agent": request.agent_handle or "",
+                        "status": "fallback",
+                        "fallback_from": "ollama",
+                        "mission_id": request.mission_id,
+                    },
+                    request.user_id,
+                )
+            )
+        except Exception as fb_exc:
+            _log.warning("ollama local_stub fallback failed: %s", fb_exc)
+            out = {"error": "ollama_and_stub_failed", "detail": str(fb_exc)}
+
+    if out is None and request.provider in ("openai", "anthropic", "ollama") and last_err is not None:
         if not s.nexa_strict_privacy_mode and not s.nexa_disable_external_calls:
             try:
                 _log.warning(

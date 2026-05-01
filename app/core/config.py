@@ -358,7 +358,15 @@ class Settings(BaseSettings):
     nexa_memory_layer_enabled: bool = True
     nexa_local_first: bool = False
     nexa_ollama_base_url: str | None = None
+    # Phase 39 — local Ollama when NEXA_LOCAL_FIRST routes tools away from remote APIs
+    nexa_ollama_enabled: bool = False
+    nexa_ollama_default_model: str = "llama3"
     nexa_mission_parallel_tasks: bool = False
+    # When True with SQLite, allow parallel agent waves (dev-only; session-per-thread).
+    nexa_mission_parallel_allow_sqlite: bool = False
+    # Phase 39 — periodic autonomy heartbeat (OpenClaw-style background tick)
+    nexa_heartbeat_enabled: bool = False
+    nexa_heartbeat_interval_seconds: int = 300
 
     # Phase 23 — AI dev OS (workspace commands, allowlist).
     nexa_dev_allowed_commands: str = (
