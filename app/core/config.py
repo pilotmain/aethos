@@ -9,7 +9,7 @@ from functools import lru_cache
 from pathlib import Path
 
 from dotenv import dotenv_values, load_dotenv
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Resolve repo root: app/core/config.py -> parents: core, app, project
@@ -346,6 +346,9 @@ class Settings(BaseSettings):
     # Phase 19 — user-facing privacy stance (standard | strict | paranoid).
     nexa_user_privacy_mode: str = "standard"
 
+    # Phase 33 — production posture (quiet logs, no experimental tooling hooks).
+    nexa_production_mode: bool = False
+
     # Phase 22 — OpenClaw parity (memory, autonomy, local-first).
     nexa_memory_layer_enabled: bool = True
     nexa_local_first: bool = False
@@ -381,6 +384,17 @@ class Settings(BaseSettings):
     def _normalize_nexa_user_privacy_mode(cls, v: object) -> str:
         x = (str(v) if v is not None else "standard").strip().lower()
         return x if x in ("standard", "strict", "paranoid") else "standard"
+
+    @model_validator(mode="after")
+    def _phase33_production_lock(self) -> Settings:
+        """When NEXA_PRODUCTION_MODE is set, disable debug tooling surfaces unsuitable for prod."""
+        if not self.nexa_production_mode:
+            return self
+        object.__setattr__(self, "debug", False)
+        object.__setattr__(self, "nexa_agent_tools_enabled", False)
+        object.__setattr__(self, "nexa_browser_preview_enabled", False)
+        object.__setattr__(self, "nexa_file_watcher_enabled", False)
+        return self
 
     model_config = SettingsConfigDict(
         env_file=_EnvFile,

@@ -87,7 +87,10 @@ def _http_error_detail(exc: StarletteHTTPException) -> str:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    configure_logging()
+    get_settings.cache_clear()
+    _boot = get_settings()
+    configure_logging(logging.WARNING if _boot.nexa_production_mode else logging.INFO)
+    app.debug = not _boot.nexa_production_mode and bool(_boot.debug)
     from app.services.startup_ensure import (
         ensure_nexa_secret_key,
         print_env_validation_at_startup,
@@ -95,7 +98,6 @@ async def lifespan(app: FastAPI):
     )
 
     ensure_nexa_secret_key()
-    get_settings.cache_clear()
     from app.services.plugins.registry import load_plugins
 
     load_plugins()

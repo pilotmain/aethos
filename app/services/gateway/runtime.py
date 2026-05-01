@@ -30,7 +30,14 @@ class NexaGateway:
         channel: str = "web",
         metadata: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        _ = channel, metadata
+        admission = dict(metadata or {})
+        admission.setdefault("via_gateway", True)
+        _log.debug(
+            "gateway admission channel=%s via_gateway=%s keys=%s",
+            channel,
+            admission.get("via_gateway"),
+            sorted(admission.keys()),
+        )
         from app.core.db import SessionLocal
         from app.services.missions.parser import parse_mission
         from app.services.plugins.registry import load_plugins

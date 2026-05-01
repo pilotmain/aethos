@@ -311,7 +311,7 @@ def _runtime_hints(
     mode_label = effective_privacy_mode(db, scoped_user_id)
     return {
         "offline_mode": offline_mode,
-        "strict_privacy_mode": bool(s.nexa_strict_privacy_mode),
+        "strict_privacy_mode": bool(s.nexa_strict_privacy_mode or getattr(s, "nexa_production_mode", False)),
         "remote_providers_available": has_remote,
         "external_calls_disabled": bool(s.nexa_disable_external_calls),
         "integrity_alert_active": active_banner,
