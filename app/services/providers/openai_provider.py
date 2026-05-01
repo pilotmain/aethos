@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 def call_openai(payload: dict[str, Any]) -> dict[str, Any]:
     from app.core.config import get_settings
-    from app.services.providers.sdk import OpenAI
+    from app.services.providers.sdk import build_openai_client
 
     s = get_settings()
     key = (s.openai_api_key or "").strip()
@@ -26,7 +26,7 @@ def call_openai(payload: dict[str, Any]) -> dict[str, Any]:
 
     try:
         timeout = float(s.nexa_provider_timeout_seconds or 15.0)
-        client = OpenAI(api_key=key, timeout=timeout)
+        client = build_openai_client(api_key=key, timeout=timeout)
         resp = client.chat.completions.create(
             model=s.openai_model,
             messages=[{"role": "user", "content": task}],

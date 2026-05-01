@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
+from fastapi import APIRouter, Depends
 from sqlalchemy import text
 from sqlalchemy.orm import Session
-
-from fastapi import APIRouter, Depends
 
 from app.core.config import get_settings
 from app.core.db import get_db

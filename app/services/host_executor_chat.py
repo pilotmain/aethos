@@ -16,20 +16,20 @@ from app.models.conversation_context import ConversationContext
 from app.repositories.telegram_repo import TelegramRepository
 from app.schemas.agent_job import AgentJobCreate
 from app.services.agent_job_service import AgentJobService
+from app.services.content_provenance import InstructionSource, apply_trusted_instruction_source
+from app.services.custom_agent_routing import custom_agent_message_blocks_folder_heuristics
 from app.services.host_executor import ALLOWED_RUN_COMMANDS, proposed_risk_level
 from app.services.host_executor_intent import (
     infer_host_executor_action,
     safe_relative_path,
     title_for_payload,
 )
-from app.services.custom_agent_routing import custom_agent_message_blocks_folder_heuristics
 from app.services.local_file_intent import infer_local_file_request
+from app.services.nexa_safety_policy import stamp_host_payload
 from app.services.nexa_workspace_project_registry import (
     active_project_relative_base,
     merge_payload_with_project_base,
 )
-from app.services.content_provenance import InstructionSource, apply_trusted_instruction_source
-from app.services.nexa_safety_policy import stamp_host_payload
 
 
 def _agent_team_chat_blocks_folder_heuristics(text: str) -> bool:
@@ -37,6 +37,17 @@ def _agent_team_chat_blocks_folder_heuristics(text: str) -> bool:
     from app.services.agent_team.chat import agent_team_chat_blocks_folder_heuristics
 
     return agent_team_chat_blocks_folder_heuristics(text)
+from app.services.host_executor_visibility import (
+    completion_system_event_text,
+    format_host_completion_message,
+    format_host_confirmation,
+    format_queued_ack,
+)
+from app.services.next_action_confirmation import (
+    _wants_proceed_ok,
+    _wants_yesish,
+    is_pending_inject_expired,
+)
 from app.services.permission_request_flow import (
     card_message_for_host_payload,
     derive_permission_reason,
@@ -48,17 +59,6 @@ from app.services.permission_request_flow import (
     reason_for_host_payload,
     request_permission_from_chat,
     still_waiting_permission_message,
-)
-from app.services.host_executor_visibility import (
-    completion_system_event_text,
-    format_host_completion_message,
-    format_host_confirmation,
-    format_queued_ack,
-)
-from app.services.next_action_confirmation import (
-    _wants_proceed_ok,
-    _wants_yesish,
-    is_pending_inject_expired,
 )
 
 logger = logging.getLogger(__name__)

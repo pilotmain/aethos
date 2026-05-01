@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
+
 def empty_memory_preferences() -> dict[str, Any]:
     return {
         "preferred_response_format": None,

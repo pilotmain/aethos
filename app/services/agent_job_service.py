@@ -507,7 +507,9 @@ class AgentJobService:
 
     def sweep_stale_dev_locks(self, db: Session) -> int:
         from datetime import datetime
+
         from sqlalchemy import select
+
         from app.models.agent_job import AgentJob
         from app.services.audit_service import audit
 

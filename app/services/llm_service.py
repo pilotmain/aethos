@@ -13,15 +13,15 @@ import re
 from datetime import UTC, datetime, timedelta
 
 from app.core.config import get_settings
-from app.services.providers.sdk import OpenAI, anthropic
 from app.services.intent_service import is_valid_task, normalize_task, preprocess_for_fallback
 from app.services.llm_action_types import PLAN_REFINEMENT
-from app.services.llm_key_resolution import get_merged_api_keys, MergedLlmKeyInfo
+from app.services.llm_key_resolution import MergedLlmKeyInfo, get_merged_api_keys
 from app.services.llm_usage_context import push_llm_action
 from app.services.llm_usage_recorder import (
     record_anthropic_message_usage,
     record_openai_message_usage,
 )
+from app.services.providers.sdk import build_anthropic_client, build_openai_client
 
 logger = logging.getLogger(__name__)
 
@@ -97,7 +97,7 @@ def _intent_classify_with_openai(
     user_prompt: str, openai_key: str, *, m: MergedLlmKeyInfo
 ) -> dict:
     s = get_settings()
-    oai = OpenAI(api_key=openai_key)
+    oai = build_openai_client(api_key=openai_key)
     logger.warning("INTENT_LLM_CALL_TRIGGERED provider=openai")
     response = oai.chat.completions.create(
         model=s.openai_model,
@@ -135,7 +135,7 @@ def call_primary_llm_json(user_prompt: str) -> dict:
     if m.anthropic_api_key:
         try:
             logger.warning("INTENT_LLM_CALL_TRIGGERED provider=anthropic")
-            client = anthropic.Anthropic(api_key=m.anthropic_api_key)
+            client = build_anthropic_client(api_key=m.anthropic_api_key)
             msg = client.messages.create(
                 model=settings.anthropic_model,
                 max_tokens=1024,
@@ -209,7 +209,7 @@ def call_primary_llm_text(user_prompt: str) -> str:
     if m.anthropic_api_key:
         try:
             logger.warning("LLM_TEXT_CALL_TRIGGERED provider=anthropic")
-            client = anthropic.Anthropic(api_key=m.anthropic_api_key)
+            client = build_anthropic_client(api_key=m.anthropic_api_key)
             msg = client.messages.create(
                 model=settings.anthropic_model,
                 max_tokens=4096,
@@ -232,7 +232,7 @@ def call_primary_llm_text(user_prompt: str) -> str:
             logger.warning("LLM_TEXT anthropic failed, openai fallback: %s", e)
 
     if m.openai_api_key:
-        oai = OpenAI(api_key=m.openai_api_key)
+        oai = build_openai_client(api_key=m.openai_api_key)
         logger.warning("LLM_TEXT_CALL_TRIGGERED provider=openai")
         response = oai.chat.completions.create(
             model=settings.openai_model,
@@ -313,18 +313,18 @@ class LLMService:
         self.settings = get_settings()
         s = self.settings
         self.client = (
-            anthropic.Anthropic(api_key=s.anthropic_api_key) if s.anthropic_api_key else None
+            build_anthropic_client(api_key=s.anthropic_api_key) if s.anthropic_api_key else None
         )
-        self.openai_client = OpenAI(api_key=s.openai_api_key) if s.openai_api_key else None
+        self.openai_client = build_openai_client(api_key=s.openai_api_key) if s.openai_api_key else None
 
     def _clients_from_merge(self) -> tuple[object | None, object | None]:
         """For requests that can use BYOK, prefer :func:`get_merged_api_keys` over self.*."""
         m = get_merged_api_keys()
         acli = ocli = None
         if m.anthropic_api_key:
-            acli = anthropic.Anthropic(api_key=m.anthropic_api_key)
+            acli = build_anthropic_client(api_key=m.anthropic_api_key)
         if m.openai_api_key:
-            ocli = OpenAI(api_key=m.openai_api_key)
+            ocli = build_openai_client(api_key=m.openai_api_key)
         if acli or ocli:
             return (acli, ocli)
         return (self.client, self.openai_client)

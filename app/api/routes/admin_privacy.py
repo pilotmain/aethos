@@ -11,7 +11,6 @@ from app.core.db import get_db
 from app.models.nexa_next_runtime import NexaExternalCall
 from app.services.mission_control.nexa_next_state import STATE
 
-
 router = APIRouter(prefix="/admin", tags=["admin-privacy"])
 
 

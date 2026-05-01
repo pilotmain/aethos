@@ -14,18 +14,18 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.models.audit_log import AuditLog
 from app.models.user_agent import UserAgent
+from app.repositories.telegram_repo import TelegramRepository
+from app.services import user_api_keys
 from app.services.custom_agent_templates import (
     REGULATED_TEMPLATE_AGENT_KEYS,
-    template_for_phrase,
     _generic,
+    template_for_phrase,
 )
 from app.services.llm_action_types import CHAT_RESPONSE
-from app.services.llm_usage_context import push_llm_action
-from app.services import user_api_keys
 from app.services.llm_key_resolution import ResolvedLLM, resolve_llm_for_user
+from app.services.llm_usage_context import push_llm_action
 from app.services.runtime_capabilities import log_guardrail_block
 from app.services.user_capabilities import get_telegram_role_for_app_user, is_trusted_or_owner
-from app.repositories.telegram_repo import TelegramRepository
 
 logger = logging.getLogger(__name__)
 
@@ -68,6 +68,7 @@ def _audit_custom_agent_event(
         logger.warning("custom agent audit commit failed: %s", exc)
 
 from app.services.mention_control import CATALOG_KEY_TO_INTERNAL, MENTION_ALIASES  # noqa: WPS433
+
 DANGER_TOOL_KEYWORDS: frozenset[str] = frozenset(
     {
         "dev execution",

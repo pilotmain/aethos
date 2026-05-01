@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -15,19 +17,17 @@ from app.services.host_executor_chat import (
     may_run_pre_llm_deterministic_host,
     try_apply_host_executor_turn,
 )
-from app.services.nexa_workspace_project_registry import try_workspace_project_nl_turn
-from app.services.next_action_confirmation import (
-    interpret_next_action_user_message,
-    parse_suggested_actions_from_context,
-)
 from app.services.lightweight_workflow import (
     append_adhoc_committed_action,
     flow_step_exists_for_command,
     interpret_flow_user_message,
     mark_flow_step_done,
 )
-import json
-from datetime import datetime, timezone
+from app.services.nexa_workspace_project_registry import try_workspace_project_nl_turn
+from app.services.next_action_confirmation import (
+    interpret_next_action_user_message,
+    parse_suggested_actions_from_context,
+)
 
 logger = logging.getLogger(__name__)
 

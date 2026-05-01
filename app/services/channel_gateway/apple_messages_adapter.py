@@ -10,9 +10,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.channel_user import ChannelUser
+from app.services.channel_gateway.apple_messages_send import send_apple_message_text
 from app.services.channel_gateway.base import ChannelAdapter
 from app.services.channel_gateway.identity import resolve_channel_user
-from app.services.channel_gateway.apple_messages_send import send_apple_message_text
 
 # Provider-defined customer id; stable alphanumerics, underscore, hyphen, colon.
 _CUSTOMER_RE = re.compile(r"^[A-Za-z0-9_\-:]{1,128}$")

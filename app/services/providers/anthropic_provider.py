@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 def call_anthropic(payload: dict[str, Any]) -> dict[str, Any]:
     from app.core.config import get_settings
-    from app.services.providers.sdk import anthropic as anthropic_sdk
+    from app.services.providers.sdk import build_anthropic_client
 
     s = get_settings()
     key = (s.anthropic_api_key or "").strip()
@@ -26,7 +26,7 @@ def call_anthropic(payload: dict[str, Any]) -> dict[str, Any]:
 
     try:
         timeout = float(s.nexa_provider_timeout_seconds or 15.0)
-        client = anthropic_sdk.Anthropic(api_key=key, timeout=timeout)
+        client = build_anthropic_client(api_key=key, timeout=timeout)
         msg = client.messages.create(
             model=s.anthropic_model,
             max_tokens=2048,

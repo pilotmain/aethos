@@ -6,7 +6,6 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-
 # Triggers: “create an agent”, “create 3 agents”, “build me a personal agent”, etc.
 # Deliberately excludes vague phrases like “create multi agents” (capability question).
 _RE_CREATE = re.compile(

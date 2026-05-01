@@ -3,54 +3,69 @@ from __future__ import annotations
 
 import json
 import logging
+from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import FileResponse, Response
-from pathlib import Path
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.core.db import get_db
 from app.core.security import get_valid_web_user_id
+from app.models.access_permission import AccessPermission
+from app.models.conversation_context import ConversationContext
+from app.repositories.telegram_repo import TelegramRepository
 from app.schemas.agent_job import AgentJobApprovalRequest, AgentJobRead
 from app.schemas.memory import AgentMemoryState
 from app.schemas.web_ui import (
-    UsageSummaryOut,
     DecisionSummaryOut,
     FlowSummaryItemOut,
     SystemEventItemOut,
+    UsageSummaryOut,
+    WebAccessPermissionGrantIn,
+    WebAccessPermissionOut,
+    WebActiveWorkspaceProjectResponse,
     WebByokKeyIn,
     WebByokKeyRow,
     WebChatMessageIn,
     WebChatMessageOut,
-    WebIndicatorItem,
     WebDocumentGenerateIn,
     WebDocumentGenerateOut,
     WebDocumentItemOut,
-    WebMessageItem,
-    WebSessionOut,
-    WebSessionCreateIn,
-    WebSessionCreatedOut,
     WebHostExecutorPanelOut,
+    WebIndicatorItem,
+    WebMessageItem,
+    WebNexaWorkspaceProjectCreateIn,
+    WebNexaWorkspaceProjectOut,
+    WebReleaseLatestOut,
+    WebReleaseNotesOut,
+    WebSessionActiveProjectIn,
+    WebSessionCreatedOut,
+    WebSessionCreateIn,
+    WebSessionOut,
     WebSystemStatusOut,
     WebWorkContextOut,
-    WebReleaseNotesOut,
-    WebReleaseLatestOut,
-    WebAccessPermissionOut,
-    WebAccessPermissionGrantIn,
-    WebWorkspaceRootOut,
     WebWorkspaceRootCreateIn,
-    WebNexaWorkspaceProjectOut,
-    WebNexaWorkspaceProjectCreateIn,
-    WebSessionActiveProjectIn,
-    WebActiveWorkspaceProjectResponse,
+    WebWorkspaceRootOut,
 )
-from app.services.host_executor_visibility import host_executor_public
-from app.services.work_context import build_work_context
+from app.services import release_updates, user_api_keys
+from app.services.access_permissions import (
+    GRANT_MODE_PERSISTENT,
+)
+from app.services.access_permissions import (
+    grant_permission as ap_grant_permission,
+)
+from app.services.access_permissions import (
+    list_permissions as ap_list_permissions,
+)
+from app.services.access_permissions import (
+    revoke_permission as ap_revoke_permission,
+)
 from app.services.agent_job_service import AgentJobService
-from app.models.conversation_context import ConversationContext
+from app.services.app_user_id_parse import parse_telegram_id_from_app_user_id
+from app.services.channel_gateway.router import handle_incoming_channel_message
 from app.services.conversation_context_service import (
     create_new_web_conversation_context,
     delete_or_clear_web_session,
@@ -58,24 +73,13 @@ from app.services.conversation_context_service import (
     get_or_create_context,
     list_conversation_contexts_for_user,
 )
-from app.services.memory_service import MemoryService
-from app.services.nexa_doctor import build_nexa_doctor_text
-from app.services import user_api_keys
-from app.services.worker_heartbeat import read_heartbeat
-from app.services.user_api_keys import (
-    delete_user_api_key,
-    list_user_providers,
-    normalize_provider,
-    set_user_api_key,
-)
 from app.services.document_generation import (
     DocumentGenerationError,
     generate_document,
     get_document_path_for_owner,
     list_document_artifacts_for_user,
 )
-from app.services.channel_gateway.router import handle_incoming_channel_message
-from app.services.app_user_id_parse import parse_telegram_id_from_app_user_id
+from app.services.host_executor_visibility import host_executor_public
 from app.services.llm_usage_recorder import (
     build_llm_usage_summary,
     format_usage_subline,
@@ -83,23 +87,32 @@ from app.services.llm_usage_recorder import (
     get_session_usage_summary,
     get_usage_by_day,
 )
-from app.services import release_updates
-from app.services.user_capabilities import get_telegram_role_for_app_user, is_owner_role
-from app.models.access_permission import AccessPermission
-from app.services.access_permissions import (
-    GRANT_MODE_PERSISTENT,
-    grant_permission as ap_grant_permission,
-    list_permissions as ap_list_permissions,
-    revoke_permission as ap_revoke_permission,
-)
-from app.services.workspace_registry import add_root as wr_add_root, list_roots as wr_list_roots, revoke_root as wr_revoke_root
+from app.services.memory_service import MemoryService
+from app.services.nexa_doctor import build_nexa_doctor_text
 from app.services.nexa_workspace_project_registry import (
     add_workspace_project as nxp_add,
+)
+from app.services.nexa_workspace_project_registry import (
     list_workspace_projects as nxp_list,
+)
+from app.services.nexa_workspace_project_registry import (
     remove_workspace_project as nxp_remove,
+)
+from app.services.nexa_workspace_project_registry import (
     set_active_workspace_project as nxp_set_active,
 )
-from app.repositories.telegram_repo import TelegramRepository
+from app.services.user_api_keys import (
+    delete_user_api_key,
+    list_user_providers,
+    normalize_provider,
+    set_user_api_key,
+)
+from app.services.user_capabilities import get_telegram_role_for_app_user, is_owner_role
+from app.services.work_context import build_work_context
+from app.services.worker_heartbeat import read_heartbeat
+from app.services.workspace_registry import add_root as wr_add_root
+from app.services.workspace_registry import list_roots as wr_list_roots
+from app.services.workspace_registry import revoke_root as wr_revoke_root
 
 logger = logging.getLogger(__name__)
 

@@ -4,8 +4,8 @@ Keys do not grant role or Dev/Ops — only LLM access when merged in :mod:`app.s
 """
 from __future__ import annotations
 
-import re
 import logging
+import re
 from dataclasses import dataclass
 
 from sqlalchemy import delete, func, select

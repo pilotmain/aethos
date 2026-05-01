@@ -13,6 +13,7 @@ from app.core.config import get_settings
 from app.models.nexa_next_runtime import NexaArtifact, NexaExternalCall, NexaMission, NexaMissionTask
 from app.services.events.bus import list_events
 from app.services.metrics.runtime import snapshot as metrics_process_snapshot
+
 MC_MAX_MISSIONS_LOADED = 50
 MC_MAX_ARTIFACTS_PER_MISSION = 100
 

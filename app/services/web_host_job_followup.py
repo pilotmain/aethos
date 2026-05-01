@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+
 from sqlalchemy.orm import Session
 
 from app.services.agent_job_service import AgentJobService

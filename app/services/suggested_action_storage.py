@@ -9,9 +9,9 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 
 from app.services.conversation_context_service import get_or_create_context
-from app.services.web_request_context import get_web_session_id
 from app.services.lightweight_workflow import merge_or_create_flow_state_from_suggestions
 from app.services.next_action_confirmation import command_from_suggestion_line, risk_for_suggestion_command
+from app.services.web_request_context import get_web_session_id
 
 logger = logging.getLogger(__name__)
 

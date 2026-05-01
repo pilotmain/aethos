@@ -15,14 +15,14 @@ from app.models.audit_log import AuditLog
 from app.models.user import User
 from app.services.access_permissions import STATUS_PENDING
 from app.services.agent_job_service import TERMINAL_JOB_STATUSES, AgentJobService
+from app.services.agent_team.service import list_assignments_for_user
 from app.services.channel_gateway.governance import merge_channel_status_governance
 from app.services.channel_gateway.status import build_channel_status_list
+from app.services.custom_agents import display_agent_handle_label
 from app.services.mission_control.cleanup_actions import assignment_hidden_mc, job_dismissed_mc
 from app.services.mission_control.scoring import score_mission_item
 from app.services.mission_control.ui_state import dismissed_attention_ids
 from app.services.trust_audit_constants import NETWORK_EXTERNAL_SEND_BLOCKED
-from app.services.agent_team.service import list_assignments_for_user
-from app.services.custom_agents import display_agent_handle_label
 from app.services.trust_audit_read_model import audit_row_to_event, query_trust_activity, summarize_trust_activity
 
 _GATEWAY_OUTBOUND_FAILED = "gateway.outbound_failed"

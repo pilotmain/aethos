@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any
 from contextlib import asynccontextmanager
+from typing import Any
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -31,8 +31,8 @@ from app.api.routes import (
     memory,
     mission_control,
     permissions,
-    report_watcher,
     plans,
+    report_watcher,
     slack,
     sms,
     system,
@@ -42,13 +42,13 @@ from app.api.routes import (
     whatsapp,
 )
 from app.core.config import get_settings, print_llm_debug_banner, print_local_service_urls
-from app.services.startup_config_log import log_sanitized_nexa_config, maybe_log_llm_key_hint
 from app.core.db import ensure_schema
 from app.core.scheduler import scheduler
 from app.middleware.metrics import MetricsMiddleware
 from app.middleware.security_headers import SecurityHeadersMiddleware
 from app.models import *  # noqa: F401,F403
 from app.services.logging.logger import configure_logging
+from app.services.startup_config_log import log_sanitized_nexa_config, maybe_log_llm_key_hint
 from app.workers.followup_worker import process_due_checkins
 from app.workers.operator_supervisor import process_supervisor_cycle
 

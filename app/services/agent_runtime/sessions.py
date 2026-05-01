@@ -16,13 +16,6 @@ from app.services.agent_runtime.chat_tools import (
     dedupe_session_specs,
     short_assignment_title,
 )
-from app.services.agent_team.planner import DEFAULT_ORCHESTRATOR
-from app.services.agent_team.service import (
-    create_assignment,
-    dispatch_assignment,
-    get_or_create_default_organization,
-)
-from app.services.custom_agents import display_agent_handle, get_custom_agent, normalize_agent_key
 from app.services.agent_runtime.paths import mission_control_md_path
 from app.services.agent_runtime.tool_registry import get_tool_record, is_tool_enabled
 from app.services.agent_runtime.validation import validate_sessions_spawn
@@ -31,7 +24,14 @@ from app.services.agent_runtime.workspace_files import (
     ensure_seed_files,
     merge_memory_spawn_record,
 )
+from app.services.agent_team.planner import DEFAULT_ORCHESTRATOR
+from app.services.agent_team.service import (
+    create_assignment,
+    dispatch_assignment,
+    get_or_create_default_organization,
+)
 from app.services.audit_service import audit
+from app.services.custom_agents import display_agent_handle, get_custom_agent, normalize_agent_key
 from app.services.runtime_capabilities import audit_permission_bypassed, autonomy_test_mode
 
 logger = logging.getLogger(__name__)

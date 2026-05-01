@@ -9,9 +9,9 @@ from sqlalchemy.orm import Session
 
 from app.models.conversation_context import ConversationContext
 from app.models.project_context import NexaWorkspaceProject
+from app.services.agent_job_service import AgentJobService
 from app.services.document_generation import list_document_artifacts_for_user
 from app.services.lightweight_workflow import _is_flow_expired, _load_flow, _pending_steps
-from app.services.agent_job_service import AgentJobService
 
 
 @dataclass

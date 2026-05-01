@@ -25,7 +25,7 @@ from app.services.job_diagnostics import (
 )
 from app.services.memory_preferences import get_memory_preferences_dict
 from app.services.system_memory_files import memory_path, soul_path
-from app.services.worker_heartbeat import HEARTBEAT_PATH, aider_on_path, read_heartbeat, RUNTIME_DIR
+from app.services.worker_heartbeat import HEARTBEAT_PATH, RUNTIME_DIR, aider_on_path, read_heartbeat
 
 logger = logging.getLogger(__name__)
 
@@ -333,8 +333,8 @@ def build_nexa_doctor_text(
     get_memory_preferences_dict()  # warm cache; durable count uses file snapshot
     dct = durable_preferences_count()
 
-    from app.services.user_capabilities import access_section_for_doctor, is_owner_ids_configured
     from app.services.llm_key_resolution import doctor_user_llm_block
+    from app.services.user_capabilities import access_section_for_doctor, is_owner_ids_configured
 
     acc_block = ""
     if telegram_user_id is not None:

@@ -10,14 +10,14 @@ from fastapi import APIRouter, HTTPException, Request, status
 from app.core.config import get_settings
 from app.core.db import SessionLocal
 from app.services.channel_gateway.email_links import format_email_permission_text
+from app.services.channel_gateway.gateway_events import audit_outbound_failure
 from app.services.channel_gateway.metadata import build_channel_origin
 from app.services.channel_gateway.origin_context import bind_channel_origin
+from app.services.channel_gateway.rate_limit import GatewayRateLimitExceeded
 from app.services.channel_gateway.router import handle_incoming_channel_message
 from app.services.channel_gateway.sms_adapter import get_sms_adapter, twilio_form_to_raw_event
-from app.services.channel_gateway.gateway_events import audit_outbound_failure
 from app.services.channel_gateway.sms_send import send_sms_text
 from app.services.channel_gateway.sms_verify import verify_twilio_signature
-from app.services.channel_gateway.rate_limit import GatewayRateLimitExceeded
 from app.services.orchestrator_service import OrchestratorService
 
 logger = logging.getLogger(__name__)

@@ -12,8 +12,9 @@ from urllib.parse import urlparse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models.access_permission import AccessPermission
 from app.core.config import get_settings
+from app.models.access_permission import AccessPermission
+from app.services import workspace_registry as workspace_registry_mod
 from app.services.audit_service import audit
 from app.services.channel_gateway.governance import user_can_approve_high_risk
 from app.services.governance_taxonomy import EVENT_APPROVAL_ROLE_DENIED
@@ -28,7 +29,6 @@ from app.services.trust_audit_constants import (
     ACCESS_PERMISSION_USED,
 )
 from app.services.trust_audit_correlation import correlation_from_payload
-from app.services import workspace_registry as workspace_registry_mod
 from app.services.workspace_registry import list_roots, path_allowed_under_policy
 
 logger = logging.getLogger(__name__)

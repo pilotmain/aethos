@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.models.agent_job import AgentJob
 from app.services.handoff_paths import AGENT_TASKS_DIR, PROJECT_ROOT
-from app.services.memory_preferences import get_memory_preferences_dict, count_non_empty_preferences
+from app.services.memory_preferences import count_non_empty_preferences, get_memory_preferences_dict
 from app.services.system_memory_files import memory_path
 
 logger = logging.getLogger(__name__)

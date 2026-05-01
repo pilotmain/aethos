@@ -6,7 +6,8 @@ import logging
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import delete as sql_delete, select
+from sqlalchemy import delete as sql_delete
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import flag_modified
 

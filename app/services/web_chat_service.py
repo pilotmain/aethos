@@ -3,16 +3,15 @@ from __future__ import annotations
 
 import re
 import uuid
-from typing import Any
 from contextlib import nullcontext
 from dataclasses import dataclass, field
+from typing import Any
+
 from sqlalchemy.orm import Session
 
 from app.schemas.web_ui import WebResponseSourceItem
 from app.services.agent_job_service import AgentJobService
 from app.services.agent_orchestrator import handle_agent_request
-from app.services.web_chat_metadata import WebMessageMetadata, compute_web_message_metadata
-from app.services.web_turn_extras import take_web_turn_extra
 from app.services.agent_router import route_agent
 from app.services.conversation_context_service import (
     build_context_snapshot,
@@ -20,33 +19,35 @@ from app.services.conversation_context_service import (
     get_or_create_context,
     update_context_after_turn,
 )
-from app.services.intent_classifier import get_intent
-from app.services.memory_aware_routing import apply_memory_aware_route_adjustment
-from app.services.memory_service import MemoryService
-from app.services.mention_incoming_for_http import run_explicit_mention
-from app.services.orchestrator_service import OrchestratorService
-from app.services.response_formatter import finalize_user_facing_text
-from app.services.llm_request_context import llm_telegram_context
-from app.services.llm_usage_context import bind_llm_usage_context
-from app.services.web_request_context import bind_web_session_id
 from app.services.custom_agents import (
-    try_custom_agent_capability_guidance,
     try_conversational_create_custom_agents,
+    try_custom_agent_capability_guidance,
 )
-from app.services.document_generation import DocumentGenerationError, generate_document
-from app.services.document_template_intent import parse_template_document_request
 from app.services.decision_summary import (
     build_decision_summary,
     decision_for_web_explicit,
     infer_decision_for_web_main,
     merge_no_llm_path,
 )
+from app.services.document_generation import DocumentGenerationError, generate_document
+from app.services.document_template_intent import parse_template_document_request
+from app.services.intent_classifier import get_intent
+from app.services.llm_request_context import llm_telegram_context
+from app.services.llm_usage_context import bind_llm_usage_context
 from app.services.llm_usage_recorder import (
     build_usage_summary_for_request,
     count_llm_events_for_request,
     record_response_turn,
 )
+from app.services.memory_aware_routing import apply_memory_aware_route_adjustment
+from app.services.memory_service import MemoryService
+from app.services.mention_incoming_for_http import run_explicit_mention
+from app.services.orchestrator_service import OrchestratorService
 from app.services.permission_reply_guard import patch_llm_reply_for_permission_execution_layer
+from app.services.response_formatter import finalize_user_facing_text
+from app.services.web_chat_metadata import WebMessageMetadata, compute_web_message_metadata
+from app.services.web_request_context import bind_web_session_id
+from app.services.web_turn_extras import take_web_turn_extra
 
 orchestrator = OrchestratorService()
 memory_service = MemoryService()
@@ -270,14 +271,13 @@ def process_web_message(
             def _host_drain_seed() -> list[dict[str, str]]:
                 return list(_host_idle_events or [])
 
+            from app.services.agent_runtime.boss_chat import try_spawn_lifecycle_chat_turn
             from app.services.agent_team import try_agent_team_chat_turn
             from app.services.custom_agent_routing import try_deterministic_custom_agent_turn
             from app.services.multi_agent_routing import (
                 is_multi_agent_capability_question,
                 reply_multi_agent_capability_clarification,
             )
-
-            from app.services.agent_runtime.boss_chat import try_spawn_lifecycle_chat_turn
 
             _spawn_life = try_spawn_lifecycle_chat_turn(db, app_user_id, tstrip)
             if _spawn_life is not None:

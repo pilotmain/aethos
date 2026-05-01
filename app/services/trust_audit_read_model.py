@@ -9,10 +9,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any
+from urllib.parse import urlparse
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
-from urllib.parse import urlparse
 
 from app.models.audit_log import AuditLog
 from app.services.trust_audit_constants import (

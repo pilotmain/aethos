@@ -17,10 +17,6 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
-from app.services.custom_agents import (
-    display_agent_handle,
-    normalize_agent_key,
-)
 from app.services.agent_runtime.chat_tools import (
     bounded_mission_signals_present,
     detect_bounded_mission_structure,
@@ -29,14 +25,18 @@ from app.services.agent_runtime.chat_tools import (
     mission_payload_for_spawn,
     try_record_initial_spawn_heartbeat,
 )
-from app.services.mission_control.mode import (
-    handle_mission_control_dashboard_turn,
-    is_mission_control_mode_prompt,
-)
 from app.services.agent_runtime.heartbeat import background_heartbeat
 from app.services.agent_runtime.sessions import sessions_spawn
 from app.services.agent_runtime.tool_registry import load_tool_manifest
 from app.services.audit_service import audit
+from app.services.custom_agents import (
+    display_agent_handle,
+    normalize_agent_key,
+)
+from app.services.mission_control.mode import (
+    handle_mission_control_dashboard_turn,
+    is_mission_control_mode_prompt,
+)
 from app.services.runtime_capabilities import log_guardrail_block
 
 logger = logging.getLogger(__name__)

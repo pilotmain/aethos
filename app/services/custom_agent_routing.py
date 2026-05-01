@@ -161,9 +161,9 @@ def try_deterministic_custom_agent_turn(db: Session, app_user_id: str, user_text
         format_unknown_with_custom,
         get_custom_agent,
         normalize_agent_key,
-        run_custom_user_agent,
         resolve_disable_enable_delete,
         resolve_update_custom_agent,
+        run_custom_user_agent,
     )
     from app.services.mention_control import format_unknown_mention_message, parse_mention
 

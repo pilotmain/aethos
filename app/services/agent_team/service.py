@@ -11,9 +11,9 @@ from sqlalchemy.orm import Session
 
 from app.models.agent_team import AgentAssignment, AgentOrganization, AgentRoleAssignment
 from app.services.agent_team.host_bridge import try_assignment_host_dispatch
-from app.services.cursor_integration import try_cursor_dispatch
 from app.services.agent_team.planner import DEFAULT_ORCHESTRATOR
 from app.services.audit_service import audit
+from app.services.cursor_integration import try_cursor_dispatch
 from app.services.custom_agents import (
     display_agent_handle,
     display_agent_handle_label,

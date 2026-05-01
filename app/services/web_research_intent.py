@@ -11,8 +11,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.telegram_link import TelegramLink
-from app.services.user_capabilities import is_owner_role, get_telegram_role
 from app.services.app_user_id_parse import parse_telegram_id_from_app_user_id
+from app.services.user_capabilities import get_telegram_role, is_owner_role
 
 # https://... and common bare host.TLD (incl. www. and other subdomains)
 _TLD = (

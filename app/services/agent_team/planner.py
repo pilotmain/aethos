@@ -5,7 +5,6 @@ from __future__ import annotations
 import re
 from typing import Any
 
-
 DEFAULT_ORCHESTRATOR = "orchestrator"
 
 # Topic / market / industry research — not local filesystem work (Rule 1).

@@ -15,12 +15,9 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.models.agent_job import AgentJob
-
 from app.services.agent_job_service import AgentJobService
 from app.services.audit_service import audit
 from app.services.cursor_dev_handoff import build_final_worker_review, review_path_for_job
-from app.services.telegram_dev_ux import compact_review_for_telegram, user_friendly_status
-from app.services.dev_worktree_guards import ensure_clean_worktree, is_mainish
 from app.services.dev_artifacts import (
     copy_review_to_artifacts,
     copy_task_to_artifacts,
@@ -32,8 +29,10 @@ from app.services.dev_preflight import (
     run_dev_preflight,
     write_preflight_json,
 )
+from app.services.dev_worktree_guards import ensure_clean_worktree, is_mainish
 from app.services.handoff_paths import AGENT_TASKS_DIR, PROJECT_ROOT
 from app.services.secret_scan import scan_combined_diff_for_secrets
+from app.services.telegram_dev_ux import compact_review_for_telegram, user_friendly_status
 from app.services.telegram_outbound import send_telegram_message
 from app.services.worker_heartbeat import write_heartbeat
 from app.services.worker_identity import get_worker_id

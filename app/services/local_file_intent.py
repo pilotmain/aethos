@@ -15,9 +15,8 @@ from pathlib import Path
 from typing import Any
 
 from app.core.config import get_settings
-
-from app.services.host_executor_intent import safe_relative_path
 from app.services.custom_agent_routing import custom_agent_message_blocks_folder_heuristics
+from app.services.host_executor_intent import safe_relative_path
 
 
 def _agent_team_chat_blocks_folder_heuristics(text: str) -> bool:

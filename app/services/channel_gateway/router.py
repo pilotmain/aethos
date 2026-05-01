@@ -4,8 +4,8 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
-from app.services.channel_gateway.metadata import build_channel_origin
 from app.services.channel_gateway.governance import check_channel_governance
+from app.services.channel_gateway.metadata import build_channel_origin
 from app.services.channel_gateway.normalized_message import validate_normalized_message
 from app.services.channel_gateway.origin_context import bind_channel_origin
 

@@ -5,10 +5,16 @@ import re
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import Application, ContextTypes
 
+from app.bot.typing import typing_indicator
 from app.core.config import get_settings, print_llm_debug_banner
-from app.services.startup_config_log import log_sanitized_nexa_config, maybe_log_llm_key_hint
 from app.core.db import SessionLocal, ensure_schema
 from app.schemas.agent_job import AgentJobCreate
+from app.services import user_api_keys as user_api_key_service
+from app.services.agent_job_service import AgentJobService
+from app.services.agent_orchestrator import handle_agent_mention
+from app.services.agent_router import route_agent
+from app.services.agent_status_text import format_agents_status
+from app.services.agent_telegram_copy import format_agents_list, format_command_center
 from app.services.behavior_engine import (
     apply_tone,
     build_context,
@@ -16,23 +22,12 @@ from app.services.behavior_engine import (
     map_intent_to_behavior,
     no_tasks_response,
 )
-from app.services.agent_job_service import AgentJobService
-from app.services.dev_orchestrator.dev_job_planner import (
-    create_planned_dev_job,
-    format_planned_dev_reply,
+from app.services.channel_gateway.telegram_adapter import (
+    get_telegram_adapter,
+    register_telegram_handlers,
 )
-from app.services.dev_task_service import (
-    build_cursor_instruction,
-    is_cursor_request,
-    is_dev_task_message,
-    parse_dev_task,
-)
-from app.services.agent_orchestrator import handle_agent_mention
-from app.services.agent_router import route_agent
-from app.services.memory_aware_routing import apply_memory_aware_route_adjustment
-from app.services.mention_control import map_catalog_key_to_internal, parse_mention
-from app.services.ops_approval import process_ops_job_decision
-from app.services.ops_handler import handle_nexa_ops_mention
+from app.services.checkin_service import CheckInService
+from app.services.command_help import format_command_help_response
 from app.services.conversation_context_service import (
     apply_topic_intent_to_context,
     build_context_snapshot,
@@ -46,18 +41,16 @@ from app.services.conversation_context_service import (
     short_reply_for_topic_intent,
     update_context_after_turn,
 )
-from app.services.agent_status_text import format_agents_status
-from app.services.agent_telegram_copy import format_agents_list, format_command_center
-from app.services.handoff_tracking_service import HandoffTrackingService
-from app.services.learning_event_service import (
-    approve as learning_approve,
-    list_pending as learning_list_pending,
-    reject as learning_reject,
+from app.services.dev_orchestrator.dev_job_planner import (
+    create_planned_dev_job,
+    format_planned_dev_reply,
 )
-from app.services.loop_tracking_service import reset_focus_after_completion
-from app.services.local_action_parser import parse_local_action
-from app.services.checkin_service import CheckInService
-from app.services.command_help import format_command_help_response
+from app.services.dev_task_service import (
+    build_cursor_instruction,
+    is_cursor_request,
+    is_dev_task_message,
+    parse_dev_task,
+)
 from app.services.general_answer_service import answer_general_question
 from app.services.general_response import (
     casual_capability_reply,
@@ -67,6 +60,7 @@ from app.services.general_response import (
     simple_greeting_reply,
     strip_correction_prefix,
 )
+from app.services.handoff_tracking_service import HandoffTrackingService
 from app.services.idea_intake import (
     build_pending_project_payload,
     extract_idea_summary,
@@ -85,8 +79,32 @@ from app.services.idea_workflow_routing import (
     try_strategy_workflow,
 )
 from app.services.intent_classifier import get_intent, is_command_question
+from app.services.learning_event_service import (
+    approve as learning_approve,
+)
+from app.services.learning_event_service import (
+    list_pending as learning_list_pending,
+)
+from app.services.learning_event_service import (
+    reject as learning_reject,
+)
+from app.services.llm_request_context import (
+    bind_llm_telegram,
+    llm_telegram_context,
+    unbind_llm_telegram,
+)
+from app.services.llm_usage_context import bind_llm_usage_telegram, unbind_llm_usage
+from app.services.local_action_parser import parse_local_action
+from app.services.loop_tracking_service import reset_focus_after_completion
+from app.services.memory_aware_routing import apply_memory_aware_route_adjustment
 from app.services.memory_service import MemoryService
+from app.services.mention_control import map_catalog_key_to_internal, parse_mention
+from app.services.ops_approval import process_ops_job_decision
+from app.services.ops_handler import handle_nexa_ops_mention
 from app.services.orchestrator_service import OrchestratorService
+from app.services.startup_config_log import log_sanitized_nexa_config, maybe_log_llm_key_hint
+from app.services.telegram_access_audit import log_access_denied
+from app.services.telegram_memory_commands import handle_memory_command
 from app.services.telegram_onboarding import (
     first_time_nexa_start_text,
     help_message,
@@ -95,24 +113,11 @@ from app.services.telegram_onboarding import (
     start_message_for_role,
     weak_input_response,
 )
-from app.services.telegram_access_audit import log_access_denied
-from app.services.telegram_memory_commands import handle_memory_command
 from app.services.telegram_service import TelegramService
-from app.services.channel_gateway.telegram_adapter import (
-    get_telegram_adapter,
-    register_telegram_handlers,
-)
-from app.services.llm_request_context import (
-    bind_llm_telegram,
-    llm_telegram_context,
-    unbind_llm_telegram,
-)
-from app.services.llm_usage_context import bind_llm_usage_telegram, unbind_llm_usage
-from app.services import user_api_keys as user_api_key_service
 from app.services.user_capabilities import (
+    ACCESS_RESTRICTED,
     BLOCKED_MSG,
     DEV_EXECUTION_RESTRICTED,
-    ACCESS_RESTRICTED,
     can_list_dev_jobs_commands,
     can_memory_working_remember_forget,
     can_project_admin,
@@ -120,13 +125,11 @@ from app.services.user_capabilities import (
     can_run_dev_agent_jobs,
     can_use_dev_doctor_or_git,
     can_write_global_memory_file,
+    format_access_command_text,
     get_telegram_role,
     is_owner_role,
     is_trusted_or_owner,
-    format_access_command_text,
 )
-
-from app.bot.typing import typing_indicator
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -992,11 +995,11 @@ async def permissions_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     if not update.effective_user or not update.message:
         return
     from app.services.access_permissions import (
+        STATUS_PENDING,
         grant_permission,
         list_permissions,
         reason_for_scope,
         revoke_permission,
-        STATUS_PENDING,
     )
 
     db = SessionLocal()
@@ -2095,8 +2098,8 @@ async def _handle_incoming_text_impl(update: Update, context: ContextTypes.DEFAU
                 udata = (context.user_data or {}) if context and context.user_data is not None else {}
                 if not tstrip.startswith("/") and tstrip:
                     from app.services.custom_agents import (
-                        try_custom_agent_capability_guidance,
                         try_conversational_create_custom_agents,
+                        try_custom_agent_capability_guidance,
                     )
     
                     cg = try_custom_agent_capability_guidance(db, app_user_id, tstrip)
@@ -2133,15 +2136,15 @@ async def _handle_incoming_text_impl(update: Update, context: ContextTypes.DEFAU
                         return
                 if not tstrip.startswith("/") and tstrip:
                     from telegram import InputFile
-    
-                    from app.services.document_template_intent import (
-                        is_template_document_intent,
-                        parse_template_document_request,
-                    )
+
                     from app.services.document_generation import (
                         DocumentGenerationError,
                         generate_document,
                         get_document_path_for_owner,
+                    )
+                    from app.services.document_template_intent import (
+                        is_template_document_intent,
+                        parse_template_document_request,
                     )
     
                     if is_template_document_intent(tstrip):

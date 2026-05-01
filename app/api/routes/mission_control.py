@@ -23,10 +23,8 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.core.db import get_db
 from app.core.security import get_valid_web_user_id
-from app.services.mission_control.db_purge import (
-    mission_control_data_inventory,
-    purge_mission_control_database_for_user,
-)
+from app.models.nexa_next_runtime import NexaMission
+from app.services.audit_service import audit
 from app.services.mission_control.cleanup_actions import (
     cancel_assignment,
     clear_spawn_group,
@@ -37,12 +35,14 @@ from app.services.mission_control.cleanup_actions import (
     mission_control_delete_custom_agent,
     reset_mission_control,
 )
-from app.services.mission_control.read_model import build_mission_control_summary
+from app.services.mission_control.db_purge import (
+    mission_control_data_inventory,
+    purge_mission_control_database_for_user,
+)
 from app.services.mission_control.graph_builder import build_graph_cached
 from app.services.mission_control.nexa_next_state import build_execution_snapshot
-from app.models.nexa_next_runtime import NexaMission
+from app.services.mission_control.read_model import build_mission_control_summary
 from app.services.mission_control.ui_state import dismiss_attention_item
-from app.services.audit_service import audit
 
 router = APIRouter(prefix="/mission-control", tags=["mission-control"])
 

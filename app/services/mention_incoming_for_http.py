@@ -14,6 +14,7 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
+from app.repositories.telegram_repo import TelegramRepository
 from app.schemas.agent_job import AgentJobCreate
 from app.services.agent_job_service import AgentJobService
 from app.services.agent_orchestrator import handle_agent_mention
@@ -27,21 +28,20 @@ from app.services.idea_workflow_routing import (
     try_marketing_workflow,
     try_strategy_workflow,
 )
+from app.services.memory_service import MemoryService
 from app.services.mention_control import map_catalog_key_to_internal, parse_mention
 from app.services.ops_handler import handle_nexa_ops_mention
+from app.services.orchestrator_service import OrchestratorService
 from app.services.project_parser import parse_dev_project_phrase
 from app.services.project_registry import get_default_project, get_project_by_key, list_project_keys
-from app.services.orchestrator_service import OrchestratorService
-from app.services.memory_service import MemoryService
-from app.services.telegram_dev_ux import format_job_row_short
 from app.services.telegram_access_audit import log_access_denied
+from app.services.telegram_dev_ux import format_job_row_short
 from app.services.user_capabilities import (
     DEV_EXECUTION_RESTRICTED,
     get_telegram_role,
     is_owner_role,
     is_trusted_or_owner,
 )
-from app.repositories.telegram_repo import TelegramRepository
 
 logger = logging.getLogger(__name__)
 

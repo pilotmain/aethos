@@ -91,7 +91,7 @@ def _generate_secret() -> str:
 
 
 def print_env_validation_at_startup(component: str) -> None:
-    from app.services.env_validator import format_env_validation_report, collect_env_validation_issues
+    from app.services.env_validator import collect_env_validation_issues, format_env_validation_report
 
     try:
         issues = collect_env_validation_issues()

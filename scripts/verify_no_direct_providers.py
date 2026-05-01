@@ -2,7 +2,7 @@
 """
 Fail if OpenAI / Anthropic SDK imports appear outside ``app/services/providers/``.
 
-Same rule as ``tests/test_no_direct_external_provider_calls.py`` — CI guardrail (Phase 10).
+Same rule as CI guardrails (Phase 10 / 16) — complements import-linter + AST tests.
 """
 
 from __future__ import annotations
@@ -39,8 +39,6 @@ def scan() -> list[str]:
         for i, line in enumerate(text.splitlines(), start=1):
             if line.strip().startswith("#"):
                 continue
-            if "app.services.providers.sdk" in line:
-                continue
             low = line.lower()
             if any(m in low for m in _FORBIDDEN_LINE_MARKERS):
                 bad.append(f"{path.relative_to(_REPO_ROOT)}:{i}:{line.strip()}")
@@ -50,7 +48,12 @@ def scan() -> list[str]:
 def main() -> int:
     bad = scan()
     if bad:
-        print("Forbidden provider imports outside app/services/providers:\n" + "\n".join(bad), file=sys.stderr)
+        print(
+            "CRITICAL: ARCHITECTURE VIOLATION — forbidden vendor SDK imports outside "
+            "app/services/providers/:\n\n"
+            + "\n".join(bad),
+            file=sys.stderr,
+        )
         return 1
     return 0
 

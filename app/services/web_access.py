@@ -11,9 +11,8 @@ import logging
 import re
 import socket
 from dataclasses import dataclass, field
-from urllib import robotparser
 from typing import Any
-
+from urllib import robotparser
 from urllib.parse import urlparse, urlunparse
 
 import httpx

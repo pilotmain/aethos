@@ -13,14 +13,14 @@ from starlette.responses import PlainTextResponse
 from app.core.config import get_settings
 from app.core.db import SessionLocal
 from app.services.channel_gateway.email_links import format_email_permission_text
+from app.services.channel_gateway.gateway_events import audit_outbound_failure
 from app.services.channel_gateway.metadata import build_channel_origin
 from app.services.channel_gateway.origin_context import bind_channel_origin
+from app.services.channel_gateway.rate_limit import GatewayRateLimitExceeded
 from app.services.channel_gateway.router import handle_incoming_channel_message
 from app.services.channel_gateway.whatsapp_adapter import extract_whatsapp_inbound_messages, get_whatsapp_adapter
-from app.services.channel_gateway.gateway_events import audit_outbound_failure
 from app.services.channel_gateway.whatsapp_send import send_whatsapp_text
 from app.services.channel_gateway.whatsapp_verify import verify_meta_webhook_signature
-from app.services.channel_gateway.rate_limit import GatewayRateLimitExceeded
 from app.services.orchestrator_service import OrchestratorService
 
 logger = logging.getLogger(__name__)

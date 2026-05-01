@@ -5,7 +5,6 @@ from datetime import date
 
 from sqlalchemy.orm import Session
 
-from app.services.memory_service import MemoryService
 from app.services.agent_router import (
     format_active_agent_projection,
     infer_active_agents_from_text,
@@ -13,6 +12,7 @@ from app.services.agent_router import (
 )
 from app.services.command_help import format_command_help_response
 from app.services.intent_classifier import is_command_question
+from app.services.memory_service import MemoryService
 from app.services.multi_agent_routing import (
     is_multi_agent_capability_question,
     reply_multi_agent_capability_clarification,
@@ -22,7 +22,7 @@ from app.services.research_capability_copy import (
     format_research_capability_message,
     is_research_capability_question,
 )
-from app.services.telegram_onboarding import clarify_general_response, capability_response
+from app.services.telegram_onboarding import capability_response, clarify_general_response
 
 logger = logging.getLogger(__name__)
 
@@ -303,6 +303,11 @@ def build_response(
         format_next_steps_block,
         should_append_next_steps,
     )
+    from app.services.owner_identity_faq import (
+        try_canned_nexa_product_faq,
+        try_canned_owner_identity_faq,
+    )
+    from app.services.prompt_budget import classify_prompt_budget_tier
     from app.services.response_composer import (
         ResponseContext,
         append_microstep_if_useful,
@@ -310,11 +315,6 @@ def build_response(
         resolve_voice_style,
     )
     from app.services.response_formatter import finalize_user_facing_text
-    from app.services.owner_identity_faq import (
-        try_canned_nexa_product_faq,
-        try_canned_owner_identity_faq,
-    )
-    from app.services.prompt_budget import classify_prompt_budget_tier
 
     uprefs = context.user_preferences
 

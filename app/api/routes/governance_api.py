@@ -33,13 +33,13 @@ from app.services.channel_gateway.governance import ALL_GOVERNANCE_ROLES, merge_
 from app.services.channel_gateway.status import build_channel_status_list
 from app.services.governance.read_model import audit_rows_filtered_export, build_organization_overview
 from app.services.governance.service import (
+    _EXPORT_ROLES,
+    _MANAGE_ROLES,
     ROLE_ADMIN,
     ROLE_AUDITOR,
     ROLE_MEMBER,
     ROLE_OWNER,
     ROLE_VIEWER,
-    _EXPORT_ROLES,
-    _MANAGE_ROLES,
     add_member,
     create_organization,
     ensure_default_organization,

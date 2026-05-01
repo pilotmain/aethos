@@ -16,12 +16,11 @@ from app.services.audit_service import audit
 from app.services.content_provenance import InstructionSource, normalize_instruction_source
 from app.services.enforcement_pipeline import ExecutionContext, enforce_host_execution_policy
 from app.services.host_executor_chat import (
-    enqueue_host_job_from_validated_payload,
     _validate_enqueue_payload,
+    enqueue_host_job_from_validated_payload,
 )
 from app.services.permission_request_flow import precheck_host_executor_permissions
 from app.services.trust_audit_constants import ACCESS_HOST_EXECUTOR_BLOCKED, HOST_EXECUTION_ALLOWED
-
 
 logger = logging.getLogger(__name__)
 

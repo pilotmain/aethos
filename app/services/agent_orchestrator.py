@@ -27,14 +27,14 @@ def _public_url_read_response(
     from app.core.config import get_settings
     from app.services.browser_preview import is_static_fetch_likely_too_little
     from app.services.user_capabilities import get_telegram_role_for_app_user, is_owner_role
-    from app.services.web_research_intent import (
-        app_user_allows_internal_fetch,
-        extract_urls_from_text,
-    )
     from app.services.web_access import (
         PublicPageSummary,
         format_page_summary_for_prompt,
         summarize_public_page,
+    )
+    from app.services.web_research_intent import (
+        app_user_allows_internal_fetch,
+        extract_urls_from_text,
     )
 
     t = (text or "").strip()
@@ -287,11 +287,11 @@ def _build_marketing_public_url_blocks(
     (formatted block for the LLM, list of PublicPageSummary for optional thin-page note).
     """
     from app.core.config import get_settings
+    from app.services.web_access import format_page_summary_for_prompt, summarize_public_page
     from app.services.web_research_intent import (
         app_user_allows_internal_fetch,
         extract_urls_from_text,
     )
-    from app.services.web_access import format_page_summary_for_prompt, summarize_public_page
 
     urls = extract_urls_from_text((user_text or "").strip(), max_urls=2)
     if not urls:
@@ -455,6 +455,7 @@ def _run_marketing_search_block_for_prompt(
     and thin-page rules). Returns (prompt block or policy/error string, search result items).
     """
     from app.core.config import get_settings
+    from app.schemas.web_ui import WebResponseSourceItem
     from app.services.web_research_intent import build_marketing_search_query_against_url
     from app.services.web_search import (
         MissingWebSearchKey,
@@ -463,7 +464,6 @@ def _run_marketing_search_block_for_prompt(
         format_search_results_for_prompt,
         search_web,
     )
-    from app.schemas.web_ui import WebResponseSourceItem
 
     t = (user_text or "").strip()
     rlist = [u for u in (resolved_urls or []) if (u or "").strip()]
@@ -592,6 +592,7 @@ def handle_nexa_request(
     conversation_snapshot: dict | None = None,
     routing_agent_key: str | None = None,
 ) -> str:
+    from app.core.config import get_settings
     from app.services.behavior_engine import (
         apply_tone,
         build_context,
@@ -599,9 +600,8 @@ def handle_nexa_request(
         no_tasks_response,
     )
     from app.services.intent_classifier import get_intent
-    from app.core.config import get_settings
-    from app.services.web_research_intent import should_use_public_url_read
     from app.services.routing.authority import should_suppress_public_web_pipeline
+    from app.services.web_research_intent import should_use_public_url_read
 
     intent = get_intent(text, conversation_snapshot=conversation_snapshot)
     ctx = build_context(db, app_user_id, memory_service, orchestrator)
@@ -924,14 +924,13 @@ def handle_research_agent_request(
             "`@research Ethiopian economy update` or a specific question."
         )
     from app.services.browser_preview import format_preview_for_chat, preview_public_page
+    from app.services.general_answer_service import answer_general_question
+    from app.services.routing.authority import should_suppress_public_web_pipeline
     from app.services.user_capabilities import get_telegram_role_for_app_user
     from app.services.web_research_intent import (
         extract_url_for_browser_preview,
         extract_urls_from_text,
     )
-    from app.services.general_answer_service import answer_general_question
-
-    from app.services.routing.authority import should_suppress_public_web_pipeline
 
     suppress_web = should_suppress_public_web_pipeline(t)
 
@@ -985,7 +984,7 @@ def handle_general_agent_request(
     conversation_snapshot: dict | None = None,
     routing_agent_key: str | None = None,
 ) -> str:
-    from app.services.behavior_engine import build_context, build_response, apply_tone, map_intent_to_behavior
+    from app.services.behavior_engine import apply_tone, build_context, build_response, map_intent_to_behavior
     from app.services.intent_classifier import get_intent
 
     intent = get_intent(text, conversation_snapshot=conversation_snapshot)

@@ -1,0 +1,9 @@
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["F401", "E9", "I"]
+
+[tool.ruff.lint.per-file-ignores]
+"app/services/providers/**" = ["I"]

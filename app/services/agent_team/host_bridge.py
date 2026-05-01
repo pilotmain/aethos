@@ -9,9 +9,10 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.models.agent_team import AgentAssignment
+from app.services.agent_team.planner import assignment_skips_host_path_inference
 from app.services.audit_service import audit
-from app.services.conversation_context_service import get_or_create_context
 from app.services.content_provenance import InstructionSource, apply_trusted_instruction_source
+from app.services.conversation_context_service import get_or_create_context
 from app.services.host_executor_chat import (
     _validate_enqueue_payload,
     enqueue_host_job_from_validated_payload,
@@ -23,7 +24,6 @@ from app.services.nexa_workspace_project_registry import (
     active_project_relative_base,
     merge_payload_with_project_base,
 )
-from app.services.agent_team.planner import assignment_skips_host_path_inference
 from app.services.permission_request_flow import (
     card_message_for_host_payload,
     derive_permission_reason,

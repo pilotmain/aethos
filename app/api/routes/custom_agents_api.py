@@ -16,8 +16,8 @@ from app.schemas.custom_agents_api import (
     CustomAgentsListOut,
     CustomAgentSummary,
 )
-from app.services.custom_agent_parser import parse_custom_agent_from_prompt
 from app.services.channel_gateway.origin_context import get_channel_origin
+from app.services.custom_agent_parser import parse_custom_agent_from_prompt
 from app.services.custom_agents import (
     _audit_custom_agent_event,
     can_user_create_custom_agents,

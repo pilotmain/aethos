@@ -6,6 +6,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
+
 def _norm_handle_key(h: str) -> str:
     return re.sub(r"[^a-z0-9]+", "_", (h or "").lower()).strip("_")
 

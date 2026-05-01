@@ -9,17 +9,17 @@ import re
 from typing import Any, TypedDict
 
 from app.core.config import get_settings
-from app.services.providers.sdk import OpenAI, anthropic
 from app.services.llm_key_resolution import get_merged_api_keys
+from app.services.llm_usage_recorder import record_anthropic_message_usage, record_openai_message_usage
 from app.services.memory_preferences import (
     identity_pronoun_system_instructions,
     maybe_apply_single_plain_cursor_block,
     preference_formatting_system_instructions,
 )
+from app.services.providers.sdk import build_anthropic_client, build_openai_client
 from app.services.response_formatter import LIST_FORMATTING_LLM_GUIDANCE
-from app.services.structured_response_style import structured_system_suffix_for_nexa_composer
 from app.services.safe_llm_gateway import composer_context_to_safe_llm_payload
-from app.services.llm_usage_recorder import record_anthropic_message_usage, record_openai_message_usage
+from app.services.structured_response_style import structured_system_suffix_for_nexa_composer
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +36,7 @@ def resolve_voice_style(
     conversation_snapshot: dict | None = None,
 ) -> str:
     _ = conversation_snapshot
-    from app.services.brand_voice import choose_voice_mode, VOICE_MODES
+    from app.services.brand_voice import VOICE_MODES, choose_voice_mode
 
     mode = choose_voice_mode(routing_agent_key, intent)
     if mode not in VOICE_MODES and not routing_agent_key:
@@ -491,9 +491,9 @@ def _get_clients() -> tuple:
     s = get_settings()
     m = get_merged_api_keys()
     anth = (
-        anthropic.Anthropic(api_key=m.anthropic_api_key) if m.anthropic_api_key else None
+        build_anthropic_client(api_key=m.anthropic_api_key) if m.anthropic_api_key else None
     )
-    oai = OpenAI(api_key=m.openai_api_key) if m.openai_api_key else None
+    oai = build_openai_client(api_key=m.openai_api_key) if m.openai_api_key else None
     return s, anth, oai
 
 

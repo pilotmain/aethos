@@ -17,10 +17,10 @@ from app.core.db import SessionLocal
 from app.models.channel_user import ChannelUser
 from app.services.access_permissions import deny_permission as ap_deny_permission
 from app.services.access_permissions import grant_permission as ap_grant_permission
+from app.services.channel_gateway.gateway_events import audit_outbound_failure
 from app.services.channel_gateway.metadata import build_channel_origin
 from app.services.channel_gateway.origin_context import bind_channel_origin
 from app.services.channel_gateway.router import handle_incoming_channel_message
-from app.services.channel_gateway.gateway_events import audit_outbound_failure
 from app.services.channel_gateway.slack_adapter import get_slack_adapter
 from app.services.channel_gateway.slack_api import slack_chat_post_message
 from app.services.channel_gateway.slack_blocks import grant_mode_for_action, permission_blocks
