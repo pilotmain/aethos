@@ -341,6 +341,12 @@ class Settings(BaseSettings):
     # Phase 19 — user-facing privacy stance (standard | strict | paranoid).
     nexa_user_privacy_mode: str = "standard"
 
+    # Phase 22 — OpenClaw parity (memory, autonomy, local-first).
+    nexa_memory_layer_enabled: bool = True
+    nexa_local_first: bool = False
+    nexa_ollama_base_url: str | None = None
+    nexa_mission_parallel_tasks: bool = False
+
     @field_validator("nexa_user_privacy_mode", mode="before")
     @classmethod
     def _normalize_nexa_user_privacy_mode(cls, v: object) -> str:

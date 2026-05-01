@@ -116,6 +116,15 @@ class NexaGateway:
 
         update_state(result)
 
+        try:
+            from app.services.memory.memory_writer import MemoryWriter
+
+            MemoryWriter().write_mission_memory(
+                user_id, mission_id, mission, result, timed_out=timed_out
+            )
+        except Exception:
+            _log.warning("memory.persist_failed", exc_info=True)
+
         return {
             "status": "timeout" if timed_out else "completed",
             "mission": mission,

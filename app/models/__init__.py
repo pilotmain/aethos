@@ -18,6 +18,7 @@ from app.models.llm_usage_event import LlmUsageEvent
 from app.models.local_action import LocalAction
 from app.models.memory import UserMemory
 from app.models.nexa_next_runtime import NexaArtifact, NexaExternalCall, NexaMission, NexaMissionTask
+from app.models.nexa_scheduler_job import NexaSchedulerJob
 from app.models.organization_channel_policy import OrganizationChannelPolicy
 from app.models.plan import Plan, PlanTask
 from app.models.project import Project
@@ -74,4 +75,5 @@ __all__ = [
     "NexaMissionTask",
     "NexaArtifact",
     "NexaExternalCall",
+    "NexaSchedulerJob",
 ]

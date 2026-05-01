@@ -6,6 +6,7 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
+from app.core.config import get_settings
 from app.services.artifacts.store import read_artifacts, write_artifact
 from app.services.events.envelope import emit_runtime_event
 from app.services.providers.gateway import call_provider
@@ -20,6 +21,20 @@ def run_agent(agent: dict[str, Any], db: Session) -> dict[str, Any]:
     mission_id = agent.get("mission_id")
     previous_outputs = read_artifacts(db, mission_id)
 
+    payload_in: dict[str, Any] = {
+        "task": agent["task"],
+        "agent": agent["role"],
+        "handle": agent["handle"],
+        "tool": tool_name,
+        "inputs": previous_outputs,
+    }
+    if get_settings().nexa_memory_layer_enabled:
+        from app.services.memory.memory_index import MemoryIndex
+
+        mc = MemoryIndex().recent_for_prompt(str(agent.get("user_id") or ""))
+        if mc:
+            payload_in["memory_context"] = mc
+
     request = ProviderRequest(
         user_id=str(agent.get("user_id") or "dev_user"),
         mission_id=mission_id,
@@ -27,13 +42,7 @@ def run_agent(agent: dict[str, Any], db: Session) -> dict[str, Any]:
         provider=provider_name,
         model=None,
         purpose=tool_name,
-        payload={
-            "task": agent["task"],
-            "agent": agent["role"],
-            "handle": agent["handle"],
-            "tool": tool_name,
-            "inputs": previous_outputs,
-        },
+        payload=payload_in,
         db=db,
     )
 

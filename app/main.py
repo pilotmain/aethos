@@ -30,6 +30,9 @@ from app.api.routes import (
     jobs,
     memory,
     mission_control,
+    nexa_memory_layer,
+    nexa_scheduler_api,
+    nexa_skills_api,
     permissions,
     plans,
     report_watcher,
@@ -126,6 +129,15 @@ async def lifespan(app: FastAPI):
                 replace_existing=True,
             )
         scheduler.start()
+    try:
+        from app.core.db import SessionLocal
+        from app.services.scheduler.service import register_apscheduler_jobs_from_db
+
+        with SessionLocal() as db:
+            n = register_apscheduler_jobs_from_db(db)
+            logging.getLogger("nexa").info("nexa.scheduler.restored count=%s", n)
+    except Exception as exc:
+        logging.getLogger("nexa").warning("nexa.scheduler.restore_failed %s", exc)
     yield
     if scheduler.running:
         scheduler.shutdown(wait=False)
@@ -159,6 +171,9 @@ app.include_router(dumps.router, prefix=settings.api_v1_prefix)
 app.include_router(plans.router, prefix=settings.api_v1_prefix)
 app.include_router(checkins.router, prefix=settings.api_v1_prefix)
 app.include_router(memory.router, prefix=settings.api_v1_prefix)
+app.include_router(nexa_memory_layer.router, prefix=settings.api_v1_prefix)
+app.include_router(nexa_scheduler_api.router, prefix=settings.api_v1_prefix)
+app.include_router(nexa_skills_api.router, prefix=settings.api_v1_prefix)
 app.include_router(jobs.router, prefix=settings.api_v1_prefix)
 app.include_router(web.router, prefix=settings.api_v1_prefix)
 app.include_router(permissions.router, prefix=settings.api_v1_prefix)

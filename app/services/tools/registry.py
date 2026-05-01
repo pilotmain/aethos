@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from app.core.config import get_settings
+
 
 @dataclass
 class ToolDescriptor:
@@ -88,11 +90,15 @@ def select_tool_for_agent(agent: dict[str, Any]) -> str:
 
 def get_provider_for_tool(tool_name: str) -> str:
     td = TOOLS.get(tool_name)
+    p = "local_stub"
     if td and td.enabled:
-        return td.provider
-    if td:
-        return td.provider
-    return "local_stub"
+        p = td.provider
+    elif td:
+        p = td.provider
+    s = get_settings()
+    if getattr(s, "nexa_local_first", False) and p in ("openai", "anthropic"):
+        return "local_stub"
+    return p
 
 
 def list_tools() -> dict[str, ToolDescriptor]:

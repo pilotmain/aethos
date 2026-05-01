@@ -133,3 +133,7 @@ ehthumbs.db
 Desktop.ini
 
 coverage/
+
+# Phase 22 on-disk user data (local memory + skills)
+/data/nexa_memory/
+/data/nexa_skills/
