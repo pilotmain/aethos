@@ -70,6 +70,12 @@ class MemoryWriter:
                 user_id, kind=kind, title=title, body_md=body, meta=meta
             )
             _log.info("memory.mission_saved user_id=%s mission_id=%s entry=%s", user_id, mission_id, rec.get("id"))
+            try:
+                from app.services.memory.intelligence import maybe_post_mission_memory_pass
+
+                maybe_post_mission_memory_pass(user_id, store=self.store)
+            except Exception:
+                _log.debug("memory.post_mission_pass skipped", exc_info=True)
             return rec
         except OSError as exc:
             _log.warning("memory.write_failed %s", exc)

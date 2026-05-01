@@ -9,14 +9,15 @@ from app.models.dev_runtime import NexaDevWorkspace
 
 def build_dev_plan(goal: str, workspace: NexaDevWorkspace) -> list[dict[str, Any]]:
     """
-    Build a fixed pipeline: inspect → (bounded loop handled in service) → summary.
+    Build a fixed pipeline: analyze → (bounded loop in service) → summary.
 
-    Phase 25 runs adapter/test/fix iterations between inspect and summary.
+    The service loop implements **analyze → code → test → fix → repeat → commit**
+    (bounded iterations); this plan supplies the upfront analyze + closing summary steps.
     """
     _ = workspace
-    g = (goal or "").strip()[:2000]
+    _ = (goal or "").strip()[:2000]
     return [
-        {"type": "inspect", "description": "Inspect repository structure and git status"},
+        {"type": "analyze", "description": "Analyze repository state and goal (git status, scope)"},
         {"type": "summary", "description": "Summarize run and PR-ready notes"},
     ]
 

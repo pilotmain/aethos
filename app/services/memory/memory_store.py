@@ -79,6 +79,40 @@ class MemoryStore:
                     continue
         return rows[-limit:]
 
+    def remove_entry(self, user_id: str, entry_id: str) -> bool:
+        """Remove one entry from the index and delete its markdown file (best-effort)."""
+        tid = (entry_id or "").strip()
+        if not tid:
+            return False
+        idx = self.index_path(user_id)
+        if not idx.is_file():
+            return False
+        kept: list[str] = []
+        removed = False
+        with idx.open(encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    row = json.loads(line)
+                except json.JSONDecodeError:
+                    kept.append(line)
+                    continue
+                if str(row.get("id") or "") == tid:
+                    removed = True
+                    continue
+                kept.append(line)
+        if not removed:
+            return False
+        idx.write_text("\n".join(kept) + ("\n" if kept else ""), encoding="utf-8")
+        md = self.user_dir(user_id) / f"{tid}.md"
+        try:
+            md.unlink(missing_ok=True)
+        except OSError:
+            pass
+        return True
+
     def read_document(self, user_id: str) -> dict[str, Any]:
         """Aggregate view for API: entries + concatenated markdown summaries."""
         entries = self.list_entries(user_id, limit=500)

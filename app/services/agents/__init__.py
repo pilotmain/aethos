@@ -1,5 +1,15 @@
-"""Dynamic agent descriptors for missions and user-defined specialists."""
+"""Agent runtime helpers — long-running sessions, checkpoints (Phase 41)."""
 
-from app.services.agents.factory import create_agent
+from app.services.agents.long_running import (
+    LongRunningSession,
+    register_session,
+    tick_all_registered,
+    unregister_session,
+)
 
-__all__ = ["create_agent"]
+__all__ = [
+    "LongRunningSession",
+    "register_session",
+    "tick_all_registered",
+    "unregister_session",
+]

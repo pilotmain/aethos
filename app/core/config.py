@@ -201,6 +201,8 @@ class Settings(BaseSettings):
     # Optional Playwright-based owner-only public preview (off by default; no login/forms)
     nexa_browser_preview_enabled: bool = False
     nexa_browser_preview_timeout_ms: int = 35_000
+    # Playwright click / form fill on allowlisted public URLs (still no logins; off by default)
+    nexa_browser_automation_enabled: bool = False
 
     @field_validator("nexa_approvals_enabled", mode="before")
     @classmethod

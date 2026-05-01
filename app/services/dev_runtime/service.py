@@ -36,6 +36,16 @@ from app.services.dev_runtime.workspace import get_workspace
 from app.services.events.envelope import emit_runtime_event
 from app.services.mission_control.nexa_next_state import update_state
 
+# Phase 41 — documented pipeline surface (analyze → code → test → fix → repeat → commit)
+DEV_PIPELINE_SEQUENCE: tuple[str, ...] = (
+    "analyze",
+    "code",
+    "test",
+    "fix",
+    "repeat",
+    "commit",
+)
+
 
 def _utc_now() -> datetime:
     return datetime.now(timezone.utc)
@@ -157,7 +167,7 @@ def run_dev_mission(
             cmd_ran: str | None = None
             artifact: dict[str, Any] | None = None
 
-            if stype == "inspect":
+            if stype in ("inspect", "analyze"):
                 gs = git_status(repo)
                 cmd_ran = "git status"
                 row.command = cmd_ran
@@ -178,6 +188,7 @@ def run_dev_mission(
                 "command": cmd_ran,
                 "output_preview": (row.output or "")[:2000],
                 "status": row.status,
+                "pipeline_phase": "analyze" if stype in ("analyze", "inspect") else stype,
             }
             steps_out.append(step_blob)
             context_accum[stype] = artifact
@@ -264,6 +275,8 @@ def run_dev_mission(
             row_loop.test_result = test_bundle
             db.commit()
 
+            tests_ok = bool(test_bundle.get("ok"))
+            pivot_next = not tests_ok and iteration < max_loop_iters
             step_blob = {
                 "id": row_loop.id,
                 "type": "loop_iteration",
@@ -273,6 +286,13 @@ def run_dev_mission(
                 "output_preview": (row_loop.output or "")[:2000],
                 "status": row_loop.status,
                 "tests_ok": test_bundle.get("ok"),
+                "pipeline": {
+                    "sequence": list(DEV_PIPELINE_SEQUENCE),
+                    "code": {"adapter": ca.provider, "ok": ca.ok},
+                    "test": {"ok": tests_ok, "summary": (test_bundle.get("summary") or "")[:500]},
+                    "fix": {"next_iteration_planned": pivot_next},
+                    "repeat": {"iteration": iteration, "max": max_loop_iters},
+                },
             }
             steps_out.append(step_blob)
             context_accum[f"loop_iteration_{iteration}"] = {"agent": out_dict, "tests": test_bundle}
@@ -405,6 +425,18 @@ def run_dev_mission(
             "tests_passed": tests_passed,
             "has_runtime_errors": has_runtime_errors,
             "max_iterations": max_loop_iters,
+            "pipeline": {
+                "sequence": list(DEV_PIPELINE_SEQUENCE),
+                "analyze": {"completed": True},
+                "code_test_loop": {
+                    "iterations": loop_iterations_executed,
+                    "tests_passed": tests_passed,
+                },
+                "commit": {
+                    "attempted": bool(allow_commit),
+                    "result": commit_result,
+                },
+            },
         }
         result_payload["pr_ready"] = is_pr_ready({**result_payload, "status": "completed"})
 
@@ -436,6 +468,7 @@ def run_dev_mission(
             "tests_passed": tests_passed,
             "pr_ready": result_payload["pr_ready"],
             "has_runtime_errors": has_runtime_errors,
+            "pipeline": result_payload.get("pipeline"),
         }
 
     except PrivacyBlockedError as exc:
@@ -485,4 +518,4 @@ def run_dev_mission(
         }
 
 
-__all__ = ["run_dev_mission"]
+__all__ = ["DEV_PIPELINE_SEQUENCE", "run_dev_mission"]

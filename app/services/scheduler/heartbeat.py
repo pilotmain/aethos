@@ -27,6 +27,14 @@ def run_heartbeat_cycle() -> dict[str, Any]:
             "interval_seconds": int(getattr(s, "nexa_heartbeat_interval_seconds", 300) or 300),
         },
     )
+    try:
+        from app.services.agents.long_running import tick_all_registered
+
+        lr = tick_all_registered()
+        if lr:
+            _log.debug("heartbeat long_running ticks=%s", len(lr))
+    except Exception:
+        _log.debug("heartbeat long_running tick skipped", exc_info=True)
     _log.debug("heartbeat tick")
     return {"ok": True, "event": "system.heartbeat"}
 
