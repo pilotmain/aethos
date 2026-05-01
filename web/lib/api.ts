@@ -25,6 +25,18 @@ function parseErrorBodyText(t: string): string {
   return detail;
 }
 
+/** Friendlier message for Mission Control surfaces (auth hints). */
+export function formatMissionControlApiError(message: string): string {
+  const m = message.trim();
+  if (/^401\b/.test(m) || m.includes("Unauthorized")) {
+    return `${m} — Open Login / Connection and set X-User-Id (and bearer token if your API requires NEXA_WEB_API_TOKEN).`;
+  }
+  if (/Cannot reach API/i.test(m)) {
+    return `${m} Use Retry after fixing API base URL or starting the Nexa API.`;
+  }
+  return m;
+}
+
 function url(path: string): string {
   const c = readConfig();
   const base = (c.apiBase || DEFAULT_API_BASE).replace(/\/$/, "");

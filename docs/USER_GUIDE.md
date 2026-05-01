@@ -55,6 +55,18 @@ Panels:
 
 Snapshot polling uses `/api/v1/mission-control/state?user_id=…`. Streams are **scoped per user** when `user_id` is supplied.
 
+### Settings panel (web)
+
+On desktop, Mission Control shows a **Settings** column on the right. On smaller screens, open **Settings** to use the same panel in a drawer.
+
+You can adjust:
+
+- **Privacy mode** — `standard`, `strict`, or `paranoid` (same semantics as the API; see [Privacy modes](#privacy-modes)).
+- **Theme** — light or dark for the Mission Control shell (saved per user).
+- **Auto refresh** — when on, the dashboard polls mission-control state on an interval; when off, refresh manually.
+
+Changes call `GET`/`POST /api/v1/user/settings`. The UI shows saving progress and **Saved** / **Failed** feedback. Your configured **User id** appears in the header; changing identity in local storage (e.g. after login or switching users) reloads context.
+
 ## CLI (optional)
 
 From the repo root:
@@ -62,7 +74,14 @@ From the repo root:
 ```bash
 python -m nexa_cli state --user-id YOUR_ID
 python -m nexa_cli run "Your mission text here"
+python -m nexa_cli settings get
+python -m nexa_cli settings set privacy_mode=strict theme=dark auto_refresh=true
+python -m nexa_cli replay MISSION_UUID
 ```
+
+`settings set` accepts one or more `key=value` pairs. Supported keys: `privacy_mode`, `theme` (`dark` / `light`), `auto_refresh` (`true` / `false` / `1` / `0`).
+
+`replay` posts to `/api/v1/mission-control/replay/{mission_id}` and prints the HTTP status and JSON body (missions must have stored `input_text`).
 
 Environment:
 

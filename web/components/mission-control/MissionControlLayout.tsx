@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { Activity, Radio } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Activity, Menu, Radio, X } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 import { ArtifactsPanel } from "@/components/mission-control/ArtifactsPanel";
 import { CreateAgentPanel } from "@/components/mission-control/CreateAgentPanel";
 import { MissionBuilderPanel } from "@/components/mission-control/MissionBuilderPanel";
@@ -15,9 +15,11 @@ import { PrivacyTrustPanel } from "@/components/mission-control/PrivacyTrustPane
 import { OfflineModeBanner } from "@/components/mission-control/OfflineModeBanner";
 import { PrivacyIndicatorBadge } from "@/components/mission-control/PrivacyIndicatorBadge";
 import { ProviderTransparencyPanel } from "@/components/mission-control/ProviderTransparencyPanel";
-import { isConfigured } from "@/lib/config";
+import type { UiTheme } from "@/components/settings/UserSettingsPanel";
+import { UserSettingsPanel } from "@/components/settings/UserSettingsPanel";
+import { formatMissionControlApiError, webFetch } from "@/lib/api";
+import { isConfigured, readConfig } from "@/lib/config";
 import { useMissionControlSnapshot } from "@/lib/mission-control/useMissionControlSnapshot";
-import { webFetch } from "@/lib/api";
 import {
   appendMissionLiveEvent,
   refreshMissionControlStore,
@@ -28,17 +30,60 @@ import {
   subscribeMissionMessages,
 } from "@/lib/ws/missionControlStream";
 
+const CONFIG_KEY = "nexa_web_v1";
+
 /**
- * Phase 12–13 — Mission Control shell: privacy-first indicators, graph, replay, artifacts, dashboard.
+ * Phase 12–21 — Mission Control shell + settings sidebar / drawer + theme-aware shell.
  */
 export function MissionControlLayout() {
   const [configured, setConfigured] = useState(false);
+  const [sessionUserId, setSessionUserId] = useState("");
+  const [mcTheme, setMcTheme] = useState<UiTheme>("dark");
+  const [mcAutoRefresh, setMcAutoRefresh] = useState(true);
+  const [settingsDrawerOpen, setSettingsDrawerOpen] = useState(false);
+  const pollMs = mcAutoRefresh ? 10000 : 0;
+
   const { data: snap, loading: snapLoading, error: snapErr, refresh: refreshMc } =
-    useMissionControlSnapshot(10000);
+    useMissionControlSnapshot(pollMs);
+
+  const onPrefsApplied = useCallback((prefs: { theme: UiTheme; auto_refresh: boolean }) => {
+    setMcTheme(prefs.theme);
+    setMcAutoRefresh(prefs.auto_refresh);
+  }, []);
 
   useEffect(() => {
     setConfigured(isConfigured());
   }, []);
+
+  useEffect(() => {
+    const syncUser = () => setSessionUserId(readConfig().userId.trim());
+    syncUser();
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === CONFIG_KEY) syncUser();
+    };
+    window.addEventListener("storage", onStorage);
+    window.addEventListener("focus", syncUser);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("focus", syncUser);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (mcTheme === "dark") {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+    return () => {
+      document.documentElement.classList.remove("dark");
+    };
+  }, [mcTheme]);
+
+  useEffect(() => {
+    if (!configured || !sessionUserId) return;
+    void refreshMc();
+  }, [sessionUserId, configured, refreshMc]);
 
   /** Single-stream bootstrap: one WS + coordinated HTTP refresh (Phase 14). */
   useEffect(() => {
@@ -77,20 +122,46 @@ export function MissionControlLayout() {
     await refreshMc();
   };
 
+  const shellLight = mcTheme === "light";
+
+  const outerClass = shellLight
+    ? "min-h-screen bg-zinc-100 text-zinc-900 antialiased transition-colors duration-300"
+    : "min-h-screen bg-gradient-to-b from-zinc-950 via-zinc-950 to-black text-zinc-100 transition-colors duration-300";
+
+  const headerBorder = shellLight ? "border-zinc-200 bg-white/90" : "border-zinc-800/80 bg-zinc-950/90";
+  const headerSub = shellLight ? "text-zinc-600" : "text-zinc-500";
+  const linkHome = shellLight ? "text-zinc-600 hover:text-zinc-900" : "text-zinc-400 hover:text-zinc-200";
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-zinc-950 via-zinc-950 to-black text-zinc-100">
-      <header className="sticky top-0 z-10 border-b border-zinc-800/80 bg-zinc-950/90 backdrop-blur">
+    <div className={outerClass}>
+      <header className={`sticky top-0 z-30 border-b backdrop-blur ${headerBorder}`}>
         <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-3 px-4 py-3">
           <div className="flex items-center gap-2">
-            <Activity className="h-5 w-5 shrink-0 text-emerald-400" aria-hidden />
+            <Activity className={`h-5 w-5 shrink-0 ${shellLight ? "text-emerald-600" : "text-emerald-400"}`} aria-hidden />
             <div>
-              <h1 className="text-lg font-semibold tracking-tight text-zinc-50">Mission Control</h1>
-              <p className="text-[11px] text-zinc-500">Multi-agent graph · live stream · artifacts</p>
+              <h1 className={`text-lg font-semibold tracking-tight ${shellLight ? "text-zinc-900" : "text-zinc-50"}`}>
+                Mission Control
+              </h1>
+              <p className={`text-[11px] ${headerSub}`}>Multi-agent graph · live stream · artifacts</p>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-3 text-xs">
+            {configured && sessionUserId ? (
+              <span
+                className={`max-w-[200px] truncate font-mono text-[10px] ${shellLight ? "text-zinc-500" : "text-zinc-500"}`}
+                title={sessionUserId}
+              >
+                User: {sessionUserId.length > 18 ? `${sessionUserId.slice(0, 18)}…` : sessionUserId}
+              </span>
+            ) : null}
             {!configured ? (
-              <span className="rounded-md border border-amber-500/40 bg-amber-950/40 px-2 py-1 text-amber-100">
+              <span
+                className={`rounded-md border px-2 py-1 ${
+                  shellLight
+                    ? "border-amber-400/50 bg-amber-50 text-amber-950"
+                    : "border-amber-500/40 bg-amber-950/40 text-amber-100"
+                }`}
+              >
                 Configure{" "}
                 <Link href="/login" className="font-medium underline">
                   Login
@@ -100,76 +171,135 @@ export function MissionControlLayout() {
             ) : (
               <>
                 <PrivacyIndicatorBadge indicator={snap?.privacy_indicator} />
-                <span className="inline-flex items-center gap-1 rounded-md border border-emerald-500/30 bg-emerald-950/30 px-2 py-1 text-emerald-100">
+                <span
+                  className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 ${
+                    shellLight
+                      ? "border-emerald-300/60 bg-emerald-50 text-emerald-950"
+                      : "border-emerald-500/30 bg-emerald-950/30 text-emerald-100"
+                  }`}
+                >
                   <Radio className="h-3 w-3" aria-hidden />
                   Session ready
                 </span>
               </>
             )}
-            <Link href="/" className="text-zinc-400 underline-offset-4 hover:text-zinc-200 hover:underline">
+            {configured ? (
+              <button
+                type="button"
+                className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 lg:hidden ${
+                  shellLight
+                    ? "border-zinc-300 bg-white text-zinc-800"
+                    : "border-zinc-600 bg-zinc-900 text-zinc-100"
+                }`}
+                onClick={() => setSettingsDrawerOpen(true)}
+              >
+                <Menu className="h-3.5 w-3.5" aria-hidden />
+                Settings
+              </button>
+            ) : null}
+            <Link href="/" className={`underline-offset-4 hover:underline ${linkHome}`}>
               Home
             </Link>
           </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-[1600px] space-y-6 px-4 py-6">
-        {snapErr && configured ? (
-          <div className="flex flex-wrap items-center gap-3 rounded-lg border border-rose-500/35 bg-rose-950/30 px-3 py-2 text-xs text-rose-100">
-            <p className="min-w-0 flex-1">{snapErr}</p>
-            <button
-              type="button"
-              className="shrink-0 rounded border border-rose-400/50 bg-rose-950/50 px-2 py-1 text-rose-50 hover:bg-rose-900/60"
-              onClick={() => void refreshMc()}
+      <div className="mx-auto flex max-w-[1600px] flex-col gap-6 px-4 py-6 lg:flex-row lg:items-start">
+        <main className="min-w-0 flex-1 space-y-6">
+          {snapErr && configured ? (
+            <div
+              className={`flex flex-wrap items-center gap-3 rounded-lg border px-3 py-2 text-xs ${
+                shellLight
+                  ? "border-rose-300 bg-rose-50 text-rose-950"
+                  : "border-rose-500/35 bg-rose-950/30 text-rose-100"
+              }`}
             >
-              Retry
-            </button>
-          </div>
-        ) : null}
-        {configured ? (
-          <IntegrityAlertBanner
-            level={integrityBannerLevel}
-            alerts={integrityAlerts}
-            onIgnoreAlert={integrityBannerLevel === "warning" ? dismissWarning : undefined}
-          />
-        ) : null}
-        {(offline || strict) && configured ? (
-          <OfflineModeBanner offline={offline} strictMode={strict} />
-        ) : null}
+              <p className="min-w-0 flex-1">{formatMissionControlApiError(snapErr)}</p>
+              <button
+                type="button"
+                className={`shrink-0 rounded border px-2 py-1 ${
+                  shellLight
+                    ? "border-rose-400/60 bg-white text-rose-900 hover:bg-rose-50"
+                    : "border-rose-400/50 bg-rose-950/50 text-rose-50 hover:bg-rose-900/60"
+                }`}
+                onClick={() => void refreshMc()}
+              >
+                Retry
+              </button>
+            </div>
+          ) : null}
+          {configured ? (
+            <IntegrityAlertBanner
+              level={integrityBannerLevel}
+              alerts={integrityAlerts}
+              onIgnoreAlert={integrityBannerLevel === "warning" ? dismissWarning : undefined}
+            />
+          ) : null}
+          {(offline || strict) && configured ? (
+            <OfflineModeBanner offline={offline} strictMode={strict} />
+          ) : null}
 
-        {configured ? (
-          <PrivacyTrustPanel
-            privacyScore={privacyScore}
-            userPrivacyMode={userPrivacyMode}
-            recentAlerts={integrityAlerts}
+          {configured ? (
+            <PrivacyTrustPanel
+              privacyScore={privacyScore}
+              userPrivacyMode={userPrivacyMode}
+              recentAlerts={integrityAlerts}
+              loading={snapLoading && configured}
+            />
+          ) : null}
+
+          <ProviderTransparencyPanel
+            transparency={snap?.provider_transparency}
+            metrics={snap?.metrics}
             loading={snapLoading && configured}
           />
-        ) : null}
 
-        <ProviderTransparencyPanel
-          transparency={snap?.provider_transparency}
-          metrics={snap?.metrics}
-          loading={snapLoading && configured}
-        />
+          <div className="grid gap-4 lg:grid-cols-2 lg:items-stretch">
+            <MissionGraph />
+            <MissionControlLiveEvents />
+          </div>
 
-        {/* Primary split: agents left, events right */}
-        <div className="grid gap-4 lg:grid-cols-2 lg:items-stretch">
-          <MissionGraph />
-          <MissionControlLiveEvents />
-        </div>
+          <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
+            <MissionBuilderPanel />
+            <CreateAgentPanel />
+          </div>
 
-        {/* Mission builder + dynamic agent */}
-        <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
-          <MissionBuilderPanel />
-          <CreateAgentPanel />
-        </div>
+          <ArtifactsPanel />
 
-        {/* Bottom band: artifacts */}
-        <ArtifactsPanel />
+          <MissionControlPage />
+        </main>
 
-        {/* Full orchestration dashboard (assignments, permissions, maintenance, …) */}
-        <MissionControlPage />
-      </main>
+        <aside className="hidden w-full max-w-sm shrink-0 lg:block lg:w-80 lg:max-w-none">
+          <UserSettingsPanel onPreferencesApplied={onPrefsApplied} />
+        </aside>
+      </div>
+
+      {settingsDrawerOpen ? (
+        <>
+          <button
+            type="button"
+            className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
+            aria-label="Close settings"
+            onClick={() => setSettingsDrawerOpen(false)}
+          />
+          <div className="fixed inset-y-0 right-0 z-50 flex w-[min(100vw,22rem)] flex-col border-l border-zinc-800 bg-zinc-950 shadow-2xl transition-transform duration-200 ease-out lg:hidden">
+            <div className="flex items-center justify-between border-b border-zinc-800 px-3 py-2">
+              <span className="text-sm font-medium text-zinc-200">Settings</span>
+              <button
+                type="button"
+                className="rounded p-1 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+                onClick={() => setSettingsDrawerOpen(false)}
+                aria-label="Close"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-3">
+              <UserSettingsPanel compact onPreferencesApplied={onPrefsApplied} />
+            </div>
+          </div>
+        </>
+      ) : null}
     </div>
   );
 }
