@@ -46,16 +46,21 @@ def build_execution_snapshot(db: Session, *, user_id: str | None = None) -> dict
         q = q.where(NexaMission.user_id == user_id)
     mission_rows = list(db.scalars(q).all())
 
-    missions_out = [
-        {
-            "id": m.id,
-            "user_id": m.user_id,
-            "title": m.title,
-            "status": m.status,
-            "created_at": m.created_at.isoformat() if m.created_at else None,
-        }
-        for m in mission_rows
-    ]
+    missions_out = []
+    for m in mission_rows:
+        it = getattr(m, "input_text", None)
+        if it and len(it) > 5000:
+            it = it[:5000] + "…"
+        missions_out.append(
+            {
+                "id": m.id,
+                "user_id": m.user_id,
+                "title": m.title,
+                "status": m.status,
+                "created_at": m.created_at.isoformat() if m.created_at else None,
+                "input_text": it,
+            }
+        )
 
     mids = [m.id for m in mission_rows]
     tasks_out: list[dict[str, Any]] = []

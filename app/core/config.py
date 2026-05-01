@@ -319,6 +319,10 @@ class Settings(BaseSettings):
     nexa_privacy_firewall_enabled: bool = True
     nexa_redact_pii_before_external_api: bool = True
     nexa_block_secrets_to_external_api: bool = True
+    # Phase 10 — production hardening
+    nexa_disable_external_calls: bool = False
+    nexa_provider_rate_limit_per_minute: int = 120
+    nexa_admin_endpoints_enabled: bool = False
 
     model_config = SettingsConfigDict(
         env_file=_EnvFile,

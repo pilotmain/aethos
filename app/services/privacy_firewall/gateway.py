@@ -15,12 +15,33 @@ class PrivacyBlockedError(RuntimeError):
     """Raised when outbound payload must not proceed (e.g. API key detected)."""
 
 
-def prepare_external_payload(payload: dict[str, Any]) -> dict[str, Any]:
+def normalize_pii_policy(raw: str | None) -> str:
+    """Map legacy ``firewall_required`` → ``redact``; default ``redact``."""
+    x = (raw or "").strip().lower()
+    if x in ("", "firewall_required"):
+        return "redact"
+    if x in ("allow", "redact", "block"):
+        return x
+    return "redact"
+
+
+def prepare_external_payload(
+    payload: dict[str, Any],
+    *,
+    pii_policy: str | None = None,
+) -> dict[str, Any]:
     """
     Mandatory gate before tool execution / external bodies — dict in, sanitized dict out.
 
+    Secrets always block. PII handling depends on ``pii_policy``:
+
+    - ``redact`` (default): redact PII fields.
+    - ``block``: raise :exc:`PrivacyBlockedError` when PII is present.
+    - ``allow``: pass payload through unchanged (still blocks secrets).
+
     Raises :exc:`PrivacyBlockedError` when secret-shaped material is detected.
     """
+    policy = normalize_pii_policy(pii_policy)
     text = str(payload)
     findings = detect_sensitive_data(text)
 
@@ -31,9 +52,19 @@ def prepare_external_payload(payload: dict[str, Any]) -> dict[str, Any]:
         raise PrivacyBlockedError("Blocked: secret detected")
 
     if findings["pii"]:
+        if policy == "block":
+            ev = {"type": "pii_blocked_by_policy", "data": findings}
+            log_event(ev)
+            add_privacy_event(ev)
+            raise PrivacyBlockedError("Blocked: PII blocked by policy")
+
         ev = {"type": "pii_redacted", "data": findings}
         log_event(ev)
         add_privacy_event(ev)
+
+        if policy == "allow":
+            return payload
+
         return redact_sensitive_data(payload)
 
     return payload

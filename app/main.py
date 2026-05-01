@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
 
 from app.api.routes import (
+    admin_privacy,
     agent_organization,
     agent_runtime_api,
     apple_messages,
@@ -98,6 +99,7 @@ app.add_middleware(
 )
 app.include_router(dashboard.router)
 app.include_router(health.router, prefix=settings.api_v1_prefix)
+app.include_router(admin_privacy.router, prefix=settings.api_v1_prefix)
 app.include_router(channels.router, prefix=settings.api_v1_prefix)
 app.include_router(governance_api.router, prefix=settings.api_v1_prefix)
 app.include_router(custom_agents_api.router, prefix=settings.api_v1_prefix)

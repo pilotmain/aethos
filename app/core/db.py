@@ -618,6 +618,18 @@ def _migrate_agent_organizations_governance_org() -> None:
             pass
 
 
+def _migrate_nexa_missions_input_text() -> None:
+    insp = inspect(engine)
+    if "nexa_missions" not in insp.get_table_names():
+        return
+    cols = {c["name"] for c in insp.get_columns("nexa_missions")}
+    if "input_text" in cols:
+        return
+    tt = "TEXT"
+    with engine.begin() as conn:
+        conn.execute(text(f"ALTER TABLE nexa_missions ADD COLUMN input_text {tt} NULL"))
+
+
 def ensure_schema() -> None:
     import app.models  # noqa: F401 — register all models (incl. TaskPattern) on Base.metadata
 
@@ -642,6 +654,7 @@ def ensure_schema() -> None:
     _migrate_agent_organizations_governance_org()
     _migrate_nexa_workspace_projects()
     _migrate_conversation_context_blocked_host()
+    _migrate_nexa_missions_input_text()
 
 
 def get_db() -> Generator[Session, None, None]:

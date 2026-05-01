@@ -28,6 +28,7 @@ from app.services.mission_control.cleanup_actions import (
 from app.services.mission_control.read_model import build_mission_control_summary
 from app.services.mission_control.graph_builder import build_graph
 from app.services.mission_control.nexa_next_state import build_execution_snapshot
+from app.models.nexa_next_runtime import NexaMission
 from app.services.mission_control.ui_state import dismiss_attention_item
 from app.services.audit_service import audit
 
@@ -195,6 +196,27 @@ def mission_control_gateway_run(
     from app.services.gateway.runtime import NexaGateway
 
     return NexaGateway().handle_message(text, user_id, db=db)
+
+
+@router.post("/replay/{mission_id}")
+def mission_control_replay_mission(
+    mission_id: str,
+    db: Session = Depends(get_db),
+    app_user_id: str = Depends(get_valid_web_user_id),
+) -> dict:
+    """Re-run stored mission input text through the gateway (same privacy guarantees)."""
+    from app.services.gateway.runtime import NexaGateway
+
+    m = db.get(NexaMission, mission_id)
+    if m is None or m.user_id != app_user_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Mission not found")
+    raw = (m.input_text or "").strip()
+    if not raw:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Mission has no stored input_text (created before replay support)",
+        )
+    return NexaGateway().handle_message(raw, app_user_id, db=db)
 
 
 def _not_found() -> HTTPException:

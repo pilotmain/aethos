@@ -8,7 +8,6 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.core.db import SessionLocal
-from app.core.security import get_valid_web_user_id
 from app.main import app
 from app.models.access_permission import AccessPermission
 from app.models.audit_log import AuditLog
@@ -16,16 +15,6 @@ from app.models.user import User
 from app.services.access_permissions import RISK_MEDIUM, STATUS_PENDING
 from app.services.mission_control.scoring import score_mission_item
 from app.services.trust_audit_constants import ACCESS_SENSITIVE_EGRESS_WARNING, NETWORK_EXTERNAL_SEND_BLOCKED
-
-
-@pytest.fixture
-def api_client():
-    uid = f"mc_user_{uuid.uuid4().hex[:10]}"
-    app.dependency_overrides[get_valid_web_user_id] = lambda: uid
-    try:
-        yield TestClient(app), uid
-    finally:
-        app.dependency_overrides.clear()
 
 
 def test_mission_control_state_shape(api_client: tuple[TestClient, str]) -> None:

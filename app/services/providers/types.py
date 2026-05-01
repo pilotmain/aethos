@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from sqlalchemy.orm import Session
 
 
 @dataclass
@@ -16,6 +19,7 @@ class ProviderRequest:
     purpose: str
     payload: dict[str, Any]
     allow_external: bool = True
+    db: "Session | None" = None
 
 
 @dataclass

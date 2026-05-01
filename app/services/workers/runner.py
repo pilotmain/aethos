@@ -34,6 +34,7 @@ def run_agent(agent: dict[str, Any], db: Session) -> dict[str, Any]:
             "tool": tool_name,
             "inputs": previous_outputs,
         },
+        db=db,
     )
 
     response = call_provider(request)

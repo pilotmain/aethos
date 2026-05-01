@@ -29,7 +29,7 @@ from app.models.organization_channel_policy import OrganizationChannelPolicy
 from app.models.project_context import NexaWorkspaceProject
 from app.models.agent_team import AgentAssignment, AgentOrganization, AgentRoleAssignment
 from app.models.governance import Organization, OrganizationMembership, OrganizationPolicy
-from app.models.nexa_next_runtime import NexaArtifact, NexaMission, NexaMissionTask
+from app.models.nexa_next_runtime import NexaArtifact, NexaExternalCall, NexaMission, NexaMissionTask
 
 __all__ = [
     "User",
@@ -71,4 +71,5 @@ __all__ = [
     "NexaMission",
     "NexaMissionTask",
     "NexaArtifact",
+    "NexaExternalCall",
 ]

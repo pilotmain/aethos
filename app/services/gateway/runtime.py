@@ -40,12 +40,19 @@ class NexaGateway:
             return {"mode": "chat", "text": "No mission detected"}
 
         if db is not None:
-            return self._run_mission(mission, user_id, db)
+            return self._run_mission(mission, user_id, db, source_text=text)
 
         with SessionLocal() as session:
-            return self._run_mission(mission, user_id, session)
+            return self._run_mission(mission, user_id, session, source_text=text)
 
-    def _run_mission(self, mission: dict[str, Any], user_id: str, db: Session) -> dict[str, Any]:
+    def _run_mission(
+        self,
+        mission: dict[str, Any],
+        user_id: str,
+        db: Session,
+        *,
+        source_text: str | None = None,
+    ) -> dict[str, Any]:
         from app.models.nexa_next_runtime import NexaMission, NexaMissionTask
         from app.services.events.bus import publish
         from app.services.mission_control.nexa_next_state import update_state
@@ -56,7 +63,16 @@ class NexaGateway:
         agents = create_runtime_agents(mission, user_id, mission_id=mission_id)
 
         title = str(mission.get("title") or "Untitled Mission")[:2000]
-        db.add(NexaMission(id=mission_id, user_id=user_id, title=title, status="running"))
+        raw_in = (source_text or "").strip()
+        db.add(
+            NexaMission(
+                id=mission_id,
+                user_id=user_id,
+                title=title,
+                status="running",
+                input_text=raw_in[:50000] if raw_in else None,
+            )
+        )
         for agent in agents:
             row = NexaMissionTask(
                 mission_id=mission_id,

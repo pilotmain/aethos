@@ -2,9 +2,14 @@
 
 from __future__ import annotations
 
+import uuid
+
 import pytest
+from fastapi.testclient import TestClient
 
 from app.core.db import SessionLocal, ensure_schema
+from app.core.security import get_valid_web_user_id
+from app.main import app
 
 
 @pytest.fixture
@@ -15,6 +20,25 @@ def db_session():
         yield session
     finally:
         session.close()
+
+
+@pytest.fixture
+def api_client():
+    """Authenticated Mission Control API client (``X-User-Id`` + optional bearer)."""
+    uid = f"mc_user_{uuid.uuid4().hex[:10]}"
+    app.dependency_overrides[get_valid_web_user_id] = lambda: uid
+    try:
+        yield TestClient(app), uid
+    finally:
+        app.dependency_overrides.clear()
+
+
+@pytest.fixture(autouse=True)
+def _reset_provider_rate_limits():
+    from app.services.providers.rate_limit import reset_rate_limits_for_tests
+
+    reset_rate_limits_for_tests()
+    yield
 
 
 @pytest.fixture

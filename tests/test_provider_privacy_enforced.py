@@ -11,11 +11,11 @@ from app.services.providers.types import ProviderRequest
 def test_prepare_external_payload_invoked_before_local_stub():
     seen: list[bool] = []
 
-    def spy_prepare(payload):
+    def spy_prepare(payload, **kwargs):
         seen.append(True)
         from app.services.privacy_firewall.gateway import prepare_external_payload as real
 
-        return real(payload)
+        return real(payload, **kwargs)
 
     with patch("app.services.providers.gateway.prepare_external_payload", spy_prepare):
         req = ProviderRequest(
