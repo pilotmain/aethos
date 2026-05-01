@@ -289,48 +289,71 @@ def call_provider(request: ProviderRequest) -> ProviderResponse:
         )
 
     scan_text = _output_scan_text(out)
-    post_findings = detect_sensitive_data(scan_text)
+    det_mode = "ingress" if s.nexa_detection_strict_mode else "egress"
+    post_findings = detect_sensitive_data(scan_text, mode=det_mode)
+    _log.info(
+        "DETECTION MODE: %s CONFIDENCE: %s",
+        det_mode,
+        post_findings.get("confidence"),
+    )
     log_event(
         {
             "type": "gateway_post_provider_scan",
             "mission_id": request.mission_id,
             "agent": request.agent_handle or "",
             "tool": tool_key,
+            "detection_mode": det_mode,
             "findings": post_findings,
         }
     )
 
-    if post_findings["secrets"]:
+    if post_findings["confidence"] == "high" and post_findings["secrets"]:
         _log.error(_POST_SECRET_MSG)
         emit_runtime_event(
             "integrity.post_provider_secret_detected",
             mission_id=str(request.mission_id) if request.mission_id else None,
             agent=request.agent_handle or "",
-            payload={"findings": post_findings},
+            payload={
+                "severity": "critical",
+                "detection_mode": det_mode,
+                "findings": post_findings,
+            },
         )
         add_integrity_alert(
             {
                 "type": "post_provider_secret_detected",
+                "severity": "critical",
                 "mission_id": request.mission_id,
                 "findings": post_findings,
             }
         )
         raise RuntimeError(_POST_SECRET_MSG)
 
+    if post_findings["secrets"] and post_findings["confidence"] != "high":
+        _log.warning(
+            "Post-provider scan: non-blocking secret-shaped patterns (confidence=%s): %s",
+            post_findings.get("confidence"),
+            post_findings.get("secrets"),
+        )
+
     if post_findings["pii"]:
         ev_pii = {
             "type": "post_provider_pii_detected",
+            "severity": "warning",
             "data": post_findings,
             "mission_id": request.mission_id,
             "agent": request.agent_handle or "",
         }
         log_event(ev_pii)
-        _log.error("CRITICAL: PII-like patterns in provider output — review required")
+        _log.warning("PII-like patterns in provider output — review recommended (egress warning)")
         emit_runtime_event(
             "integrity.post_provider_pii_detected",
             mission_id=str(request.mission_id) if request.mission_id else None,
             agent=request.agent_handle or "",
-            payload={"findings": post_findings},
+            payload={
+                "severity": "warning",
+                "findings": post_findings,
+            },
         )
         add_integrity_alert(dict(ev_pii))
         redactions.append({"kind": "post_provider_output_pii_flagged", "findings": post_findings})

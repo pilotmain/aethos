@@ -115,6 +115,33 @@ def summarize_provider_transparency(
     }
 
 
+def _integrity_banner_level(alerts: list[Any]) -> str | None:
+    """Worst unresolved severity for Mission Control banner (Phase 18)."""
+    critical = False
+    warning = False
+    for a in alerts:
+        if not isinstance(a, dict):
+            continue
+        sev = a.get("severity")
+        if sev is None:
+            t = str(a.get("type") or "").lower()
+            if "pii" in t:
+                warning = True
+            else:
+                critical = True
+            continue
+        sl = str(sev).lower()
+        if sl == "critical":
+            critical = True
+        elif sl == "warning":
+            warning = True
+    if critical:
+        return "critical"
+    if warning:
+        return "warning"
+    return None
+
+
 def _runtime_hints() -> dict[str, Any]:
     s = get_settings()
     has_remote = bool((s.openai_api_key or "").strip() or (s.anthropic_api_key or "").strip())
@@ -126,6 +153,7 @@ def _runtime_hints() -> dict[str, Any]:
         "remote_providers_available": has_remote,
         "external_calls_disabled": bool(s.nexa_disable_external_calls),
         "integrity_alert_active": bool(alerts),
+        "integrity_banner_level": _integrity_banner_level(alerts),
     }
 
 

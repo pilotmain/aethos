@@ -45,7 +45,7 @@ def prepare_external_payload(
     """
     policy = normalize_pii_policy(pii_policy)
     text = str(payload)
-    findings = detect_sensitive_data(text)
+    findings = detect_sensitive_data(text, mode="ingress")
 
     if findings["secrets"]:
         ev = {"type": "secret_blocked", "data": findings}

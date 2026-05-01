@@ -335,6 +335,9 @@ class Settings(BaseSettings):
     # Phase 13 — strict privacy lockdown (external providers off; local_stub only)
     nexa_strict_privacy_mode: bool = False
 
+    # Phase 18 — post-provider scan uses ingress-style detection when true (paranoid / audit).
+    nexa_detection_strict_mode: bool = False
+
     model_config = SettingsConfigDict(
         env_file=_EnvFile,
         env_file_encoding="utf-8",

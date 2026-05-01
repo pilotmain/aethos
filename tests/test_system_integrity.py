@@ -91,4 +91,5 @@ def test_post_provider_pii_surfaces_integrity_alert(monkeypatch, db_session) -> 
     resp = gw.call_provider(req)
     assert resp.ok
     assert STATE["integrity_alerts"]
-    assert any(str(a.get("type")) == "post_provider_pii_detected" for a in STATE["integrity_alerts"])
+    row = next(a for a in STATE["integrity_alerts"] if str(a.get("type")) == "post_provider_pii_detected")
+    assert row.get("severity") == "warning"

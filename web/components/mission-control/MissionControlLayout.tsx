@@ -56,7 +56,9 @@ export function MissionControlLayout() {
 
   const offline = snap?.runtime?.offline_mode;
   const strict = snap?.runtime?.strict_privacy_mode;
-  const integrityAlert = snap?.runtime?.integrity_alert_active;
+  const integrityBannerLevel =
+    snap?.runtime?.integrity_banner_level ??
+    (snap?.runtime?.integrity_alert_active ? "critical" : null);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-zinc-950 via-zinc-950 to-black text-zinc-100">
@@ -98,7 +100,7 @@ export function MissionControlLayout() {
         {snapErr && configured ? (
           <p className="rounded-lg border border-rose-500/35 bg-rose-950/30 px-3 py-2 text-xs text-rose-100">{snapErr}</p>
         ) : null}
-        {configured ? <IntegrityAlertBanner active={integrityAlert} /> : null}
+        {configured ? <IntegrityAlertBanner level={integrityBannerLevel} /> : null}
         {(offline || strict) && configured ? (
           <OfflineModeBanner offline={offline} strictMode={strict} />
         ) : null}
