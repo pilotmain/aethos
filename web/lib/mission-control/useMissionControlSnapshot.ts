@@ -56,6 +56,9 @@ export type MissionControlSnapshot = {
     completed_at?: string | null;
     error?: string | null;
   }>;
+  maintenance?: {
+    sql_purge_enabled?: boolean;
+  };
 };
 
 function snapshotFromStore(): MissionControlSnapshot | null {

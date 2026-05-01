@@ -7,7 +7,7 @@ import { ArtifactsPanel } from "@/components/mission-control/ArtifactsPanel";
 import { CreateAgentPanel } from "@/components/mission-control/CreateAgentPanel";
 import { MissionBuilderPanel } from "@/components/mission-control/MissionBuilderPanel";
 import { MissionControlLiveEvents } from "@/components/mission-control/MissionControlLiveEvents";
-import { MissionControlPage } from "@/components/mission-control/MissionControlPage";
+import { MissionControlMaintenanceControls } from "@/components/mission-control/MissionControlMaintenanceControls";
 import { MissionGraph } from "@/components/mission-control/MissionGraph";
 import type { IntegrityAlertRow } from "@/components/mission-control/IntegrityAlertBanner";
 import { IntegrityAlertBanner } from "@/components/mission-control/IntegrityAlertBanner";
@@ -231,6 +231,14 @@ export function MissionControlLayout() {
             </div>
           ) : null}
           {configured ? (
+            <MissionControlMaintenanceControls
+              shellLight={shellLight}
+              sqlPurgeEnabled={Boolean(snap?.maintenance?.sql_purge_enabled)}
+              onAfterMaintenance={refreshMc}
+            />
+          ) : null}
+
+          {configured ? (
             <IntegrityAlertBanner
               level={integrityBannerLevel}
               alerts={integrityAlerts}
@@ -278,8 +286,6 @@ export function MissionControlLayout() {
           </div>
 
           <ArtifactsPanel />
-
-          <MissionControlPage />
         </main>
 
         <aside className="hidden w-full max-w-sm shrink-0 lg:block lg:w-80 lg:max-w-none">
