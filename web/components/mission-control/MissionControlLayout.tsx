@@ -14,6 +14,15 @@ import { PrivacyIndicatorBadge } from "@/components/mission-control/PrivacyIndic
 import { ProviderTransparencyPanel } from "@/components/mission-control/ProviderTransparencyPanel";
 import { isConfigured } from "@/lib/config";
 import { useMissionControlSnapshot } from "@/lib/mission-control/useMissionControlSnapshot";
+import {
+  appendMissionLiveEvent,
+  refreshMissionControlStore,
+} from "@/lib/state/missionControlStore";
+import {
+  disconnectMissionControlStream,
+  ensureMissionControlStream,
+  subscribeMissionMessages,
+} from "@/lib/ws/missionControlStream";
 
 /**
  * Phase 12–13 — Mission Control shell: privacy-first indicators, graph, replay, artifacts, dashboard.
@@ -24,6 +33,24 @@ export function MissionControlLayout() {
 
   useEffect(() => {
     setConfigured(isConfigured());
+  }, []);
+
+  /** Single-stream bootstrap: one WS + coordinated HTTP refresh (Phase 14). */
+  useEffect(() => {
+    if (!isConfigured()) return;
+    void refreshMissionControlStore();
+    ensureMissionControlStream();
+    let debounce: number | undefined;
+    const unsub = subscribeMissionMessages((data) => {
+      appendMissionLiveEvent(data);
+      window.clearTimeout(debounce);
+      debounce = window.setTimeout(() => void refreshMissionControlStore(), 400);
+    });
+    return () => {
+      unsub();
+      window.clearTimeout(debounce);
+      disconnectMissionControlStream();
+    };
   }, []);
 
   const offline = snap?.runtime?.offline_mode;

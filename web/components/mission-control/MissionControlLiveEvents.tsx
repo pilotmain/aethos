@@ -8,41 +8,46 @@ import {
   SkipForward,
   Video,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useReducer, useState } from "react";
 import { missionControlEventsWsUrl } from "@/lib/mission-control/eventsWsUrl";
 import {
-  connectReconnectingMissionWs,
-  type MissionWsConnectionState,
-} from "@/lib/ws/reconnectingMissionWs";
+  getMissionLiveEvents,
+  subscribeMissionStore,
+} from "@/lib/state/missionControlStore";
+import {
+  forceReconnectMissionStream,
+  subscribeMissionConnection,
+  type MissionStreamConnState,
+} from "@/lib/ws/missionControlStream";
 
 type ViewMode = "live" | "replay";
 
+function mapConnLabel(conn: MissionStreamConnState): string {
+  if (conn === "open") return "Live stream";
+  if (conn === "reconnecting") return "Reconnecting…";
+  if (conn === "error") return "Socket error (retrying)";
+  return "Connecting…";
+}
+
 /**
- * Live event stream + replay scrubber (Phase 12).
+ * Live event stream + replay scrubber — reads shared store + connection state (Phase 14 single WS).
  */
 export function MissionControlLiveEvents() {
-  const [events, setEvents] = useState<Array<Record<string, unknown>>>([]);
+  const [, bump] = useReducer((x: number) => x + 1, 0);
+  const events = getMissionLiveEvents();
   const wsUrl = useMemo(() => missionControlEventsWsUrl(), []);
-  const [conn, setConn] = useState<MissionWsConnectionState>("connecting");
-  const [wsKey, setWsKey] = useState(0);
+  const [conn, setConn] = useState<MissionStreamConnState>("connecting");
   const [mode, setMode] = useState<ViewMode>("live");
   const [cursor, setCursor] = useState(0);
   const [playing, setPlaying] = useState(false);
 
   useEffect(() => {
-    const dispose = connectReconnectingMissionWs(wsUrl, {
-      onState: setConn,
-      onMessage: (raw) => {
-        try {
-          const event = JSON.parse(raw) as Record<string, unknown>;
-          setEvents((prev) => [...prev, event].slice(-800));
-        } catch {
-          /* ignore non-JSON */
-        }
-      },
-    });
-    return dispose;
-  }, [wsUrl, wsKey]);
+    return subscribeMissionStore(bump);
+  }, []);
+
+  useEffect(() => {
+    return subscribeMissionConnection(setConn);
+  }, []);
 
   useEffect(() => {
     if (mode === "live") {
@@ -69,14 +74,7 @@ export function MissionControlLiveEvents() {
   const displayed =
     mode === "live" ? events : events.slice(0, Math.min(cursor + 1, events.length));
 
-  const connLabel =
-    conn === "open"
-      ? "Live stream"
-      : conn === "reconnecting"
-        ? "Reconnecting…"
-        : conn === "error"
-          ? "Socket error (retrying)"
-          : "Connecting…";
+  const connLabel = mapConnLabel(conn);
 
   return (
     <section className="flex h-full min-h-[320px] flex-col rounded-xl border border-zinc-800 bg-zinc-950/70">
@@ -91,7 +89,7 @@ export function MissionControlLiveEvents() {
           <button
             type="button"
             onClick={() => {
-              setWsKey((k) => k + 1);
+              forceReconnectMissionStream();
               setPlaying(false);
             }}
             className="inline-flex items-center gap-1 rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1 text-[11px] font-medium text-zinc-300 hover:bg-zinc-800"
@@ -186,7 +184,7 @@ export function MissionControlLiveEvents() {
           {displayed.map((e, i) => (
             <pre
               key={`${mode}-${i}-${String((e as { type?: unknown }).type ?? "")}`}
-              className={`whitespace-pre-wrap border-b border-zinc-900 px-2 py-1.5 last:border-b-0 ${
+              className={`whitespace-pre-wrap border-b border-zinc-900 px-2 py-1.5 transition-colors duration-300 last:border-b-0 ${
                 mode === "replay" && i === displayed.length - 1 ? "bg-violet-950/25" : ""
               }`}
             >

@@ -17,6 +17,10 @@ def test_system_health_ok() -> None:
     assert body["providers"]
     assert "uptime_seconds" in body
     assert body["version"]
+    assert "offline_mode" in body
+    assert "strict_privacy" in body
+    assert isinstance(body["provider_tags"], list)
+    assert body["provider_tags"]
 
 
 def test_system_metrics_snapshot() -> None:

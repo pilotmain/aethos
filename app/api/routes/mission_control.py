@@ -26,7 +26,7 @@ from app.services.mission_control.cleanup_actions import (
     reset_mission_control,
 )
 from app.services.mission_control.read_model import build_mission_control_summary
-from app.services.mission_control.graph_builder import build_graph
+from app.services.mission_control.graph_builder import build_graph_cached
 from app.services.mission_control.nexa_next_state import build_execution_snapshot
 from app.models.nexa_next_runtime import NexaMission
 from app.services.mission_control.ui_state import dismiss_attention_item
@@ -128,7 +128,7 @@ def mission_control_graph(
 ) -> dict:
     """Agent/task nodes and dependency edges for Mission Control visualization."""
     state = build_execution_snapshot(db, user_id=user_id)
-    return build_graph(state)
+    return build_graph_cached(state)
 
 
 @router.get("/events/stream")

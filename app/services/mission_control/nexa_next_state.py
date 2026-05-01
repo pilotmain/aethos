@@ -20,6 +20,9 @@ from app.services.events.bus import list_events
 from app.services.metrics.runtime import snapshot as metrics_process_snapshot
 from app.services.mission_control.read_model import build_mission_control_summary
 
+MC_MAX_MISSIONS_LOADED = 50
+MC_MAX_ARTIFACTS_PER_MISSION = 100
+
 # Ephemeral streams (privacy audit / provider gateway) until those are persisted.
 _PRIVACY_EVENTS_CAP = 400
 STATE: dict[str, Any] = {
@@ -205,6 +208,7 @@ def build_execution_snapshot(db: Session, *, user_id: str | None = None) -> dict
     q = select(NexaMission).order_by(NexaMission.created_at.desc())
     if user_id:
         q = q.where(NexaMission.user_id == user_id)
+    q = q.limit(MC_MAX_MISSIONS_LOADED)
     mission_rows = list(db.scalars(q).all())
 
     missions_out = []
@@ -243,17 +247,28 @@ def build_execution_snapshot(db: Session, *, user_id: str | None = None) -> dict
             }
             for t in task_rows
         ]
-        art_rows = db.scalars(select(NexaArtifact).where(NexaArtifact.mission_id.in_(mids))).all()
-        artifacts_out = [
-            {
-                "id": a.id,
-                "mission_id": a.mission_id,
-                "agent": a.agent_handle,
-                "artifact": a.artifact_json,
-                "created_at": a.created_at.isoformat() if a.created_at else None,
-            }
-            for a in art_rows
-        ]
+        art_rows = list(
+            db.scalars(
+                select(NexaArtifact)
+                .where(NexaArtifact.mission_id.in_(mids))
+                .order_by(NexaArtifact.created_at.desc())
+            ).all()
+        )
+        by_mid: dict[str, list[Any]] = defaultdict(list)
+        for a in art_rows:
+            by_mid[a.mission_id].append(a)
+        artifacts_out = []
+        for mid in mids:
+            for a in by_mid.get(mid, [])[:MC_MAX_ARTIFACTS_PER_MISSION]:
+                artifacts_out.append(
+                    {
+                        "id": a.id,
+                        "mission_id": a.mission_id,
+                        "agent": a.agent_handle,
+                        "artifact": a.artifact_json,
+                        "created_at": a.created_at.isoformat() if a.created_at else None,
+                    }
+                )
 
     priv = list(STATE["privacy_events"])
     prov = list(STATE["provider_events"])
@@ -280,6 +295,7 @@ def build_execution_snapshot(db: Session, *, user_id: str | None = None) -> dict
 
 
 def build_mission_control_runtime_state(db: Session, user_id: str, *, hours: int = 24) -> dict[str, Any]:
+    # TODO: remove in Phase 15 — consolidate with build_execution_snapshot / legacy orchestration paths.
     """Shape expected by ``GET /mission-control/state`` — live-backed, no static mocks."""
     summary = build_mission_control_summary(db, user_id, hours=hours)
     orch = summary.get("orchestration") or {}

@@ -1,9 +1,14 @@
 "use client";
 
+import { motion } from "framer-motion";
 import { ChevronDown, ChevronRight, FileJson, Loader2, RefreshCw } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
-import { webFetch } from "@/lib/api";
-import { isConfigured, readConfig } from "@/lib/config";
+import { useCallback, useEffect, useReducer, useState } from "react";
+import { isConfigured } from "@/lib/config";
+import {
+  getMissionState,
+  refreshMissionControlStore,
+  subscribeMissionStore,
+} from "@/lib/state/missionControlStore";
 
 type ArtifactRow = {
   id: number;
@@ -14,7 +19,7 @@ type ArtifactRow = {
 };
 
 type McState = {
-  artifacts: ArtifactRow[];
+  artifacts?: ArtifactRow[];
 };
 
 function summarizeArtifact(a: unknown): string {
@@ -33,45 +38,51 @@ function summarizeArtifact(a: unknown): string {
   return String(a).slice(0, 400);
 }
 
+function groupByAgent(data: McState | null): Record<string, ArtifactRow[]> {
+  const arts = Array.isArray(data?.artifacts) ? data!.artifacts! : [];
+  const map: Record<string, ArtifactRow[]> = {};
+  for (const a of arts) {
+    const key = (a.agent || "unknown").trim() || "unknown";
+    if (!map[key]) map[key] = [];
+    map[key].push(a);
+  }
+  return map;
+}
+
 export function ArtifactsPanel() {
-  const [byAgent, setByAgent] = useState<Record<string, ArtifactRow[]>>({});
-  const [loading, setLoading] = useState(true);
+  const [, bump] = useReducer((x: number) => x + 1, 0);
+  const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const configured = isConfigured();
+
+  useEffect(() => {
+    return subscribeMissionStore(bump);
+  }, []);
+
+  const byAgent = groupByAgent(getMissionState() as McState | null);
 
   const load = useCallback(async () => {
-    if (!isConfigured()) {
+    if (!configured) {
       setErr("Set API base and user id on the login page to load artifacts.");
-      setLoading(false);
-      setByAgent({});
       return;
     }
     setErr(null);
     setLoading(true);
     try {
-      const uid = readConfig().userId;
-      const data = await webFetch<McState>(`/mission-control/state?user_id=${encodeURIComponent(uid)}`);
-      const arts = Array.isArray(data.artifacts) ? data.artifacts : [];
-      const map: Record<string, ArtifactRow[]> = {};
-      for (const a of arts) {
-        const key = (a.agent || "unknown").trim() || "unknown";
-        if (!map[key]) map[key] = [];
-        map[key].push(a);
-      }
-      setByAgent(map);
+      await refreshMissionControlStore();
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));
-      setByAgent({});
     } finally {
       setLoading(false);
     }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  }, [configured]);
 
   const agents = Object.keys(byAgent).sort();
+  const configHint =
+    !configured && !err
+      ? "Set API base and user id on the login page to load artifacts."
+      : null;
 
   return (
     <section className="rounded-xl border border-zinc-800 bg-zinc-950/70 px-4 py-4">
@@ -94,15 +105,20 @@ export function ArtifactsPanel() {
       {err ? (
         <p className="mt-3 rounded-md border border-rose-500/30 bg-rose-950/40 px-3 py-2 text-xs text-rose-200">{err}</p>
       ) : null}
+      {configHint ? (
+        <p className="mt-3 rounded-md border border-amber-500/25 bg-amber-950/30 px-3 py-2 text-xs text-amber-100">
+          {configHint}
+        </p>
+      ) : null}
 
-      {loading && Object.keys(byAgent).length === 0 && !err ? (
+      {loading && agents.length === 0 && !err ? (
         <div className="mt-4 flex items-center gap-2 text-xs text-zinc-500">
           <Loader2 className="h-4 w-4 animate-spin" />
-          Loading artifacts…
+          Refreshing artifacts…
         </div>
       ) : null}
 
-      {!loading && agents.length === 0 && !err ? (
+      {!loading && configured && agents.length === 0 && !err ? (
         <p className="mt-4 text-sm text-zinc-500">No artifacts yet. Run a mission to produce outputs.</p>
       ) : null}
 
@@ -125,11 +141,14 @@ export function ArtifactsPanel() {
               </button>
               {open ? (
                 <ul className="space-y-2 border-t border-zinc-800/80 px-3 pb-3 pt-2">
-                  {rows.map((row) => (
-                    <li
+                  {rows.map((row, ri) => (
+                    <motion.li
                       key={row.id}
                       title={summarizeArtifact(row.artifact).slice(0, 600)}
-                      className="rounded-md border border-zinc-800/60 bg-zinc-950/80 p-2.5 font-mono text-[11px] text-zinc-300 transition-colors duration-200 hover:border-zinc-600 hover:bg-zinc-900/80"
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.35, ease: "easeOut", delay: Math.min(ri, 16) * 0.035 }}
+                      className="rounded-md border border-zinc-800/60 bg-zinc-950/80 p-2.5 font-mono text-[11px] text-zinc-300 transition-colors duration-300 hover:border-zinc-600 hover:bg-zinc-900/80"
                     >
                       <div className="mb-1 flex flex-wrap items-center gap-2 text-zinc-500">
                         <FileJson className="h-3.5 w-3.5" />
@@ -139,7 +158,7 @@ export function ArtifactsPanel() {
                       <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-words text-zinc-400">
                         {summarizeArtifact(row.artifact) || "—"}
                       </pre>
-                    </li>
+                    </motion.li>
                   ))}
                 </ul>
               ) : null}
@@ -148,7 +167,7 @@ export function ArtifactsPanel() {
         })}
       </div>
 
-      <p className="mt-3 text-[10px] text-zinc-600">Source: GET /api/v1/mission-control/state (scoped by your user id).</p>
+      <p className="mt-3 text-[10px] text-zinc-600">Source: shared Mission Control store (GET /api/v1/mission-control/state).</p>
     </section>
   );
 }

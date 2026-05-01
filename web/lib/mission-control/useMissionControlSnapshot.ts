@@ -1,8 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { webFetch } from "@/lib/api";
-import { isConfigured, readConfig } from "@/lib/config";
+import {
+  getMissionState,
+  refreshMissionControlStore,
+  subscribeMissionStore,
+} from "@/lib/state/missionControlStore";
+import { isConfigured } from "@/lib/config";
 
 export type PrivacyIndicator = {
   level: "safe" | "redacted" | "blocked";
@@ -28,13 +32,21 @@ export type MissionControlSnapshot = {
   metrics?: Record<string, unknown>;
 };
 
+function snapshotFromStore(): MissionControlSnapshot | null {
+  const raw = getMissionState();
+  if (!raw || typeof raw !== "object") return null;
+  return raw as MissionControlSnapshot;
+}
+
 export function useMissionControlSnapshot(pollMs = 8000): {
   data: MissionControlSnapshot | null;
   loading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
 } {
-  const [data, setData] = useState<MissionControlSnapshot | null>(null);
+  const [data, setData] = useState<MissionControlSnapshot | null>(() =>
+    isConfigured() ? snapshotFromStore() : null,
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -47,11 +59,8 @@ export function useMissionControlSnapshot(pollMs = 8000): {
     }
     setError(null);
     try {
-      const uid = readConfig().userId;
-      const snap = await webFetch<MissionControlSnapshot>(
-        `/mission-control/state?user_id=${encodeURIComponent(uid)}`,
-      );
-      setData(snap);
+      await refreshMissionControlStore();
+      setData(snapshotFromStore());
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
       setData(null);
@@ -63,6 +72,13 @@ export function useMissionControlSnapshot(pollMs = 8000): {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    return subscribeMissionStore(() => {
+      if (!isConfigured()) return;
+      setData(snapshotFromStore());
+    });
+  }, []);
 
   useEffect(() => {
     if (!pollMs || pollMs < 2000) return;

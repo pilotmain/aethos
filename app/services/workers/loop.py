@@ -9,7 +9,7 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from app.models.nexa_next_runtime import NexaMissionTask
-from app.services.events.bus import publish
+from app.services.events.envelope import emit_runtime_event
 from app.services.logging.logger import get_logger
 from app.services.workers.runner import run_agent
 
@@ -41,12 +41,10 @@ def run_until_complete(
         if deadline is not None and time.monotonic() > deadline:
             _log.warning("mission runtime exceeded mission_id=%s", mission_id)
             _cancel_remaining(agents, db, mission_id=str(mission_id) if mission_id else "")
-            publish(
-                {
-                    "type": "mission.timeout",
-                    "mission_id": mission_id,
-                    "detail": "NEXA_MISSION_MAX_RUNTIME_SECONDS exceeded",
-                }
+            emit_runtime_event(
+                "mission.timeout",
+                mission_id=str(mission_id) if mission_id else None,
+                payload={"detail": "NEXA_MISSION_MAX_RUNTIME_SECONDS exceeded"},
             )
             return agents, True
 
@@ -68,12 +66,10 @@ def run_until_complete(
                     row.started_at = started_at
                     db.commit()
 
-            publish(
-                {
-                    "type": "task.started",
-                    "agent": agent["handle"],
-                    "mission_id": agent.get("mission_id"),
-                }
+            emit_runtime_event(
+                "task.started",
+                mission_id=str(agent.get("mission_id") or "") or None,
+                agent=str(agent.get("handle") or ""),
             )
 
             agent["status"] = "running"
@@ -90,12 +86,10 @@ def run_until_complete(
                     row.duration_ms = dur_ms
                     db.commit()
 
-            publish(
-                {
-                    "type": "task.completed",
-                    "agent": agent["handle"],
-                    "mission_id": agent.get("mission_id"),
-                }
+            emit_runtime_event(
+                "task.completed",
+                mission_id=str(agent.get("mission_id") or "") or None,
+                agent=str(agent.get("handle") or ""),
             )
 
             completed.add(agent["handle"])

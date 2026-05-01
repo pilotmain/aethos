@@ -57,7 +57,7 @@ class NexaGateway:
         source_text: str | None = None,
     ) -> dict[str, Any]:
         from app.models.nexa_next_runtime import NexaMission, NexaMissionTask
-        from app.services.events.bus import publish
+        from app.services.events.envelope import emit_runtime_event
         from app.services.mission_control.nexa_next_state import update_state
         from app.services.runtime_agents.factory import create_runtime_agents
         from app.services.workers.loop import run_until_complete
@@ -90,7 +90,7 @@ class NexaGateway:
             agent["task_pk"] = row.id
         db.commit()
 
-        publish({"type": "mission.started", "mission_id": mission_id, "user_id": user_id})
+        emit_runtime_event("mission.started", mission_id=mission_id, user_id=user_id)
         _log.info("mission.start mission_id=%s user_id=%s", mission_id, user_id)
 
         max_sec = get_settings().nexa_mission_max_runtime_seconds
@@ -111,7 +111,7 @@ class NexaGateway:
             _log.warning("mission.timeout mission_id=%s user_id=%s", mission_id, user_id)
         else:
             record_mission_completed()
-            publish({"type": "mission.completed", "mission_id": mission_id, "user_id": user_id})
+            emit_runtime_event("mission.completed", mission_id=mission_id, user_id=user_id)
             _log.info("mission.completed mission_id=%s user_id=%s", mission_id, user_id)
 
         update_state(result)

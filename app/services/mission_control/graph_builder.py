@@ -2,7 +2,13 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
+from collections import OrderedDict
 from typing import Any
+
+_GRAPH_CACHE: OrderedDict[str, dict[str, Any]] = OrderedDict()
+_MAX_GRAPH_CACHE_ENTRIES = 64
 
 
 def _scoped_id(mission_id: str, handle: str) -> str:
@@ -92,3 +98,47 @@ def build_graph(state: dict[str, Any]) -> dict[str, Any]:
                     edges.append({"from": _scoped_id(mid, dep_h), "to": nid})
 
     return {"nodes": nodes, "edges": edges}
+
+
+def _graph_cache_key(state: dict[str, Any]) -> str:
+    slim = {
+        "missions": [
+            {"id": (m or {}).get("id"), "status": (m or {}).get("status")}
+            for m in (state.get("missions") or [])[:80]
+            if isinstance(m, dict)
+        ],
+        "tasks": [
+            {
+                "mission_id": (t or {}).get("mission_id"),
+                "agent_handle": (t or {}).get("agent_handle"),
+                "status": (t or {}).get("status"),
+                "depends_on": (t or {}).get("depends_on"),
+            }
+            for t in (state.get("tasks") or [])
+            if isinstance(t, dict)
+        ],
+    }
+    raw = json.dumps(slim, sort_keys=True, default=str).encode()
+    return hashlib.sha256(raw).hexdigest()
+
+
+def build_graph_cached(state: dict[str, Any]) -> dict[str, Any]:
+    """Memoized graph build keyed by missions/tasks signature (Phase 14)."""
+    key = _graph_cache_key(state)
+    if key in _GRAPH_CACHE:
+        _GRAPH_CACHE.move_to_end(key)
+        return dict(_GRAPH_CACHE[key])
+    out = build_graph(state)
+    _GRAPH_CACHE[key] = out
+    _GRAPH_CACHE.move_to_end(key)
+    while len(_GRAPH_CACHE) > _MAX_GRAPH_CACHE_ENTRIES:
+        _GRAPH_CACHE.popitem(last=False)
+    return dict(out)
+
+
+def clear_graph_cache() -> None:
+    """Test helper / manual invalidation."""
+    _GRAPH_CACHE.clear()
+
+
+__all__ = ["build_graph", "build_graph_cached", "clear_graph_cache"]

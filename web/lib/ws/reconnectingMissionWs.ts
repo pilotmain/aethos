@@ -1,6 +1,8 @@
 export type MissionWsConnectionState = "connecting" | "open" | "reconnecting" | "error";
 
 /**
+ * @deprecated Phase 14 — use `@/lib/ws/missionControlStream` for a single shared Mission Control socket.
+ *
  * WebSocket with exponential backoff reconnect (Phase 11).
  * Caller supplies `onMessage`; optional `pingMs` keeps connections alive.
  */

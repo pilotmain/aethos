@@ -27,6 +27,8 @@ export type AgentCardProps = {
   nodeId?: string;
   /** Highlight when this agent is the active runner (Phase 13). */
   active?: boolean;
+  /** Subtle emphasis on the current execution path (Phase 14). */
+  pathHighlight?: boolean;
   className?: string;
 };
 
@@ -40,19 +42,24 @@ export function AgentCard({
   lastOutput,
   nodeId,
   active,
+  pathHighlight,
   className = "",
 }: AgentCardProps) {
   const st = (status || "unknown").toLowerCase();
   const ring = STATUS_RING[st] ?? "border-zinc-700";
   const pulse = st === "running";
   const activeRing = active ? " ring-2 ring-violet-500/70 ring-offset-2 ring-offset-zinc-950" : "";
+  const pathRing =
+    pathHighlight && !active
+      ? " shadow-[0_0_0_1px_rgba(52,211,153,0.35)] bg-emerald-950/15"
+      : "";
 
   return (
     <motion.div
       layout
       animate={{ scale: pulse ? 1.03 : 1 }}
       transition={{ type: "spring", stiffness: 380, damping: 26 }}
-      className={`min-w-[160px] max-w-[260px] rounded-lg border bg-black/35 px-3 py-2.5 transition-[box-shadow,transform] duration-300 ${ring}${activeRing} ${className}`}
+      className={`min-w-[160px] max-w-[260px] rounded-lg border bg-black/35 px-3 py-2.5 transition-[box-shadow,transform] duration-300 ${ring}${activeRing}${pathRing} ${className}`}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">

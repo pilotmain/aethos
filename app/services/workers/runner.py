@@ -7,7 +7,7 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from app.services.artifacts.store import read_artifacts, write_artifact
-from app.services.events.bus import publish
+from app.services.events.envelope import emit_runtime_event
 from app.services.providers.gateway import call_provider
 from app.services.providers.types import ProviderRequest
 from app.services.tools.registry import get_provider_for_tool, select_tool_for_agent
@@ -44,13 +44,11 @@ def run_agent(agent: dict[str, Any], db: Session) -> dict[str, Any]:
 
     output = response.output if response.output is not None else {"type": "empty"}
     write_artifact(db, mission_id, agent["handle"], output)
-    publish(
-        {
-            "type": "artifact.created",
-            "mission_id": mission_id,
-            "agent": agent["handle"],
-            "artifact": output,
-        }
+    emit_runtime_event(
+        "artifact.created",
+        mission_id=str(mission_id) if mission_id else None,
+        agent=str(agent["handle"]),
+        payload={"artifact": output},
     )
     return output
 
