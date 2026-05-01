@@ -55,7 +55,11 @@ export type MissionControlSnapshot = {
     created_at?: string | null;
     completed_at?: string | null;
     error?: string | null;
+    pipeline?: unknown;
   }>;
+  long_running_sessions?: Array<Record<string, unknown>>;
+  scheduler_jobs?: Array<Record<string, unknown>>;
+  channel_activity?: Array<Record<string, unknown>>;
   maintenance?: {
     sql_purge_enabled?: boolean;
   };

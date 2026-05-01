@@ -272,7 +272,21 @@ export function MissionControlLayout() {
             />
           ) : null}
 
-          {configured ? <Phase22Overview shellLight={shellLight} /> : null}
+          {configured ? (
+            <Phase22Overview
+              shellLight={shellLight}
+              longRunningCount={
+                Array.isArray(snap?.long_running_sessions) ? snap!.long_running_sessions!.length : undefined
+              }
+              schedulerJobCount={
+                Array.isArray(snap?.scheduler_jobs) ? snap!.scheduler_jobs!.length : undefined
+              }
+              channelEventsCount={
+                Array.isArray(snap?.channel_activity) ? snap!.channel_activity!.length : undefined
+              }
+              autonomous={Boolean(snap?.runtime && (snap.runtime as { autonomous_mode?: boolean }).autonomous_mode)}
+            />
+          ) : null}
 
           {configured ? (
             <DevOpsPanel

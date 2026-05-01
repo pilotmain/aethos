@@ -1,7 +1,8 @@
-"""Long-running agent sessions — checkpointed state, scheduler-driven ticks (Phase 41)."""
+"""Long-running agent sessions — filesystem checkpoints + DB persistence (Phase 41–42)."""
 
 from __future__ import annotations
 
+import hashlib
 import json
 import uuid
 from dataclasses import dataclass, field
@@ -9,6 +10,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from app.models.long_running_session import NexaLongRunningSession
 from app.services.events.envelope import emit_runtime_event
 from app.services.logging.logger import get_logger
 from app.services.memory.memory_store import MemoryStore
@@ -20,6 +25,15 @@ _REGISTRY: dict[str, "LongRunningSession"] = {}
 
 def _utc_iso() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+
+
+def _utc_now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+def _stable_session_pk(user_id: str, session_key: str) -> str:
+    raw = f"{(user_id or '').strip()}\n{(session_key or '').strip()}".encode()
+    return hashlib.sha256(raw).hexdigest()[:24]
 
 
 @dataclass
@@ -114,7 +128,111 @@ class LongRunningSession:
             "session_id": self.session_id,
             "user_id": self.user_id,
             "iteration": cp.iteration,
+            "source": "filesystem",
         }
+
+
+def upsert_db_session(
+    db: Session,
+    *,
+    user_id: str,
+    session_key: str,
+    goal: str = "",
+    interval_seconds: int = 300,
+    state: dict[str, Any] | None = None,
+    active: bool = True,
+) -> NexaLongRunningSession:
+    """Create or update a DB-backed session (survives API restart)."""
+    pk = _stable_session_pk(user_id, session_key)
+    uid = (user_id or "").strip()[:128]
+    sk = (session_key or "").strip()[:128]
+    row = db.scalar(
+        select(NexaLongRunningSession).where(
+            NexaLongRunningSession.user_id == uid,
+            NexaLongRunningSession.session_key == sk,
+        )
+    )
+    now = _utc_now()
+    blob = json.dumps(state or {}, ensure_ascii=False)
+    if row is None:
+        row = NexaLongRunningSession(
+            id=pk,
+            user_id=uid,
+            session_key=sk,
+            goal=(goal or "").strip()[:50_000],
+            state_json=blob,
+            interval_seconds=max(30, int(interval_seconds or 300)),
+            iteration=0,
+            last_tick_at=None,
+            active=active,
+            created_at=now,
+            updated_at=now,
+        )
+        db.add(row)
+    else:
+        row.goal = (goal or row.goal or "").strip()[:50_000]
+        row.state_json = blob
+        row.interval_seconds = max(30, int(interval_seconds or row.interval_seconds or 300))
+        row.active = active
+        row.updated_at = now
+    db.commit()
+    db.refresh(row)
+    return row
+
+
+def list_db_sessions(db: Session, *, user_id: str | None = None, active_only: bool = True) -> list[NexaLongRunningSession]:
+    q = select(NexaLongRunningSession).order_by(NexaLongRunningSession.updated_at.desc())
+    if user_id:
+        q = q.where(NexaLongRunningSession.user_id == user_id.strip())
+    if active_only:
+        q = q.where(NexaLongRunningSession.active.is_(True))
+    return list(db.scalars(q.limit(200)).all())
+
+
+def tick_eligible_db_sessions(db: Session) -> list[dict[str, Any]]:
+    """Advance DB-backed sessions whose interval has elapsed."""
+    now = _utc_now()
+    rows = list(
+        db.scalars(select(NexaLongRunningSession).where(NexaLongRunningSession.active.is_(True))).all()
+    )
+    out: list[dict[str, Any]] = []
+    for row in rows:
+        iv = max(30, int(row.interval_seconds or 300))
+        last = row.last_tick_at
+        if last is not None:
+            last_cmp = last if last.tzinfo else last.replace(tzinfo=timezone.utc)
+            if (now - last_cmp).total_seconds() < iv:
+                continue
+        row.iteration = int(row.iteration or 0) + 1
+        row.last_tick_at = now
+        row.updated_at = now
+        try:
+            st = json.loads(row.state_json or "{}")
+        except json.JSONDecodeError:
+            st = {}
+        st["ticks"] = int(st.get("ticks") or 0) + 1
+        row.state_json = json.dumps(st, ensure_ascii=False)
+        emit_runtime_event(
+            "long_running.tick",
+            user_id=row.user_id,
+            payload={
+                "session_key": row.session_key,
+                "iteration": row.iteration,
+                "source": "database",
+            },
+        )
+        out.append(
+            {
+                "ok": True,
+                "session_key": row.session_key,
+                "user_id": row.user_id,
+                "iteration": row.iteration,
+                "source": "database",
+            }
+        )
+    if out:
+        db.commit()
+    return out
 
 
 def register_session(sess: LongRunningSession) -> None:
@@ -127,14 +245,26 @@ def unregister_session(user_id: str, session_id: str) -> None:
 
 
 def tick_all_registered() -> list[dict[str, Any]]:
-    """Invoke one tick per registered in-memory session (heartbeat hook)."""
-    return [sess.tick() for sess in list(_REGISTRY.values())]
+    """In-memory ticks plus eligible DB-backed sessions (heartbeat hook)."""
+    mem = [sess.tick() for sess in list(_REGISTRY.values())]
+    db_out: list[dict[str, Any]] = []
+    try:
+        from app.core.db import SessionLocal
+
+        with SessionLocal() as db:
+            db_out = tick_eligible_db_sessions(db)
+    except Exception:
+        _log.warning("long_running.db_tick_failed", exc_info=True)
+    return mem + db_out
 
 
 __all__ = [
     "LongRunningCheckpoint",
     "LongRunningSession",
+    "list_db_sessions",
     "register_session",
     "tick_all_registered",
+    "tick_eligible_db_sessions",
     "unregister_session",
+    "upsert_db_session",
 ]

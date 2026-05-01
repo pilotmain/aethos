@@ -28,6 +28,8 @@ export type DevRunRow = {
   privacy_note?: string | null;
   privacy_warnings?: string | null;
   has_runtime_errors?: boolean | null;
+  /** Phase 42 — analyze → code → test → … snapshot from dev mission ``result_json``. */
+  pipeline?: { sequence?: string[] } | null;
 };
 
 function panelTitle(shellLight: boolean) {
@@ -145,6 +147,11 @@ export function DevOpsPanel(props: {
                     ) : null}
                     {r.has_runtime_errors ? (
                       <span className={shellLight ? "text-amber-800" : "text-amber-300"}>runtime err</span>
+                    ) : null}
+                    {r.pipeline?.sequence?.length ? (
+                      <span className={`font-mono text-[10px] ${subtle(shellLight)}`} title="Dev pipeline phases">
+                        phases:{r.pipeline.sequence.join("→")}
+                      </span>
                     ) : null}
                     {onRetryRun && (r.status === "failed" || r.status === "blocked") ? (
                       <button

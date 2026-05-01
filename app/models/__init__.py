@@ -17,6 +17,7 @@ from app.models.governance import Organization, OrganizationMembership, Organiza
 from app.models.learning_event import LearningEvent
 from app.models.llm_usage_event import LlmUsageEvent
 from app.models.local_action import LocalAction
+from app.models.long_running_session import NexaLongRunningSession
 from app.models.memory import UserMemory
 from app.models.nexa_next_runtime import NexaArtifact, NexaExternalCall, NexaMission, NexaMissionTask
 from app.models.nexa_scheduler_job import NexaSchedulerJob
@@ -77,6 +78,7 @@ __all__ = [
     "NexaArtifact",
     "NexaExternalCall",
     "NexaSchedulerJob",
+    "NexaLongRunningSession",
     "NexaDevWorkspace",
     "NexaDevRun",
     "NexaDevStep",

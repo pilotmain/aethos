@@ -369,6 +369,16 @@ class Settings(BaseSettings):
     # Phase 39 — periodic autonomy heartbeat (OpenClaw-style background tick)
     nexa_heartbeat_enabled: bool = False
     nexa_heartbeat_interval_seconds: int = 300
+    # Phase 42 — Ollama HTTP embeddings (requires ``nexa_ollama_enabled`` + reachable Ollama).
+    nexa_ollama_embeddings_enabled: bool = False
+    # Discord bot (optional ``discord.py`` package).
+    nexa_discord_enabled: bool = False
+    nexa_discord_bot_token: str = ""
+    nexa_discord_app_user_id: str = ""
+    # Slack: use NexaGateway route_inbound instead of legacy channel gateway pipeline.
+    nexa_slack_route_inbound: bool = False
+    # Autonomy — tighten scheduler + heartbeat expectations (documentary; gates optional hooks).
+    nexa_autonomous_mode: bool = False
 
     # Phase 23 — AI dev OS (workspace commands, allowlist).
     nexa_dev_allowed_commands: str = (

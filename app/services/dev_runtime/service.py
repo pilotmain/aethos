@@ -199,7 +199,8 @@ def run_dev_mission(
                 payload={"run_id": rid, "step_type": stype, "step_id": row.id},
             )
 
-        # Phase 25 — bounded adapter / test loop
+        # Phase 42 — bounded retry: coding step → tests → failure-driven goal pivot until pass,
+        # exhaustion (max_iterations), or adapter error (same bounds as Phase 25).
         iteration = 0
         while iteration < max_loop_iters:
             iteration += 1

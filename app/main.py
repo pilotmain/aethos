@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 from contextlib import asynccontextmanager
@@ -154,7 +155,23 @@ async def lifespan(app: FastAPI):
             logging.getLogger("nexa").info("nexa.scheduler.restored count=%s", n)
     except Exception as exc:
         logging.getLogger("nexa").warning("nexa.scheduler.restore_failed %s", exc)
+    discord_bg: asyncio.Task[None] | None = None
+    if getattr(_boot, "nexa_discord_enabled", False) and (getattr(_boot, "nexa_discord_bot_token", None) or "").strip():
+        try:
+            from app.services.channels.discord_bot import run_discord_bot_forever
+
+            discord_bg = asyncio.create_task(run_discord_bot_forever())
+        except Exception as exc:
+            logging.getLogger("nexa").warning("discord bot start failed: %s", exc)
     yield
+    if discord_bg is not None:
+        discord_bg.cancel()
+        try:
+            await discord_bg
+        except asyncio.CancelledError:
+            pass
+        except Exception as exc:
+            logging.getLogger("nexa").warning("discord bot shutdown: %s", exc)
     if scheduler.running:
         scheduler.shutdown(wait=False)
 

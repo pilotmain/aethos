@@ -114,8 +114,13 @@ async def slack_events(request: Request) -> dict[str, Any]:
         app_uid = adapter.resolve_app_user_id(db, wrapper)
         orchestrator.users.get_or_create(db, app_uid)
         norm = adapter.normalize_message(wrapper, app_user_id=app_uid)
-        with bind_channel_origin(build_channel_origin(norm)):
-            env = handle_incoming_channel_message(db, normalized_message=norm)
+        if getattr(get_settings(), "nexa_slack_route_inbound", False):
+            from app.services.channels.slack_bot import slack_inbound_via_gateway
+
+            env = slack_inbound_via_gateway(db, norm)
+        else:
+            with bind_channel_origin(build_channel_origin(norm)):
+                env = handle_incoming_channel_message(db, normalized_message=norm)
 
         token = (get_settings().slack_bot_token or "").strip()
         if not token:

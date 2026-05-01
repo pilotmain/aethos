@@ -6,7 +6,7 @@ import json
 import re
 from typing import Any
 
-from app.services.memory.embedding import cosine_similarity, embed_text
+from app.services.memory.embedding import cosine_similarity, embed_text_primary
 from app.services.memory.memory_store import MemoryStore
 
 
@@ -53,11 +53,11 @@ class MemoryIndex:
         q = (query or "").strip()
         if not q:
             return []
-        qv = embed_text(q)
+        qv = embed_text_primary(q)
         scored: list[tuple[float, dict[str, Any]]] = []
         for e in self.store.list_entries(user_id, limit=500):
             blob = f"{e.get('title', '')}\n{e.get('preview', '')}"
-            sv = embed_text(blob[:8000])
+            sv = embed_text_primary(blob[:8000])
             score = cosine_similarity(qv, sv)
             scored.append((score, e))
         scored.sort(key=lambda x: x[0], reverse=True)

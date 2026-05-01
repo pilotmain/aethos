@@ -10,8 +10,15 @@ type SchedulerListResponse = { jobs?: unknown[] };
 type SkillsListResponse = { skills?: unknown[] };
 
 /** Phase 22 — Memory, scheduler, and skills snapshot cards (Mission Control v3). */
-export function Phase22Overview(props: { shellLight: boolean }) {
-  const { shellLight } = props;
+export function Phase22Overview(props: {
+  shellLight: boolean;
+  /** Phase 42 — counts from unified Mission Control state (optional). */
+  longRunningCount?: number;
+  schedulerJobCount?: number;
+  channelEventsCount?: number;
+  autonomous?: boolean;
+}) {
+  const { shellLight, longRunningCount, schedulerJobCount, channelEventsCount, autonomous } = props;
   const [memory, setMemory] = useState<NexaMemoryResponse | null>(null);
   const [sched, setSched] = useState<SchedulerListResponse | null>(null);
   const [skills, setSkills] = useState<SkillsListResponse | null>(null);
@@ -120,6 +127,50 @@ export function Phase22Overview(props: { shellLight: boolean }) {
           <p className={`mt-1 text-[11px] ${cardTitle}`}>User-defined JSON skills</p>
         </div>
       </div>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div
+            className={`rounded-lg border p-3 ${
+              shellLight ? "border-zinc-200 bg-white text-zinc-900" : "border-zinc-700/80 bg-zinc-900/40 text-zinc-100"
+            }`}
+          >
+            <div className={`mb-1 text-xs font-medium ${cardTitle}`}>Long-running agents</div>
+            <p className={`text-2xl font-semibold tabular-nums ${stat}`}>
+              {typeof longRunningCount === "number" ? longRunningCount : "—"}
+            </p>
+            <p className={`mt-1 text-[11px] ${cardTitle}`}>DB-backed sessions</p>
+          </div>
+          <div
+            className={`rounded-lg border p-3 ${
+              shellLight ? "border-zinc-200 bg-white text-zinc-900" : "border-zinc-700/80 bg-zinc-900/40 text-zinc-100"
+            }`}
+          >
+            <div className={`mb-1 text-xs font-medium ${cardTitle}`}>Scheduler jobs</div>
+            <p className={`text-2xl font-semibold tabular-nums ${stat}`}>
+              {typeof schedulerJobCount === "number" ? schedulerJobCount : "—"}
+            </p>
+            <p className={`mt-1 text-[11px] ${cardTitle}`}>Registered APScheduler rows</p>
+          </div>
+          <div
+            className={`rounded-lg border p-3 ${
+              shellLight ? "border-zinc-200 bg-white text-zinc-900" : "border-zinc-700/80 bg-zinc-900/40 text-zinc-100"
+            }`}
+          >
+            <div className={`mb-1 text-xs font-medium ${cardTitle}`}>Channel activity</div>
+            <p className={`text-2xl font-semibold tabular-nums ${stat}`}>
+              {typeof channelEventsCount === "number" ? channelEventsCount : "—"}
+            </p>
+            <p className={`mt-1 text-[11px] ${cardTitle}`}>Recent bus events (tail)</p>
+          </div>
+          <div
+            className={`rounded-lg border p-3 ${
+              shellLight ? "border-zinc-200 bg-white text-zinc-900" : "border-zinc-700/80 bg-zinc-900/40 text-zinc-100"
+            }`}
+          >
+            <div className={`mb-1 text-xs font-medium ${cardTitle}`}>Autonomy mode</div>
+            <p className={`text-sm font-semibold ${stat}`}>{autonomous ? "On" : "Off"}</p>
+            <p className={`mt-1 text-[11px] ${cardTitle}`}>NEXA_AUTONOMOUS_MODE</p>
+          </div>
+        </div>
     </section>
   );
 }

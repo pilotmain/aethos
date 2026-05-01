@@ -11,6 +11,9 @@ from app.services.memory.memory_store import MemoryStore
 
 _log = get_logger("memory.intelligence")
 
+# Below this heuristic score, entries are candidates for prune when over capacity.
+MIN_IMPORTANCE_SCORE_FOR_KEEP: float = 0.5
+
 
 def _parse_ts(ts: str | None) -> datetime | None:
     if not ts:

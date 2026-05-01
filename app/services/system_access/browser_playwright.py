@@ -201,10 +201,47 @@ def fill_form_field(url: str, selector: str, text: str) -> dict[str, Any]:
         return {"ok": False, "error": str(exc)[:2000]}
 
 
+def list_visible_links(url: str, *, max_links: int = 40) -> dict[str, Any]:
+    """Return up to ``max_links`` absolute hrefs from anchor elements (read-only)."""
+    uerr = validate_public_url_strict(url)
+    if uerr:
+        return {"ok": False, "error": uerr}
+    ok, reason = _preview_gate()
+    if not ok:
+        return {"ok": False, "error": reason}
+    spw = _try_import_sync_playwright()
+    if spw is None:
+        return {"ok": False, "error": "playwright_missing"}
+    to_ms = _timeout_ms()
+    u = (url or "").strip()
+    hrefs: list[str] = []
+    try:
+        with spw() as p:
+            browser = p.chromium.launch(headless=True)
+            try:
+                ctx = browser.new_context(user_agent=get_settings().nexa_web_user_agent)
+                page = ctx.new_page()
+                page.set_default_timeout(to_ms)
+                page.goto(u, wait_until="domcontentloaded", timeout=to_ms)
+                page.wait_for_timeout(600)
+                for el in page.query_selector_all("a[href]"):
+                    if len(hrefs) >= max_links:
+                        break
+                    h = el.get_attribute("href")
+                    if h:
+                        hrefs.append(h)
+                return {"ok": True, "links": hrefs, "final_url": page.url}
+            finally:
+                browser.close()
+    except Exception as exc:
+        return {"ok": False, "error": str(exc)[:2000]}
+
+
 __all__ = [
     "click_selector",
     "extract_content",
     "fill_form_field",
+    "list_visible_links",
     "open_page",
     "screenshot_page",
 ]

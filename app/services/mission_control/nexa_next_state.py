@@ -11,7 +11,9 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.models.dev_runtime import NexaDevRun, NexaDevWorkspace
+from app.models.long_running_session import NexaLongRunningSession
 from app.models.nexa_next_runtime import NexaArtifact, NexaExternalCall, NexaMission, NexaMissionTask
+from app.models.nexa_scheduler_job import NexaSchedulerJob
 from app.services.events.bus import list_events
 from app.services.metrics.runtime import snapshot as metrics_process_snapshot
 
@@ -318,6 +320,7 @@ def _runtime_hints(
         "integrity_banner_level": _integrity_banner_level(alerts, ignored_ids),
         "user_privacy_mode": mode_label,
         "privacy_score": score,
+        "autonomous_mode": bool(getattr(s, "nexa_autonomous_mode", False)),
     }
 
 
@@ -484,8 +487,12 @@ def build_execution_snapshot(
         integrity_alerts_scoped=alerts_scoped,
     )
 
+    ev_bus = list_events()
     dev_workspaces_out: list[dict[str, Any]] = []
     dev_runs_out: list[dict[str, Any]] = []
+    long_running_out: list[dict[str, Any]] = []
+    scheduler_jobs_out: list[dict[str, Any]] = []
+    channel_activity_out: list[dict[str, Any]] = []
     if user_id:
         ws_rows = list(
             db.scalars(
@@ -543,17 +550,68 @@ def build_execution_snapshot(
                 "has_runtime_errors": (r.result_json or {}).get("has_runtime_errors")
                 if isinstance(r.result_json, dict)
                 else None,
+                "pipeline": (r.result_json or {}).get("pipeline")
+                if isinstance(r.result_json, dict)
+                else None,
                 "privacy_note": "Outbound adapter context is gated; stored output is redacted.",
                 "privacy_warnings": None,
             }
             for r in dr_rows
         ]
+        lr_rows = list(
+            db.scalars(
+                select(NexaLongRunningSession)
+                .where(NexaLongRunningSession.user_id == user_id)
+                .order_by(NexaLongRunningSession.updated_at.desc())
+                .limit(40)
+            ).all()
+        )
+        long_running_out = [
+            {
+                "session_key": x.session_key,
+                "goal": (x.goal or "")[:280],
+                "iteration": x.iteration,
+                "interval_seconds": x.interval_seconds,
+                "active": x.active,
+                "updated_at": x.updated_at.isoformat() if x.updated_at else None,
+            }
+            for x in lr_rows
+        ]
+        sj_rows = list(
+            db.scalars(
+                select(NexaSchedulerJob)
+                .where(NexaSchedulerJob.user_id == user_id)
+                .order_by(NexaSchedulerJob.created_at.desc())
+                .limit(40)
+            ).all()
+        )
+        scheduler_jobs_out = [
+            {
+                "id": j.id,
+                "label": j.label,
+                "enabled": j.enabled,
+                "kind": j.kind,
+                "interval_seconds": j.interval_seconds,
+                "cron_expression": j.cron_expression,
+                "created_at": j.created_at.isoformat() if j.created_at else None,
+            }
+            for j in sj_rows
+        ]
+        recent_ev = ev_bus[-25:] if ev_bus else []
+        channel_activity_out = [
+            {
+                "type": str(ev.get("type") if isinstance(ev, dict) else "")[:120],
+                "ts": ev.get("timestamp") if isinstance(ev, dict) else None,
+            }
+            for ev in recent_ev
+            if isinstance(ev, dict)
+        ][-15:]
 
     exec_payload: dict[str, Any] = {
         "missions": missions_out,
         "tasks": tasks_out,
         "artifacts": artifacts_out,
-        "events": list_events(),
+        "events": ev_bus,
         "privacy_events": priv,
         "provider_events": prov,
         "integrity_alerts": _annotate_integrity_alerts(alert_tail),
@@ -574,6 +632,9 @@ def build_execution_snapshot(
         "agent_performance": _agent_performance_from_tasks(tasks_out),
         "dev_workspaces": dev_workspaces_out,
         "dev_runs": dev_runs_out,
+        "long_running_sessions": long_running_out,
+        "scheduler_jobs": scheduler_jobs_out,
+        "channel_activity": channel_activity_out,
     }
 
     uid_early = (user_id or "").strip()
