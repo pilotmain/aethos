@@ -1861,6 +1861,42 @@ async def _handle_incoming_text_impl(update: Update, context: ContextTypes.DEFAU
                     for piece in _split_telegram_text(twhy, max_len=4000):
                         await update.message.reply_text(piece)
                     return
+
+                # Phase 34 — unified gateway (same admission as web :meth:`route_inbound`).
+                if not tstrip.startswith("/") and tstrip:
+                    from app.services.channels.router import route_inbound
+                    from app.services.channels.telegram_gateway_reply import (
+                        format_telegram_gateway_reply,
+                        telegram_gateway_should_hand_off,
+                    )
+
+                    gw = route_inbound(
+                        tstrip,
+                        app_user_id,
+                        db=db,
+                        channel="telegram",
+                        metadata={
+                            "telegram_update_id": getattr(update, "update_id", None),
+                            "telegram_chat_id": telegram_chat_id,
+                            "telegram_user_id": int(effu.id),
+                        },
+                    )
+                    if telegram_gateway_should_hand_off(gw):
+                        reply_gw = format_telegram_gateway_reply(gw)
+                        cctx_gw = get_or_create_context(db, app_user_id)
+                        for piece in _split_telegram_text(reply_gw, max_len=4000):
+                            await update.message.reply_text(piece)
+                        _persist_conversation_turn(
+                            db,
+                            app_user_id,
+                            cctx_gw,
+                            tstrip,
+                            reply_gw,
+                            "gateway",
+                            "nexa",
+                        )
+                        return
+
                 udata = (context.user_data or {}) if context and context.user_data is not None else {}
                 if not tstrip.startswith("/") and tstrip:
                     from app.services.custom_agents import (

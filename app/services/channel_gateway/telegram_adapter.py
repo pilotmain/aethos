@@ -91,8 +91,25 @@ def get_telegram_adapter() -> TelegramAdapter:
     return _telegram_adapter
 
 
+def route_telegram_text_through_gateway(
+    text: str,
+    app_user_id: str,
+    *,
+    db: Session,
+    metadata: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Phase 34 — same admission as web: :func:`~app.services.channels.router.route_inbound`."""
+    from app.services.channels.router import route_inbound
+
+    return route_inbound(text, app_user_id, db=db, channel="telegram", metadata=metadata or {})
+
+
 def register_telegram_handlers(application: Application) -> None:
-    """Wire all Telegram handlers. Lazy-imports `telegram_bot` to avoid import cycles."""
+    """Wire all Telegram handlers. Lazy-imports `telegram_bot` to avoid import cycles.
+
+    Plain text messages hit ``telegram_bot.handle_incoming_text``, which routes non-slash
+    lines through :func:`route_telegram_text_through_gateway` / :func:`~app.services.channels.router.route_inbound`.
+    """
     from app.bot import telegram_bot as tb
 
     application.add_handler(CommandHandler("start", tb.start))

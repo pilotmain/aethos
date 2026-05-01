@@ -13,6 +13,9 @@ from app.services.metrics.runtime import record_mission_completed, record_missio
 
 _log = get_logger("gateway")
 
+# Returned when no mission/dev intent matches; channels may fall back to legacy chat.
+GATEWAY_CHAT_FALLBACK_TEXT = "No mission detected"
+
 
 class NexaGateway:
     """
@@ -59,7 +62,7 @@ class NexaGateway:
                 hint = maybe_dev_gateway_hint(text, user_id, db_inner)
                 if hint is not None:
                     return hint
-                return {"mode": "chat", "text": "No mission detected"}
+                return {"mode": "chat", "text": GATEWAY_CHAT_FALLBACK_TEXT}
 
             return self._run_mission(mission, user_id, db_inner, source_text=text)
 

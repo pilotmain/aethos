@@ -1,3 +1,9 @@
+"""Behavior/reply orchestration for legacy Telegram chat turns.
+
+Inbound Telegram **text** should pass through :func:`~app.services.channels.router.route_inbound`
+first (Phase 34); this module handles fallback chat and non-gateway intents.
+"""
+
 from __future__ import annotations
 
 import logging
