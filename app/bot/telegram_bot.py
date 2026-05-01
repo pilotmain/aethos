@@ -527,7 +527,7 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             body = help_message(False, None)
         await update.message.reply_text(
             body
-            + "\n\n**Nexa** (command center) — /agents, /agents status, /learning\n\nCommands:\n"
+            + "\n\n**Nexa** — /command (roster & status), /learning\n\nCommands:\n"
             "/today — today's plan\n"
             "/overwhelmed — smaller plan\n"
             "/prefs — preferences\n"
@@ -535,8 +535,8 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             "/forget <query> — remove matching memory/tasks/check-ins\n"
             "/soul — show soul rules\n"
             "/soul <text> — append a soul rule\n"
-            "/agents — list your AI agents; /agents status for live state\n"
-            "/command — command center; /command status for live state\n"
+            "/command — agent roster, `run dev:` / `run mission:` hints, /command status for live state\n"
+            "/agents — same as /command (legacy alias)\n"
             "/learning — pending learnings; /learning approve <id> or /learning reject <id>\n"
             "/key, /keys — your own OpenAI or Anthropic key (BYOK, encrypted; does not change roles or Dev/Ops); /key set, /key list, /key delete\n"
             "/usage, /usage recent — today’s LLM usage (estimates; /usage recent for a short list)\n"
@@ -559,19 +559,12 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             "approve commit job #123 — allow commit after review passes\n"
             "deny job #123 — cancel a queued autonomous job\n"
             "\n"
-            "Marketing (read-only public tools when the host enables them):\n"
-            "@marketing analyze pilotmain.com\n"
-            "@marketing web search on pilotmain.com and suggest positioning\n"
-            "@marketing summarize products on https://example.com\n"
-            "@marketing analyze https://example.com\n"
-            "@marketing web search on example.com and suggest positioning\n"
-            "\n"
-            "Public pages (read-only, when the host has NEXA web access on):\n"
-            "@research check https://example.com  ·  @research summarize https://example.com\n"
-            "Or in normal chat: e.g. “check https://example.com” or “can you read this site …” with a URL.\n"
+            "Web & research (read-only public tools when the host enables them):\n"
+            "Paste a public https:// link, or: “check https://example.com” in normal chat.\n"
+            "run dev: … and run mission: … route into the dev and mission systems on the host.\n"
             "\n"
             "Dev ideas: /improve /fix /build /refactor + text\n"
-            "Natural language: ask/tell cursor or dev agent to … (same Dev Agent queue)\n"
+            "Natural language: describe the change; Nexa routes to the dev queue when a worker is set up.\n"
             "Dev: /improve, /dev create-cursor-task …, /dev doctor, /dev git, /dev queue, /dev health, /dev run-tests, /dev review-last-change. /dev-status"
         )
     finally:
@@ -1664,7 +1657,7 @@ async def agents_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
             out2 += "\n\n**Custom** (yours, LLM-only):\n" + "\n".join(
                 f"· `@{a.agent_key}`" for a in cu[:20]
             )
-        out2 += "\n\n`/agents mine` — your custom list only. Ask in chat to create more (no builder UI)."
+        out2 += "\n\n**Custom agents** — your list above. Use “create agent: …” in chat to add more."
         for piece in _split_telegram_text(out2[:12_000], max_len=4000):
             await update.message.reply_text(piece)
     finally:
@@ -1719,7 +1712,7 @@ async def user_agent_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             k = (args[1] or "").strip().lstrip("@")
             if delete_custom_agent(db, uid, k):
                 await update.message.reply_text(
-                    f"Deactivated `@{k}`. (It won’t show in /agents mine.)"
+                    f"Deactivated `@{k}`. (It won’t appear in your custom list.)"
                 )
             else:
                 await update.message.reply_text("No custom agent with that key.")
@@ -2361,7 +2354,7 @@ async def _handle_incoming_text_impl(update: Update, context: ContextTypes.DEFAU
                     m_body = (mr.text or "").strip()
                     if not m_body:
                         await update.message.reply_text(
-                            "Add a message after your @mention — e.g. `@reset your request` or `@dev fix the tests`."
+                            "Add a message after your @mention — e.g. `@nexa hello` or `run dev: fix the tests`."
                         )
                         return
                     if m_key == "strategy":

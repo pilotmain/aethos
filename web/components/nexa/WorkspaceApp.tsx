@@ -294,17 +294,18 @@ const ACTIVE_STATUSES = new Set(["running", "queued"]);
 const KEY_PROVIDERS = ["openai", "anthropic"] as const;
 
 function agentLabel(ak: string | null | undefined) {
-  const m: Record<string, string> = {
-    developer: "Dev",
-    dev: "Dev",
-    dev_executor: "Dev",
-    ops: "Ops",
-    strategy: "Strategy",
-    marketing: "Marketing",
-    research: "Research",
-    nexa: "Nexa",
-  };
-  return m[(ak || "nexa").toLowerCase()] || (ak || "Nexa");
+  const k = (ak || "nexa").toLowerCase();
+  if (k === "nexa") return "Nexa";
+  /** Legacy router personas collapse to Nexa in labels (no separate persona chips). */
+  if (
+    ["developer", "dev", "dev_executor", "ops", "strategy", "marketing", "research", "reset", "qa"].includes(
+      k,
+    )
+  ) {
+    return "Nexa";
+  }
+  const raw = (ak || "nexa").replace(/^@+/, "");
+  return raw ? `@${raw}` : "Nexa";
 }
 
 const PROJECT_PLACEHOLDER = "default";

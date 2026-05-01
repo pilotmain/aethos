@@ -27,12 +27,12 @@ def start_message_for_role(role: str) -> str:
     r = (role or "guest").strip() or "guest"
     if r == "owner":
         return (
-            "Welcome to **Nexa** Command Center.\n\n"
+            "Welcome to **Nexa**.\n\n"
             "You have **owner** access on this bot.\n\n"
             "Try:\n"
             "• /dev doctor — local health, DB, and access summary\n"
-            "• /agents\n"
-            "• @dev — queue work on the host dev agent (when the worker is set up)\n"
+            "• /command — roster and command reference\n"
+            "• `run dev:` or `run mission:` in chat when the worker is set up\n"
             "• /help for the full list\n\n"
             "Nexa still needs your project paths and local worker on the machine you control; "
             "strangers on this link only get the guest view unless you add their Telegram id in env."

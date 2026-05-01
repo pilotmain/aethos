@@ -1,43 +1,33 @@
-"""Nexa / command-center strings for Telegram."""
+"""Nexa-Next strings for Telegram (no legacy slash roster / persona chips)."""
 
 
 WELCOME_NEXA = (
-    "Welcome to **Nexa** — a personal AI command center for thinking, deciding, delegating, and executing. "
-    "The **Reset Agent** handles overload, planning, and next steps. "
-    "The **Dev Agent** runs the autonomous dev loop (with your approval) on your machine. "
-    "Use /agents to see the full specialist roster."
+    "Welcome to **Nexa** — a privacy-first AI dev OS for missions, dev runs, and chat. "
+    "Use **@nexa**, **run dev:** for coding tasks on your worker, **run mission:** for structured work, "
+    "and **create agent:** for custom agents. See /help for the full command list."
 )
 
 
 def format_agents_list() -> str:
     return (
-        "Nexa agents:\n\n"
-        "🧠 @reset — turns chaos into next steps\n"
-        "💻 @dev — works on code through your local worker\n"
-        "🧪 @qa — reviews tests, failures, and regressions\n"
-        "⚙️ @ops — checks worker health and execution state\n"
-        "🧭 @strategy — helps with product, roadmap, and tradeoffs\n"
-        "📣 @marketing — helps with copy, positioning, and launches\n"
-        "🔎 @research — finds and summarizes information\n\n"
-        "Use an agent directly:\n"
-        "@dev add a README note\n"
-        "@ops health"
+        "Nexa — agents\n\n"
+        "· @nexa — default assistant\n"
+        "· Custom agents — `create agent: …` in chat, `/agent` in Telegram, or the web app\n\n"
+        "Try: `run dev: fix the failing test` · `run mission: ship the milestone` · `@nexa hello`"
     )
 
 
 def format_command_center() -> str:
     return (
-        "Nexa Command Center\n\n"
-        "Agents:\n"
-        "🧠 @reset — focus and overwhelm\n"
-        "💻 @dev — code work through local worker\n"
-        "🧪 @qa — tests and regressions\n"
-        "⚙️ @ops — system health and queue\n"
-        "🧭 @strategy — direction and roadmap\n"
-        "📣 @marketing — messaging and launch\n"
-        "🔎 @research — research and comparison\n\n"
+        "Nexa\n\n"
+        "Workflows:\n"
+        "· run dev: … — dev runtime (registered workspace)\n"
+        "· run mission: … — structured mission\n"
+        "· create agent: … — custom agent\n\n"
+        "Chat:\n"
+        "· @nexa — assistant\n\n"
         "Try:\n"
-        "@dev fix the README typo\n"
-        "@ops health\n"
-        "@strategy what should we build next?"
+        "run dev: add a README section\n"
+        "run mission: close the release checklist\n"
+        "@nexa what should I focus on?"
     )

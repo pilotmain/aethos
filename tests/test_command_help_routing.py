@@ -12,13 +12,15 @@ def test_is_command_not_helpful() -> None:
     assert is_command_question("this was helpful, thanks") is False
 
 
-def test_format_command_has_nexa() -> None:
+def test_format_command_has_nexa_next_workflows() -> None:
     body = format_command_help_response()
     assert "Nexa" in body
-    assert "/agents" in body
-    assert "@marketing analyze pilotmain.com" in body
-    assert "@marketing web search on pilotmain.com and suggest positioning" in body
-    assert "@marketing summarize products on https://example.com" in body
+    assert "run dev" in body
+    assert "run mission" in body
+    assert "create agent" in body
+    assert "/agents" not in body
+    assert "@dev" not in body
+    assert "Command Center" not in body
 
 
 def test_build_response_command_overrides_projection() -> None:
@@ -30,4 +32,5 @@ def test_build_response_command_overrides_projection() -> None:
         plan_result=None,
     )
     assert "Active agents right now" not in out
-    assert "Nexa Command Center" in out
+    assert "Command Center" not in out
+    assert "run dev" in out or "run mission" in out

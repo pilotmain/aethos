@@ -29,26 +29,20 @@ def test_parse_unknown() -> None:
     assert u.text == "test"
 
 
-def test_agents_list_includes_all_catalog_agents() -> None:
+def test_agents_list_is_nexa_next_only() -> None:
     body = format_agents_list()
-    for k in (
-        "reset",
-        "dev",
-        "qa",
-        "ops",
-        "strategy",
-        "marketing",
-        "research",
-    ):
-        assert f"@{k}" in body, body
     assert "Nexa" in body
+    assert "@nexa" in body
+    assert "@dev" not in body
+    assert "@ops" not in body
 
 
-def test_command_center_includes_nexa() -> None:
+def test_command_center_format_nexa_next() -> None:
     cmd = format_command_center()
-    assert "Nexa Command Center" in cmd
-    for em in ("🧠", "💻", "🧪", "⚙️", "🧭", "📣", "🔎"):
-        assert em in cmd
+    assert "Nexa" in cmd
+    assert "Command Center" not in cmd
+    assert "@dev" not in cmd
+    assert "run dev" in cmd
 
 
 def test_catalog_matches_spec_keys() -> None:

@@ -1,10 +1,10 @@
 const SEEDS = [
   "run dev: fix failing tests in the test suite",
+  "run mission: ship the current milestone",
   "run dev: review the repo and suggest improvements",
-  "create agent for API documentation review",
+  "create agent: API documentation reviewer",
   "show memory",
   "show system status",
-  "/help",
 ] as const;
 
 /**
