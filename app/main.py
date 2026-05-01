@@ -1,7 +1,15 @@
+from __future__ import annotations
+
+import json
+import logging
+from typing import Any
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.cors import CORSMiddleware
+from starlette.responses import JSONResponse
 
 from app.api.routes import (
     admin_privacy,
@@ -27,6 +35,7 @@ from app.api.routes import (
     plans,
     slack,
     sms,
+    system,
     tasks,
     trust,
     web,
@@ -36,7 +45,10 @@ from app.core.config import get_settings, print_llm_debug_banner, print_local_se
 from app.services.startup_config_log import log_sanitized_nexa_config, maybe_log_llm_key_hint
 from app.core.db import ensure_schema
 from app.core.scheduler import scheduler
+from app.middleware.metrics import MetricsMiddleware
+from app.middleware.security_headers import SecurityHeadersMiddleware
 from app.models import *  # noqa: F401,F403
+from app.services.logging.logger import configure_logging
 from app.workers.followup_worker import process_due_checkins
 from app.workers.operator_supervisor import process_supervisor_cycle
 
@@ -44,8 +56,33 @@ settings = get_settings()
 ensure_schema()
 
 
+def _retention_sweep() -> None:
+    from app.core.db import SessionLocal
+    from app.services.cleanup.retention import run_retention_cleanup
+
+    log = logging.getLogger("nexa")
+    with SessionLocal() as db:
+        try:
+            out = run_retention_cleanup(db)
+            if out.get("missions_deleted") or out.get("external_calls_deleted"):
+                log.info("retention.cleanup %s", out)
+        except Exception as exc:
+            log.warning("retention sweep failed: %s", exc)
+
+
+def _http_error_detail(exc: StarletteHTTPException) -> str:
+    d = exc.detail
+    if isinstance(d, str):
+        return d
+    try:
+        return json.dumps(d)
+    except Exception:
+        return str(d)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    configure_logging()
     from app.services.startup_ensure import (
         ensure_nexa_secret_key,
         print_env_validation_at_startup,
@@ -79,6 +116,14 @@ async def lifespan(app: FastAPI):
             id="operator_supervisor",
             replace_existing=True,
         )
+        if s.nexa_retention_sweep_interval_seconds > 0:
+            scheduler.add_job(
+                _retention_sweep,
+                "interval",
+                seconds=s.nexa_retention_sweep_interval_seconds,
+                id="nexa_retention",
+                replace_existing=True,
+            )
         scheduler.start()
     yield
     if scheduler.running:
@@ -97,8 +142,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(MetricsMiddleware)
+app.add_middleware(SecurityHeadersMiddleware)
 app.include_router(dashboard.router)
 app.include_router(health.router, prefix=settings.api_v1_prefix)
+app.include_router(system.router, prefix=settings.api_v1_prefix)
 app.include_router(admin_privacy.router, prefix=settings.api_v1_prefix)
 app.include_router(channels.router, prefix=settings.api_v1_prefix)
 app.include_router(governance_api.router, prefix=settings.api_v1_prefix)
@@ -124,3 +172,55 @@ app.include_router(whatsapp.router, prefix=settings.api_v1_prefix)
 app.include_router(sms.router, prefix=settings.api_v1_prefix)
 app.include_router(apple_messages.router, prefix=settings.api_v1_prefix)
 app.include_router(internal.router, prefix=settings.api_v1_prefix)
+
+
+@app.exception_handler(RequestValidationError)
+async def _validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+    errs = exc.errors()
+    msg = "Validation error"
+    if errs:
+        e0 = errs[0]
+        loc = ".".join(str(x) for x in e0.get("loc", ()) if x != "body")
+        msg = f"{loc}: {e0.get('msg', 'invalid')}" if loc else str(e0.get("msg", msg))
+    return JSONResponse(
+        status_code=422,
+        content={"ok": False, "error": msg, "code": "VALIDATION_ERROR"},
+    )
+
+
+@app.exception_handler(StarletteHTTPException)
+async def _http_exception_handler(request: Request, exc: StarletteHTTPException) -> JSONResponse:
+    code = f"HTTP_{exc.status_code}"
+    if exc.status_code == 404:
+        code = "NOT_FOUND"
+    elif exc.status_code == 401:
+        code = "UNAUTHORIZED"
+    elif exc.status_code == 403:
+        code = "FORBIDDEN"
+
+    d: Any = exc.detail
+    msg = _http_error_detail(exc)
+    body: dict[str, Any] = {"ok": False, "code": code}
+    if isinstance(d, dict):
+        body["detail"] = d
+        body["error"] = str(d.get("error") or msg)
+    elif isinstance(d, str):
+        body["detail"] = d
+        body["error"] = d
+    elif isinstance(d, list):
+        body["detail"] = d
+        body["error"] = msg
+    else:
+        body["detail"] = d if d is not None else msg
+        body["error"] = msg
+
+    return JSONResponse(status_code=exc.status_code, content=body)
+
+
+@app.exception_handler(Exception)
+async def _unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    logging.getLogger("nexa").exception("unhandled error path=%s", request.url.path)
+    return JSONResponse(
+        status_code=500,
+        content={"ok": False, "error": "Internal server error", "code": "INTERNAL_ERROR"},
+    )

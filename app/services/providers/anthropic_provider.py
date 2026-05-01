@@ -25,7 +25,8 @@ def call_anthropic(payload: dict[str, Any]) -> dict[str, Any]:
         return {"error": "empty_task"}
 
     try:
-        client = anthropic_sdk.Anthropic(api_key=key)
+        timeout = float(s.nexa_provider_timeout_seconds or 15.0)
+        client = anthropic_sdk.Anthropic(api_key=key, timeout=timeout)
         msg = client.messages.create(
             model=s.anthropic_model,
             max_tokens=2048,

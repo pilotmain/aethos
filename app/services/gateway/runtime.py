@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
-import logging
 import uuid
 from typing import Any
 
 from sqlalchemy.orm import Session
 
-logger = logging.getLogger(__name__)
+from app.core.config import get_settings
+from app.services.logging.logger import get_logger
+from app.services.metrics.runtime import record_mission_completed, record_mission_timeout
+
+_log = get_logger("gateway")
 
 
 class NexaGateway:
@@ -88,20 +91,34 @@ class NexaGateway:
         db.commit()
 
         publish({"type": "mission.started", "mission_id": mission_id, "user_id": user_id})
+        _log.info("mission.start mission_id=%s user_id=%s", mission_id, user_id)
 
-        result = run_until_complete(agents, mission, db)
+        max_sec = get_settings().nexa_mission_max_runtime_seconds
+        result, timed_out = run_until_complete(
+            agents,
+            mission,
+            db,
+            max_runtime_seconds=max_sec if max_sec and max_sec > 0 else None,
+        )
 
         nm = db.get(NexaMission, mission_id)
         if nm is not None:
-            nm.status = "completed"
+            nm.status = "timeout" if timed_out else "completed"
             db.commit()
 
-        publish({"type": "mission.completed", "mission_id": mission_id, "user_id": user_id})
+        if timed_out:
+            record_mission_timeout()
+            _log.warning("mission.timeout mission_id=%s user_id=%s", mission_id, user_id)
+        else:
+            record_mission_completed()
+            publish({"type": "mission.completed", "mission_id": mission_id, "user_id": user_id})
+            _log.info("mission.completed mission_id=%s user_id=%s", mission_id, user_id)
 
         update_state(result)
 
         return {
-            "status": "completed",
+            "status": "timeout" if timed_out else "completed",
             "mission": mission,
             "result": result,
+            "timed_out": timed_out,
         }

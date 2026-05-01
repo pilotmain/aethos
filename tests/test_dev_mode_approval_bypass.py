@@ -89,15 +89,21 @@ def test_spawn_bypass_audits_when_autonomy_mode(runtime_env, db_session, monkeyp
         before = db_session.scalars(
             select(AuditLog).where(AuditLog.event_type == "access.permission.bypassed")
         ).all()
-        n_before = len(before)
+        before_ids = {r.id for r in before}
         out = sessions_spawn(db_session, user_id=uid, payload=_spawn_payload(uid))
         assert out.get("spawn_group_id", "").startswith("spawn_")
         rows = db_session.scalars(
             select(AuditLog).where(AuditLog.event_type == "access.permission.bypassed")
         ).all()
-        assert len(rows) > n_before
-        meta = rows[-1].metadata_json or {}
-        assert meta.get("tool") == "sessions_spawn"
+        new_rows = [r for r in rows if r.id not in before_ids]
+        assert new_rows
+        spawn_rows = [
+            r
+            for r in new_rows
+            if r.user_id == uid and (r.metadata_json or {}).get("tool") == "sessions_spawn"
+        ]
+        assert spawn_rows
+        meta = spawn_rows[-1].metadata_json or {}
         assert meta.get("risk") == "dev_mode"
     finally:
         get_settings.cache_clear()

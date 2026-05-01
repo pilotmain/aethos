@@ -4,9 +4,12 @@ Single entry for model/tool providers — always runs payload through the privac
 
 from __future__ import annotations
 
+import time
 from typing import Any
 
 from app.core.config import get_settings
+from app.services.logging.logger import get_logger
+from app.services.metrics.runtime import record_privacy_block, record_provider_call
 from app.services.mission_control.nexa_next_state import add_provider_event
 from app.services.privacy_firewall.audit import log_event
 from app.services.privacy_firewall.gateway import PrivacyBlockedError, prepare_external_payload
@@ -17,6 +20,8 @@ from app.services.providers.openai_provider import call_openai
 from app.services.providers.rate_limit import allow_provider_request
 from app.services.providers.types import ProviderRequest, ProviderResponse
 from app.services.tools.registry import TOOLS
+
+_log = get_logger("gateway")
 
 
 def call_provider(request: ProviderRequest) -> ProviderResponse:
@@ -46,6 +51,7 @@ def call_provider(request: ProviderRequest) -> ProviderResponse:
         log_event({"type": "provider_blocked", **ev})
         add_provider_event(ev)
         audit(True, err)
+        _log.warning("provider blocked: %s", err)
         return ProviderResponse(
             ok=False,
             provider=request.provider,
@@ -62,6 +68,7 @@ def call_provider(request: ProviderRequest) -> ProviderResponse:
         log_event({"type": "provider_blocked", **ev})
         add_provider_event(ev)
         audit(True, err)
+        _log.warning("provider blocked: %s", err)
         return ProviderResponse(
             ok=False,
             provider=request.provider,
@@ -76,6 +83,7 @@ def call_provider(request: ProviderRequest) -> ProviderResponse:
         safe_payload = prepare_external_payload(payload_in, pii_policy=raw_policy)
     except PrivacyBlockedError as exc:
         err = str(exc)
+        record_privacy_block()
         ev = {
             "provider": request.provider,
             "agent": request.agent_handle or "",
@@ -85,6 +93,7 @@ def call_provider(request: ProviderRequest) -> ProviderResponse:
         log_event({"type": "provider_blocked", **ev})
         add_provider_event(ev)
         audit(True, err)
+        _log.warning("privacy blocked provider call: %s", err)
         return ProviderResponse(
             ok=False,
             provider=request.provider,
@@ -111,28 +120,8 @@ def call_provider(request: ProviderRequest) -> ProviderResponse:
     if "handle" in payload_in and "handle" not in merged:
         merged["handle"] = payload_in["handle"]
 
-    try:
-        out: dict[str, Any] | str
-        if request.provider == "local_stub":
-            out = call_local_stub(merged)
-        elif request.provider == "openai":
-            out = call_openai(merged)
-        elif request.provider == "anthropic":
-            out = call_anthropic(merged)
-        else:
-            err = f"unknown provider: {request.provider}"
-            audit(False, err)
-            return ProviderResponse(
-                ok=False,
-                provider=request.provider,
-                model=request.model,
-                output=None,
-                redactions=redactions,
-                blocked=False,
-                error=err,
-            )
-    except NotImplementedError as exc:
-        err = str(exc)
+    if request.provider not in ("local_stub", "openai", "anthropic"):
+        err = f"unknown provider: {request.provider}"
         audit(False, err)
         return ProviderResponse(
             ok=False,
@@ -140,8 +129,59 @@ def call_provider(request: ProviderRequest) -> ProviderResponse:
             model=request.model,
             output=None,
             redactions=redactions,
+            blocked=False,
             error=err,
         )
+
+    max_retries = max(1, min(10, int(s.nexa_provider_max_retries or 3)))
+    out: dict[str, Any] | str | None = None
+    last_err: Exception | None = None
+
+    for attempt in range(max_retries):
+        t0 = time.perf_counter()
+        try:
+            if request.provider == "local_stub":
+                out = call_local_stub(merged)
+            elif request.provider == "openai":
+                out = call_openai(merged)
+            else:
+                out = call_anthropic(merged)
+            record_provider_call(latency_ms=(time.perf_counter() - t0) * 1000)
+            _log.info(
+                "provider_call provider=%s agent=%s ms=%.1f attempt=%s/%s",
+                request.provider,
+                request.agent_handle,
+                (time.perf_counter() - t0) * 1000,
+                attempt + 1,
+                max_retries,
+            )
+            break
+        except NotImplementedError as exc:
+            err = str(exc)
+            audit(False, err)
+            return ProviderResponse(
+                ok=False,
+                provider=request.provider,
+                model=request.model,
+                output=None,
+                redactions=redactions,
+                error=err,
+            )
+        except Exception as exc:
+            last_err = exc
+            _log.warning("provider retryable failure attempt=%s/%s: %s", attempt + 1, max_retries, exc)
+            if attempt + 1 >= max_retries:
+                err = str(exc)
+                audit(False, err)
+                return ProviderResponse(
+                    ok=False,
+                    provider=request.provider,
+                    model=request.model,
+                    output=None,
+                    redactions=redactions,
+                    error=err,
+                )
+            time.sleep(0.25 * (attempt + 1))
 
     ev_ok = {
         "provider": request.provider,

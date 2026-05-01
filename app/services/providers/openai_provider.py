@@ -25,7 +25,8 @@ def call_openai(payload: dict[str, Any]) -> dict[str, Any]:
         return {"error": "empty_task"}
 
     try:
-        client = OpenAI(api_key=key)
+        timeout = float(s.nexa_provider_timeout_seconds or 15.0)
+        client = OpenAI(api_key=key, timeout=timeout)
         resp = client.chat.completions.create(
             model=s.openai_model,
             messages=[{"role": "user", "content": task}],

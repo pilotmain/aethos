@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from app.models.agent_team import AgentAssignment
@@ -92,12 +92,17 @@ def get_spawn_group_state(
         return {"ok": False, "not_found": True, "spawn_group_id": sg, "reason": "invalid id"}
 
     tag = _title_tag(sg)
+    ij = AgentAssignment.input_json
+    # Parent row title includes the tag; child rows store spawn_group_id in input_json only.
     rows = list(
         db.scalars(
             select(AgentAssignment)
             .where(
                 AgentAssignment.user_id == uid,
-                AgentAssignment.title.contains(tag),
+                or_(
+                    AgentAssignment.title.contains(tag),
+                    ij["spawn_group_id"].as_string() == sg,
+                ),
             )
             .order_by(AgentAssignment.id.asc())
         ).all()

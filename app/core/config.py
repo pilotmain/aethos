@@ -324,6 +324,14 @@ class Settings(BaseSettings):
     nexa_provider_rate_limit_per_minute: int = 120
     nexa_admin_endpoints_enabled: bool = False
 
+    # Phase 11 — production stabilization
+    nexa_release_version: str = "phase-11"
+    nexa_provider_timeout_seconds: float = 15.0
+    nexa_provider_max_retries: int = 3
+    nexa_mission_max_runtime_seconds: int = 60
+    nexa_data_retention_days: int = 7
+    nexa_retention_sweep_interval_seconds: int = 3600
+
     model_config = SettingsConfigDict(
         env_file=_EnvFile,
         env_file_encoding="utf-8",
@@ -344,6 +352,7 @@ def print_local_service_urls() -> None:
     p = s.api_v1_prefix
     print("--- Local service URLs ---", flush=True)
     print(f"  Backend / health     {base}{p}/health", flush=True)
+    print(f"  System health        {base}{p}/system/health", flush=True)
     print(f"  API docs (Swagger)   {base}/docs", flush=True)
     print(f"  ReDoc                {base}/redoc", flush=True)
     print(f"  Dashboard            {base}/dashboard", flush=True)

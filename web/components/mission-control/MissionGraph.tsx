@@ -3,6 +3,8 @@
 import { motion } from "framer-motion";
 import { useCallback, useEffect, useState } from "react";
 import { DEFAULT_API_BASE, readConfig } from "@/lib/config";
+import { missionControlEventsWsUrl } from "@/lib/mission-control/eventsWsUrl";
+import { connectReconnectingMissionWs } from "@/lib/ws/reconnectingMissionWs";
 
 type GraphNode = {
   id: string;
@@ -15,16 +17,6 @@ type GraphNode = {
 type GraphEdge = { from: string; to: string };
 
 type MissionGraphPayload = { nodes: GraphNode[]; edges: GraphEdge[] };
-
-function toWsOrigin(httpBase: string): string {
-  try {
-    const u = new URL(httpBase.startsWith("http") ? httpBase : `http://${httpBase}`);
-    u.protocol = u.protocol === "https:" ? "wss:" : "ws:";
-    return u.origin;
-  } catch {
-    return "ws://127.0.0.1:8010";
-  }
-}
 
 function graphHttpUrl(): string {
   const c = readConfig();
@@ -45,6 +37,7 @@ const STATUS_CLASS: Record<string, string> = {
 export function MissionGraph() {
   const [graph, setGraph] = useState<MissionGraphPayload>({ nodes: [], edges: [] });
   const [error, setError] = useState<string | null>(null);
+  const [wsStatus, setWsStatus] = useState<string>("connecting");
 
   const refresh = useCallback(() => {
     fetch(graphHttpUrl())
@@ -67,25 +60,13 @@ export function MissionGraph() {
   }, [refresh]);
 
   useEffect(() => {
-    const c = readConfig();
-    const base = c.apiBase?.trim() || DEFAULT_API_BASE;
-    const wsUrl = `${toWsOrigin(base)}/api/v1/mission-control/events/ws`;
-    const ws = new WebSocket(wsUrl);
-
-    ws.onmessage = () => {
-      refresh();
-    };
-
-    const ping = window.setInterval(() => {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send("ping");
-      }
-    }, 25_000);
-
-    return () => {
-      clearInterval(ping);
-      ws.close();
-    };
+    const wsUrl = missionControlEventsWsUrl();
+    return connectReconnectingMissionWs(wsUrl, {
+      onState: (s) => setWsStatus(s === "open" ? "live" : s),
+      onMessage: () => {
+        refresh();
+      },
+    });
   }, [refresh]);
 
   return (
@@ -93,6 +74,11 @@ export function MissionGraph() {
       <h2 className="text-sm font-medium text-zinc-200">Mission graph</h2>
       <p className="mt-1 text-xs text-zinc-500">
         Agents and task dependencies (refreshes on live events).
+        {wsStatus !== "live" && (
+          <span className="ml-2 text-zinc-600">
+            · Events: {wsStatus === "reconnecting" ? "reconnecting…" : wsStatus}
+          </span>
+        )}
       </p>
       {error && <p className="mt-2 text-xs text-red-400">{error}</p>}
 
