@@ -162,7 +162,7 @@ Persistent guidance for this workflow lives in `.cursor/rules/finish-work-verifi
 - `POST /api/v1/plans/morning-refresh`
 - `GET /api/v1/tasks` … `POST /api/v1/tasks` … `POST /api/v1/tasks/{id}/complete` / `snooze`
 - `GET /api/v1/checkins/pending` … `POST /api/v1/checkins/respond`
-- `GET /api/v1/memory` — `PUT /api/v1/memory/preferences`
+- `GET /api/v1/web/memory` — `PUT /api/v1/web/memory/preferences` (agent memory; legacy `/api/v1/memory` returns 410)
 - `GET /api/v1/jobs` … and job decision / review-approve / commit-approve
 - `POST /api/v1/internal/process-due-checkins` — `process-job-handoffs` — `process-supervisor-cycle`
 

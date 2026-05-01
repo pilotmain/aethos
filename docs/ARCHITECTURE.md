@@ -55,4 +55,6 @@ python scripts/system_integrity_check.py
 ruff check app/
 ```
 
-`scripts/run_ci_checks.sh` runs the same sequence.
+`scripts/run_ci_checks.sh` runs the same sequence (and sets `NEXA_NEXT_LOCAL_SIDECAR=1` so pytest uses SQLite when Postgres from `.env` is unavailable).
+
+Public HTTP surfaces are listed in **[docs/API_CONTRACT.md](API_CONTRACT.md)**; changes require updating that file.

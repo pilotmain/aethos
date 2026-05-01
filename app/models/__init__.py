@@ -10,6 +10,7 @@ from app.models.brain_dump import BrainDump
 from app.models.channel_user import ChannelUser
 from app.models.checkin import CheckIn
 from app.models.conversation_context import ConversationContext
+from app.models.dev_runtime import NexaDevRun, NexaDevStep, NexaDevWorkspace
 from app.models.dev_task import DevTask
 from app.models.document_artifact import DocumentArtifactModel
 from app.models.governance import Organization, OrganizationMembership, OrganizationPolicy
@@ -18,7 +19,6 @@ from app.models.llm_usage_event import LlmUsageEvent
 from app.models.local_action import LocalAction
 from app.models.memory import UserMemory
 from app.models.nexa_next_runtime import NexaArtifact, NexaExternalCall, NexaMission, NexaMissionTask
-from app.models.dev_runtime import NexaDevRun, NexaDevStep, NexaDevWorkspace
 from app.models.nexa_scheduler_job import NexaSchedulerJob
 from app.models.organization_channel_policy import OrganizationChannelPolicy
 from app.models.plan import Plan, PlanTask

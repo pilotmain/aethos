@@ -21,6 +21,7 @@ Nexa is **not** just a chatbot. It is an **execution layer** that uses **LLMs** 
 
 ## Docs
 
+- **Frozen public HTTP API** → [docs/API_CONTRACT.md](docs/API_CONTRACT.md) — paths and change rule for contributors
 - **Platform handoff (agents / planning)** → [docs/HANDOFF_PLATFORM_OVERVIEW.md](docs/HANDOFF_PLATFORM_OVERVIEW.md) — full-picture map and where to go deeper
 - **Architecture** → [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — how Nexa is built (Arcturus)
 - **Roadmap** → [docs/ROADMAP.md](docs/ROADMAP.md) — where Nexa is going (phases)

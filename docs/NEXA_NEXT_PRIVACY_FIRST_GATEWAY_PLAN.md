@@ -73,8 +73,7 @@ See root **`.env.example`** — section **Nexa Next (gateway + privacy firewall)
 
 ## API
 
-- **`GET /api/v1/mission-control/state`** — missions/agents/tasks/events/artifacts/privacy_events (live-backed; empty arrays until bus/graph exist).
-- **`GET /api/v1/mission-control/summary`** — existing aggregate dashboard payload.
+- **`GET /api/v1/mission-control/state`** — unified payload: execution snapshot (missions/tasks/artifacts/events) **plus** aggregate dashboard fields (overview, attention, channels, orchestration, etc.); `hours` query for trust window. Replaces the old `/mission-control/summary` route.
 
 ## Rule for Cursor / contributors
 

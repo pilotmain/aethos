@@ -18,16 +18,18 @@ from app.services.dev_runtime.git_tools import (
     create_commit,
     get_diff_summary,
     git_status,
+)
+from app.services.dev_runtime.git_tools import (
     prepare_pr_summary as ws_prepare_pr_summary,
 )
 from app.services.dev_runtime.github_pr import create_pull_request
 from app.services.dev_runtime.planner import build_dev_plan
+from app.services.dev_runtime.pr import is_pr_ready
 from app.services.dev_runtime.privacy import (
     PrivacyBlockedError,
     gate_agent_context_before_external,
     redact_output_for_storage,
 )
-from app.services.dev_runtime.pr import is_pr_ready
 from app.services.dev_runtime.step_record import create_dev_step
 from app.services.dev_runtime.tester import run_repo_tests
 from app.services.dev_runtime.workspace import get_workspace

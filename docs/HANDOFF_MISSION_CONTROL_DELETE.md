@@ -51,7 +51,7 @@ This summarizes repo changes around **Mission Control cleanup**, **browser relia
 
 ## Why Mission Control “shows everything again”
 
-Data is driven by **`GET /api/v1/mission-control/summary`** against the **same database** the API uses. If the UI now reaches the API (correct base URL, CORS, server up), **assignments/jobs/trust lines reappear** — that is expected unless rows were removed or hidden. Deletes target rows **for the `X-User-Id`** in the request; mismatch → 404, no change.
+Data is driven by **`GET /api/v1/mission-control/state`** (includes the former “summary” dashboard fields) against the **same database** the API uses. If the UI now reaches the API (correct base URL, CORS, server up), **assignments/jobs/trust lines reappear** — that is expected unless rows were removed or hidden. Deletes target rows **for the `X-User-Id`** in the request; mismatch → 404, no change.
 
 ## Reverting selectively
 

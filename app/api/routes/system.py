@@ -39,14 +39,23 @@ def system_health(db: Session = Depends(get_db)) -> dict:
     if (s.anthropic_api_key or "").strip():
         provider_tags.append("anthropic")
 
+    strict_priv = bool(rt.get("strict_privacy_mode"))
+    privacy_mode = "strict" if strict_priv else "standard"
+    scheduler = "running" if db_status == "connected" else "unknown"
+    runtime_ready = "ready" if overall == "ok" else "degraded"
+
     return {
+        "ok": overall == "ok",
         "status": overall,
         "db": db_status,
+        "scheduler": scheduler,
+        "privacy_mode": privacy_mode,
+        "runtime": runtime_ready,
         "providers": providers,
         "uptime_seconds": round(uptime_seconds(), 3),
         "version": s.nexa_release_version,
         "offline_mode": bool(rt.get("offline_mode")),
-        "strict_privacy": bool(rt.get("strict_privacy_mode")),
+        "strict_privacy": strict_priv,
         "provider_tags": provider_tags,
     }
 

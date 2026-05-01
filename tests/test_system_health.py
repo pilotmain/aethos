@@ -12,8 +12,12 @@ def test_system_health_ok() -> None:
     r = c.get("/api/v1/system/health")
     assert r.status_code == 200
     body = r.json()
+    assert isinstance(body.get("ok"), bool)
     assert body["status"] in ("ok", "degraded")
     assert body["db"] == "connected"
+    assert body.get("scheduler") in ("running", "unknown")
+    assert body.get("privacy_mode") in ("standard", "strict")
+    assert body.get("runtime") in ("ready", "degraded")
     assert body["providers"]
     assert "uptime_seconds" in body
     assert body["version"]

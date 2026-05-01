@@ -221,6 +221,8 @@ async def _http_exception_handler(request: Request, exc: StarletteHTTPException)
         code = "UNAUTHORIZED"
     elif exc.status_code == 403:
         code = "FORBIDDEN"
+    elif exc.status_code == 410:
+        code = "GONE"
 
     d: Any = exc.detail
     msg = _http_error_detail(exc)
