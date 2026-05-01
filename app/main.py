@@ -145,10 +145,15 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title=settings.app_name, debug=settings.debug, lifespan=lifespan)
+# Browser Origin must be listed or fetch fails with an opaque network error (looks like "wrong URL").
+# scripts/nexa_next_local_all.sh serves Next on :3120; merge these even when .env only lists :3000.
+_extra_local_web_origins = ("http://localhost:3120", "http://127.0.0.1:3120")
 _cors = [o.strip() for o in (settings.nexa_web_origins or "").split(",") if o.strip()]
 if not _cors:
     # Empty env must not disable CORS — browser would get opaque "Failed to fetch" on every API call.
-    _cors = ["http://localhost:3000", "http://127.0.0.1:3000"]
+    _cors = ["http://localhost:3000", "http://127.0.0.1:3000", *_extra_local_web_origins]
+else:
+    _cors = list(dict.fromkeys([*_cors, *_extra_local_web_origins]))
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors,
