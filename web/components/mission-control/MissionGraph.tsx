@@ -1,8 +1,9 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { Loader2, RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { DEFAULT_API_BASE, readConfig } from "@/lib/config";
+import { AgentCard } from "@/components/mission-control/AgentCard";
 import { missionControlEventsWsUrl } from "@/lib/mission-control/eventsWsUrl";
 import { connectReconnectingMissionWs } from "@/lib/ws/reconnectingMissionWs";
 
@@ -18,45 +19,86 @@ type GraphEdge = { from: string; to: string };
 
 type MissionGraphPayload = { nodes: GraphNode[]; edges: GraphEdge[] };
 
+type TaskRow = {
+  mission_id?: string;
+  agent_handle?: string;
+  output?: unknown;
+};
+
 function graphHttpUrl(): string {
   const c = readConfig();
   const base = (c.apiBase?.trim() || DEFAULT_API_BASE).replace(/\/$/, "");
-  return `${base}/api/v1/mission-control/graph`;
+  const uid = (c.userId || "").trim();
+  const q = uid ? `?user_id=${encodeURIComponent(uid)}` : "";
+  return `${base}/api/v1/mission-control/graph${q}`;
 }
 
-const STATUS_CLASS: Record<string, string> = {
-  queued: "text-zinc-400",
-  pending: "text-zinc-400",
-  running: "text-orange-400",
-  completed: "text-emerald-400",
-  failed: "text-red-400",
-  blocked: "text-amber-500",
-  cancelled: "text-zinc-500",
-};
+function stateHttpUrl(): string {
+  const c = readConfig();
+  const base = (c.apiBase?.trim() || DEFAULT_API_BASE).replace(/\/$/, "");
+  const uid = (c.userId || "").trim();
+  const q = uid ? `?user_id=${encodeURIComponent(uid)}` : "";
+  return `${base}/api/v1/mission-control/state${q}`;
+}
+
+function formatTaskOutput(output: unknown): string {
+  if (output == null) return "";
+  if (typeof output === "string") return output;
+  try {
+    return JSON.stringify(output);
+  } catch {
+    return String(output);
+  }
+}
 
 export function MissionGraph() {
   const [graph, setGraph] = useState<MissionGraphPayload>({ nodes: [], edges: [] });
+  const [outputs, setOutputs] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   const [wsStatus, setWsStatus] = useState<string>("connecting");
 
-  const refresh = useCallback(() => {
-    fetch(graphHttpUrl())
-      .then((res) => {
-        if (!res.ok) throw new Error(`${res.status}`);
-        return res.json() as Promise<MissionGraphPayload>;
-      })
-      .then((g) => {
-        setGraph({
-          nodes: Array.isArray(g.nodes) ? g.nodes : [],
-          edges: Array.isArray(g.edges) ? g.edges : [],
-        });
-        setError(null);
-      })
-      .catch(() => setError("Could not load mission graph"));
+  const refreshOutputs = useCallback(async () => {
+    try {
+      const r = await fetch(stateHttpUrl());
+      if (!r.ok) return;
+      const data = (await r.json()) as { tasks?: TaskRow[] };
+      const tasks = Array.isArray(data.tasks) ? data.tasks : [];
+      const m: Record<string, string> = {};
+      for (const t of tasks) {
+        const mid = String(t.mission_id || "").trim();
+        const h = String(t.agent_handle || "").trim();
+        if (!mid || !h) continue;
+        const id = `${mid}:${h}`;
+        m[id] = formatTaskOutput(t.output);
+      }
+      setOutputs(m);
+    } catch {
+      /* ignore */
+    }
   }, []);
 
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    try {
+      const r = await fetch(graphHttpUrl());
+      if (!r.ok) throw new Error(`${r.status}`);
+      const g = (await r.json()) as MissionGraphPayload;
+      setGraph({
+        nodes: Array.isArray(g.nodes) ? g.nodes : [],
+        edges: Array.isArray(g.edges) ? g.edges : [],
+      });
+      setError(null);
+      await refreshOutputs();
+    } catch {
+      setError("Could not load mission graph");
+    } finally {
+      setLoading(false);
+    }
+  }, [refreshOutputs]);
+
   useEffect(() => {
-    refresh();
+    void refresh();
   }, [refresh]);
 
   useEffect(() => {
@@ -64,46 +106,59 @@ export function MissionGraph() {
     return connectReconnectingMissionWs(wsUrl, {
       onState: (s) => setWsStatus(s === "open" ? "live" : s),
       onMessage: () => {
-        refresh();
+        void refresh();
       },
     });
   }, [refresh]);
 
   return (
-    <section className="border-b border-zinc-800 bg-zinc-950/80 px-4 py-4">
-      <h2 className="text-sm font-medium text-zinc-200">Mission graph</h2>
-      <p className="mt-1 text-xs text-zinc-500">
-        Agents and task dependencies (refreshes on live events).
-        {wsStatus !== "live" && (
-          <span className="ml-2 text-zinc-600">
-            · Events: {wsStatus === "reconnecting" ? "reconnecting…" : wsStatus}
-          </span>
-        )}
-      </p>
-      {error && <p className="mt-2 text-xs text-red-400">{error}</p>}
-
-      <div className="mt-3 flex flex-wrap gap-4">
-        {graph.nodes.map((n) => {
-          const cls = STATUS_CLASS[n.status] ?? "text-zinc-300";
-          const pulse = n.status === "running";
-          return (
-            <motion.div
-              key={n.id}
-              layout
-              animate={{ scale: pulse ? 1.06 : 1 }}
-              transition={{ type: "spring", stiffness: 320, damping: 24 }}
-              className={`rounded-md border border-zinc-800 bg-black/30 px-3 py-2 text-sm ${cls}`}
-            >
-              <div className="font-medium">{n.label}</div>
-              <div className="font-mono text-[11px] text-zinc-500">{n.id}</div>
-              <div className="text-[11px] uppercase tracking-wide">{n.status}</div>
-            </motion.div>
-          );
-        })}
+    <section className="flex h-full min-h-[320px] flex-col rounded-xl border border-zinc-800 bg-zinc-950/70 px-4 py-4">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <h2 className="text-sm font-medium text-zinc-200">Agent graph</h2>
+          <p className="mt-1 text-xs text-zinc-500">
+            Tasks and dependencies for your missions.
+            {wsStatus !== "live" && (
+              <span className="ml-2 text-zinc-600">
+                · Events: {wsStatus === "reconnecting" ? "reconnecting…" : wsStatus}
+              </span>
+            )}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => void refresh()}
+          disabled={loading}
+          className="inline-flex items-center gap-1 rounded-md border border-zinc-700 bg-zinc-900/80 px-2 py-1 text-[11px] text-zinc-300 hover:bg-zinc-800 disabled:opacity-50"
+        >
+          {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+          Refresh
+        </button>
       </div>
 
-      {graph.edges.length > 0 && (
-        <div className="mt-4 rounded border border-zinc-800 bg-black/20 p-3 font-mono text-[11px] text-zinc-400">
+      {error ? <p className="mt-2 text-xs text-red-400">{error}</p> : null}
+
+      <div className="mt-4 flex flex-wrap gap-3">
+        {loading && graph.nodes.length === 0 ? (
+          <div className="flex items-center gap-2 text-xs text-zinc-500">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Loading graph…
+          </div>
+        ) : null}
+        {graph.nodes.map((n) => (
+          <AgentCard
+            key={n.id}
+            nodeId={n.id}
+            label={n.label}
+            handle={n.handle}
+            status={n.status}
+            lastOutput={outputs[n.id] ?? null}
+          />
+        ))}
+      </div>
+
+      {graph.edges.length > 0 ? (
+        <div className="mt-4 rounded-lg border border-zinc-800 bg-black/25 p-3 font-mono text-[11px] text-zinc-400">
           <div className="mb-2 text-zinc-500">Dependencies</div>
           <ul className="space-y-1">
             {graph.edges.map((e, i) => (
@@ -113,7 +168,7 @@ export function MissionGraph() {
             ))}
           </ul>
         </div>
-      )}
+      ) : null}
     </section>
   );
 }

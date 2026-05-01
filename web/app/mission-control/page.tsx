@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
-import { MissionGraph } from "@/components/mission-control/MissionGraph";
-import { MissionControlLiveEvents } from "@/components/mission-control/MissionControlLiveEvents";
-import { MissionControlPage } from "@/components/mission-control/MissionControlPage";
+import { MissionControlLayout } from "@/components/mission-control/MissionControlLayout";
 
 export const metadata: Metadata = {
   title: "Mission Control · Nexa",
@@ -9,11 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function MissionControlRoute() {
-  return (
-    <>
-      <MissionControlLiveEvents />
-      <MissionGraph />
-      <MissionControlPage />
-    </>
-  );
+  return <MissionControlLayout />;
 }

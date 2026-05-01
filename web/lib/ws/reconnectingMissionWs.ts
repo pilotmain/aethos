@@ -14,7 +14,8 @@ export function connectReconnectingMissionWs(
 ): () => void {
   let attempt = 0;
   let ws: WebSocket | null = null;
-  let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
+  /** Browser timer id (distinct from NodeJS.Timeout during Next typecheck). */
+  let reconnectTimer: number | undefined;
   let stopped = false;
 
   const pingMs = opts.pingMs ?? 25_000;
