@@ -1,5 +1,7 @@
 """Policy modes for outbound content: block | redact | ask | allow_local_only | allow."""
 
+# DO NOT MODIFY WITHOUT SECURITY REVIEW — policy semantics drive firewall outcomes.
+
 from __future__ import annotations
 
 from enum import Enum

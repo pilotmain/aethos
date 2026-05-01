@@ -1,5 +1,7 @@
 """Redact known patterns from text prior to external transmission."""
 
+# DO NOT MODIFY WITHOUT SECURITY REVIEW — redaction behavior.
+
 from __future__ import annotations
 
 import re

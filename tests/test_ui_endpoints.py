@@ -28,6 +28,7 @@ def test_mission_control_state_shape() -> None:
         "events",
         "privacy_indicator",
         "provider_transparency",
+        "integrity_alerts",
         "metrics",
         "runtime",
         "agent_performance",

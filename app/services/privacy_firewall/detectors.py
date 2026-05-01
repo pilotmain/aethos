@@ -1,5 +1,7 @@
 """Heuristic detectors for secrets, PII, and policy triggers (expand over time)."""
 
+# DO NOT MODIFY WITHOUT SECURITY REVIEW — detector heuristics affect outbound safety.
+
 from __future__ import annotations
 
 import re

@@ -1,6 +1,6 @@
 # Nexa Next — architecture boundaries
 
-This document locks how requests flow through the system after Phase 15–16. Automated checks (`lint-imports`, `ruff`, `scripts/verify_no_direct_providers.py`, and AST tests under `tests/test_*boundaries*.py`) enforce the same rules in CI.
+This document locks how requests flow through the system after Phase 15–17. Automated checks (`lint-imports`, `ruff`, `scripts/verify_no_direct_providers.py`, `scripts/system_integrity_check.py`, and AST tests under `tests/test_*boundaries*.py` / `tests/test_system_integrity.py`) enforce the same rules in CI.
 
 ## Provider flow
 
@@ -9,7 +9,12 @@ This document locks how requests flow through the system after Phase 15–16. Au
    - `app.services.providers.*` (provider implementations),
    - `app.services.llm_service` and `app.services.response_composer` (orchestration that predates full gateway-only routing),
    - tests (`tests.*`, `pytest`, etc.).
-3. **Business calls** for mission/agent execution should use **`app.services.providers.gateway.call_provider`** (`ProviderRequest`) so privacy, rate limits, and routing stay centralized.
+3. **Business calls** for mission/agent execution should use **`app/services.providers.gateway.call_provider`** (`ProviderRequest`) so privacy, rate limits, and routing stay centralized.
+
+### Phase 17 — gateway exit gate
+
+- After `prepare_external_payload`, the merged outbound dict is wrapped in **`FrozenPayloadDict`** so it cannot be mutated before the provider runs.
+- Every successful provider response is serialized and passed through **`detect_sensitive_data`** again. Secret-shaped output raises **`RuntimeError`** (fail-fast). PII-shaped output emits **`integrity.post_provider_pii_detected`**, logs **`post_provider_pii_detected`**, and fills **`STATE["integrity_alerts"]`** for Mission Control (`runtime.integrity_alert_active`, red banner).
 
 ## Plugin boundaries
 
@@ -34,8 +39,9 @@ From repo root (venv active):
 ```bash
 pytest
 python scripts/verify_no_direct_providers.py
-ruff check app/
 lint-imports --config importlinter.ini
+python scripts/system_integrity_check.py
+ruff check app/
 ```
 
 `scripts/run_ci_checks.sh` runs the same sequence.

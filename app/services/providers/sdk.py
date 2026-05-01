@@ -1,3 +1,5 @@
+# DO NOT MODIFY WITHOUT SECURITY REVIEW — vendor SDK construction guard.
+
 """
 Vendor LLM SDK access — **only** via :func:`build_openai_client` / :func:`build_anthropic_client`.
 

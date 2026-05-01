@@ -28,7 +28,9 @@ export type MissionControlSnapshot = {
     strict_privacy_mode?: boolean;
     remote_providers_available?: boolean;
     external_calls_disabled?: boolean;
+    integrity_alert_active?: boolean;
   };
+  integrity_alerts?: Array<Record<string, unknown>>;
   metrics?: Record<string, unknown>;
 };
 

@@ -1,18 +1,28 @@
+# DO NOT MODIFY WITHOUT SECURITY REVIEW — single outbound path for LLM/tool providers.
+
 """
-Single entry for model/tool providers — always runs payload through the privacy firewall first.
+Single entry for model/tool providers — always runs payload through the privacy firewall first,
+freezes the outbound dict at the gate, and re-scans model output before returning (Phase 17).
 """
 
 from __future__ import annotations
 
+import json
 import time
 from typing import Any
 
 from app.core.config import get_settings
+from app.services.events.envelope import emit_runtime_event
 from app.services.logging.logger import get_logger
 from app.services.metrics.runtime import record_privacy_block, record_provider_call
-from app.services.mission_control.nexa_next_state import add_provider_event
+from app.services.mission_control.nexa_next_state import (
+    add_integrity_alert,
+    add_provider_event,
+)
 from app.services.privacy_firewall.audit import log_event
+from app.services.privacy_firewall.detectors import detect_sensitive_data
 from app.services.privacy_firewall.gateway import PrivacyBlockedError, prepare_external_payload
+from app.services.privacy_firewall.immutable import FrozenPayloadDict
 from app.services.providers.anthropic_provider import call_anthropic
 from app.services.providers.external_audit import persist_external_call
 from app.services.providers.local_stub_provider import call_local_stub
@@ -23,13 +33,35 @@ from app.services.tools.registry import TOOLS
 
 _log = get_logger("gateway")
 
+_POST_SECRET_MSG = (
+    "CRITICAL: Secret-shaped material detected in provider output — outbound blocked."
+)
+
+
+def _output_scan_text(output: dict[str, Any] | str | None) -> str:
+    if output is None:
+        return ""
+    if isinstance(output, str):
+        return output
+    try:
+        return json.dumps(output, sort_keys=True, default=str)
+    except (TypeError, ValueError):
+        return str(output)
+
 
 def call_provider(request: ProviderRequest) -> ProviderResponse:
+    if request.payload is None:
+        raise ValueError("ProviderRequest.payload is required")
     payload_in = dict(request.payload)
+    tool_key = str(payload_in.get("tool") or "").strip()
+    if not tool_key:
+        raise ValueError("ProviderRequest.payload must include non-empty 'tool'")
+    if tool_key not in TOOLS:
+        raise ValueError(f"Unknown tool {tool_key!r}; must be registered in TOOLS")
+
     redactions: list[dict[str, Any]] = []
     s = get_settings()
 
-    tool_key = str(payload_in.get("tool") or "").strip()
     td = TOOLS.get(tool_key)
     raw_policy = td.pii_policy if td else None
 
@@ -101,6 +133,16 @@ def call_provider(request: ProviderRequest) -> ProviderResponse:
             error=err,
         )
 
+    log_event(
+        {
+            "type": "gateway_pre_firewall",
+            "mission_id": request.mission_id,
+            "agent": request.agent_handle or "",
+            "tool": tool_key,
+            "payload_keys": sorted(payload_in.keys()),
+        }
+    )
+
     try:
         safe_payload = prepare_external_payload(payload_in, pii_policy=raw_policy)
     except PrivacyBlockedError as exc:
@@ -142,6 +184,18 @@ def call_provider(request: ProviderRequest) -> ProviderResponse:
     if "handle" in payload_in and "handle" not in merged:
         merged["handle"] = payload_in["handle"]
 
+    log_event(
+        {
+            "type": "gateway_post_firewall_pre_provider",
+            "mission_id": request.mission_id,
+            "agent": request.agent_handle or "",
+            "tool": tool_key,
+            "payload_keys": sorted(merged.keys()),
+        }
+    )
+
+    frozen_payload = FrozenPayloadDict(merged)
+
     if request.provider not in ("local_stub", "openai", "anthropic"):
         err = f"unknown provider: {request.provider}"
         audit(False, err)
@@ -164,11 +218,11 @@ def call_provider(request: ProviderRequest) -> ProviderResponse:
         t0 = time.perf_counter()
         try:
             if request.provider == "local_stub":
-                out = call_local_stub(merged)
+                out = call_local_stub(frozen_payload)
             elif request.provider == "openai":
-                out = call_openai(merged)
+                out = call_openai(frozen_payload)
             else:
-                out = call_anthropic(merged)
+                out = call_anthropic(frozen_payload)
             record_provider_call(latency_ms=(time.perf_counter() - t0) * 1000)
             _log.info(
                 "provider_call provider=%s agent=%s ms=%.1f attempt=%s/%s",
@@ -206,7 +260,7 @@ def call_provider(request: ProviderRequest) -> ProviderResponse:
                     last_err,
                 )
                 t0 = time.perf_counter()
-                out = call_local_stub(merged)
+                out = call_local_stub(frozen_payload)
                 effective_provider = "local_stub"
                 record_provider_call(latency_ms=(time.perf_counter() - t0) * 1000)
                 add_provider_event(
@@ -233,6 +287,53 @@ def call_provider(request: ProviderRequest) -> ProviderResponse:
             redactions=redactions,
             error=err,
         )
+
+    scan_text = _output_scan_text(out)
+    post_findings = detect_sensitive_data(scan_text)
+    log_event(
+        {
+            "type": "gateway_post_provider_scan",
+            "mission_id": request.mission_id,
+            "agent": request.agent_handle or "",
+            "tool": tool_key,
+            "findings": post_findings,
+        }
+    )
+
+    if post_findings["secrets"]:
+        _log.error(_POST_SECRET_MSG)
+        emit_runtime_event(
+            "integrity.post_provider_secret_detected",
+            mission_id=str(request.mission_id) if request.mission_id else None,
+            agent=request.agent_handle or "",
+            payload={"findings": post_findings},
+        )
+        add_integrity_alert(
+            {
+                "type": "post_provider_secret_detected",
+                "mission_id": request.mission_id,
+                "findings": post_findings,
+            }
+        )
+        raise RuntimeError(_POST_SECRET_MSG)
+
+    if post_findings["pii"]:
+        ev_pii = {
+            "type": "post_provider_pii_detected",
+            "data": post_findings,
+            "mission_id": request.mission_id,
+            "agent": request.agent_handle or "",
+        }
+        log_event(ev_pii)
+        _log.error("CRITICAL: PII-like patterns in provider output — review required")
+        emit_runtime_event(
+            "integrity.post_provider_pii_detected",
+            mission_id=str(request.mission_id) if request.mission_id else None,
+            agent=request.agent_handle or "",
+            payload={"findings": post_findings},
+        )
+        add_integrity_alert(dict(ev_pii))
+        redactions.append({"kind": "post_provider_output_pii_flagged", "findings": post_findings})
 
     ev_ok: dict[str, Any] = {
         "provider": effective_provider,

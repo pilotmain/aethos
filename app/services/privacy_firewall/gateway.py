@@ -1,5 +1,7 @@
 """Ingress for outbound payloads — worker dict gate + legacy string gate for providers."""
 
+# DO NOT MODIFY WITHOUT SECURITY REVIEW — privacy ingress path.
+
 from __future__ import annotations
 
 from typing import Any

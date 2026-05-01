@@ -22,8 +22,18 @@ _PRIVACY_EVENTS_CAP = 400
 STATE: dict[str, Any] = {
     "privacy_events": [],
     "provider_events": [],
+    "integrity_alerts": [],
     "last_updated": None,
 }
+
+_INTEGRITY_ALERTS_CAP = 80
+
+
+def add_integrity_alert(entry: dict[str, Any]) -> None:
+    """Ephemeral UI/runtime alerts for Phase 17 integrity violations (non-secret signals)."""
+    STATE.setdefault("integrity_alerts", []).append(entry)
+    while len(STATE["integrity_alerts"]) > _INTEGRITY_ALERTS_CAP:
+        STATE["integrity_alerts"].pop(0)
 
 
 def add_privacy_event(event: dict[str, Any]) -> None:
@@ -109,11 +119,13 @@ def _runtime_hints() -> dict[str, Any]:
     s = get_settings()
     has_remote = bool((s.openai_api_key or "").strip() or (s.anthropic_api_key or "").strip())
     offline_mode = not has_remote and not s.nexa_disable_external_calls
+    alerts = STATE.get("integrity_alerts") or []
     return {
         "offline_mode": offline_mode,
         "strict_privacy_mode": bool(s.nexa_strict_privacy_mode),
         "remote_providers_available": has_remote,
         "external_calls_disabled": bool(s.nexa_disable_external_calls),
+        "integrity_alert_active": bool(alerts),
     }
 
 
@@ -274,6 +286,7 @@ def build_execution_snapshot(db: Session, *, user_id: str | None = None) -> dict
         "events": list_events(),
         "privacy_events": priv,
         "provider_events": prov,
+        "integrity_alerts": list(STATE.get("integrity_alerts") or [])[-40:],
         "last_updated": STATE.get("last_updated"),
         "privacy_indicator": derive_privacy_indicator(priv),
         "provider_transparency": summarize_provider_transparency(prov, privacy_events=priv),

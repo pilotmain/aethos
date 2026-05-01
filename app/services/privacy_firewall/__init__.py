@@ -4,6 +4,8 @@ Privacy firewall — redact / block / confirm before payloads reach external pro
 Worker missions use :func:`prepare_external_payload`; LLM strings use :func:`prepare_external_text`.
 """
 
+# DO NOT MODIFY WITHOUT SECURITY REVIEW — package entrypoints affect all outbound privacy.
+
 from app.services.privacy_firewall.gateway import (
     PrivacyBlockedError,
     normalize_pii_policy,
