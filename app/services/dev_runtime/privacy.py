@@ -34,4 +34,28 @@ def gate_outbound_dev_payload(
     return prepare_external_payload(payload, pii_policy="redact", db=db, user_id=user_id)
 
 
-__all__ = ["redact_output_for_storage", "gate_outbound_dev_payload", "PrivacyBlockedError"]
+def gate_agent_context_before_external(
+    adapter_name: str,
+    context: dict[str, object],
+    *,
+    db: Session | None,
+    user_id: str | None,
+) -> dict[str, object]:
+    """
+    Scan coding-agent context (diffs, logs, env-shaped strings) before remote/local-tool adapters run.
+
+    Local stub skips the strict outbound gate to preserve offline ergonomics.
+    """
+    if (adapter_name or "").strip().lower() in ("", "local_stub"):
+        return context
+    out = gate_outbound_dev_payload({"ctx": dict(context)}, db=db, user_id=user_id)
+    inner = out.get("ctx")
+    return dict(inner) if isinstance(inner, dict) else dict(context)
+
+
+__all__ = [
+    "redact_output_for_storage",
+    "gate_outbound_dev_payload",
+    "gate_agent_context_before_external",
+    "PrivacyBlockedError",
+]

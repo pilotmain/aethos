@@ -523,7 +523,23 @@ def build_execution_snapshot(db: Session, *, user_id: str | None = None) -> dict
                 "preferred_agent": (r.result_json or {}).get("preferred_agent")
                 if isinstance(r.result_json, dict)
                 else None,
-                "privacy_note": "Secrets redacted in stored step output.",
+                "iterations": (r.result_json or {}).get("iterations")
+                if isinstance(r.result_json, dict)
+                else None,
+                "tests_passed": (r.result_json or {}).get("tests_passed")
+                if isinstance(r.result_json, dict)
+                else None,
+                "pr_ready": (r.result_json or {}).get("pr_ready")
+                if isinstance(r.result_json, dict)
+                else None,
+                "max_iterations": (r.result_json or {}).get("max_iterations")
+                if isinstance(r.result_json, dict)
+                else None,
+                "has_runtime_errors": (r.result_json or {}).get("has_runtime_errors")
+                if isinstance(r.result_json, dict)
+                else None,
+                "privacy_note": "Outbound adapter context is gated; stored output is redacted.",
+                "privacy_warnings": None,
             }
             for r in dr_rows
         ]

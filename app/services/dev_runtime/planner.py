@@ -9,17 +9,14 @@ from app.models.dev_runtime import NexaDevWorkspace
 
 def build_dev_plan(goal: str, workspace: NexaDevWorkspace) -> list[dict[str, Any]]:
     """
-    Build a fixed pipeline: inspect → test → coding agent → test → summary.
+    Build a fixed pipeline: inspect → (bounded loop handled in service) → summary.
 
-    ``goal`` and ``workspace`` influence descriptions only in V1.
+    Phase 25 runs adapter/test/fix iterations between inspect and summary.
     """
     _ = workspace
     g = (goal or "").strip()[:2000]
     return [
         {"type": "inspect", "description": "Inspect repository structure and git status"},
-        {"type": "test", "description": f"Run tests ({g[:120]})"},
-        {"type": "edit", "description": "Coding agent plan / artifact (stub)"},
-        {"type": "test", "description": "Re-run tests after edits"},
         {"type": "summary", "description": "Summarize run and PR-ready notes"},
     ]
 

@@ -102,6 +102,7 @@ def cmd_dev_run(
     allow_write: bool,
     allow_commit: bool,
     auto_pr: bool,
+    max_iterations: int | None,
 ) -> int:
     body_obj: dict[str, Any] = {
         "workspace_id": workspace_id,
@@ -112,6 +113,8 @@ def cmd_dev_run(
     }
     if agent:
         body_obj["preferred_agent"] = agent
+    if max_iterations is not None:
+        body_obj["max_iterations"] = max_iterations
     code, body = _req("POST", "/api/v1/dev/runs", uid=uid, body=json.dumps(body_obj).encode())
     print(body[:24000])
     return 0 if code == 200 else 1
@@ -200,6 +203,7 @@ def main() -> int:
     sp_drn.add_argument("--allow-write", action="store_true")
     sp_drn.add_argument("--allow-commit", action="store_true")
     sp_drn.add_argument("--auto-pr", action="store_true")
+    sp_drn.add_argument("--max-iterations", type=int, default=None, dest="max_iterations")
     sp_dsc = dev_sub.add_parser("schedule", help="POST /dev/runs with schedule payload")
     sp_dsc.add_argument("--workspace", required=True, dest="workspace_id")
     sp_dsc.add_argument("--goal", required=True)
@@ -250,6 +254,7 @@ def main() -> int:
                 allow_write=bool(args.allow_write),
                 allow_commit=bool(args.allow_commit),
                 auto_pr=bool(args.auto_pr),
+                max_iterations=getattr(args, "max_iterations", None),
             )
         if args.dev_cmd == "schedule":
             return cmd_dev_schedule(

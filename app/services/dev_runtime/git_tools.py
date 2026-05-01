@@ -85,6 +85,25 @@ def create_commit(workspace_root: Path | str, message: str, *, allow_commit: boo
         return {"ok": False, "error": str(exc)[:2000]}
 
 
+def get_diff_summary(repo_path: Path | str) -> dict[str, Any]:
+    """
+    Summarize uncommitted changes for coding-agent context (no raw secrets guaranteed —
+    callers still gate before external providers).
+    """
+    root = validate_workspace_path(str(repo_path))
+    gd = git_diff(root)
+    stdout = str(gd.get("stdout") or "")
+    ufs = changed_files(root)
+    return {
+        "changed_files": ufs,
+        "changed_file_count": len(ufs),
+        "diff_chars": len(stdout),
+        "diff_line_count": stdout.count("\n") + (1 if stdout.strip() else 0),
+        "has_uncommitted": bool(ufs or stdout.strip()),
+        "diff_preview": stdout[:8000],
+    }
+
+
 def prepare_pr_summary(workspace: NexaDevWorkspace, run_result: dict[str, Any] | None) -> dict[str, Any]:
     """Merge workspace context with PR summary text for UI / export."""
     from app.services.dev_runtime.pr import prepare_pr_summary as _title_body
@@ -103,5 +122,6 @@ __all__ = [
     "current_branch",
     "changed_files",
     "create_commit",
+    "get_diff_summary",
     "prepare_pr_summary",
 ]

@@ -37,6 +37,7 @@ class DevRunCreate(BaseModel):
     allow_commit: bool = False
     allow_push: bool = False
     cost_budget_usd: float = Field(default=0, ge=0, le=1_000_000)
+    max_iterations: int | None = Field(default=None)
     schedule: dict[str, Any] | None = None
 
 
@@ -82,6 +83,7 @@ def _schedule_dev_mission(db: Session, app_user_id: str, body: DevRunCreate) -> 
         "goal": body.goal,
         "preferred_agent": body.preferred_agent or "local_stub",
         "allow_write": bool(body.allow_write),
+        "max_iterations": body.max_iterations if body.max_iterations is not None else 3,
     }
     mission_text = json.dumps(payload)
     label = f"dev:{body.workspace_id[:24]}"
@@ -185,6 +187,7 @@ def post_run(
             allow_commit=body.allow_commit,
             allow_push=body.allow_push,
             cost_budget_usd=float(body.cost_budget_usd or 0),
+            max_iterations=body.max_iterations,
             schedule=None,
         )
     except ValueError as exc:
@@ -202,6 +205,7 @@ def post_retry_run(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="run_not_found")
     rj = r.result_json if isinstance(r.result_json, dict) else {}
     try:
+        mi = rj.get("max_iterations")
         return run_dev_mission(
             db,
             app_user_id,
@@ -213,6 +217,7 @@ def post_retry_run(
             allow_commit=bool(rj.get("allow_commit", False)),
             allow_push=bool(rj.get("allow_push", False)),
             cost_budget_usd=float(rj.get("cost_budget_usd") or 0),
+            max_iterations=int(mi) if mi is not None else None,
         )
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
@@ -256,6 +261,11 @@ def get_run(
             "command": s.command,
             "output": (s.output or "")[:120_000],
             "artifact_json": s.artifact_json,
+            "iteration": getattr(s, "iteration", None),
+            "adapter": getattr(s, "adapter", None),
+            "input_json": getattr(s, "input_json", None),
+            "output_json": getattr(s, "output_json", None),
+            "test_result": getattr(s, "test_result", None),
             "created_at": s.created_at.isoformat() if s.created_at else None,
             "completed_at": s.completed_at.isoformat() if s.completed_at else None,
         }

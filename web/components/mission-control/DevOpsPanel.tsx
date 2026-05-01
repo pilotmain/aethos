@@ -21,7 +21,13 @@ export type DevRunRow = {
   error?: string | null;
   adapter_used?: string | null;
   preferred_agent?: string | null;
+  iterations?: number | null;
+  tests_passed?: boolean | null;
+  pr_ready?: boolean | null;
+  max_iterations?: number | null;
   privacy_note?: string | null;
+  privacy_warnings?: string | null;
+  has_runtime_errors?: boolean | null;
 };
 
 function panelTitle(shellLight: boolean) {
@@ -59,7 +65,7 @@ export function DevOpsPanel(props: {
     <>
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <Terminal className={`h-4 w-4 ${subtle(shellLight)}`} aria-hidden />
-        <h2 className={`text-sm font-semibold ${panelTitle(shellLight)}`}>Dev workspace (Phase 24)</h2>
+        <h2 className={`text-sm font-semibold ${panelTitle(shellLight)}`}>Dev workspace (Phase 25)</h2>
         {loading ? (
           <span className={`text-xs ${subtle(shellLight)}`}>Loading…</span>
         ) : null}
@@ -120,6 +126,25 @@ export function DevOpsPanel(props: {
                     ) : null}
                     {r.preferred_agent ? (
                       <span className={`font-mono ${subtle(shellLight)}`}>wanted:{r.preferred_agent}</span>
+                    ) : null}
+                    {r.iterations != null ? (
+                      <span className={`font-mono ${subtle(shellLight)}`}>
+                        iters:{r.iterations}
+                        {r.max_iterations != null ? `/${r.max_iterations}` : ""}
+                      </span>
+                    ) : null}
+                    {r.tests_passed != null ? (
+                      <span className={r.tests_passed ? (shellLight ? "text-sky-800" : "text-sky-300") : subtle(shellLight)}>
+                        tests:{r.tests_passed ? "pass" : "fail"}
+                      </span>
+                    ) : null}
+                    {r.pr_ready != null ? (
+                      <span className={r.pr_ready ? (shellLight ? "text-violet-800" : "text-violet-300") : subtle(shellLight)}>
+                        PR:{r.pr_ready ? "ready" : "no"}
+                      </span>
+                    ) : null}
+                    {r.has_runtime_errors ? (
+                      <span className={shellLight ? "text-amber-800" : "text-amber-300"}>runtime err</span>
                     ) : null}
                     {onRetryRun && (r.status === "failed" || r.status === "blocked") ? (
                       <button

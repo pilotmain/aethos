@@ -646,6 +646,27 @@ def _migrate_nexa_tasks_timing() -> None:
             conn.execute(text(f"ALTER TABLE nexa_tasks ADD COLUMN duration_ms {fl} NULL"))
 
 
+def _migrate_nexa_dev_steps_phase25() -> None:
+    """Phase 25 — iteration + structured JSON on dev steps."""
+    insp = inspect(engine)
+    if "nexa_dev_steps" not in insp.get_table_names():
+        return
+    cols = {c["name"] for c in insp.get_columns("nexa_dev_steps")}
+    dialect = engine.dialect.name
+    jt = "JSONB" if dialect == "postgresql" else "TEXT"
+    with engine.begin() as conn:
+        if "iteration" not in cols:
+            conn.execute(text("ALTER TABLE nexa_dev_steps ADD COLUMN iteration INTEGER NULL"))
+        if "adapter" not in cols:
+            conn.execute(text("ALTER TABLE nexa_dev_steps ADD COLUMN adapter VARCHAR(64) NULL"))
+        if "input_json" not in cols:
+            conn.execute(text(f"ALTER TABLE nexa_dev_steps ADD COLUMN input_json {jt} NULL"))
+        if "output_json" not in cols:
+            conn.execute(text(f"ALTER TABLE nexa_dev_steps ADD COLUMN output_json {jt} NULL"))
+        if "test_result" not in cols:
+            conn.execute(text(f"ALTER TABLE nexa_dev_steps ADD COLUMN test_result {jt} NULL"))
+
+
 def ensure_schema() -> None:
     import app.models  # noqa: F401 — register all models (incl. TaskPattern) on Base.metadata
 
@@ -672,6 +693,7 @@ def ensure_schema() -> None:
     _migrate_conversation_context_blocked_host()
     _migrate_nexa_missions_input_text()
     _migrate_nexa_tasks_timing()
+    _migrate_nexa_dev_steps_phase25()
 
 
 def get_db() -> Generator[Session, None, None]:

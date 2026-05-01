@@ -58,6 +58,12 @@ class NexaDevStep(Base):
     artifact_json: Mapped[Any | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utc_now, nullable=False)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Phase 25 — bounded execution loop metadata
+    iteration: Mapped[int | None] = mapped_column(Integer(), nullable=True)
+    adapter: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    input_json: Mapped[Any | None] = mapped_column(JSON, nullable=True)
+    output_json: Mapped[Any | None] = mapped_column(JSON, nullable=True)
+    test_result: Mapped[Any | None] = mapped_column(JSON, nullable=True)
 
 
 __all__ = ["NexaDevWorkspace", "NexaDevRun", "NexaDevStep"]
