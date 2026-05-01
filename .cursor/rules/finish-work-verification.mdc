@@ -1,0 +1,50 @@
+---
+description: After any code change, rerun compile/tests and restart API + Telegram bot
+alwaysApply: true
+---
+
+# Hard rule: finish all work with verification and running processes
+
+When you finish a task in this repository (or before ending a coding session on this project), you **must** do **both** steps below. Do not skip in favor of "the change looks right."
+
+## 1. Tests (rerun)
+
+From the project root, with the project venv active:
+
+1. **Compile every app module (blocks on syntax errors):**
+   ```bash
+   python -m compileall -q app
+   ```
+   Expect: **no output and exit code 0** (quiet success).
+
+2. **Short intent + response smoke check** (adjust if imports move; intent is `get_intent`, behavior via `map_intent_to_behavior`, and one `build_response` sample with `use_real_llm` typically `False` unless `.env` enables LLM):
+   - Run a small one-liner or script that imports `get_intent`, `map_intent_to_behavior`, `build_response`, and `Context`, and checks a few fixed strings (capability, brain-dump list, stuck, `not done`).
+   - Confirm behavior matches expectations for this codebase (e.g. `capability_question` → clarify, not planning).
+
+## 2. Both processes (restart)
+
+Restart **both** the API and the Telegram bot so the running process loads the new code (Python does not auto-reload the bot; API reloads only for server files under uvicorn `--reload` as configured).
+
+1. **Stop** any existing process for this repo, e.g. the `uvicorn app.main:app` instance and `python -m app.bot.telegram_bot` (use your OS tools: `pkill`/`kill` for this project’s commands from the right cwd, or stop the terminal jobs).
+
+2. **Start again** from the project root (`.venv` active):
+
+   **API (FastAPI):**
+   ```bash
+   .venv/bin/uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+   ```
+
+   **Telegram bot (separate shell or background):**
+   ```bash
+   .venv/bin/python -m app.bot.telegram_bot
+   ```
+
+3. **Confirm**
+   - Uvicorn: log should show the server listening (e.g. on port `8000`).
+   - Bot: log should show Telegram `getMe` (and related calls) **200** and `Application started`.
+
+**Note:** A `PTBUserWarning` about `create_task` before the application is running can appear from `post_init` polling; it is a known pattern and does not mean the bot failed to start. If the token or network fails, you will not see a clean `getMe` **200**.
+
+---
+
+If automated tests are added later (e.g. `pytest`), this rule should be updated to require those as part of "Tests (rerun)" in addition to `compileall` and the smoke check.

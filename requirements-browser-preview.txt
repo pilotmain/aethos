@@ -1,0 +1,4 @@
+# Optional: public URL headless browser preview (NEXA_BROWSER_PREVIEW_ENABLED=true on the host).
+#   pip install -r requirements-browser-preview.txt
+#   playwright install chromium
+playwright>=1.40.0

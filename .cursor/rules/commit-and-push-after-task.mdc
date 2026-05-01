@@ -1,0 +1,77 @@
+---
+description: Commit and push after each phase/task; canonical GitHub remote for nexa-next
+alwaysApply: true
+---
+
+# Where to commit and push
+
+## Canonical remote (this repository)
+
+- **Remote name:** `origin`
+- **URL:** `https://github.com/pilotmain/nexa-next.git`
+- **Default branch:** `main`
+
+If `origin` is missing or wrong, fix it before pushing:
+
+```bash
+git remote remove origin 2>/dev/null; git remote add origin https://github.com/pilotmain/nexa-next.git
+git branch -M main
+git push -u origin main
+```
+
+After the first successful push, routine pushes use `git push origin main` (or `git push` when upstream is set).
+
+---
+
+## Phases and discrete tasks
+
+When you **finish a milestone** (for example a numbered phase spec) or any **self-contained task** the user treats as done:
+
+1. **Commit** that work with a message that names the phase or task and summarizes what changed.
+2. **Push** to **`origin/main`** right after, unless the user asked to hold changes or use a feature branch.
+
+Do not leave completed phase work only local when the user expects it on GitHub.
+
+---
+
+## 1. Development done **here in Cursor** (this agent session)
+
+When a task is **finished in this chat** (primary Cursor agent work):
+
+1. **Commit and push** only the changes from **that** task. Do not mix unrelated diffs, drive-by cleanups, or unreviewed output from other runs unless the user asked to land it.
+2. **Stage** sensibly (respect `.gitignore`; never commit secrets or `.env`).
+3. **Commit** with a clear message (what / why, full sentences).
+4. **Push to `origin/main`** at **`https://github.com/pilotmain/nexa-next.git`** (or merge a short-lived local branch into `main`, then push `main`).
+
+If the user says **not** to push (WIP, hold for review), follow that.
+
+Do not end a Cursor task with your own changes uncommitted if the user expected them on the remote, unless they asked to hold.
+
+---
+
+## 2. Work that comes from the **bot** (agent tasks via Telegram / Nexa, etc.)
+
+When the **deliverable** is code or repo changes produced **as an agent task from the bot** (not the main Cursor session doing the edit here):
+
+- Still **commit and push** when that work is done, but **not to `main` directly**.
+- Use a **feature branch** (e.g. `bot/dev-job-123-short-slug` or `agent/telegram-task-…`), push **`origin <branch>`**, and **open a pull request into `main`** (or leave the branch pushed for the user to open the PR).
+- The primary Cursor session may **merge** that PR, or **cherry-pick**, when asked.
+
+This keeps **interactive Cursor work** on `main` and **asynchronous bot-driven changes** reviewable before they land on `main`.
+
+---
+
+## 3. Other agents (subagents, parallel agents, background jobs)
+
+- Prefer **branch + PR** to `main`, same as bot-originated work, unless the user explicitly says to integrate on `main` now.
+- Do not silently push other agents’ output to `main` from their pipeline.
+
+---
+
+## Summary
+
+| Source | Where to push |
+|--------|------------------|
+| **This Cursor agent** (task done in this chat) | **`origin/main`** when the task is done |
+| **Bot / Telegram agent task** (code produced for that job) | **Feature branch** → **PR to `main`** |
+| **Other / parallel agents** | **Branch + PR**; no silent push to `main` unless user says so |

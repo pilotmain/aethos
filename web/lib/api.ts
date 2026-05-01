@@ -1,0 +1,154 @@
+import { DEFAULT_API_BASE, readConfig } from "./config";
+import type { TrustActivityResponse, TrustSummaryResponse, WebReleaseNotes } from "./nexa-types";
+
+const API_PREFIX = "/api/v1";
+
+function parseErrorBodyText(t: string): string {
+  let detail = t;
+  try {
+    const j = JSON.parse(t) as { detail?: string | { msg?: string }[] };
+    if (j.detail) {
+      if (typeof j.detail === "string") {
+        return j.detail;
+      }
+      if (Array.isArray(j.detail) && j.detail[0] && typeof j.detail[0] === "object") {
+        const m = (j.detail[0] as { msg?: string }).msg;
+        if (m) return m;
+      }
+      if (Array.isArray(j.detail) && typeof j.detail[0] === "string") {
+        return j.detail[0];
+      }
+    }
+  } catch {
+    /* not JSON */
+  }
+  return detail;
+}
+
+function url(path: string): string {
+  const c = readConfig();
+  const base = (c.apiBase || DEFAULT_API_BASE).replace(/\/$/, "");
+  return `${base}${API_PREFIX}${path.startsWith("/") ? path : `/${path}`}`;
+}
+
+function headers(): HeadersInit {
+  const c = readConfig();
+  const h: Record<string, string> = {
+    "X-User-Id": c.userId,
+  };
+  if (c.token) {
+    h.Authorization = `Bearer ${c.token}`;
+  }
+  return h;
+}
+
+/** Maps browser "Failed to fetch" to a message that names API base / CORS / port. */
+async function fetchOrNetworkHint(urlStr: string, init?: RequestInit): Promise<Response> {
+  try {
+    return await fetch(urlStr, init);
+  } catch (e) {
+    if (e instanceof TypeError) {
+      const origin =
+        typeof window !== "undefined" ? window.location.origin : "(browser origin)";
+      throw new Error(
+        `Cannot reach API (wrong URL/port, server down, or CORS). Check Connection settings: API base should match your Nexa API (e.g. http://127.0.0.1:8010). This page is ${origin}.`,
+      );
+    }
+    throw e;
+  }
+}
+
+export async function webFetch<T = unknown>(path: string, init: RequestInit = {}): Promise<T> {
+  const h = { ...headers(), ...(init.headers as Record<string, string>) } as Record<string, string>;
+  if (init.body && !h["Content-Type"]) {
+    h["Content-Type"] = "application/json";
+  }
+  if (!h["Accept"]) {
+    h["Accept"] = "application/json";
+  }
+
+  const r = await fetchOrNetworkHint(url(path), { ...init, headers: h });
+  const text = await r.text();
+  if (r.status === 401) {
+    const msg =
+      parseErrorBodyText(text) || "Unauthorized (check X-User-Id and optional bearer token)";
+    throw new Error(`${r.status}: ${msg}`);
+  }
+  if (!r.ok) {
+    const msg = parseErrorBodyText(text) || r.statusText;
+    throw new Error(`${r.status}: ${msg}`);
+  }
+  if (r.status === 204 || !text.trim()) {
+    return null as T;
+  }
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new Error(
+      text.length > 400 ? `${text.slice(0, 400)}…` : text || "Invalid JSON response from API"
+    );
+  }
+}
+
+/** No auth — public release highlights for banner / System tab. */
+export async function fetchTrustActivity(hours: number, limit = 200): Promise<TrustActivityResponse> {
+  const q = new URLSearchParams({
+    hours: String(hours),
+    limit: String(limit),
+  });
+  return webFetch<TrustActivityResponse>(`/trust/activity?${q}`);
+}
+
+export async function fetchTrustSummary(
+  hours: number,
+  recentLimit = 20
+): Promise<TrustSummaryResponse> {
+  const q = new URLSearchParams({
+    hours: String(hours),
+    recent_limit: String(recentLimit),
+  });
+  return webFetch<TrustSummaryResponse>(`/trust/summary?${q}`);
+}
+
+export async function webFetchPublicReleaseNotes(): Promise<WebReleaseNotes> {
+  const c = readConfig();
+  const base = (c.apiBase || DEFAULT_API_BASE).replace(/\/$/, "");
+  const r = await fetchOrNetworkHint(`${base}${API_PREFIX}/web/release-notes`);
+  if (!r.ok) {
+    const t = await r.text();
+    throw new Error(parseErrorBodyText(t) || r.statusText);
+  }
+  return r.json() as Promise<WebReleaseNotes>;
+}
+
+export async function webDownloadBlob(path: string, init: RequestInit = {}): Promise<Blob> {
+  const c = readConfig();
+  const h: Record<string, string> = {
+    "X-User-Id": c.userId,
+    ...(init.headers as Record<string, string> | undefined),
+  };
+  if (c.token) {
+    h.Authorization = `Bearer ${c.token}`;
+  }
+  const r = await fetchOrNetworkHint(url(path), { ...init, headers: h, method: init.method || "GET" });
+  if (r.status === 401) {
+    const t = await r.text();
+    throw new Error(
+      parseErrorBodyText(t) || "Unauthorized (check X-User-Id and optional bearer token)"
+    );
+  }
+  if (!r.ok) {
+    const t = await r.text();
+    throw new Error(parseErrorBodyText(t) || r.statusText);
+  }
+  return r.blob();
+}
+
+export function downloadBlobToFile(blob: Blob, filename: string): void {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.rel = "noopener";
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 60_000);
+}

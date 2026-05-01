@@ -1,0 +1,74 @@
+# Optional: API + bot with SQLite on a Docker volume (no Postgres).
+#   docker compose -f docker-compose.sqlite.yml up --build
+#
+# Data: volume `sqlite_data` holds /app/data/overwhelm_reset.db
+
+name: nexa-sqlite
+
+services:
+  api:
+    container_name: nexa-api
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: nexa:local
+    restart: unless-stopped
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    ports:
+      - "8010:8000"
+    environment:
+      DATABASE_URL: sqlite:////app/data/overwhelm_reset.db
+      API_BASE_URL: http://localhost:8010
+    env_file:
+      - .env
+    # Bind mount: same `.agent_tasks` on host and in container (dev handoff / Cursor / done files).
+    volumes:
+      - sqlite_data:/app/data
+      - ./.agent_tasks:/app/.agent_tasks
+      - runtime_data:/app/.runtime
+    develop:
+      watch:
+        - action: sync+restart
+          path: ./app
+          target: /app/app
+        - action: sync+restart
+          path: ./scripts
+          target: /app/scripts
+        - action: rebuild
+          path: ./requirements.txt
+        - action: rebuild
+          path: ./Dockerfile
+
+  bot:
+    container_name: nexa-bot
+    image: nexa:local
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    command: ["python", "-m", "app.bot.telegram_bot"]
+    environment:
+      DATABASE_URL: sqlite:////app/data/overwhelm_reset.db
+      API_BASE_URL: http://localhost:8010
+    env_file:
+      - .env
+    depends_on:
+      - api
+    # Bind mount: same `.agent_tasks` on host and in container (dev handoff / Cursor / done files).
+    volumes:
+      - sqlite_data:/app/data
+      - ./.agent_tasks:/app/.agent_tasks
+      - runtime_data:/app/.runtime
+    develop:
+      watch:
+        - action: sync+restart
+          path: ./app
+          target: /app/app
+        - action: rebuild
+          path: ./requirements.txt
+        - action: rebuild
+          path: ./Dockerfile
+
+volumes:
+  sqlite_data:
+  runtime_data:

@@ -1,0 +1,135 @@
+.venv
+.aider-venv/
+venv/
+ENV/
+
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.pyc
+
+# Env & secrets (never commit)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+!**/fixtures/**/*.pem
+
+# Local databases & WAL (often huge; recreate from migrations)
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+*-wal
+*-shm
+overwhelm_reset.db
+
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
+.dmypy.json
+dmypy.json
+
+# pytest / coverage (pytest cache section below consolidated here)
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+*.cover
+.cache/
+
+# Python packaging / build outputs (avoid committing wheels / sdists)
+dist/
+build/
+*.egg-info/
+.eggs/
+*.egg
+pip-wheel-metadata/
+
+# Wheels / archives (should not land in git)
+*.whl
+*.zip
+*.tar.gz
+*.tgz
+*.7z
+*.rar
+
+# Logs & runtime
+*.log
+.runtime/
+.aider*
+tmp/
+temp/
+
+# Local agent / IDE
+.agent_tasks/
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json.example
+*.swp
+*.swo
+*~
+.DS_Store
+
+# TypeScript / JS tooling caches
+*.tsbuildinfo
+.turbo/
+.vercel/
+.pnpm-store/
+.npm/
+.yarn/cache/
+.yarn/unplugged/
+.yarn/install-state.gz
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Next.js (web app) — build output & deps can be hundreds of MB
+web/node_modules/
+web/.next/
+web/out/
+**/node_modules/
+**/.next/
+
+# Storybook / misc front-end build dirs
+storybook-static/
+dist-ssr/
+*.local.html
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Terraform / local infra state (large & sensitive)
+.terraform/
+*.tfstate
+*.tfstate.*
+
+# ML / data dumps (if generated locally)
+*.parquet
+*.arrow
+*.npy
+*.npz
+*.pkl
+*.pickle
+*.h5
+*.pt
+*.onnx
+*.safetensors
+*.gguf
+*.lancedb/
+.chroma/
+
+# OS / thumbnails
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+coverage/
