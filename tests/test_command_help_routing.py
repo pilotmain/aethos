@@ -1,4 +1,4 @@
-from app.services.behavior_engine import build_response, Context
+from app.services.legacy_behavior_utils import build_response, Context
 from app.services.intent_classifier import is_command_question
 from app.services.command_help import format_command_help_response
 

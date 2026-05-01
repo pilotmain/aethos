@@ -1,7 +1,8 @@
-"""Behavior/reply orchestration — composed replies via :func:`build_response`.
+"""Legacy behavior / LLM reply composition (``build_response`` and helpers).
 
-Telegram and web generic chat are admitted through :class:`~app.services.gateway.runtime.NexaGateway`
-(Phase 35); `build_response` remains the implementation layer for intent-conditioned copy and LLM routing.
+Phase 36: user-facing entry is :class:`~app.services.gateway.runtime.NexaGateway`; this module
+remains the internal text composition layer. Prefer :meth:`~app.services.gateway.runtime.NexaGateway.compose_llm_reply`
+from orchestrators instead of importing ``build_response`` directly.
 """
 
 from __future__ import annotations

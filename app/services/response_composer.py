@@ -724,7 +724,7 @@ def _hash_pick(seed: str, options: list[str]) -> str:
 def fallback_compose_response(
     ctx: ResponseContext, *, reason: str = "fallback"
 ) -> ComposedResponse:
-    from app.services.behavior_engine import generate_microstep
+    from app.services.legacy_behavior_utils import generate_microstep
     from app.services.telegram_onboarding import clarify_general_response
 
     logger.error("FALLBACK_TRIGGERED behavior=%s reason=%s", ctx.behavior, reason)

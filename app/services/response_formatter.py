@@ -3,7 +3,7 @@ User-facing response cleanup: normalizes messy LLM list/bullet patterns without
 stripping meaningful markdown (## headings, links, code fences, intentional emphasis).
 
 User-visible replies should go through :func:`finalize_user_facing_text` (or at minimum
-:func:`clean_response_formatting`) from ``behavior_engine.build_response``,
+:func:`clean_response_formatting`) from ``legacy_behavior_utils.build_response``,
 ``agent_orchestrator`` sinks, and ``web_chat_service._finalize_web_result``.
 :func:`finalize_user_facing_text` applies list cleanup plus a light owner-pronoun check when
 memory + preferences say to.

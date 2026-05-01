@@ -15,12 +15,8 @@ from app.services.agent_orchestrator import handle_agent_mention
 from app.services.agent_router import route_agent
 from app.services.agent_status_text import format_agents_status
 from app.services.agent_telegram_copy import format_agents_list, format_command_center
-from app.services.behavior_engine import (
-    apply_tone,
-    build_context,
-    build_response,
-    no_tasks_response,
-)
+from app.services.gateway.runtime import NexaGateway
+from app.services.legacy_behavior_utils import apply_tone, build_context, no_tasks_response
 from app.services.channel_gateway.telegram_adapter import (
     get_telegram_adapter,
     register_telegram_handlers,
@@ -638,7 +634,7 @@ async def overwhelmed(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
                     _persist_conversation_turn(db, app_user_id, cctx, msg, o, intent, rkey)
                     return
                 orchestrator.users.mark_user_onboarded(db, app_user_id)
-                body = build_response(
+                body = NexaGateway().compose_llm_reply(
                     msg,
                     intent,
                     ctx_after,
@@ -654,7 +650,7 @@ async def overwhelmed(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
                 _persist_conversation_turn(db, app_user_id, cctx, msg, full, intent, rkey)
             else:
                 ctx = build_context(db, app_user_id, memory_service, orchestrator)
-                body = build_response(
+                body = NexaGateway().compose_llm_reply(
                     msg,
                     intent,
                     ctx,
@@ -1861,8 +1857,6 @@ async def _handle_incoming_text_impl(update: Update, context: ContextTypes.DEFAU
                     from app.services.channels.telegram_gateway_reply import (
                         format_telegram_gateway_reply,
                     )
-                    from app.services.gateway.runtime import NexaGateway
-
                     gw_struct = NexaGateway().try_structured_turn(
                         tstrip,
                         app_user_id,
@@ -1872,6 +1866,9 @@ async def _handle_incoming_text_impl(update: Update, context: ContextTypes.DEFAU
                             "telegram_update_id": getattr(update, "update_id", None),
                             "telegram_chat_id": telegram_chat_id,
                             "telegram_user_id": int(effu.id),
+                            "telegram_username": effu.username,
+                            "telegram_role": tg_role,
+                            "telegram_owner": is_owner_role(tg_role),
                         },
                     )
                     if gw_struct is not None:
@@ -1886,6 +1883,60 @@ async def _handle_incoming_text_impl(update: Update, context: ContextTypes.DEFAU
                             tstrip,
                             reply_gw,
                             "gateway",
+                            "nexa",
+                        )
+                        return
+
+                if not tstrip.startswith("/") and tstrip:
+                    gw_appr = NexaGateway().try_approval_only(
+                        tstrip,
+                        app_user_id,
+                        db=db,
+                        channel="telegram",
+                        metadata={
+                            "telegram_update_id": getattr(update, "update_id", None),
+                            "telegram_chat_id": telegram_chat_id,
+                            "telegram_user_id": int(effu.id),
+                            "telegram_username": effu.username,
+                            "telegram_role": tg_role,
+                            "telegram_owner": is_owner_role(tg_role),
+                        },
+                    )
+                    if gw_appr is not None:
+                        from app.services.channels.telegram_gateway_reply import (
+                            format_telegram_gateway_reply,
+                        )
+
+                        reply_ap = format_telegram_gateway_reply(gw_appr)
+                        for se in gw_appr.get("side_effects") or []:
+                            if se.get("kind") == "telegram_send_approval_card":
+                                from app.services.aider_autonomous_loop import (
+                                    approval_inline_markup,
+                                    format_approval_message,
+                                )
+                                from app.services.telegram_outbound import send_telegram_message
+
+                                jid_se = int(se.get("job_id") or 0)
+                                job_row = job_service.get_job(db, app_user_id, jid_se)
+                                if job_row:
+                                    rtxt = str(se.get("result_text") or "")
+                                    chat_tgt = str(se.get("chat_id") or telegram_chat_id or "")
+                                    send_telegram_message(
+                                        chat_tgt,
+                                        (format_approval_message(job_row, rtxt) or "")[:3900],
+                                        max_len=4000,
+                                        reply_markup=approval_inline_markup(job_row.id),
+                                    )
+                        cctx_ap = get_or_create_context(db, app_user_id)
+                        for piece in _split_telegram_text(reply_ap, max_len=4000):
+                            await update.message.reply_text(piece)
+                        _persist_conversation_turn(
+                            db,
+                            app_user_id,
+                            cctx_ap,
+                            tstrip,
+                            reply_ap,
+                            str(gw_appr.get("intent") or "approval"),
                             "nexa",
                         )
                         return
@@ -2356,61 +2407,6 @@ async def _handle_incoming_text_impl(update: Update, context: ContextTypes.DEFAU
                     )
                     return
     
-                if tlow == "approve despite failed tests":
-                    if not is_owner_role(tg_role):
-                        _deny(
-                            db,
-                            telegram_id=effu.id,
-                            app_user=app_user_id,
-                            uname=effu.username,
-                            family="approve",
-                            reason="not_owner",
-                            preview=None,
-                        )
-                        await update.message.reply_text(ACCESS_RESTRICTED)
-                        return
-                    rows = job_service.list_jobs(db, app_user_id, limit=40)
-                    j_ov = next(
-                        (
-                            r
-                            for r in rows
-                            if (r.worker_type or "") == "dev_executor"
-                            and (r.status or "") == "failed"
-                            and (r.tests_status or "") == "failed"
-                        ),
-                        None,
-                    )
-                    if not j_ov:
-                        await update.message.reply_text(
-                            "No `failed` dev job with failed tests found. List recent jobs first, or use this after the worker "
-                            "reports a test failure."
-                        )
-                        return
-                    o = job_service.mark_waiting_approval_despite_failed_tests(
-                        db, app_user_id, j_ov.id
-                    )
-                    if not o:
-                        await update.message.reply_text("Could not open approval for that job (check ownership).")
-                        return
-                    from app.services.aider_autonomous_loop import (
-                        approval_inline_markup,
-                        format_approval_message,
-                    )
-                    from app.services.telegram_outbound import send_telegram_message
-    
-                    rtxt = (o.result or "")[:12_000]
-                    chat = str(update.effective_chat.id)
-                    send_telegram_message(
-                        chat,
-                        (format_approval_message(o, rtxt) or "")[:3900],
-                        max_len=4000,
-                        reply_markup=approval_inline_markup(o.id),
-                    )
-                    await update.message.reply_text(
-                        "Okay — I will allow approval despite failed tests. Review the branch and diff on the host before you tap Approve."
-                    )
-                    return
-    
                 if re.match(r"^/dev\s+health", tlow):
                     if not can_read_dev_stack_commands(tg_role):
                         _deny(
@@ -2577,52 +2573,6 @@ async def _handle_incoming_text_impl(update: Update, context: ContextTypes.DEFAU
                         "`.runtime/dev_worker_stop_after_current` or we add a clear command next."
                     )
                     return
-                mhr = re.match(r"^approve high risk job\s*#?(\d+)\s*$", tlow)
-                if mhr:
-                    if not is_owner_role(tg_role):
-                        _deny(
-                            db, telegram_id=effu.id, app_user=app_user_id, uname=effu.username,
-                            family="job", reason="high_risk", preview=None,
-                        )
-                        await update.message.reply_text(ACCESS_RESTRICTED)
-                        return
-                    j = job_service.approve_high_risk(db, app_user_id, int(mhr.group(1)))
-                    await update.message.reply_text(
-                        f"Job #{j.id} is now `{j.status}`. Reply: `approve job #{j.id}` to run the dev worker."
-                    )
-                    return
-    
-                # Aider autonomous loop: latest job in waiting_approval (one word, no job id)
-                if tlow in {"approve", "yes"} and tstrip.count(" ") == 0:
-                    if not is_owner_role(tg_role):
-                        _deny(
-                            db, telegram_id=effu.id, app_user=app_user_id, uname=effu.username,
-                            family="approve", reason="one_word_approve", preview=None,
-                        )
-                        await update.message.reply_text(ACCESS_RESTRICTED)
-                        return
-                    j_approve = job_service.mark_autonomous_approved(db, app_user_id)
-                    if j_approve:
-                        await update.message.reply_text(
-                            f"Approved job #{j_approve.id} for commit. "
-                            "The next `dev_agent_executor` run will commit on the feature branch (status: approved_to_commit)."
-                        )
-                        return
-                if tlow == "reject" and tstrip.count(" ") == 0:
-                    if not is_owner_role(tg_role):
-                        _deny(
-                            db, telegram_id=effu.id, app_user=app_user_id, uname=effu.username,
-                            family="reject", reason="one_word", preview=None,
-                        )
-                        await update.message.reply_text(ACCESS_RESTRICTED)
-                        return
-                    j_rej = job_service.mark_autonomous_rejected(db, app_user_id)
-                    if j_rej:
-                        await update.message.reply_text(
-                            f"Job #{j_rej.id} rejected. Working tree was reset to the pre-agent snapshot where possible. "
-                            f"Status: {j_rej.status}."
-                        )
-                        return
                 if tlow in {"show diff", "showdiff"} or tlow == "diff":
                     if not is_owner_role(tg_role):
                         _deny(
@@ -2655,67 +2605,6 @@ async def _handle_incoming_text_impl(update: Update, context: ContextTypes.DEFAU
                     out = "\n\n---\n\n".join(_format_job_line(job) for job in rows)
                     for piece in _split_telegram_text(out):
                         await update.message.reply_text(piece)
-                    return
-    
-                approve_match = re.match(r"^(approve|deny)\s+job\s*#?(\d+)$", tlow)
-                if approve_match:
-                    if not is_owner_role(tg_role):
-                        _deny(
-                            db, telegram_id=effu.id, app_user=app_user_id, uname=effu.username,
-                            family="approve", reason="job_line", preview=None,
-                        )
-                        await update.message.reply_text(ACCESS_RESTRICTED)
-                        return
-                    decision = "approve" if approve_match.group(1) == "approve" else "deny"
-                    job_id = int(approve_match.group(2))
-                    a_ops = process_ops_job_decision(
-                        db, job_service, app_user_id, job_id, decision
-                    )
-                    if a_ops is not None:
-                        await update.message.reply_text(a_ops)
-                        return
-                    job = job_service.decide(db, app_user_id, job_id, decision)
-                    if decision == "approve" and (getattr(job, "worker_type", None) or "") == "dev_executor":
-                        pl = dict(getattr(job, "payload_json", None) or {})
-                        ed = pl.get("execution_decision") or {}
-                        tool = ed.get("tool_key") or pl.get("preferred_dev_tool") or "—"
-                        mode = ed.get("mode") or pl.get("dev_execution_mode") or "—"
-                        pk = (pl.get("project_key") or "nexa") or "nexa"
-                        await update.message.reply_text(
-                            f"Dev Agent accepted job #{job.id}.\n\n"
-                            f"Project: `{pk}`\n"
-                            f"Tool: `{tool}`\n"
-                            f"Mode: `{mode}`\n"
-                            f"Status: queued for worker.\n"
-                        )
-                    else:
-                        await update.message.reply_text(f"Job #{job.id} is now {job.status}.")
-                    return
-    
-                approve_review_match = re.match(r"^approve\s+review\s+job\s*#?(\d+)$", tlow)
-                if approve_review_match:
-                    if not is_owner_role(tg_role):
-                        _deny(
-                            db, telegram_id=effu.id, app_user=app_user_id, uname=effu.username,
-                            family="approve", reason="review", preview=None,
-                        )
-                        await update.message.reply_text(ACCESS_RESTRICTED)
-                        return
-                    job = job_service.approve_review(db, app_user_id, int(approve_review_match.group(1)))
-                    await update.message.reply_text(f"Job #{job.id} is now {job.status}.")
-                    return
-    
-                approve_commit_match = re.match(r"^approve\s+commit\s+job\s*#?(\d+)$", tlow)
-                if approve_commit_match:
-                    if not is_owner_role(tg_role):
-                        _deny(
-                            db, telegram_id=effu.id, app_user=app_user_id, uname=effu.username,
-                            family="approve", reason="commit", preview=None,
-                        )
-                        await update.message.reply_text(ACCESS_RESTRICTED)
-                        return
-                    job = job_service.approve_commit(db, app_user_id, int(approve_commit_match.group(1)))
-                    await update.message.reply_text(f"Job #{job.id} is now {job.status}.")
                     return
     
                 cancel_match = re.match(r"^cancel\s+job\s*#?(\d+)$", tlow)
@@ -3249,9 +3138,7 @@ async def _handle_incoming_text_impl(update: Update, context: ContextTypes.DEFAU
                             return f"{a.rstrip()}\n\n{m}"
                         return m
 
-                    from app.services.gateway.runtime import NexaGateway
-
-                    gw_chat = NexaGateway().handle_full_chat(
+                    gw_chat = NexaGateway().continue_after_structured(
                         text,
                         app_user_id,
                         db=db,
@@ -3261,8 +3148,30 @@ async def _handle_incoming_text_impl(update: Update, context: ContextTypes.DEFAU
                             "telegram_update_id": getattr(update, "update_id", None),
                             "telegram_chat_id": telegram_chat_id,
                             "telegram_user_id": int(effu.id),
+                            "telegram_username": effu.username,
+                            "telegram_role": tg_role,
+                            "telegram_owner": is_owner_role(tg_role),
                         },
                     )
+                    for se in gw_chat.get("side_effects") or []:
+                        if se.get("kind") == "telegram_send_approval_card":
+                            from app.services.aider_autonomous_loop import (
+                                approval_inline_markup,
+                                format_approval_message,
+                            )
+                            from app.services.telegram_outbound import send_telegram_message
+
+                            jid_se = int(se.get("job_id") or 0)
+                            job_row = job_service.get_job(db, app_user_id, jid_se)
+                            if job_row:
+                                rtxt = str(se.get("result_text") or "")
+                                chat_tgt = str(se.get("chat_id") or telegram_chat_id or "")
+                                send_telegram_message(
+                                    chat_tgt,
+                                    (format_approval_message(job_row, rtxt) or "")[:3900],
+                                    max_len=4000,
+                                    reply_markup=approval_inline_markup(job_row.id),
+                                )
                     reply_body = (gw_chat.get("text") or "").strip()
                     wf = _wrap_tg_inject_ack(reply_body)
                     await update.message.reply_text(wf)

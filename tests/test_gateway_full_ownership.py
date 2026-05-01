@@ -1,4 +1,4 @@
-"""Phase 35 — NexaGateway owns generic chat; behavior_engine is not wired from Telegram text paths."""
+"""Phase 35/36 — NexaGateway owns chat; legacy behavior utils are not called from Telegram text paths."""
 
 from __future__ import annotations
 

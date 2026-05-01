@@ -95,8 +95,8 @@ def test_research_uses_fetched(m_pub, m_e) -> None:
     m_pub.assert_called()
 
 
-@patch("app.services.behavior_engine.apply_tone", side_effect=lambda t, m: t)
-@patch("app.services.behavior_engine.build_context", return_value=MagicMock(memory={}))
+@patch("app.services.legacy_behavior_utils.apply_tone", side_effect=lambda t, m: t)
+@patch("app.services.legacy_behavior_utils.build_context", return_value=MagicMock(memory={}))
 @patch("app.services.intent_classifier.get_intent", return_value="clarify")
 @patch("app.core.config.get_settings")
 @patch("app.services.agent_orchestrator._public_url_read_response", return_value="G_OUT")
@@ -116,8 +116,8 @@ def test_nexa_general_path_uses_read(
     _purl.assert_called()
 
 
-@patch("app.services.behavior_engine.apply_tone", side_effect=lambda t, m: t)
-@patch("app.services.behavior_engine.build_context", return_value=MagicMock(memory={}))
+@patch("app.services.legacy_behavior_utils.apply_tone", side_effect=lambda t, m: t)
+@patch("app.services.legacy_behavior_utils.build_context", return_value=MagicMock(memory={}))
 @patch("app.services.intent_classifier.get_intent", return_value="clarify")
 @patch("app.core.config.get_settings")
 @patch("app.services.agent_orchestrator._public_url_read_response", return_value="OK from public fetch")

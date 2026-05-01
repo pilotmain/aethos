@@ -593,12 +593,8 @@ def handle_nexa_request(
     routing_agent_key: str | None = None,
 ) -> str:
     from app.core.config import get_settings
-    from app.services.behavior_engine import (
-        apply_tone,
-        build_context,
-        build_response,
-        no_tasks_response,
-    )
+    from app.services.gateway.runtime import NexaGateway
+    from app.services.legacy_behavior_utils import apply_tone, build_context, no_tasks_response
     from app.services.intent_classifier import get_intent
     from app.services.routing.authority import should_suppress_public_web_pipeline
     from app.services.web_research_intent import should_use_public_url_read
@@ -633,7 +629,7 @@ def handle_nexa_request(
             return apply_tone(no_tasks_response(), ctx.memory)
         orchestrator.users.mark_user_onboarded(db, app_user_id)
         ctx2 = build_context(db, app_user_id, memory_service, orchestrator)
-        body = build_response(
+        body = NexaGateway().compose_llm_reply(
             text,
             intent,
             ctx2,
@@ -644,7 +640,7 @@ def handle_nexa_request(
             routing_agent_key=routing_agent_key,
         )
         return apply_tone(body, ctx2.memory)
-    body = build_response(
+    body = NexaGateway().compose_llm_reply(
         text,
         intent,
         ctx,
@@ -982,12 +978,13 @@ def handle_general_agent_request(
     conversation_snapshot: dict | None = None,
     routing_agent_key: str | None = None,
 ) -> str:
-    from app.services.behavior_engine import apply_tone, build_context, build_response, map_intent_to_behavior
+    from app.services.gateway.runtime import NexaGateway
+    from app.services.legacy_behavior_utils import apply_tone, build_context, map_intent_to_behavior
     from app.services.intent_classifier import get_intent
 
     intent = get_intent(text, conversation_snapshot=conversation_snapshot)
     ctx = build_context(db, app_user_id, memory_service, orchestrator)
-    body = build_response(
+    body = NexaGateway().compose_llm_reply(
         text,
         intent,
         ctx,

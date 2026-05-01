@@ -24,6 +24,12 @@ class NexaGateway:
     Channels must call ``handle_message`` rather than invoking agents/tools directly.
     """
 
+    def compose_llm_reply(self, *args: Any, **kwargs: Any) -> str:
+        """Phase 36 — sole supported external wrapper around legacy ``build_response``."""
+        from app.services.legacy_behavior_utils import build_response
+
+        return build_response(*args, **kwargs)
+
     def _try_structured_route(
         self, text: str, user_id: str, db: Session
     ) -> dict[str, Any] | None:
@@ -59,6 +65,55 @@ class NexaGateway:
         _ = metadata
         return self._try_structured_route(text, user_id, db)
 
+    def try_approval_only(
+        self,
+        text: str,
+        user_id: str,
+        *,
+        db: Session,
+        channel: str = "web",
+        metadata: dict[str, Any] | None = None,
+    ) -> dict[str, Any] | None:
+        """NL job approvals — Telegram calls this after structured turn; web uses :meth:`handle_message`."""
+        admission = dict(metadata or {})
+        admission.setdefault("via_gateway", True)
+        return self._try_approval_route(text, user_id, db, channel, admission)
+
+    def _try_approval_route(
+        self,
+        text: str,
+        user_id: str,
+        db: Session,
+        channel: str,
+        admission: dict[str, Any],
+    ) -> dict[str, Any] | None:
+        from app.services.gateway.approval_flow import try_gateway_approval_route
+
+        return try_gateway_approval_route(
+            text,
+            user_id,
+            db,
+            channel=channel,
+            metadata=admission,
+        )
+
+    def continue_after_structured(
+        self,
+        text: str,
+        user_id: str,
+        *,
+        db: Session,
+        channel: str = "web",
+        metadata: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Telegram: structured routing already ran; run approval NL + full chat."""
+        admission = dict(metadata or {})
+        admission.setdefault("via_gateway", True)
+        approval = self._try_approval_route(text, user_id, db, channel, admission)
+        if approval is not None:
+            return approval
+        return self.handle_full_chat(text, user_id, db=db, channel=channel, metadata=admission)
+
     def handle_full_chat(
         self,
         text: str,
@@ -72,13 +127,12 @@ class NexaGateway:
         LLM / behavior chat path (formerly Telegram-only ``behavior_engine`` fall-through).
 
         Loads conversation snapshot, classifies intent, and delegates to
-        :func:`~app.services.behavior_engine.build_response` for the composed reply.
+        :meth:`compose_llm_reply` (legacy ``build_response``) for the composed reply.
         """
         from app.services.agent_router import route_agent
-        from app.services.behavior_engine import (
+        from app.services.legacy_behavior_utils import (
             apply_tone,
             build_context,
-            build_response,
             no_tasks_response,
         )
         from app.services.conversation_context_service import (
@@ -149,7 +203,7 @@ class NexaGateway:
                 }
             orchestrator.users.mark_user_onboarded(db, user_id)
             ctx_after = build_context(db, user_id, memory_service, orchestrator)
-            reply = build_response(
+            reply = self.compose_llm_reply(
                 raw,
                 intent,
                 ctx_after,
@@ -171,7 +225,7 @@ class NexaGateway:
             )
             return {"mode": "chat", "text": gq, "intent": "general_answer"}
 
-        reply = build_response(
+        reply = self.compose_llm_reply(
             raw,
             intent,
             ctx,
@@ -209,6 +263,9 @@ class NexaGateway:
             structured = self._try_structured_route(text, user_id, db_inner)
             if structured is not None:
                 return structured
+            approval = self._try_approval_route(text, user_id, db_inner, channel, admission)
+            if approval is not None:
+                return approval
             return self.handle_full_chat(
                 text, user_id, db=db_inner, channel=channel, metadata=admission
             )

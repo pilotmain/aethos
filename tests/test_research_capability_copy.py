@@ -91,7 +91,7 @@ def test_compose_clarify_uses_research_copy_when_use_real_llm() -> None:
 
 
 def test_handle_message_capability_uses_research_for_telegram_path() -> None:
-    from app.services.behavior_engine import Context, handle_message
+    from app.services.legacy_behavior_utils import Context, handle_message
 
     s = type(
         "S",
