@@ -12,7 +12,7 @@
 
 ## 1. What Nexa is (product)
 
-- **Not** a single-purpose chatbot. Nexa is a **multi-agent command center**: think, plan, research, create documents, manage projects, and **execute** work through **conversation**.
+- **Not** a single-purpose chatbot. Nexa is an **AI execution system** that creates task-focused agents dynamically when work needs them: think, plan, research, create documents, manage projects, and **execute** work through **conversation**.
 - **Surfaces:** **Web** (Next.js workspace) and **Telegram** (commands, capture, dev/Ops flows) on the same **FastAPI** backend.
 - **Positioning:** An **execution layer**—LLMs when they add value, **tools** when deterministic steps are better, **approval gates** for risky or irreversible actions (jobs, host tools, network egress, etc.).
 - **Platform traits:** Custom agents, built-in specialists (`@dev`, `@ops`, research/marketing/strategy-style paths), **BYOK** keys, usage/cost visibility, **memory** and conversation state, **durable jobs** (especially dev agent work), and **governance** (roles, permissions, safety policy, audit / trust signals).

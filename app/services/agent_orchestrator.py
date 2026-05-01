@@ -511,7 +511,7 @@ def _run_marketing_search_block_for_prompt(
 
 
 _MARKETING_SYS_WITH_TOOLS = (
-    "You are the Marketing agent for Nexa, a personal AI command center. "
+    "You are the Marketing agent for Nexa, a personal AI execution system. "
     "You may receive a **Public page read (tool, read-only)** section and/or a **Web search (tool, read-only)** section. "
     "If Source: lines appear, those tools already ran — do not say you cannot browse, perform live web searches, or open public https links. "
     "If the tool text shows a failed fetch, timeout, or block, say once: I could not access the page because {reason} — you can paste the text here and I can still help. Do not invent page contents. "
@@ -558,7 +558,7 @@ _MARKETING_SYS_WITH_TOOLS = (
 )
 
 _MARKETING_SYS_OFFLINE = (
-    "You are the Marketing agent for Nexa (a personal AI command center). "
+    "You are the Marketing agent for Nexa (a personal AI execution system). "
     "Help with positioning, taglines, landing copy, user personas, or a launch post. "
     "Be concrete and concise. Do not create development tasks or mention code repos."
 )
@@ -874,7 +874,7 @@ def handle_strategy_agent_request(
             from app.services.structured_response_style import structured_style_guidance_for
 
             strat = (
-                "You are the Strategy agent for Nexa, a personal AI command center. "
+                "You are the Strategy agent for Nexa, a personal AI execution system. "
                 "Answer with: (1) a clear recommendation, (2) 2–4 short bullets on tradeoffs, (3) one next step. "
                 "Be concise. Do not name other products."
             )

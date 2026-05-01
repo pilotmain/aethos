@@ -1,4 +1,4 @@
-"""Default stages for turning an idea into execution (Nexa command center)."""
+"""Default stages for turning an idea into execution (Nexa execution system)."""
 
 from __future__ import annotations
 

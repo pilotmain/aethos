@@ -68,7 +68,7 @@ DEFAULT_AGENTS: dict[str, dict[str, object]] = {
     },
     "general": {
         "display_name": "General",
-        "description": "Falls back to Nexa routing (command center) when no specialist matches.",
+        "description": "Falls back to Nexa routing when no prior agent handle matches.",
         "allowed_tools": ["safe_llm", "memory", "tasks", "telegram"],
     },
 }

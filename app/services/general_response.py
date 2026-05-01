@@ -162,12 +162,13 @@ def is_casual_capability_question(text: str) -> bool:
 
 def casual_capability_reply() -> str:
     return (
-        "Yes. I can answer normal questions, help you think through ideas, and route execution work to agents.\n\n"
-        "For now, my strongest areas are:\n"
+        "Yes. I can answer normal questions, help you think through ideas, and run execution work when you want action.\n\n"
+        "Strong areas include:\n"
         "• daily planning and overwhelm (Reset)\n"
-        "• development work through Dev Agent\n"
-        "• ops, status, and logs through Ops Agent\n"
+        "• development tasks on your codebase (jobs/missions, approval-gated)\n"
+        "• ops, status, and host checks\n"
         "• product strategy and planning\n\n"
+        "I create task-focused agents dynamically when the work needs them.\n\n"
         "What would you like to do?"
     )
 
@@ -176,7 +177,7 @@ def fallback_general_reply(text: str) -> str:
     _ = text
     return (
         "I can help with that at a basic level.\n\n"
-        "If it needs action, I’ll route it to the right agent. "
+        "If it needs action, I’ll run or queue execution (approval-gated when needed). "
         "If it is just a question, I’ll answer directly."
     )
 

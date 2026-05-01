@@ -22,7 +22,8 @@ MULTI_Q = (
 
 def test_multi_agent_capability_question_detected() -> None:
     assert is_multi_agent_capability_question(MULTI_Q) is True
-    assert "agent team" in reply_multi_agent_capability_clarification().lower()
+    clar = reply_multi_agent_capability_clarification().lower()
+    assert "nexa" in clar and "dynamically" in clar
 
 
 def test_explicit_team_for_goal_not_capability_question() -> None:

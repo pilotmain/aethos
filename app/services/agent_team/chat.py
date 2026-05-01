@@ -194,11 +194,11 @@ def try_agent_team_chat_turn(
         gshort = goal[:500] + ("…" if len(goal) > 500 else "")
         return AgentTeamChatOutcome(
             (
-                f"**Agent team** is ready (organization **#{org.id}** — {org.name}).\n\n"
+                f"**Workspace** is ready (organization **#{org.id}** — {org.name}).\n\n"
                 f"**Goal:** {gshort}\n\n"
-                "**Roles to use:** @orchestrator (coordinates) · @dev (implementation) · @research (context) · "
-                "@qa (review).\n\n"
-                "Say **ask my team to …** to queue tracked assignments, or **assign @dev to …** for one task."
+                "You can coordinate with **@orchestrator**, assign concrete tasks with **assign @handle to …**, "
+                "or say **ask my team to …** to queue tracked work.\n\n"
+                "Nexa creates task-focused agents dynamically when the workload needs them."
             )
         )
 
@@ -206,8 +206,8 @@ def try_agent_team_chat_turn(
         org = get_or_create_default_organization(db, app_user_id)
         return AgentTeamChatOutcome(
             (
-                f"Your **agent team** is ready (organization **#{org.id}** — {org.name}).\n\n"
-                "Add roles with the API or say e.g. **assign @my-agent to …** to create work. "
+                f"Your **workspace** is ready (organization **#{org.id}** — {org.name}).\n\n"
+                "Add agents via the API or say e.g. **assign @my-agent to …** to create work. "
                 "Use **ask my team to …** to auto-route from keywords."
             )
         )
@@ -291,7 +291,7 @@ def try_agent_team_chat_turn(
         prog = summarize_assignment_progress(db, user_id=app_user_id)
         if not prog:
             return AgentTeamChatOutcome(
-                "No assignments yet. Say **create an agent team** or **ask my team to …**."
+                "No assignments yet. Try **ask my team to …** or **create a team** for a concrete goal."
             )
         lines = []
         ids: list[int] = []

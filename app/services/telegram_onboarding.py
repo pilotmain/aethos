@@ -76,11 +76,9 @@ def help_message(has_active_plan: bool, focus_task: str | None) -> str:
 
 
 def capability_response() -> str:
-    return (
-        "Nexa is a **multi-agent system**: built-in specialists (Developer, QA, Ops, Strategy, Marketing, Research) "
-        "plus **custom agents** you define — roles, instructions, governance boundaries. Dev and Ops execute on your "
-        "machine through jobs when approved; custom agents stay inside Nexa’s permission and audit layer."
-    )
+    from app.services.system_identity.capabilities import narrative_capability_answer
+
+    return narrative_capability_answer()
 
 
 def clarify_general_response() -> str:

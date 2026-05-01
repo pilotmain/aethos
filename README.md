@@ -11,7 +11,7 @@
 
 # Nexa
 
-**Nexa** is a **multi-agent command center** that helps you think, plan, research, create documents, manage projects, and **execute** work through chat, a **web** workspace, **Telegram**, and automation. It is a **platform**: custom agents, dedicated Dev and Ops surfaces, public web research and **web search**, **BYOK** multi-tenant key handling, a **usage / cost** dashboard, and durable **memory**—not a single “chat only” app.
+**Nexa** is an **AI execution system** that helps you think, plan, research, create documents, manage projects, and **execute** work through chat, a **web** workspace, **Telegram**, and automation. It **creates task-focused agents dynamically** when work needs them. It is a **platform**: custom agents, dedicated Dev and Ops surfaces, public web research and **web search**, **BYOK** multi-tenant key handling, a **usage / cost** dashboard, and durable **memory**—not a single “chat only” app.
 
 Nexa is **not** just a chatbot. It is an **execution layer** that uses **LLMs** when they add the most value, **tools** when a deterministic or external step is better, and **approval gates** when an action is risky (jobs, reviews, rollouts, privileged commands). That keeps the system honest, inspectable, and controllable as scale grows.
 

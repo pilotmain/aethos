@@ -4,7 +4,7 @@ import { ProjectStatusBanner } from "@/components/nexa/ProjectStatusBanner";
 
 export const metadata: Metadata = {
   title: "Nexa",
-  description: "Nexa command center",
+  description: "Nexa — AI execution system",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

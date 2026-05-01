@@ -57,13 +57,13 @@ def try_canned_nexa_product_faq(user_message: str) -> str | None:
         return "Nexa was created by **Raya Ameha Meresa**."
     if _RE_WHAT_IS_NEXA.match(t):
         return (
-            "Nexa is a **multi-agent assistant** that helps you think, decide, and execute — "
-            "with specialists for dev, ops, research, marketing, and more when you need them."
+            "Nexa is an **AI execution system**: it helps you think, decide, and get work done — "
+            "creating task-focused agents dynamically when tasks need them, with permissioned execution and memory."
         )
     if _RE_WHO_ARE_YOU.match(t):
         return (
-            "I’m **Nexa** — the assistant layer in this app. I coordinate focused agents when "
-            "you invoke them; for plain questions I answer directly."
+            "I’m **Nexa** — the execution layer in this app. I answer plain questions directly and "
+            "spin up or route work when you need action, jobs, or missions."
         )
     return None
 

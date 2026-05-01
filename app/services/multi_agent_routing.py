@@ -1,5 +1,5 @@
 """
-Detect multi-agent *capability* questions so they route to agent-team planning, not custom-agent creation.
+Detect multi-agent *capability* questions so they route to clarification, not custom-agent creation.
 """
 
 from __future__ import annotations
@@ -32,16 +32,9 @@ _RE_EXPLICIT_TEAM_OR_NAMED = re.compile(
 
 
 def reply_multi_agent_capability_clarification() -> str:
-    return (
-        "Yes — Nexa can support an **agent team** (multiple coordinated agents), but I need a **concrete goal** "
-        "before setting anything up.\n\n"
-        "Examples:\n"
-        "• **create an agent team** — prepare your team workspace\n"
-        "• **create a multi-agent dev team for building a dashboard** — ties the team to a goal\n"
-        "• **ask my team to …** — queues tracked assignments\n"
-        "• Mention roles like **@orchestrator**, **@dev**, **@research**, **@qa** when you assign work\n\n"
-        "What should the team work on first?"
-    ).strip()
+    from app.services.system_identity.capabilities import NEXA_MULTI_AGENT_CLARIFICATION
+
+    return NEXA_MULTI_AGENT_CLARIFICATION.strip()
 
 
 def is_multi_agent_capability_question(text: str) -> bool:

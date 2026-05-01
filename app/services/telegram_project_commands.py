@@ -1,4 +1,4 @@
-"""Text handlers for /projects and /project (multi-project command center)."""
+"""Text handlers for /projects and /project (multi-project workspace)."""
 
 from __future__ import annotations
 

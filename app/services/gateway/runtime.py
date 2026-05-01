@@ -325,3 +325,9 @@ class NexaGateway:
             "result": result,
             "timed_out": timed_out,
         }
+
+    def describe_capabilities(self) -> dict[str, bool]:
+        """Return the application capability map (Phase 40 source of truth)."""
+        from app.services.system_identity.capabilities import describe_capabilities as _caps
+
+        return _caps()
