@@ -9,9 +9,12 @@
 #   NEXA_NEXT_WEB_PORT=3120   → Mission Control / web UI
 #
 # Usage:
-#   ./scripts/nexa_next_local_all.sh start    # API + web in background (optional Telegram bot)
+#   ./scripts/nexa_next_local_all.sh start    # API + web + Telegram bot (when TELEGRAM_BOT_TOKEN is set in .env)
 #   ./scripts/nexa_next_local_all.sh stop
 #   ./scripts/nexa_next_local_all.sh status
+#
+# Bot: starts automatically if .env contains a non-empty TELEGRAM_BOT_TOKEN. Opt out with:
+#   NEXA_NEXT_START_BOT=0   (or false / no)
 #
 # Important: run only ``start`` if you want the stack to stay up. Running ``stop`` tears down
 # API + web — so do not chain ``start`` then ``stop`` unless you mean to shut down immediately.
@@ -84,7 +87,7 @@ cmd_stop() {
   stop_pidfile "$BOT_PIDF"
   kill_listeners_on_port "$API_PORT"
   kill_listeners_on_port "$WEB_PORT"
-  echo "Stopped (nexa_next_local pidfiles cleared; listeners on ports ${API_PORT}/${WEB_PORT} released)."
+  echo "Stopped (nexa_next_local pidfiles cleared: API, web, bot; listeners on ports ${API_PORT}/${WEB_PORT} released)."
 }
 
 _one_proc_status() {
@@ -159,16 +162,25 @@ cmd_start() {
     echo $! >"$WEB_PIDF"
   )
 
-  if [ "${NEXA_NEXT_START_BOT:-}" = "1" ] || [ "${NEXA_NEXT_START_BOT:-}" = "true" ]; then
-    if [ -f "${ROOT}/.env" ] && grep -qE '^[[:space:]]*TELEGRAM_BOT_TOKEN[[:space:]]*=' "${ROOT}/.env"; then
-      echo "Starting Telegram bot …"
-      nohup "$PYTHON" -m app.bot.telegram_bot >>"$BOT_LOG" 2>&1 &
-      echo $! >"$BOT_PIDF"
-    else
-      echo "Skipping bot (set TELEGRAM_BOT_TOKEN in .env and NEXA_NEXT_START_BOT=1 to enable)." >&2
-    fi
+  # Telegram bot: run by default when token is set (same as: .venv/bin/python -m app.bot.telegram_bot).
+  # Disable with NEXA_NEXT_START_BOT=0 (or false / no) if you only want API + web.
+  _skip_bot=0
+  case "${NEXA_NEXT_START_BOT:-}" in
+    0|false|no|NO|False) _skip_bot=1 ;;
+  esac
+  _has_bot_token=0
+  if [ -f "${ROOT}/.env" ] && grep -qE '^[[:space:]]*TELEGRAM_BOT_TOKEN[[:space:]]*=[[:space:]]*[^[:space:]#]+' "${ROOT}/.env" 2>/dev/null; then
+    _has_bot_token=1
+  fi
+  if [ "$_skip_bot" -eq 0 ] && [ "$_has_bot_token" -eq 1 ]; then
+    echo "Starting Telegram bot (python -m app.bot.telegram_bot) …"
+    nohup "$PYTHON" -m app.bot.telegram_bot >>"$BOT_LOG" 2>&1 &
+    echo $! >"$BOT_PIDF"
+    echo "  Bot log: ${BOT_LOG}"
+  elif [ "$_skip_bot" -eq 1 ]; then
+    echo "Bot skipped (NEXA_NEXT_START_BOT disables bot; unset or set to 1 to enable when token is present)." >&2
   else
-    echo "Bot skipped (export NEXA_NEXT_START_BOT=1 with TELEGRAM_BOT_TOKEN in .env to run it)." >&2
+    echo "Bot skipped (no non-empty TELEGRAM_BOT_TOKEN in ${ROOT}/.env)." >&2
   fi
 
   echo ""
@@ -178,6 +190,9 @@ cmd_start() {
   echo "  Health:      $(api_health_url)"
   echo "Logs: ${API_LOG}"
   echo "      ${WEB_LOG}"
+  if [ -f "$BOT_PIDF" ]; then
+    echo "      ${BOT_LOG}"
+  fi
   echo ""
   echo "Leave these processes running. Open another terminal for other commands."
   echo "Running \"$0 stop\" shuts API + web down — only use it when you are finished."
