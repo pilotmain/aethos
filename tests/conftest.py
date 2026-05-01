@@ -50,7 +50,10 @@ def nexa_runtime_clean(db_session):
 
     clear_store_for_tests(db_session)
     clear_events()
-    STATE["privacy_events"].clear()
-    STATE["provider_events"].clear()
+    STATE.setdefault("privacy_events", []).clear()
+    STATE.setdefault("provider_events", []).clear()
+    STATE.setdefault("integrity_alerts", []).clear()
+    STATE.setdefault("integrity_alert_ignored_ids", {}).clear()
+    STATE.setdefault("privacy_override_log", []).clear()
     STATE["last_updated"] = None
     yield db_session

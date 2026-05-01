@@ -23,7 +23,7 @@ from app.services.mission_control.nexa_next_state import (
 from app.services.privacy_firewall.audit import log_event
 from app.services.privacy_firewall.detectors import detect_sensitive_data
 from app.services.privacy_firewall.explainability import explain_detection
-from app.services.privacy_firewall.user_privacy import normalize_user_privacy_mode
+from app.services.user_settings.service import effective_privacy_mode
 from app.services.privacy_firewall.gateway import PrivacyBlockedError, prepare_external_payload
 from app.services.privacy_firewall.immutable import FrozenPayloadDict
 from app.services.providers.anthropic_provider import call_anthropic
@@ -39,6 +39,12 @@ _log = get_logger("gateway")
 _POST_SECRET_MSG = (
     "CRITICAL: Secret-shaped material detected in provider output — outbound blocked."
 )
+
+
+def _tag_ev(ev: dict[str, Any], uid: str) -> dict[str, Any]:
+    out = dict(ev)
+    out["user_id"] = uid
+    return out
 
 
 def _make_integrity_alert_row(scan_findings: dict[str, Any], **extra: Any) -> dict[str, Any]:
@@ -73,7 +79,7 @@ def call_provider(request: ProviderRequest) -> ProviderResponse:
 
     redactions: list[dict[str, Any]] = []
     s = get_settings()
-    user_privacy = normalize_user_privacy_mode(getattr(s, "nexa_user_privacy_mode", None))
+    user_privacy = effective_privacy_mode(request.db, request.user_id)
 
     td = TOOLS.get(tool_key)
     raw_policy = td.pii_policy if td else None
@@ -99,7 +105,7 @@ def call_provider(request: ProviderRequest) -> ProviderResponse:
         err = "rate_limited"
         ev = {"provider": request.provider, "agent": request.agent_handle or "", "status": err}
         log_event({"type": "provider_blocked", **ev})
-        add_provider_event(ev)
+        add_provider_event(_tag_ev(ev, request.user_id))
         audit(True, err)
         _log.warning("provider blocked: %s", err)
         return ProviderResponse(
@@ -116,7 +122,7 @@ def call_provider(request: ProviderRequest) -> ProviderResponse:
         err = "external_calls_disabled"
         ev = {"provider": request.provider, "agent": request.agent_handle or "", "status": err}
         log_event({"type": "provider_blocked", **ev})
-        add_provider_event(ev)
+        add_provider_event(_tag_ev(ev, request.user_id))
         audit(True, err)
         _log.warning("provider blocked: %s", err)
         return ProviderResponse(
@@ -133,7 +139,7 @@ def call_provider(request: ProviderRequest) -> ProviderResponse:
         err = "strict_privacy_mode"
         ev = {"provider": request.provider, "agent": request.agent_handle or "", "status": err}
         log_event({"type": "provider_blocked", **ev})
-        add_provider_event(ev)
+        add_provider_event(_tag_ev(ev, request.user_id))
         audit(True, err)
         _log.warning("provider blocked (strict privacy): %s", err)
         return ProviderResponse(
@@ -150,7 +156,7 @@ def call_provider(request: ProviderRequest) -> ProviderResponse:
         err = "user_privacy_paranoid"
         ev = {"provider": request.provider, "agent": request.agent_handle or "", "status": err}
         log_event({"type": "provider_blocked", **ev})
-        add_provider_event(ev)
+        add_provider_event(_tag_ev(ev, request.user_id))
         audit(True, err)
         _log.warning("provider blocked (user privacy paranoid): %s", err)
         return ProviderResponse(
@@ -174,7 +180,12 @@ def call_provider(request: ProviderRequest) -> ProviderResponse:
     )
 
     try:
-        safe_payload = prepare_external_payload(payload_in, pii_policy=raw_policy)
+        safe_payload = prepare_external_payload(
+            payload_in,
+            pii_policy=raw_policy,
+            db=request.db,
+            user_id=request.user_id,
+        )
     except PrivacyBlockedError as exc:
         err = str(exc)
         record_privacy_block()
@@ -185,7 +196,7 @@ def call_provider(request: ProviderRequest) -> ProviderResponse:
             "error": err,
         }
         log_event({"type": "provider_blocked", **ev})
-        add_provider_event(ev)
+        add_provider_event(_tag_ev(ev, request.user_id))
         audit(True, err)
         _log.warning("privacy blocked provider call: %s", err)
         return ProviderResponse(
@@ -294,13 +305,16 @@ def call_provider(request: ProviderRequest) -> ProviderResponse:
                 effective_provider = "local_stub"
                 record_provider_call(latency_ms=(time.perf_counter() - t0) * 1000)
                 add_provider_event(
-                    {
-                        "provider": "local_stub",
-                        "agent": request.agent_handle or "",
-                        "status": "fallback",
-                        "fallback_from": request.provider,
-                        "mission_id": request.mission_id,
-                    }
+                    _tag_ev(
+                        {
+                            "provider": "local_stub",
+                            "agent": request.agent_handle or "",
+                            "status": "fallback",
+                            "fallback_from": request.provider,
+                            "mission_id": request.mission_id,
+                        },
+                        request.user_id,
+                    )
                 )
                 last_err = None
             except Exception as fb_exc:
@@ -367,6 +381,7 @@ def call_provider(request: ProviderRequest) -> ProviderResponse:
                 severity="critical",
                 mission_id=request.mission_id,
                 findings=post_findings,
+                user_id=request.user_id,
             )
         )
         raise RuntimeError(_POST_SECRET_MSG)
@@ -386,6 +401,7 @@ def call_provider(request: ProviderRequest) -> ProviderResponse:
             data=post_findings,
             mission_id=request.mission_id,
             agent=request.agent_handle or "",
+            user_id=request.user_id,
         )
         log_event({"type": "post_provider_paranoid_pii_blocked", "mission_id": request.mission_id, "alert": row})
         emit_runtime_event(
@@ -409,7 +425,7 @@ def call_provider(request: ProviderRequest) -> ProviderResponse:
             "mission_id": request.mission_id,
         }
         log_event({"type": "provider_blocked", **ev_blk})
-        add_provider_event(ev_blk)
+        add_provider_event(_tag_ev(ev_blk, request.user_id))
         audit(True, "paranoid_pii_in_output")
         return ProviderResponse(
             ok=False,
@@ -429,6 +445,7 @@ def call_provider(request: ProviderRequest) -> ProviderResponse:
             data=post_findings,
             mission_id=request.mission_id,
             agent=request.agent_handle or "",
+            user_id=request.user_id,
         )
         log_event(dict(ev_pii))
         _log.warning("PII-like patterns in provider output — review recommended (egress warning)")
@@ -455,7 +472,7 @@ def call_provider(request: ProviderRequest) -> ProviderResponse:
     if effective_provider == "local_stub" and request.provider != "local_stub":
         ev_ok["fallback_from"] = request.provider
     log_event({"type": "provider_call", **ev_ok})
-    add_provider_event(ev_ok)
+    add_provider_event(_tag_ev(ev_ok, request.user_id))
 
     audit(False, None, provider_override=effective_provider)
 

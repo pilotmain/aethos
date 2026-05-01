@@ -115,7 +115,16 @@ export function MissionControlLayout() {
 
       <main className="mx-auto max-w-[1600px] space-y-6 px-4 py-6">
         {snapErr && configured ? (
-          <p className="rounded-lg border border-rose-500/35 bg-rose-950/30 px-3 py-2 text-xs text-rose-100">{snapErr}</p>
+          <div className="flex flex-wrap items-center gap-3 rounded-lg border border-rose-500/35 bg-rose-950/30 px-3 py-2 text-xs text-rose-100">
+            <p className="min-w-0 flex-1">{snapErr}</p>
+            <button
+              type="button"
+              className="shrink-0 rounded border border-rose-400/50 bg-rose-950/50 px-2 py-1 text-rose-50 hover:bg-rose-900/60"
+              onClick={() => void refreshMc()}
+            >
+              Retry
+            </button>
+          </div>
         ) : null}
         {configured ? (
           <IntegrityAlertBanner

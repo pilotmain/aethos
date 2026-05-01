@@ -8,6 +8,8 @@ Phase 15 — locked contracts (stable JSON/WebSocket; do not rename or remove):
 - ``WebSocket /mission-control/events/ws`` — live JSON stream (same bus).
 - ``POST /mission-control/gateway/run`` — Nexa gateway admission.
 - ``POST /mission-control/override-alert`` — Phase 19 dismiss warning-level integrity alerts (authenticated).
+- ``GET /mission-control/export/{mission_id}`` — Phase 20 export mission bundle (authenticated).
+- ``POST /mission-control/import`` — Phase 20 import mission bundle (authenticated).
 
 Orchestration summary (distinct from execution state) remains at
 ``GET /mission-control/summary``.
@@ -18,7 +20,7 @@ from __future__ import annotations
 import asyncio
 from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -41,6 +43,7 @@ from app.services.mission_control.db_purge import (
     mission_control_data_inventory,
     purge_mission_control_database_for_user,
 )
+from app.services.mission_control.export_import import export_mission_bundle, import_mission_bundle
 from app.services.mission_control.graph_builder import build_graph_cached
 from app.services.mission_control.nexa_next_state import (
     apply_integrity_alert_override,
@@ -159,6 +162,34 @@ def mission_control_override_alert(
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+
+@router.get("/export/{mission_id}")
+def mission_control_export_mission(
+    mission_id: str,
+    db: Session = Depends(get_db),
+    app_user_id: str = Depends(get_valid_web_user_id),
+) -> dict:
+    """Export one mission with tasks and artifacts as JSON (Phase 20)."""
+    bundle = export_mission_bundle(db, mission_id=mission_id, user_id=app_user_id)
+    if not bundle:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Mission not found")
+    return bundle
+
+
+@router.post("/import")
+def mission_control_import_mission(
+    payload: dict = Body(...),
+    db: Session = Depends(get_db),
+    app_user_id: str = Depends(get_valid_web_user_id),
+) -> dict:
+    """Import a previously exported mission bundle (new mission id)."""
+    if not isinstance(payload, dict) or not isinstance(payload.get("mission"), dict):
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            detail="Expected bundle shape with top-level 'mission' object",
+        )
+    return import_mission_bundle(db, user_id=app_user_id, bundle=payload)
 
 
 @router.get("/graph")

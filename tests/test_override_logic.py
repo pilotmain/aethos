@@ -34,6 +34,7 @@ def test_override_warning_succeeds() -> None:
             "type": "post_provider_pii_detected",
             "severity": "warning",
             "data": findings,
+            "user_id": "user-a",
             "explanation": explain_detection(findings),
         }
     )
@@ -51,6 +52,7 @@ def test_override_critical_forbidden() -> None:
             "type": "post_provider_secret_detected",
             "severity": "critical",
             "findings": findings,
+            "user_id": "user-a",
             "explanation": explain_detection(findings),
         }
     )
@@ -66,6 +68,7 @@ def test_override_secret_type_forbidden() -> None:
             "type": "post_provider_secret_detected",
             "severity": "warning",
             "findings": findings,
+            "user_id": "user-a",
         }
     )
     with pytest.raises(PermissionError):

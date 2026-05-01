@@ -29,12 +29,14 @@ from app.models.telegram_link import TelegramLink
 from app.models.user import User
 from app.models.user_agent import UserAgent
 from app.models.user_api_key import UserApiKey
+from app.models.user_settings import NexaUserSettings
 from app.models.workspace_root import WorkspaceRoot
 
 __all__ = [
     "User",
     "UserAgent",
     "UserApiKey",
+    "NexaUserSettings",
     "AgentDefinition",
     "AgentRun",
     "AgentHeartbeat",

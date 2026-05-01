@@ -38,6 +38,7 @@ from app.api.routes import (
     system,
     tasks,
     trust,
+    user_settings,
     web,
     whatsapp,
 )
@@ -162,6 +163,7 @@ app.include_router(jobs.router, prefix=settings.api_v1_prefix)
 app.include_router(web.router, prefix=settings.api_v1_prefix)
 app.include_router(permissions.router, prefix=settings.api_v1_prefix)
 app.include_router(trust.router, prefix=settings.api_v1_prefix)
+app.include_router(user_settings.router, prefix=settings.api_v1_prefix)
 app.include_router(mission_control.router, prefix=settings.api_v1_prefix)
 app.include_router(agent_runtime_api.router, prefix=settings.api_v1_prefix)
 app.include_router(report_watcher.router, prefix=settings.api_v1_prefix)

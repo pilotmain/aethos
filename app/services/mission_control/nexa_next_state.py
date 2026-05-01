@@ -161,6 +161,27 @@ def _ignored_alert_ids_map() -> dict[str, Any]:
     return STATE["integrity_alert_ignored_ids"]
 
 
+def _scope_ephemeral(events: list[Any], uid: str | None) -> list[Any]:
+    """Phase 20 — Mission Control streams isolated per authenticated user."""
+    if uid is None:
+        return list(events)
+    return [e for e in events if isinstance(e, dict) and e.get("user_id") == uid]
+
+
+def _scope_override_log(uid: str | None) -> list[Any]:
+    raw = list(STATE.get("privacy_override_log") or [])[-24:]
+    if uid is None:
+        return raw
+    return [e for e in raw if isinstance(e, dict) and e.get("user_id") == uid]
+
+
+def _override_count_for_user(uid: str | None) -> int:
+    m = _ignored_alert_ids_map()
+    if not uid:
+        return len(m)
+    return sum(1 for v in m.values() if isinstance(v, dict) and v.get("user_id") == uid)
+
+
 def _integrity_banner_level(alerts: list[Any], ignored_ids: frozenset[str] | None = None) -> str | None:
     """Worst unresolved severity for Mission Control banner (Phase 18)."""
     ig = ignored_ids or frozenset()
@@ -229,6 +250,10 @@ def apply_integrity_alert_override(
     if not hit:
         raise KeyError("unknown alert")
 
+    owner = hit.get("user_id")
+    if owner is not None and owner != user_id:
+        raise PermissionError("alert belongs to another user")
+
     sev = str(hit.get("severity") or "").lower()
     if sev == "critical":
         raise PermissionError("cannot override critical alerts")
@@ -258,14 +283,20 @@ def apply_integrity_alert_override(
     return {"ok": True, "alert_id": aid, "action": action, "outcome": "ignored"}
 
 
-def _runtime_hints() -> dict[str, Any]:
-    from app.services.privacy_firewall.user_privacy import normalize_user_privacy_mode
+def _runtime_hints(
+    *,
+    db: Session | None = None,
+    scoped_user_id: str | None = None,
+    privacy_events_scoped: list[Any] | None = None,
+    integrity_alerts_scoped: list[Any] | None = None,
+) -> dict[str, Any]:
+    from app.services.user_settings.service import effective_privacy_mode
 
     s = get_settings()
     has_remote = bool((s.openai_api_key or "").strip() or (s.anthropic_api_key or "").strip())
     offline_mode = not has_remote and not s.nexa_disable_external_calls
-    priv = STATE.get("privacy_events") or []
-    alerts = STATE.get("integrity_alerts") or []
+    priv = privacy_events_scoped if privacy_events_scoped is not None else list(STATE.get("privacy_events") or [])
+    alerts = integrity_alerts_scoped if integrity_alerts_scoped is not None else list(STATE.get("integrity_alerts") or [])
     ignored_map = _ignored_alert_ids_map()
     ignored_ids = frozenset(ignored_map.keys())
     active_banner = bool(alerts) and any(
@@ -274,9 +305,9 @@ def _runtime_hints() -> dict[str, Any]:
     score = compute_privacy_score(
         privacy_events=list(priv),
         integrity_alerts=list(alerts),
-        overrides_count=len(ignored_map),
+        overrides_count=_override_count_for_user(scoped_user_id),
     )
-    mode_label = normalize_user_privacy_mode(getattr(s, "nexa_user_privacy_mode", None))
+    mode_label = effective_privacy_mode(db, scoped_user_id)
     return {
         "offline_mode": offline_mode,
         "strict_privacy_mode": bool(s.nexa_strict_privacy_mode),
@@ -436,11 +467,16 @@ def build_execution_snapshot(db: Session, *, user_id: str | None = None) -> dict
                     }
                 )
 
-    priv = list(STATE["privacy_events"])
-    prov = list(STATE["provider_events"])
-
-    alert_tail = list(STATE.get("integrity_alerts") or [])[-40:]
-    rh = _runtime_hints()
+    priv = _scope_ephemeral(list(STATE["privacy_events"]), user_id)
+    prov = _scope_ephemeral(list(STATE["provider_events"]), user_id)
+    alerts_scoped = _scope_ephemeral(list(STATE.get("integrity_alerts") or []), user_id)
+    alert_tail = alerts_scoped[-40:]
+    rh = _runtime_hints(
+        db=db,
+        scoped_user_id=user_id,
+        privacy_events_scoped=priv,
+        integrity_alerts_scoped=alerts_scoped,
+    )
 
     return {
         "missions": missions_out,
@@ -454,7 +490,7 @@ def build_execution_snapshot(db: Session, *, user_id: str | None = None) -> dict
         "privacy_indicator": derive_privacy_indicator(priv),
         "provider_transparency": summarize_provider_transparency(prov, privacy_events=priv),
         "privacy_audit": {
-            "recent_overrides": list(STATE.get("privacy_override_log") or [])[-24:],
+            "recent_overrides": _scope_override_log(user_id),
             "privacy_score": rh.get("privacy_score"),
         },
         "runtime": rh,
