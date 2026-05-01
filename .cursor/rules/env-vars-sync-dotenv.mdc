@@ -1,0 +1,28 @@
+---
+description: Whenever new Settings/env vars are added to the codebase, sync them into .env.example and .env
+alwaysApply: true
+---
+
+# Environment variables — keep `.env` and `.env.example` in sync
+
+Whenever you **add or rename** a configuration value that is loaded from the environment (typically new fields on `Settings` in `app/core/config.py`, or new documented `os.environ` reads used in production paths):
+
+## 1. `.env.example` (committed template)
+
+- Add a line for each new variable (or update the existing line if renamed).
+- Use a **safe default** when the app’s `Settings` default is public and non-secret (e.g. `false`, `8000`, `15`).
+- For **secrets, API keys, tokens, passwords, or host-specific URLs**, use an **empty value** and a short comment explaining what to fill in (never commit real secrets).
+- Group new vars in a short commented section (e.g. `# Phase N — …`) when it helps.
+
+## 2. `.env` (local; gitignored)
+
+- If `.env` exists in the repo root, **merge in** the same new variables:
+  - Prefer the **same safe default** as in `.env.example` when it is not secret.
+  - If the value **requires the user** (API key, token, personal path), add `VAR=` **empty** (or leave unset only if the file uses a pattern where omission is clearer) and a **one-line comment** such as `# Set yourself — …`.
+- **Do not** remove or overwrite existing user-filled values. **Do not** duplicate keys: if `VAR` already exists, update only when you intentionally rename or fix it as part of the task.
+
+## 3. Verification
+
+- After edits, a quick `grep` for the new field name across `.env.example` (and `.env` if touched) avoids typos vs `Settings` attribute → env name mapping (Pydantic `NEXA_*` / `UPPER_SNAKE`).
+
+This rule applies to **any task** that introduces new env-driven configuration, not only large phases.
