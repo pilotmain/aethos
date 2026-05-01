@@ -1,9 +1,4 @@
-"""
-Aggregated Mission Control **runtime state** for dynamic UI (Nexa Next).
-
-Maps existing orchestration assignments into a stable ``missions`` / ``tasks`` shape until
-dedicated ``missions`` / ``mission_tasks`` tables exist.
-"""
+"""Mission Control execution snapshot builders — DB-backed missions/tasks plus live event streams."""
 
 from __future__ import annotations
 
@@ -18,8 +13,6 @@ from app.core.config import get_settings
 from app.models.nexa_next_runtime import NexaArtifact, NexaExternalCall, NexaMission, NexaMissionTask
 from app.services.events.bus import list_events
 from app.services.metrics.runtime import snapshot as metrics_process_snapshot
-from app.services.mission_control.read_model import build_mission_control_summary
-
 MC_MAX_MISSIONS_LOADED = 50
 MC_MAX_ARTIFACTS_PER_MISSION = 100
 
@@ -291,70 +284,4 @@ def build_execution_snapshot(db: Session, *, user_id: str | None = None) -> dict
             tasks_out=tasks_out,
         ),
         "agent_performance": _agent_performance_from_tasks(tasks_out),
-    }
-
-
-def build_mission_control_runtime_state(db: Session, user_id: str, *, hours: int = 24) -> dict[str, Any]:
-    # TODO: remove in Phase 15 — consolidate with build_execution_snapshot / legacy orchestration paths.
-    """Shape expected by ``GET /mission-control/state`` — live-backed, no static mocks."""
-    summary = build_mission_control_summary(db, user_id, hours=hours)
-    orch = summary.get("orchestration") or {}
-    assigns: list[dict[str, Any]] = list(orch.get("assignments") or [])
-
-    missions_by_spawn: dict[str, list[dict[str, Any]]] = defaultdict(list)
-    loose: list[dict[str, Any]] = []
-    for a in assigns:
-        ij = a.get("input_json") if isinstance(a.get("input_json"), dict) else {}
-        sg = str(ij.get("spawn_group_id") or "").strip()
-        row = {
-            "assignment_id": a.get("id"),
-            "agent_handle": a.get("assigned_to_handle"),
-            "title": a.get("title"),
-            "status": a.get("status"),
-            "spawn_group_id": sg or None,
-        }
-        if sg:
-            missions_by_spawn[sg].append(row)
-        else:
-            loose.append(row)
-
-    missions_out = [
-        {"spawn_group_id": sg, "tasks": rows, "kind": "spawn_group"}
-        for sg, rows in sorted(missions_by_spawn.items(), key=lambda x: x[0])
-    ]
-    if loose:
-        missions_out.append({"spawn_group_id": None, "tasks": loose, "kind": "ungrouped"})
-
-    agents = [
-        {
-            "handle": a.get("assigned_to_handle"),
-            "assignment_id": a.get("id"),
-            "status": a.get("status"),
-        }
-        for a in assigns
-    ]
-
-    tasks = [
-        {
-            "id": a.get("id"),
-            "title": a.get("title"),
-            "status": a.get("status"),
-            "agent_handle": a.get("assigned_to_handle"),
-            "spawn_group_id": (a.get("input_json") or {}).get("spawn_group_id")
-            if isinstance(a.get("input_json"), dict)
-            else None,
-        }
-        for a in assigns
-    ]
-
-    return {
-        "missions": missions_out,
-        "agents": agents,
-        "tasks": tasks,
-        "events": [],
-        "artifacts": [],
-        "privacy_events": [],
-        "hours": summary.get("hours"),
-        "generated_at": summary.get("overview") is not None,
-        "legacy_summary_window": {"hours": hours},
     }

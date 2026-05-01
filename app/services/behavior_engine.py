@@ -307,7 +307,6 @@ def build_response(
         ResponseContext,
         append_microstep_if_useful,
         compose_response,
-        pick_voice_style,
         resolve_voice_style,
     )
     from app.services.response_formatter import finalize_user_facing_text

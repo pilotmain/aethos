@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import re
 import secrets
 from typing import Any

@@ -6,7 +6,6 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from app.services.multi_agent_routing import is_multi_agent_capability_question
 
 # Triggers: “create an agent”, “create 3 agents”, “build me a personal agent”, etc.
 # Deliberately excludes vague phrases like “create multi agents” (capability question).

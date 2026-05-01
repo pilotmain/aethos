@@ -662,7 +662,6 @@ def create_custom_agent_from_prompt(
     """
     from app.services.custom_agent_intent import is_regulated_professional_misuse_request
     from app.services.custom_agent_parser import (
-        ParsedCustomAgent,
         extract_explicit_agent_creation_handles,
         parse_custom_agent_from_prompt,
     )

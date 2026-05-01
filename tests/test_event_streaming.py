@@ -1,4 +1,4 @@
-"""Phase 7 — streamable bus, timeline API, WebSocket delivery."""
+"""Phase 7 / 15 — streamable bus, timeline API, WebSocket delivery, normalized schema."""
 
 from __future__ import annotations
 
@@ -10,13 +10,17 @@ from app.services.events.bus import clear_events, list_events, publish
 
 def test_publish_appends_to_timeline() -> None:
     clear_events()
-    publish({"type": "unit.test", "n": 1})
-    assert list_events()[-1]["type"] == "unit.test"
+    publish({"type": "unit.test", "payload": {"n": 1}})
+    row = list_events()[-1]
+    assert row["type"] == "unit.test"
+    assert row["payload"]["n"] == 1
+    assert "timestamp" in row
+    assert "mission_id" in row and "agent" in row
 
 
 def test_timeline_http_returns_events() -> None:
     clear_events()
-    publish({"type": "timeline_probe"})
+    publish({"type": "timeline_probe", "payload": {}})
     client = TestClient(app)
     r = client.get("/api/v1/mission-control/events/timeline")
     assert r.status_code == 200
@@ -25,20 +29,11 @@ def test_timeline_http_returns_events() -> None:
     assert body[-1]["type"] == "timeline_probe"
 
 
-def test_events_stream_alias_matches_timeline() -> None:
-    clear_events()
-    publish({"type": "stream_alias"})
-    client = TestClient(app)
-    t = client.get("/api/v1/mission-control/events/timeline").json()
-    s = client.get("/api/v1/mission-control/events/stream").json()
-    assert t == s
-
-
 def test_websocket_receives_published_event() -> None:
     clear_events()
     client = TestClient(app)
     with client.websocket_connect("/api/v1/mission-control/events/ws") as ws:
-        publish({"type": "ws_delivery", "ok": True})
+        publish({"type": "ws_delivery", "payload": {"ok": True}})
         data = ws.receive_json()
         assert data["type"] == "ws_delivery"
-        assert data["ok"] is True
+        assert data["payload"]["ok"] is True

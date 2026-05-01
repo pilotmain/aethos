@@ -1,4 +1,4 @@
-"""Standard runtime event envelope for Mission Control (Phase 14)."""
+"""Standard runtime event envelope for Mission Control (Phase 14–15)."""
 
 from __future__ import annotations
 
@@ -15,28 +15,23 @@ def emit_runtime_event(
     agent: str | None = None,
     user_id: str | None = None,
     payload: dict[str, Any] | None = None,
-    **extra: Any,
 ) -> None:
     """
-    Publish a bus event with a stable shape::
+    Publish a bus event with the locked shape::
 
-        type, timestamp, mission_id?, agent?, user_id?, payload
+        type, timestamp, mission_id, agent, payload[, user_id]
+
+    ``mission_id`` and ``agent`` are always present (``null`` when not applicable).
     """
     ev: dict[str, Any] = {
         "type": event_type,
         "timestamp": datetime.now(timezone.utc).isoformat(),
+        "mission_id": mission_id,
+        "agent": agent,
         "payload": dict(payload or {}),
     }
-    if mission_id is not None:
-        ev["mission_id"] = mission_id
-    if agent is not None:
-        ev["agent"] = agent
     if user_id is not None:
         ev["user_id"] = user_id
-    for k, v in extra.items():
-        if k in ev or v is None:
-            continue
-        ev[k] = v
     publish(ev)
 
 

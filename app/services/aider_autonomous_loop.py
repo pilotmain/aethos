@@ -22,7 +22,6 @@ from app.services.cursor_dev_handoff import build_final_worker_review, review_pa
 from app.services.telegram_dev_ux import compact_review_for_telegram, user_friendly_status
 from app.services.dev_worktree_guards import ensure_clean_worktree, is_mainish
 from app.services.dev_artifacts import (
-    RUNTIME_DEV_JOBS,
     copy_review_to_artifacts,
     copy_task_to_artifacts,
     ensure_job_artifact_dir,

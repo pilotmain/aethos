@@ -596,7 +596,6 @@ def handle_nexa_request(
         apply_tone,
         build_context,
         build_response,
-        map_intent_to_behavior,
         no_tasks_response,
     )
     from app.services.intent_classifier import get_intent

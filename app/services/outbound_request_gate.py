@@ -20,7 +20,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.services.audit_service import audit
-from app.services.secret_egress_gate import assert_safe_for_external_send, looks_like_secret_material
+from app.services.secret_egress_gate import assert_safe_for_external_send
 from app.services.sensitivity import detect_sensitivity_from_text
 from app.services.trust_audit_constants import ACCESS_SENSITIVE_EGRESS_WARNING
 

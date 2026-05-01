@@ -1,4 +1,16 @@
-"""Mission Control dashboard API (V1) — summary + developer cleanup actions."""
+"""Mission Control dashboard API (V1) — summary + developer cleanup actions.
+
+Phase 15 — locked contracts (stable JSON/WebSocket; do not rename or remove):
+
+- ``GET /mission-control/state`` — execution snapshot (:func:`build_execution_snapshot`).
+- ``GET /mission-control/graph`` — derived graph from the same snapshot.
+- ``GET /mission-control/events/timeline`` — deque-backed event history.
+- ``WebSocket /mission-control/events/ws`` — live JSON stream (same bus).
+- ``POST /mission-control/gateway/run`` — Nexa gateway admission.
+
+Orchestration summary (distinct from execution state) remains at
+``GET /mission-control/summary``.
+"""
 
 from __future__ import annotations
 
@@ -129,14 +141,6 @@ def mission_control_graph(
     """Agent/task nodes and dependency edges for Mission Control visualization."""
     state = build_execution_snapshot(db, user_id=user_id)
     return build_graph_cached(state)
-
-
-@router.get("/events/stream")
-def mission_control_events_stream() -> list:
-    """Returns the in-process event log (same as ``/events/timeline``)."""
-    from app.services.events.bus import list_events
-
-    return list_events()
 
 
 @router.get("/events/timeline")

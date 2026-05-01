@@ -371,18 +371,19 @@ def print_local_service_urls() -> None:
 
 
 def print_llm_debug_banner() -> None:
-    """Print once at process startup (API or bot) to verify env-driven LLM flags."""
+    """Log env-driven LLM flags once at process startup (API or bot)."""
+    import logging
+
     s = get_settings()
-    print("=== SETTINGS DEBUG ===", flush=True)
-    print("USE_REAL_LLM:", s.use_real_llm, flush=True)
-    print("ANTHROPIC:", bool(s.anthropic_api_key), flush=True)
-    print("OPENAI:", bool(s.openai_api_key), flush=True)
-    if s.llm_provider:
-        print("LLM_PROVIDER:", s.llm_provider, flush=True)
-    print("======================", flush=True)
+    log = logging.getLogger("nexa.settings")
+    log.info(
+        "LLM settings use_real_llm=%s anthropic_configured=%s openai_configured=%s llm_provider=%s",
+        s.use_real_llm,
+        bool(s.anthropic_api_key),
+        bool(s.openai_api_key),
+        (s.llm_provider or "").strip(),
+    )
     if not s.use_real_llm and (s.anthropic_api_key or s.openai_api_key):
-        print(
-            "HINT: You have API keys but USE_REAL_LLM is false. In the repo root .env, set "
-            "USE_REAL_LLM=true (no quotes, unquoted true), save, and restart the bot.",
-            flush=True,
+        log.warning(
+            "API keys present but USE_REAL_LLM is false; set USE_REAL_LLM=true in .env and restart."
         )

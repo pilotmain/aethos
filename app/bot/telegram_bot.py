@@ -30,7 +30,7 @@ from app.services.dev_task_service import (
 from app.services.agent_orchestrator import handle_agent_mention
 from app.services.agent_router import route_agent
 from app.services.memory_aware_routing import apply_memory_aware_route_adjustment
-from app.services.mention_control import format_unknown_mention_message, map_catalog_key_to_internal, parse_mention
+from app.services.mention_control import map_catalog_key_to_internal, parse_mention
 from app.services.ops_approval import process_ops_job_decision
 from app.services.ops_handler import handle_nexa_ops_mention
 from app.services.conversation_context_service import (

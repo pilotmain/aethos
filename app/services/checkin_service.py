@@ -4,7 +4,6 @@ from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.repositories.checkin_repo import CheckInRepository
-from app.schemas.task import TaskUpdate
 from app.services.llm_service import LLMService
 from app.services.memory_service import MemoryService
 from app.services.task_service import TaskService

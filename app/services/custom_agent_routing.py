@@ -156,7 +156,6 @@ def try_deterministic_custom_agent_turn(db: Session, app_user_id: str, user_text
     from app.services.custom_agents import (
         can_user_create_custom_agents,
         create_custom_agent_from_prompt,
-        delete_custom_agent,
         format_custom_agent_describe_reply,
         format_custom_agents_list_reply,
         format_unknown_with_custom,

@@ -5,7 +5,6 @@ from sqlalchemy.orm import Session
 
 from app.models import Plan, Task
 from app.repositories.task_repo import TaskRepository
-from app.schemas.memory import PreferencesRead
 from app.schemas.task import TaskCreate
 from app.services.checkin_service import CheckInService
 from app.services.dump_service import DumpService

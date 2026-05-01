@@ -8,7 +8,6 @@ from app.core.config import get_settings
 from app.services.dev_tools.registry import get_dev_tool
 from app.services.project_registry import (
     create_project_mvp,
-    get_default_project,
     get_project_by_key,
     list_projects,
     project_environments,

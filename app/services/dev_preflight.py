@@ -8,7 +8,7 @@ import shutil
 from pathlib import Path
 
 from app.core.config import get_settings
-from app.services.handoff_paths import AGENT_TASKS_DIR, PROJECT_ROOT
+from app.services.handoff_paths import PROJECT_ROOT
 
 
 def _ok(name: str, ok: bool, detail: str = "") -> dict:

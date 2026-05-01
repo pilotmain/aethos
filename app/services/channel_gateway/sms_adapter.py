@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from app.models.channel_user import ChannelUser
 from app.services.channel_gateway.base import ChannelAdapter
 from app.services.channel_gateway.identity import resolve_channel_user
-from app.services.channel_gateway.sms_send import normalize_to_address, send_sms_text
+from app.services.channel_gateway.sms_send import send_sms_text
 
 _DIGITS_ONLY = re.compile(r"^\d{4,20}$")
 

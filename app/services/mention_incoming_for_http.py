@@ -17,7 +17,6 @@ from sqlalchemy.orm import Session
 from app.schemas.agent_job import AgentJobCreate
 from app.services.agent_job_service import AgentJobService
 from app.services.agent_orchestrator import handle_agent_mention
-from app.services.conversation_context_service import build_context_snapshot
 from app.services.dev_orchestrator.dev_job_planner import (
     create_planned_dev_job,
     format_planned_dev_reply,

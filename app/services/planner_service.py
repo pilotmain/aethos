@@ -3,7 +3,7 @@ from datetime import date
 
 from sqlalchemy.orm import Session
 
-from app.models import Plan, PlanTask, Task
+from app.models import Plan, Task
 from app.repositories.plan_repo import PlanRepository
 from app.repositories.task_repo import TaskRepository
 from app.schemas.memory import PreferencesRead

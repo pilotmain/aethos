@@ -6,7 +6,7 @@ within the user's registered workspace + host executor work tree for context swi
 
 from __future__ import annotations
 
-from sqlalchemy import ForeignKey, Index, Integer, String, Text, UniqueConstraint
+from sqlalchemy import Index, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.db import Base
