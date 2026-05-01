@@ -1,7 +1,7 @@
-"""Behavior/reply orchestration for legacy Telegram chat turns.
+"""Behavior/reply orchestration — composed replies via :func:`build_response`.
 
-Inbound Telegram **text** should pass through :func:`~app.services.channels.router.route_inbound`
-first (Phase 34); this module handles fallback chat and non-gateway intents.
+Telegram and web generic chat are admitted through :class:`~app.services.gateway.runtime.NexaGateway`
+(Phase 35); `build_response` remains the implementation layer for intent-conditioned copy and LLM routing.
 """
 
 from __future__ import annotations

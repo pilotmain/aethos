@@ -5,11 +5,8 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from app.services.gateway.runtime import GATEWAY_CHAT_FALLBACK_TEXT
-
-
 def telegram_gateway_should_hand_off(gw: dict[str, Any]) -> bool:
-    """True when Nexa gateway produced a concrete reply (not the generic chat fallback)."""
+    """True when Nexa gateway produced a concrete reply (Phase 35 — chat is always composed)."""
     if gw.get("dev_run") is not None:
         return True
     if gw.get("status") in ("completed", "timeout"):
@@ -18,7 +15,7 @@ def telegram_gateway_should_hand_off(gw: dict[str, Any]) -> bool:
         return True
     if gw.get("mode") == "chat":
         t = (gw.get("text") or "").strip()
-        return bool(t) and t != GATEWAY_CHAT_FALLBACK_TEXT
+        return bool(t)
     return False
 
 

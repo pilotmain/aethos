@@ -19,7 +19,6 @@ from app.services.behavior_engine import (
     apply_tone,
     build_context,
     build_response,
-    map_intent_to_behavior,
     no_tasks_response,
 )
 from app.services.channel_gateway.telegram_adapter import (
@@ -48,14 +47,11 @@ from app.services.dev_task_service import (
     is_dev_task_message,
     parse_dev_task,
 )
-from app.services.general_answer_service import answer_general_question
 from app.services.general_response import (
     casual_capability_reply,
     is_casual_capability_question,
     is_simple_greeting,
-    looks_like_general_question,
     simple_greeting_reply,
-    strip_correction_prefix,
 )
 from app.services.handoff_tracking_service import HandoffTrackingService
 from app.services.idea_intake import (
@@ -92,7 +88,6 @@ from app.services.llm_request_context import (
 )
 from app.services.llm_usage_context import bind_llm_usage_telegram, unbind_llm_usage
 from app.services.local_action_parser import parse_local_action
-from app.services.loop_tracking_service import reset_focus_after_completion
 from app.services.memory_aware_routing import apply_memory_aware_route_adjustment
 from app.services.memory_service import MemoryService
 from app.services.mention_control import map_catalog_key_to_internal, parse_mention
@@ -106,7 +101,6 @@ from app.services.telegram_onboarding import (
     first_time_nexa_start_text,
     help_message,
     is_weak_input,
-    start_message,
     start_message_for_role,
     weak_input_response,
 )
@@ -1862,15 +1856,14 @@ async def _handle_incoming_text_impl(update: Update, context: ContextTypes.DEFAU
                         await update.message.reply_text(piece)
                     return
 
-                # Phase 34 — unified gateway (same admission as web :meth:`route_inbound`).
+                # Phase 35 — missions/dev first (structured gateway only); chat brain lives in gateway too.
                 if not tstrip.startswith("/") and tstrip:
-                    from app.services.channels.router import route_inbound
                     from app.services.channels.telegram_gateway_reply import (
                         format_telegram_gateway_reply,
-                        telegram_gateway_should_hand_off,
                     )
+                    from app.services.gateway.runtime import NexaGateway
 
-                    gw = route_inbound(
+                    gw_struct = NexaGateway().try_structured_turn(
                         tstrip,
                         app_user_id,
                         db=db,
@@ -1881,8 +1874,8 @@ async def _handle_incoming_text_impl(update: Update, context: ContextTypes.DEFAU
                             "telegram_user_id": int(effu.id),
                         },
                     )
-                    if telegram_gateway_should_hand_off(gw):
-                        reply_gw = format_telegram_gateway_reply(gw)
+                    if gw_struct is not None:
+                        reply_gw = format_telegram_gateway_reply(gw_struct)
                         cctx_gw = get_or_create_context(db, app_user_id)
                         for piece in _split_telegram_text(reply_gw, max_len=4000):
                             await update.message.reply_text(piece)
@@ -3248,122 +3241,39 @@ async def _handle_incoming_text_impl(update: Update, context: ContextTypes.DEFAU
                     update, context, interval_seconds=3.0, min_visible_seconds=1.2
                 ):
                     _ack_pre: list[str | None] = [_na.inject_ack]
-    
+
                     def _wrap_tg_inject_ack(m: str) -> str:
                         a = _ack_pre[0]
                         if a and a.strip():
                             _ack_pre[0] = None
                             return f"{a.rstrip()}\n\n{m}"
                         return m
-    
-                    intent = get_intent(text, conversation_snapshot=snap)
-                    logger.info("classified_intent=%s", intent)
-                    logger.info("plan_triggered=%s", intent == "brain_dump")
-                    logger.info("llm_classifier_used=%s", settings.use_real_llm)
-    
-                    if intent == "status_update":
-                        u = orchestrator.users.get(db, app_user_id)
-                        if u is not None:
-                            plan_data = orchestrator.get_today_plan(db, app_user_id)
-                            titles = [t.title for t in plan_data["tasks"]] if plan_data else []
-                            focus_title = titles[0] if titles else u.last_focus_task
-                            reset_focus_after_completion(db, u, focus_title)
-    
-                    ctx = build_context(db, app_user_id, memory_service, orchestrator)
-    
-                    logger.info(
-                        "incoming behavior=%s has_active_plan=%s is_new=%s text_preview=%r",
-                        map_intent_to_behavior(intent, ctx),
-                        ctx.has_active_plan,
-                        user_row.is_new,
-                        text[:120],
-                    )
-    
-                    if user_row.is_new and intent == "general_chat" and is_weak_input(text):
-                        sm = start_message()
-                        await update.message.reply_text(sm)
-                        _persist_conversation_turn(
-                            db, app_user_id, cctx, tstrip, sm, intent, routed_key
-                        )
-                        return
-    
-                    if intent == "brain_dump":
-                        logger.warning(
-                            "PLAN_GENERATION_TRIGGERED intent=%s text_preview=%s",
-                            intent,
-                            text[:100],
-                        )
-                        result = orchestrator.generate_plan_from_text(
-                            db, app_user_id, text, input_source="telegram", intent="brain_dump"
-                        )
-                        if result.get("needs_more_context"):
-                            logger.info("brain_dump needs_more_context=true")
-                            reply = apply_tone(no_tasks_response(), ctx.memory)
-                            wn = _wrap_tg_inject_ack(reply)
-                            await update.message.reply_text(wn)
-                            _persist_conversation_turn(
-                                db, app_user_id, cctx, tstrip, wn, intent, routed_key
-                            )
-                            return
-                        orchestrator.users.mark_user_onboarded(db, app_user_id)
-                        ctx_after = build_context(
-                            db, app_user_id, memory_service, orchestrator
-                        )
-                        reply = build_response(
-                            text,
-                            intent,
-                            ctx_after,
-                            plan_result=result,
-                            db=db,
-                            app_user_id=app_user_id,
-                            conversation_snapshot=snap,
-                            routing_agent_key=routed_key,
-                        )
-                        wn = _wrap_tg_inject_ack(reply)
-                        await update.message.reply_text(wn)
-                        _persist_conversation_turn(
-                            db, app_user_id, cctx, tstrip, wn, intent, routed_key
-                        )
-                        return
-    
-                    t_clean = strip_correction_prefix(text)
-                    stripped = (text or "").strip()
-                    correction_used = t_clean != stripped and len(t_clean.strip()) > 2
-                    if (
-                        looks_like_general_question(t_clean)
-                        or correction_used
-                    ):
-                        gq = answer_general_question(
-                            t_clean.strip() or stripped,
-                            conversation_snapshot=snap,
-                        )
-                        wq = _wrap_tg_inject_ack(gq)
-                        await update.message.reply_text(wq)
-                        _persist_conversation_turn(
-                            db,
-                            app_user_id,
-                            cctx,
-                            tstrip,
-                            wq,
-                            "general_answer",
-                            routed_key,
-                        )
-                        return
-    
-                    reply = build_response(
+
+                    from app.services.gateway.runtime import NexaGateway
+
+                    gw_chat = NexaGateway().handle_full_chat(
                         text,
-                        intent,
-                        ctx,
-                        plan_result=None,
+                        app_user_id,
                         db=db,
-                        app_user_id=app_user_id,
-                        conversation_snapshot=snap,
-                        routing_agent_key=routed_key,
+                        channel="telegram",
+                        metadata={
+                            "routing_agent_key": routed_key,
+                            "telegram_update_id": getattr(update, "update_id", None),
+                            "telegram_chat_id": telegram_chat_id,
+                            "telegram_user_id": int(effu.id),
+                        },
                     )
-                    wf = _wrap_tg_inject_ack(reply)
+                    reply_body = (gw_chat.get("text") or "").strip()
+                    wf = _wrap_tg_inject_ack(reply_body)
                     await update.message.reply_text(wf)
                     _persist_conversation_turn(
-                        db, app_user_id, cctx, tstrip, wf, intent, routed_key
+                        db,
+                        app_user_id,
+                        cctx,
+                        tstrip,
+                        wf,
+                        str(gw_chat.get("intent") or "general_chat"),
+                        routed_key,
                     )
             finally:
                 try:
