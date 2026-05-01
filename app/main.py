@@ -22,6 +22,7 @@ from app.api.routes import (
     checkins,
     custom_agents_api,
     dashboard,
+    dev_runtime,
     dumps,
     email,
     governance_api,
@@ -180,6 +181,7 @@ app.include_router(permissions.router, prefix=settings.api_v1_prefix)
 app.include_router(trust.router, prefix=settings.api_v1_prefix)
 app.include_router(user_settings.router, prefix=settings.api_v1_prefix)
 app.include_router(mission_control.router, prefix=settings.api_v1_prefix)
+app.include_router(dev_runtime.router, prefix=settings.api_v1_prefix)
 app.include_router(agent_runtime_api.router, prefix=settings.api_v1_prefix)
 app.include_router(report_watcher.router, prefix=settings.api_v1_prefix)
 app.include_router(agent_organization.router, prefix=settings.api_v1_prefix)

@@ -1,0 +1,17 @@
+"""Reserved for OpenAI Codex CLI integration."""
+
+from __future__ import annotations
+
+from typing import Any
+
+from app.models.dev_runtime import NexaDevWorkspace
+from app.services.dev_runtime.coding_agents.base import CodingAgentAdapter
+
+
+class CodexCliAgentAdapter(CodingAgentAdapter):
+    def run(self, workspace: NexaDevWorkspace, goal: str, context: dict[str, Any]) -> dict[str, Any]:
+        _ = workspace, goal, context
+        return {"ok": False, "error": "codex_adapter_not_implemented"}
+
+
+__all__ = ["CodexCliAgentAdapter"]

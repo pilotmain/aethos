@@ -10,6 +10,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
+from app.models.dev_runtime import NexaDevRun, NexaDevWorkspace
 from app.models.nexa_next_runtime import NexaArtifact, NexaExternalCall, NexaMission, NexaMissionTask
 from app.services.events.bus import list_events
 from app.services.metrics.runtime import snapshot as metrics_process_snapshot
@@ -478,6 +479,48 @@ def build_execution_snapshot(db: Session, *, user_id: str | None = None) -> dict
         integrity_alerts_scoped=alerts_scoped,
     )
 
+    dev_workspaces_out: list[dict[str, Any]] = []
+    dev_runs_out: list[dict[str, Any]] = []
+    if user_id:
+        ws_rows = list(
+            db.scalars(
+                select(NexaDevWorkspace)
+                .where(NexaDevWorkspace.user_id == user_id)
+                .order_by(NexaDevWorkspace.created_at.desc())
+                .limit(40)
+            ).all()
+        )
+        dev_workspaces_out = [
+            {
+                "id": w.id,
+                "name": w.name,
+                "repo_path": w.repo_path,
+                "status": w.status,
+                "created_at": w.created_at.isoformat() if w.created_at else None,
+            }
+            for w in ws_rows
+        ]
+        dr_rows = list(
+            db.scalars(
+                select(NexaDevRun)
+                .where(NexaDevRun.user_id == user_id)
+                .order_by(NexaDevRun.created_at.desc())
+                .limit(40)
+            ).all()
+        )
+        dev_runs_out = [
+            {
+                "id": r.id,
+                "workspace_id": r.workspace_id,
+                "goal": r.goal[:500] + ("…" if len(r.goal or "") > 500 else ""),
+                "status": r.status,
+                "created_at": r.created_at.isoformat() if r.created_at else None,
+                "completed_at": r.completed_at.isoformat() if r.completed_at else None,
+                "error": r.error,
+            }
+            for r in dr_rows
+        ]
+
     return {
         "missions": missions_out,
         "tasks": tasks_out,
@@ -501,4 +544,6 @@ def build_execution_snapshot(db: Session, *, user_id: str | None = None) -> dict
             tasks_out=tasks_out,
         ),
         "agent_performance": _agent_performance_from_tasks(tasks_out),
+        "dev_workspaces": dev_workspaces_out,
+        "dev_runs": dev_runs_out,
     }

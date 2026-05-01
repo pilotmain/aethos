@@ -32,6 +32,17 @@ This document locks how requests flow through the system after Phase 15–17. Au
 - External LLM calls are gated by provider configuration, outbound gates, and Mission Control privacy indicators; strict privacy mode can force **local_stub** only.
 - Mission Control events use the normalized bus schema (`type`, `timestamp`, `mission_id`, `agent`, `payload`) via `emit_runtime_event` / `publish`.
 
+## Phase 23 — developer runtime (`app/services/dev_runtime`)
+
+- **Persistence**: `nexa_dev_workspaces`, `nexa_dev_runs`, `nexa_dev_steps` (see `app/models/dev_runtime.py`).
+- **Orchestration**: `run_dev_mission` runs a deterministic plan (no external LLM in V1): inspect (`git status`), tests (`pick_test_command` → allowlisted runner), **LocalStubCodingAgent** (no filesystem writes), tests again, summary (`prepare_pr_summary`).
+- **Sandbox**: `run_dev_command` executes **only** commands in `NEXA_DEV_ALLOWED_COMMANDS`, with `cwd` locked to the workspace path and a subprocess timeout (`NEXA_DEV_COMMAND_TIMEOUT_SECONDS`).
+- **Paths**: `validate_workspace_path` confines `repo_path` under configured roots (`NEXA_DEV_WORKSPACE_ROOTS` or defaults).
+- **Outbound privacy**: External bodies use **`prepare_external_payload`** (`gate_outbound_dev_payload`); stored step text uses **`redact_output_for_storage`**.
+- **API**: `/api/v1/dev/workspaces` and `/api/v1/dev/runs` (authenticated `X-User-Id`). Mission Control snapshot adds **`dev_workspaces`** and **`dev_runs`**.
+- **Coding adapters**: `app/services/dev_runtime/coding_agents/` — only **`LocalStubCodingAgent`** is functional; Cursor/Codex/Aider/Claude modules are stubs for future wiring.
+- **Gateway**: When no structured mission parses, **`maybe_dev_gateway_hint`** may return guidance if dev workspaces exist and the text looks like a dev task.
+
 ## CI pipeline
 
 From repo root (venv active):

@@ -67,6 +67,20 @@ You can adjust:
 
 Changes call `GET`/`POST /api/v1/user/settings`. The UI shows saving progress and **Saved** / **Failed** feedback. Your configured **User id** appears in the header; changing identity in local storage (e.g. after login or switching users) reloads context.
 
+## AI dev workspace (Phase 23)
+
+Nexa-next can run an **end-to-end developer loop** on registered repositories (inspect → tests → coding-agent stub → tests → summary), with **allowlisted shell commands only** and **stored logs redacted** for secrets.
+
+1. **Register a workspace** — `POST /api/v1/dev/workspaces` with `name` and `repo_path`. Paths must sit under allowed roots (by default `NEXA_WORKSPACE_ROOT` and this repo’s root, or set `NEXA_DEV_WORKSPACE_ROOTS` to a comma-separated list of absolute prefixes).
+2. **Start a dev mission** — `POST /api/v1/dev/runs` with `workspace_id`, `goal`, and optional `auto_pr` (summary only; no GitHub API yet).
+3. **Mission Control** — the **Dev workspace** panel lists workspaces and recent runs from `/api/v1/mission-control/state`.
+
+**Command allowlist** — set `NEXA_DEV_ALLOWED_COMMANDS` (comma-separated). Defaults include read-only `git` commands plus `npm test`, `pytest`, and `python -m pytest`. Arbitrary shell (`rm`, `curl`, …) is rejected.
+
+**Privacy** — anything sent to external providers must pass `prepare_external_payload`. Command output persisted in the DB is passed through best-effort redaction (including OpenAI-style `sk-…` keys). Treat `.env` and tokens as sensitive even when redacted.
+
+Chat messages that look like dev tasks may return a hint pointing at these APIs when you already have a workspace registered.
+
 ## CLI (optional)
 
 From the repo root:

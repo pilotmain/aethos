@@ -40,6 +40,12 @@ class NexaGateway:
         mission = parse_mission(text)
 
         if not mission:
+            if db is not None:
+                from app.services.dev_runtime.gateway_hint import maybe_dev_gateway_hint
+
+                hint = maybe_dev_gateway_hint(text, user_id, db)
+                if hint is not None:
+                    return hint
             return {"mode": "chat", "text": "No mission detected"}
 
         if db is not None:

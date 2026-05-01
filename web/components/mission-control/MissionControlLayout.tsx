@@ -14,6 +14,7 @@ import { IntegrityAlertBanner } from "@/components/mission-control/IntegrityAler
 import { PrivacyTrustPanel } from "@/components/mission-control/PrivacyTrustPanel";
 import { OfflineModeBanner } from "@/components/mission-control/OfflineModeBanner";
 import { PrivacyIndicatorBadge } from "@/components/mission-control/PrivacyIndicatorBadge";
+import { DevOpsPanel } from "@/components/mission-control/DevOpsPanel";
 import { Phase22Overview } from "@/components/mission-control/Phase22Overview";
 import { ProviderTransparencyPanel } from "@/components/mission-control/ProviderTransparencyPanel";
 import type { UiTheme } from "@/components/settings/UserSettingsPanel";
@@ -256,6 +257,15 @@ export function MissionControlLayout() {
           />
 
           {configured ? <Phase22Overview shellLight={shellLight} /> : null}
+
+          {configured ? (
+            <DevOpsPanel
+              shellLight={shellLight}
+              workspaces={snap?.dev_workspaces}
+              runs={snap?.dev_runs}
+              loading={snapLoading && configured}
+            />
+          ) : null}
 
           <div className="grid gap-4 lg:grid-cols-2 lg:items-stretch">
             <MissionGraph />

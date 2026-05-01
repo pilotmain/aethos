@@ -39,6 +39,23 @@ export type MissionControlSnapshot = {
     privacy_score?: number;
   };
   metrics?: Record<string, unknown>;
+  /** Phase 23 — dev workspace registry (from /mission-control/state). */
+  dev_workspaces?: Array<{
+    id: string;
+    name?: string;
+    repo_path?: string;
+    status?: string;
+    created_at?: string | null;
+  }>;
+  dev_runs?: Array<{
+    id: string;
+    workspace_id?: string;
+    goal?: string;
+    status?: string;
+    created_at?: string | null;
+    completed_at?: string | null;
+    error?: string | null;
+  }>;
 };
 
 function snapshotFromStore(): MissionControlSnapshot | null {

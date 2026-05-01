@@ -347,6 +347,15 @@ class Settings(BaseSettings):
     nexa_ollama_base_url: str | None = None
     nexa_mission_parallel_tasks: bool = False
 
+    # Phase 23 — AI dev OS (workspace commands, allowlist).
+    nexa_dev_allowed_commands: str = (
+        "git status,git diff,git branch,git log --oneline -n 20,"
+        "npm test,npm run test,pytest,python -m pytest"
+    )
+    # Comma-separated absolute path prefixes; empty → nexa_workspace_root + repo root (see workspace validator).
+    nexa_dev_workspace_roots: str = ""
+    nexa_dev_command_timeout_seconds: int = 180
+
     @field_validator("nexa_user_privacy_mode", mode="before")
     @classmethod
     def _normalize_nexa_user_privacy_mode(cls, v: object) -> str:
