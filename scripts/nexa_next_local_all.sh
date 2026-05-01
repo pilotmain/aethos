@@ -13,6 +13,9 @@
 #   ./scripts/nexa_next_local_all.sh stop
 #   ./scripts/nexa_next_local_all.sh status
 #
+# Important: run only ``start`` if you want the stack to stay up. Running ``stop`` tears down
+# API + web — so do not chain ``start`` then ``stop`` unless you mean to shut down immediately.
+#
 # Prerequisites: Python venv at repo .venv (pip install -r requirements.txt); npm install in web/
 
 set -euo pipefail
@@ -56,11 +59,32 @@ stop_pidfile() {
   fi
 }
 
+# Uvicorn --reload replaces the supervisor PID; pidfiles can go stale. Always clear listeners.
+kill_listeners_on_port() {
+  local port="$1"
+  [ -n "${port:-}" ] || return 0
+  if ! command -v lsof &>/dev/null; then
+    return 0
+  fi
+  local pids
+  pids="$(lsof -nP -iTCP:"${port}" -sTCP:LISTEN -t 2>/dev/null || true)"
+  if [ -z "${pids:-}" ]; then
+    return 0
+  fi
+  # shellcheck disable=SC2086
+  kill ${pids} 2>/dev/null || true
+  sleep 1
+  # shellcheck disable=SC2086
+  kill -9 ${pids} 2>/dev/null || true
+}
+
 cmd_stop() {
   stop_pidfile "$API_PIDF"
   stop_pidfile "$WEB_PIDF"
   stop_pidfile "$BOT_PIDF"
-  echo "Stopped (nexa_next_local_* PIDs cleared)."
+  kill_listeners_on_port "$API_PORT"
+  kill_listeners_on_port "$WEB_PORT"
+  echo "Stopped (nexa_next_local pidfiles cleared; listeners on ports ${API_PORT}/${WEB_PORT} released)."
 }
 
 _one_proc_status() {
@@ -80,14 +104,24 @@ _one_proc_status() {
 cmd_status() {
   echo "Configured ports: API=${API_PORT} WEB=${WEB_PORT}"
   echo "Health: $(api_health_url)"
-  _one_proc_status "API" "$API_PIDF"
-  _one_proc_status "Web" "$WEB_PIDF"
-  _one_proc_status "Bot" "$BOT_PIDF"
+  local api_up=""
   if command -v curl &>/dev/null; then
     if curl -fsS --connect-timeout 2 --max-time 4 "$(api_health_url)" >/dev/null 2>&1; then
-      echo "API health: OK"
+      api_up=1
+      echo "API: responding (HTTP health OK on port ${API_PORT})"
     else
-      echo "API health: not reachable"
+      echo "API: not responding yet or stopped"
+    fi
+  else
+    echo "API: install curl for automatic health check"
+  fi
+  _one_proc_status "PID file (API)" "$API_PIDF"
+  _one_proc_status "PID file (Web)" "$WEB_PIDF"
+  _one_proc_status "PID file (Bot)" "$BOT_PIDF"
+  if [ -n "${api_up:-}" ] && [ -f "$API_PIDF" ]; then
+    pid="$(cat "$API_PIDF" 2>/dev/null || true)"
+    if [ -z "${pid:-}" ] || ! kill -0 "$pid" 2>/dev/null; then
+      echo "Note: with uvicorn --reload, the saved API pid may be stale; trust 'responding' above."
     fi
   fi
 }
@@ -143,8 +177,25 @@ cmd_start() {
   echo "Logs: ${API_LOG}"
   echo "      ${WEB_LOG}"
   echo ""
+  echo "Leave these processes running. Open another terminal for other commands."
+  echo "Running \"$0 stop\" shuts API + web down — only use it when you are finished."
+  echo ""
   echo "In the web app Login / Connection, set API base to: http://127.0.0.1:${API_PORT}"
-  echo "Stop: $0 stop"
+  echo "Check: $0 status   |   Stop later: $0 stop"
+
+  if command -v curl &>/dev/null; then
+    local i=0
+    echo -n "Waiting for API health … " >&2
+    while [ "$i" -lt 45 ]; do
+      if curl -fsS --connect-timeout 1 --max-time 3 "$(api_health_url)" >/dev/null 2>&1; then
+        echo "OK" >&2
+        return 0
+      fi
+      sleep 1
+      i=$((i + 1))
+    done
+    echo "timed out (see ${API_LOG})" >&2
+  fi
 }
 
 main() {
