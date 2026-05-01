@@ -338,6 +338,15 @@ class Settings(BaseSettings):
     # Phase 18 — post-provider scan uses ingress-style detection when true (paranoid / audit).
     nexa_detection_strict_mode: bool = False
 
+    # Phase 19 — user-facing privacy stance (standard | strict | paranoid).
+    nexa_user_privacy_mode: str = "standard"
+
+    @field_validator("nexa_user_privacy_mode", mode="before")
+    @classmethod
+    def _normalize_nexa_user_privacy_mode(cls, v: object) -> str:
+        x = (str(v) if v is not None else "standard").strip().lower()
+        return x if x in ("standard", "strict", "paranoid") else "standard"
+
     model_config = SettingsConfigDict(
         env_file=_EnvFile,
         env_file_encoding="utf-8",

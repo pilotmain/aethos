@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import time
+import uuid
 from typing import Any
 
 from app.core.config import get_settings
@@ -21,6 +22,8 @@ from app.services.mission_control.nexa_next_state import (
 )
 from app.services.privacy_firewall.audit import log_event
 from app.services.privacy_firewall.detectors import detect_sensitive_data
+from app.services.privacy_firewall.explainability import explain_detection
+from app.services.privacy_firewall.user_privacy import normalize_user_privacy_mode
 from app.services.privacy_firewall.gateway import PrivacyBlockedError, prepare_external_payload
 from app.services.privacy_firewall.immutable import FrozenPayloadDict
 from app.services.providers.anthropic_provider import call_anthropic
@@ -36,6 +39,15 @@ _log = get_logger("gateway")
 _POST_SECRET_MSG = (
     "CRITICAL: Secret-shaped material detected in provider output — outbound blocked."
 )
+
+
+def _make_integrity_alert_row(scan_findings: dict[str, Any], **extra: Any) -> dict[str, Any]:
+    row: dict[str, Any] = {
+        "alert_id": str(uuid.uuid4()),
+        "explanation": explain_detection(scan_findings),
+    }
+    row.update(extra)
+    return row
 
 
 def _output_scan_text(output: dict[str, Any] | str | None) -> str:
@@ -61,6 +73,7 @@ def call_provider(request: ProviderRequest) -> ProviderResponse:
 
     redactions: list[dict[str, Any]] = []
     s = get_settings()
+    user_privacy = normalize_user_privacy_mode(getattr(s, "nexa_user_privacy_mode", None))
 
     td = TOOLS.get(tool_key)
     raw_policy = td.pii_policy if td else None
@@ -123,6 +136,23 @@ def call_provider(request: ProviderRequest) -> ProviderResponse:
         add_provider_event(ev)
         audit(True, err)
         _log.warning("provider blocked (strict privacy): %s", err)
+        return ProviderResponse(
+            ok=False,
+            provider=request.provider,
+            model=request.model,
+            output=None,
+            redactions=redactions,
+            blocked=True,
+            error=err,
+        )
+
+    if user_privacy == "paranoid" and request.provider not in ("local_stub",):
+        err = "user_privacy_paranoid"
+        ev = {"provider": request.provider, "agent": request.agent_handle or "", "status": err}
+        log_event({"type": "provider_blocked", **ev})
+        add_provider_event(ev)
+        audit(True, err)
+        _log.warning("provider blocked (user privacy paranoid): %s", err)
         return ProviderResponse(
             ok=False,
             provider=request.provider,
@@ -291,10 +321,16 @@ def call_provider(request: ProviderRequest) -> ProviderResponse:
     scan_text = _output_scan_text(out)
     det_mode = "ingress" if s.nexa_detection_strict_mode else "egress"
     post_findings = detect_sensitive_data(scan_text, mode=det_mode)
+    effective_confidence = str(post_findings.get("confidence") or "low")
+    if user_privacy == "strict" and post_findings.get("secrets") and effective_confidence == "medium":
+        effective_confidence = "high"
+
     _log.info(
-        "DETECTION MODE: %s CONFIDENCE: %s",
+        "DETECTION MODE: %s CONFIDENCE: %s EFFECTIVE: %s USER_PRIVACY_MODE: %s",
         det_mode,
         post_findings.get("confidence"),
+        effective_confidence,
+        user_privacy,
     )
     log_event(
         {
@@ -303,11 +339,15 @@ def call_provider(request: ProviderRequest) -> ProviderResponse:
             "agent": request.agent_handle or "",
             "tool": tool_key,
             "detection_mode": det_mode,
+            "user_privacy_mode": user_privacy,
+            "effective_confidence": effective_confidence,
             "findings": post_findings,
         }
     )
 
-    if post_findings["confidence"] == "high" and post_findings["secrets"]:
+    expl = explain_detection(post_findings)
+
+    if effective_confidence == "high" and post_findings["secrets"]:
         _log.error(_POST_SECRET_MSG)
         emit_runtime_event(
             "integrity.post_provider_secret_detected",
@@ -317,34 +357,80 @@ def call_provider(request: ProviderRequest) -> ProviderResponse:
                 "severity": "critical",
                 "detection_mode": det_mode,
                 "findings": post_findings,
+                "explanation": expl,
             },
         )
         add_integrity_alert(
-            {
-                "type": "post_provider_secret_detected",
-                "severity": "critical",
-                "mission_id": request.mission_id,
-                "findings": post_findings,
-            }
+            _make_integrity_alert_row(
+                post_findings,
+                type="post_provider_secret_detected",
+                severity="critical",
+                mission_id=request.mission_id,
+                findings=post_findings,
+            )
         )
         raise RuntimeError(_POST_SECRET_MSG)
 
-    if post_findings["secrets"] and post_findings["confidence"] != "high":
+    if post_findings["secrets"] and effective_confidence != "high":
         _log.warning(
             "Post-provider scan: non-blocking secret-shaped patterns (confidence=%s): %s",
             post_findings.get("confidence"),
             post_findings.get("secrets"),
         )
 
-    if post_findings["pii"]:
-        ev_pii = {
-            "type": "post_provider_pii_detected",
-            "severity": "warning",
-            "data": post_findings,
-            "mission_id": request.mission_id,
+    if post_findings["pii"] and user_privacy == "paranoid":
+        row = _make_integrity_alert_row(
+            post_findings,
+            type="post_provider_pii_detected",
+            severity="critical",
+            data=post_findings,
+            mission_id=request.mission_id,
+            agent=request.agent_handle or "",
+        )
+        log_event({"type": "post_provider_paranoid_pii_blocked", "mission_id": request.mission_id, "alert": row})
+        emit_runtime_event(
+            "integrity.post_provider_pii_detected",
+            mission_id=str(request.mission_id) if request.mission_id else None,
+            agent=request.agent_handle or "",
+            payload={
+                "severity": "critical",
+                "findings": post_findings,
+                "explanation": expl,
+                "user_privacy_mode": user_privacy,
+            },
+        )
+        add_integrity_alert(row)
+        redactions.append({"kind": "post_provider_output_pii_blocked_paranoid", "findings": post_findings})
+        ev_blk = {
+            "provider": effective_provider,
             "agent": request.agent_handle or "",
+            "status": "blocked",
+            "error": "paranoid_pii_in_output",
+            "mission_id": request.mission_id,
         }
-        log_event(ev_pii)
+        log_event({"type": "provider_blocked", **ev_blk})
+        add_provider_event(ev_blk)
+        audit(True, "paranoid_pii_in_output")
+        return ProviderResponse(
+            ok=False,
+            provider=effective_provider,
+            model=request.model,
+            output=None,
+            redactions=redactions,
+            blocked=True,
+            error="paranoid_pii_in_output",
+        )
+
+    if post_findings["pii"]:
+        ev_pii = _make_integrity_alert_row(
+            post_findings,
+            type="post_provider_pii_detected",
+            severity="warning",
+            data=post_findings,
+            mission_id=request.mission_id,
+            agent=request.agent_handle or "",
+        )
+        log_event(dict(ev_pii))
         _log.warning("PII-like patterns in provider output — review recommended (egress warning)")
         emit_runtime_event(
             "integrity.post_provider_pii_detected",
@@ -353,9 +439,10 @@ def call_provider(request: ProviderRequest) -> ProviderResponse:
             payload={
                 "severity": "warning",
                 "findings": post_findings,
+                "explanation": expl,
             },
         )
-        add_integrity_alert(dict(ev_pii))
+        add_integrity_alert(ev_pii)
         redactions.append({"kind": "post_provider_output_pii_flagged", "findings": post_findings})
 
     ev_ok: dict[str, Any] = {

@@ -11,6 +11,7 @@ from app.services.mission_control.nexa_next_state import add_privacy_event
 from app.services.privacy_firewall.audit import log_event
 from app.services.privacy_firewall.detectors import detect_sensitive_data, detect_sensitive_segments
 from app.services.privacy_firewall.redactor import redact_common_secrets, redact_sensitive_data
+from app.services.privacy_firewall.user_privacy import normalize_user_privacy_mode
 
 
 class PrivacyBlockedError(RuntimeError):
@@ -43,7 +44,10 @@ def prepare_external_payload(
 
     Raises :exc:`PrivacyBlockedError` when secret-shaped material is detected.
     """
+    s = get_settings()
     policy = normalize_pii_policy(pii_policy)
+    if normalize_user_privacy_mode(getattr(s, "nexa_user_privacy_mode", None)) == "paranoid":
+        policy = "block"
     text = str(payload)
     findings = detect_sensitive_data(text, mode="ingress")
 

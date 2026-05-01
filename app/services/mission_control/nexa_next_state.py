@@ -23,10 +23,44 @@ STATE: dict[str, Any] = {
     "privacy_events": [],
     "provider_events": [],
     "integrity_alerts": [],
+    "integrity_alert_ignored_ids": {},
+    "privacy_override_log": [],
     "last_updated": None,
 }
 
 _INTEGRITY_ALERTS_CAP = 80
+_PRIVACY_OVERRIDE_LOG_CAP = 200
+
+
+def compute_privacy_score(
+    *,
+    privacy_events: list[Any],
+    integrity_alerts: list[Any],
+    overrides_count: int,
+) -> int:
+    """Heuristic 0–100 score: higher is healthier privacy posture for this session snapshot."""
+    score = 100
+    red = sum(
+        1 for e in privacy_events if isinstance(e, dict) and str(e.get("type") or "") == "pii_redacted"
+    )
+    blk = sum(
+        1
+        for e in privacy_events
+        if isinstance(e, dict)
+        and str(e.get("type") or "") in ("secret_blocked", "pii_blocked_by_policy")
+    )
+    score -= min(25, blk * 5)
+    score -= min(20, red * 2)
+    crit = sum(
+        1 for a in integrity_alerts if isinstance(a, dict) and str(a.get("severity") or "").lower() == "critical"
+    )
+    warn = sum(
+        1 for a in integrity_alerts if isinstance(a, dict) and str(a.get("severity") or "").lower() == "warning"
+    )
+    score -= min(25, crit * 8)
+    score -= min(15, warn * 3)
+    score += min(15, max(0, overrides_count) * 3)
+    return max(0, min(100, int(score)))
 
 
 def add_integrity_alert(entry: dict[str, Any]) -> None:
@@ -87,7 +121,14 @@ def summarize_provider_transparency(
         st = str(e.get("status") or "")
         slot = by_prov.setdefault(p, {"calls": 0, "blocked": 0, "fallback": 0, "completed": 0})
         slot["calls"] += 1
-        if st in ("blocked", "rate_limited", "external_calls_disabled", "strict_privacy_mode"):
+        if st in (
+            "blocked",
+            "rate_limited",
+            "external_calls_disabled",
+            "strict_privacy_mode",
+            "user_privacy_paranoid",
+            "paranoid_pii_in_output",
+        ):
             slot["blocked"] += 1
         elif st == "fallback":
             slot["fallback"] += 1
@@ -115,12 +156,21 @@ def summarize_provider_transparency(
     }
 
 
-def _integrity_banner_level(alerts: list[Any]) -> str | None:
+def _ignored_alert_ids_map() -> dict[str, Any]:
+    STATE.setdefault("integrity_alert_ignored_ids", {})
+    return STATE["integrity_alert_ignored_ids"]
+
+
+def _integrity_banner_level(alerts: list[Any], ignored_ids: frozenset[str] | None = None) -> str | None:
     """Worst unresolved severity for Mission Control banner (Phase 18)."""
+    ig = ignored_ids or frozenset()
     critical = False
     warning = False
     for a in alerts:
         if not isinstance(a, dict):
+            continue
+        aid = str(a.get("alert_id") or "")
+        if aid and aid in ig:
             continue
         sev = a.get("severity")
         if sev is None:
@@ -142,18 +192,100 @@ def _integrity_banner_level(alerts: list[Any]) -> str | None:
     return None
 
 
+def _annotate_integrity_alerts(alerts: list[Any]) -> list[dict[str, Any]]:
+    ignored = _ignored_alert_ids_map()
+    out: list[dict[str, Any]] = []
+    for a in alerts:
+        if not isinstance(a, dict):
+            continue
+        row = dict(a)
+        aid = str(row.get("alert_id") or "")
+        row["ignored"] = bool(aid and aid in ignored)
+        out.append(row)
+    return out
+
+
+def apply_integrity_alert_override(
+    alert_id: str,
+    action: str,
+    *,
+    user_id: str,
+) -> dict[str, Any]:
+    """
+    User-controlled dismissal for **warning** integrity alerts only (Phase 19).
+
+    Critical / secret-related alerts cannot be overridden.
+    """
+    from app.services.privacy_firewall.audit import log_event
+
+    if action != "ignore":
+        raise ValueError("unsupported action")
+    aid = str(alert_id or "").strip()
+    if not aid:
+        raise KeyError("alert_id required")
+
+    alerts = STATE.get("integrity_alerts") or []
+    hit = next((a for a in alerts if isinstance(a, dict) and str(a.get("alert_id")) == aid), None)
+    if not hit:
+        raise KeyError("unknown alert")
+
+    sev = str(hit.get("severity") or "").lower()
+    if sev == "critical":
+        raise PermissionError("cannot override critical alerts")
+    typ = str(hit.get("type") or "").lower()
+    if "secret" in typ:
+        raise PermissionError("cannot override secret alerts")
+
+    ignored = _ignored_alert_ids_map()
+    now = datetime.now(timezone.utc).isoformat()
+    ignored[aid] = {"user_id": user_id, "action": action, "at": now}
+
+    entry = {
+        "type": "privacy_alert_override",
+        "alert_id": aid,
+        "action": action,
+        "user_id": user_id,
+        "at": now,
+        "final_outcome": "ignored",
+        "explanation_snapshot": hit.get("explanation"),
+        "source_alert_type": hit.get("type"),
+    }
+    STATE.setdefault("privacy_override_log", []).append(entry)
+    while len(STATE["privacy_override_log"]) > _PRIVACY_OVERRIDE_LOG_CAP:
+        STATE["privacy_override_log"].pop(0)
+
+    log_event(entry)
+    return {"ok": True, "alert_id": aid, "action": action, "outcome": "ignored"}
+
+
 def _runtime_hints() -> dict[str, Any]:
+    from app.services.privacy_firewall.user_privacy import normalize_user_privacy_mode
+
     s = get_settings()
     has_remote = bool((s.openai_api_key or "").strip() or (s.anthropic_api_key or "").strip())
     offline_mode = not has_remote and not s.nexa_disable_external_calls
+    priv = STATE.get("privacy_events") or []
     alerts = STATE.get("integrity_alerts") or []
+    ignored_map = _ignored_alert_ids_map()
+    ignored_ids = frozenset(ignored_map.keys())
+    active_banner = bool(alerts) and any(
+        isinstance(a, dict) and str(a.get("alert_id") or "") not in ignored_ids for a in alerts
+    )
+    score = compute_privacy_score(
+        privacy_events=list(priv),
+        integrity_alerts=list(alerts),
+        overrides_count=len(ignored_map),
+    )
+    mode_label = normalize_user_privacy_mode(getattr(s, "nexa_user_privacy_mode", None))
     return {
         "offline_mode": offline_mode,
         "strict_privacy_mode": bool(s.nexa_strict_privacy_mode),
         "remote_providers_available": has_remote,
         "external_calls_disabled": bool(s.nexa_disable_external_calls),
-        "integrity_alert_active": bool(alerts),
-        "integrity_banner_level": _integrity_banner_level(alerts),
+        "integrity_alert_active": active_banner,
+        "integrity_banner_level": _integrity_banner_level(alerts, ignored_ids),
+        "user_privacy_mode": mode_label,
+        "privacy_score": score,
     }
 
 
@@ -307,6 +439,9 @@ def build_execution_snapshot(db: Session, *, user_id: str | None = None) -> dict
     priv = list(STATE["privacy_events"])
     prov = list(STATE["provider_events"])
 
+    alert_tail = list(STATE.get("integrity_alerts") or [])[-40:]
+    rh = _runtime_hints()
+
     return {
         "missions": missions_out,
         "tasks": tasks_out,
@@ -314,11 +449,15 @@ def build_execution_snapshot(db: Session, *, user_id: str | None = None) -> dict
         "events": list_events(),
         "privacy_events": priv,
         "provider_events": prov,
-        "integrity_alerts": list(STATE.get("integrity_alerts") or [])[-40:],
+        "integrity_alerts": _annotate_integrity_alerts(alert_tail),
         "last_updated": STATE.get("last_updated"),
         "privacy_indicator": derive_privacy_indicator(priv),
         "provider_transparency": summarize_provider_transparency(prov, privacy_events=priv),
-        "runtime": _runtime_hints(),
+        "privacy_audit": {
+            "recent_overrides": list(STATE.get("privacy_override_log") or [])[-24:],
+            "privacy_score": rh.get("privacy_score"),
+        },
+        "runtime": rh,
         "metrics": _mission_reliability_metrics(
             db,
             user_id=user_id,

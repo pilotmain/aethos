@@ -30,8 +30,14 @@ export type MissionControlSnapshot = {
     external_calls_disabled?: boolean;
     integrity_alert_active?: boolean;
     integrity_banner_level?: "critical" | "warning" | null;
+    user_privacy_mode?: "standard" | "strict" | "paranoid" | string;
+    privacy_score?: number;
   };
   integrity_alerts?: Array<Record<string, unknown>>;
+  privacy_audit?: {
+    recent_overrides?: unknown[];
+    privacy_score?: number;
+  };
   metrics?: Record<string, unknown>;
 };
 

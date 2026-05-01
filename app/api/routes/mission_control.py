@@ -7,6 +7,7 @@ Phase 15 — locked contracts (stable JSON/WebSocket; do not rename or remove):
 - ``GET /mission-control/events/timeline`` — deque-backed event history.
 - ``WebSocket /mission-control/events/ws`` — live JSON stream (same bus).
 - ``POST /mission-control/gateway/run`` — Nexa gateway admission.
+- ``POST /mission-control/override-alert`` — Phase 19 dismiss warning-level integrity alerts (authenticated).
 
 Orchestration summary (distinct from execution state) remains at
 ``GET /mission-control/summary``.
@@ -15,6 +16,7 @@ Orchestration summary (distinct from execution state) remains at
 from __future__ import annotations
 
 import asyncio
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect, status
 from pydantic import BaseModel
@@ -40,7 +42,10 @@ from app.services.mission_control.db_purge import (
     purge_mission_control_database_for_user,
 )
 from app.services.mission_control.graph_builder import build_graph_cached
-from app.services.mission_control.nexa_next_state import build_execution_snapshot
+from app.services.mission_control.nexa_next_state import (
+    apply_integrity_alert_override,
+    build_execution_snapshot,
+)
 from app.services.mission_control.read_model import build_mission_control_summary
 from app.services.mission_control.ui_state import dismiss_attention_item
 
@@ -64,6 +69,13 @@ class MissionControlSqlPurgeBody(BaseModel):
     include_pending_permissions: bool = True
     include_custom_agents: bool = True
     clear_workspace_files: bool = True
+
+
+class IntegrityOverrideBody(BaseModel):
+    """Acknowledge / dismiss warning-level integrity alerts (never secrets)."""
+
+    alert_id: str
+    action: Literal["ignore"]
 
 
 @router.get("/data-inventory")
@@ -131,6 +143,22 @@ def mission_control_state(
 ) -> dict:
     """Nexa-Next execution state — DB-backed missions, tasks, artifacts, plus event bus and privacy streams."""
     return build_execution_snapshot(db, user_id=user_id)
+
+
+@router.post("/override-alert")
+def mission_control_override_alert(
+    body: IntegrityOverrideBody,
+    app_user_id: str = Depends(get_valid_web_user_id),
+) -> dict:
+    """Phase 19 — dismiss warning-level integrity alerts (secrets / critical cannot be overridden)."""
+    try:
+        return apply_integrity_alert_override(body.alert_id, body.action, user_id=app_user_id)
+    except KeyError as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except PermissionError as exc:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
 
 @router.get("/graph")

@@ -9,12 +9,15 @@ import { MissionBuilderPanel } from "@/components/mission-control/MissionBuilder
 import { MissionControlLiveEvents } from "@/components/mission-control/MissionControlLiveEvents";
 import { MissionControlPage } from "@/components/mission-control/MissionControlPage";
 import { MissionGraph } from "@/components/mission-control/MissionGraph";
+import type { IntegrityAlertRow } from "@/components/mission-control/IntegrityAlertBanner";
 import { IntegrityAlertBanner } from "@/components/mission-control/IntegrityAlertBanner";
+import { PrivacyTrustPanel } from "@/components/mission-control/PrivacyTrustPanel";
 import { OfflineModeBanner } from "@/components/mission-control/OfflineModeBanner";
 import { PrivacyIndicatorBadge } from "@/components/mission-control/PrivacyIndicatorBadge";
 import { ProviderTransparencyPanel } from "@/components/mission-control/ProviderTransparencyPanel";
 import { isConfigured } from "@/lib/config";
 import { useMissionControlSnapshot } from "@/lib/mission-control/useMissionControlSnapshot";
+import { webFetch } from "@/lib/api";
 import {
   appendMissionLiveEvent,
   refreshMissionControlStore,
@@ -30,7 +33,8 @@ import {
  */
 export function MissionControlLayout() {
   const [configured, setConfigured] = useState(false);
-  const { data: snap, loading: snapLoading, error: snapErr } = useMissionControlSnapshot(10000);
+  const { data: snap, loading: snapLoading, error: snapErr, refresh: refreshMc } =
+    useMissionControlSnapshot(10000);
 
   useEffect(() => {
     setConfigured(isConfigured());
@@ -59,6 +63,19 @@ export function MissionControlLayout() {
   const integrityBannerLevel =
     snap?.runtime?.integrity_banner_level ??
     (snap?.runtime?.integrity_alert_active ? "critical" : null);
+
+  const integrityAlerts = snap?.integrity_alerts as IntegrityAlertRow[] | undefined;
+
+  const privacyScore = snap?.runtime?.privacy_score as number | undefined;
+  const userPrivacyMode = snap?.runtime?.user_privacy_mode as string | undefined;
+
+  const dismissWarning = async (alertId: string) => {
+    await webFetch("/mission-control/override-alert", {
+      method: "POST",
+      body: JSON.stringify({ alert_id: alertId, action: "ignore" }),
+    });
+    await refreshMc();
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-zinc-950 via-zinc-950 to-black text-zinc-100">
@@ -100,9 +117,24 @@ export function MissionControlLayout() {
         {snapErr && configured ? (
           <p className="rounded-lg border border-rose-500/35 bg-rose-950/30 px-3 py-2 text-xs text-rose-100">{snapErr}</p>
         ) : null}
-        {configured ? <IntegrityAlertBanner level={integrityBannerLevel} /> : null}
+        {configured ? (
+          <IntegrityAlertBanner
+            level={integrityBannerLevel}
+            alerts={integrityAlerts}
+            onIgnoreAlert={integrityBannerLevel === "warning" ? dismissWarning : undefined}
+          />
+        ) : null}
         {(offline || strict) && configured ? (
           <OfflineModeBanner offline={offline} strictMode={strict} />
+        ) : null}
+
+        {configured ? (
+          <PrivacyTrustPanel
+            privacyScore={privacyScore}
+            userPrivacyMode={userPrivacyMode}
+            recentAlerts={integrityAlerts}
+            loading={snapLoading && configured}
+          />
         ) : null}
 
         <ProviderTransparencyPanel
