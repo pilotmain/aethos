@@ -76,6 +76,7 @@ def answer_general_question(
     conversation_snapshot: dict | None = None,
     *,
     research_mode: bool = False,
+    turn_memory_summary: str | None = None,
 ) -> str:
     t = (text or "").strip()
     if not t:
@@ -90,6 +91,10 @@ def answer_general_question(
     extra = None
     if ctx:
         extra = f"Context (for reference only, may be partial):\n{ctx}"
+    tm = (turn_memory_summary or "").strip()
+    if tm:
+        block = f"User-specific memory for this turn (use naturally; do not dump verbatim):\n{tm[:6000]}"
+        extra = f"{extra}\n\n{block}" if extra else block
 
     memory_block = _general_answer_memory_block()
     system_prompt = GENERAL_ANSWER_SYSTEM_PROMPT

@@ -24,6 +24,7 @@ START_MODE="${NEXA_START:-}"
 NONINTERACTIVE="${NEXA_NONINTERACTIVE:-0}"
 SKIP_KEYS=0
 NO_CLONE=0
+DRY_RUN=0
 BOOTSTRAP_EXTRA=()
 
 usage() {
@@ -34,12 +35,14 @@ usage() {
   echo "  --no-docker     Pass through to nexa_bootstrap.py (venv + .env only)."
   echo "  --start MODE    none | docker | host (overrides auto detection)."
   echo "  --skip-keys     Do not prompt for API keys / Telegram token."
+  echo "  --dry-run       Print planned steps only (no bootstrap, no starts)."
   echo "  -h, --help      This help."
 }
 
 while [ "${1:-}" != "" ]; do
   case "$1" in
     --no-clone) NO_CLONE=1; shift ;;
+    --dry-run) DRY_RUN=1; shift ;;
     --no-docker) BOOTSTRAP_EXTRA+=(--no-docker); shift ;;
     --start)
       START_MODE="${2:-}"
@@ -77,6 +80,15 @@ else
 fi
 
 [ -f scripts/nexa_bootstrap.py ] || die "not the Nexa repo root: ${ROOT}"
+
+if [ "$DRY_RUN" = 1 ]; then
+  echo "[dry-run] Repository root: ${ROOT}"
+  echo "[dry-run] Would run: python3 scripts/nexa_bootstrap.py ${BOOTSTRAP_EXTRA[*]}"
+  echo "[dry-run] Privacy-first defaults: set NEXA_LOCAL_FIRST=true and review docs/INSTALL.md before exposing keys."
+  echo "[dry-run] Would merge keys from env when non-interactive (see merge_keys_from_env in script)."
+  echo "[dry-run] No file changes, no services started. Re-run without --dry-run to apply."
+  exit 0
+fi
 
 mkdir -p "${ROOT}/.runtime"
 

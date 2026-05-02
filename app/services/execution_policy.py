@@ -39,4 +39,52 @@ def should_auto_execute(intent: str, risk: str) -> bool:
     return intent in ("stuck_dev", "analysis")
 
 
-__all__ = ["assess_interaction_risk", "should_auto_execute"]
+def contains_destructive_language(text: str) -> bool:
+    """High-risk phrases — do not auto-run dev missions."""
+    return assess_interaction_risk(text) == "high"
+
+
+def should_auto_run_dev_task(
+    intent: str,
+    risk: str,
+    workspace_count: int,
+    text: str,
+) -> bool:
+    """
+    Phase 52 — safe low-risk auto dev investigation when exactly one workspace exists.
+
+    Requires explicit ``run dev`` elsewhere; this gates *automatic* investigation runs only.
+    """
+    if workspace_count != 1:
+        return False
+    if intent not in ("stuck_dev", "analysis"):
+        return False
+    if risk != "low":
+        return False
+    if contains_destructive_language(text):
+        return False
+    tl = (text or "").lower()
+    for phrase in (
+        "don't run",
+        "do not run",
+        "dont run",
+        "don't execute",
+        "do not execute",
+        "just explain",
+        "only explain",
+        "no execution",
+        "don't change code",
+        "do not change",
+        "theory only",
+    ):
+        if phrase in tl:
+            return False
+    return True
+
+
+__all__ = [
+    "assess_interaction_risk",
+    "contains_destructive_language",
+    "should_auto_execute",
+    "should_auto_run_dev_task",
+]

@@ -66,6 +66,41 @@ class NexaGateway:
 
         return compose_nexa_response(*args, **kwargs)
 
+    def _maybe_auto_dev_investigation(
+        self,
+        gctx: GatewayContext,
+        text: str,
+        db: Session,
+    ) -> dict[str, Any] | None:
+        """Phase 52 — auto-run a dev mission when policy + single workspace allow."""
+        from app.services.conversation_context_service import build_context_snapshot, get_or_create_context
+        from app.services.dev_runtime.run_dev_gateway import format_dev_run_summary
+        from app.services.dev_runtime.service import run_dev_mission
+        from app.services.dev_runtime.workspace import list_workspaces
+        from app.services.execution_policy import assess_interaction_risk, should_auto_run_dev_task
+        from app.services.intent_classifier import get_intent
+
+        uid = (gctx.user_id or "").strip()
+        raw = (text or "").strip()
+        if not uid or not raw:
+            return None
+        rows = list_workspaces(db, uid)
+        if len(rows) != 1:
+            return None
+        cctx = get_or_create_context(db, uid)
+        snap = build_context_snapshot(cctx, db)
+        intent = get_intent(raw, conversation_snapshot=snap)
+        risk = assess_interaction_risk(raw)
+        if not should_auto_run_dev_task(intent, risk, len(rows), raw):
+            return None
+        res = run_dev_mission(db, uid, rows[0].id, raw[:8000])
+        return {
+            "mode": "chat",
+            "text": format_dev_run_summary(res),
+            "dev_run": res,
+            "intent": "dev_mission",
+        }
+
     def _try_structured_route(self, gctx: GatewayContext, text: str, db: Session) -> dict[str, Any] | None:
         """Dev runs, missions, and dev hints only — ``None`` means generic chat."""
         from app.services.dev_runtime.gateway_hint import maybe_dev_gateway_hint
@@ -83,6 +118,10 @@ class NexaGateway:
         mission = parse_mission(text)
         if mission:
             return self._run_mission(mission, uid, db, source_text=text)
+
+        auto_dev = self._maybe_auto_dev_investigation(gctx, text, db)
+        if auto_dev is not None:
+            return auto_dev
 
         hint = maybe_dev_gateway_hint(text, uid, db)
         if hint is not None:
@@ -157,17 +196,34 @@ class NexaGateway:
         uid = gctx.user_id
         channel = gctx.channel
         raw = (text or "").strip()
+        from app.services.memory.context_injection import build_memory_context_for_turn
+
+        turn_mem = build_memory_context_for_turn(uid, raw)
+        if turn_mem.get("used"):
+            if gctx.memory is None:
+                gctx.memory = {}
+            gctx.memory.update(turn_mem)
+
         orchestrator = OrchestratorService()
         memory_service = MemoryService()
         settings = get_settings()
 
         def _attach_memory_brain(beh_ctx_inner: Any) -> None:
             if isinstance(beh_ctx_inner.memory, dict):
-                beh_ctx_inner.memory["memory_context"] = MemoryIndex().recent_for_prompt(uid, max_chars=3500)
+                turn_mc = None
+                if isinstance(gctx.memory, dict):
+                    turn_mc = gctx.memory.get("memory_context")
+                if isinstance(turn_mc, str) and turn_mc.strip():
+                    beh_ctx_inner.memory["memory_context"] = turn_mc.strip()[:5000]
+                else:
+                    beh_ctx_inner.memory["memory_context"] = MemoryIndex().recent_for_prompt(
+                        uid, max_chars=3500
+                    )
                 if isinstance(gctx.memory, dict):
                     for _k, _v in gctx.memory.items():
-                        if _k != "via_gateway":
-                            beh_ctx_inner.memory.setdefault(_k, _v)
+                        if _k in ("via_gateway", "memory_context"):
+                            continue
+                        beh_ctx_inner.memory.setdefault(_k, _v)
 
         cctx = get_or_create_context(db, uid)
         snap = build_context_snapshot(cctx, db)
@@ -241,9 +297,13 @@ class NexaGateway:
         stripped = raw
         correction_used = t_clean != stripped and len((t_clean or "").strip()) > 2
         if looks_like_general_question(t_clean) or correction_used:
+            mem_sum = ""
+            if isinstance(gctx.memory, dict):
+                mem_sum = str(gctx.memory.get("summary") or "").strip()
             gq = answer_general_question(
                 (t_clean or "").strip() or stripped,
                 conversation_snapshot=snap,
+                turn_memory_summary=mem_sum or None,
             )
             return {"mode": "chat", "text": gateway_finalize_chat_reply(gq, source="general_answer"), "intent": "general_answer"}
 
