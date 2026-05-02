@@ -14,12 +14,11 @@
 #   ./scripts/nexa_next_local_all.sh status
 #
 # Database (important):
-#   By default this script sets NEXA_NEXT_LOCAL_SIDECAR=1 so the app uses repo-root SQLite
-#   (overwhelm_reset.db) even if .env says postgresql://127.0.0.1:5434 — avoiding "connection refused"
-#   when Docker Postgres is not running.
-#   To use Postgres from .env instead, start the DB first:
-#     NEXA_NEXT_LOCAL_START_POSTGRES=1 ./scripts/nexa_next_local_all.sh start
-#   (requires Docker; starts `docker compose` service `db` using POSTGRES_HOST_PORT from .env.)
+#   If .env DATABASE_URL is Postgres and Docker is available, this script starts ``docker compose up -d db``
+#   automatically (same as ./scripts/docker_postgres_up.sh) and runs API/bot against 127.0.0.1:POSTGRES_HOST_PORT.
+#   Override: NEXA_NEXT_LOCAL_START_POSTGRES=0 — never start Docker; force repo SQLite (NEXA_NEXT_LOCAL_SIDECAR=1).
+#   Override: NEXA_NEXT_LOCAL_START_POSTGRES=1 — always try Docker db first (even if .env is sqlite).
+#   If Docker is missing or db fails to listen, falls back to SQLite at ${ROOT}/overwhelm_reset.db.
 #
 # Bot: starts automatically if .env contains a non-empty TELEGRAM_BOT_TOKEN. Opt out with:
 #   NEXA_NEXT_START_BOT=0   (or false / no)
@@ -188,9 +187,16 @@ cmd_start() {
   export API_BASE_URL="http://127.0.0.1:${API_PORT}"
   export NEXA_WEB_ORIGINS="http://localhost:${WEB_PORT},http://127.0.0.1:${WEB_PORT}"
 
+  # Unset NEXA_NEXT_LOCAL_START_POSTGRES → auto: start Docker db when .env asks for Postgres and docker exists.
   _start_pg=0
   case "${NEXA_NEXT_LOCAL_START_POSTGRES:-}" in
     1|true|TRUE|yes|YES) _start_pg=1 ;;
+    0|false|no|NO|False) _start_pg=0 ;;
+    *)
+      if _env_database_url_looks_like_postgres && command -v docker &>/dev/null && [ -f "${ROOT}/docker-compose.yml" ]; then
+        _start_pg=1
+      fi
+      ;;
   esac
   if [ "$_start_pg" -eq 1 ]; then
     if command -v docker &>/dev/null && [ -f "${ROOT}/docker-compose.yml" ]; then
@@ -210,7 +216,12 @@ cmd_start() {
     fi
   else
     export NEXA_NEXT_LOCAL_SIDECAR=1
-    echo "Local DB: SQLite at ${ROOT}/overwhelm_reset.db (NEXA_NEXT_LOCAL_SIDECAR=1; Postgres in .env ignored)."
+    if _env_database_url_looks_like_postgres; then
+      echo "Local DB: SQLite at ${ROOT}/overwhelm_reset.db (NEXA_NEXT_LOCAL_SIDECAR=1)."
+      echo "  Hint: install/start Docker and re-run, or run ./scripts/docker_postgres_up.sh then start with NEXA_NEXT_LOCAL_START_POSTGRES=1 or unset with Docker available." >&2
+    else
+      echo "Local DB: SQLite at ${ROOT}/overwhelm_reset.db (NEXA_NEXT_LOCAL_SIDECAR=1)."
+    fi
   fi
 
   if [ -f "$API_PIDF" ]; then

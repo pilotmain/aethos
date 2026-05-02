@@ -24,6 +24,20 @@ No file changes and no services started:
 ./scripts/install.sh --no-clone --dry-run
 ```
 
+## Local Postgres (Docker)
+
+If `.env` uses `postgresql://127.0.0.1:…`, start the bundled DB before the API or Telegram bot:
+
+```bash
+./scripts/docker_postgres_up.sh
+```
+
+Or start API + web + bot together (auto-starts `docker compose` service `db` when `.env` is Postgres and Docker is installed):
+
+```bash
+./scripts/nexa_next_local_all.sh start
+```
+
 ## Defaults
 
 - Prefer **local / BYOK** configuration: add keys via `/key set` or `.env`, not inline chat.

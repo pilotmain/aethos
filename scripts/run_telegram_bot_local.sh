@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
-# Run the Telegram bot with the same DB override as ./scripts/nexa_next_local_all.sh:
-# NEXA_NEXT_LOCAL_SIDECAR=1 forces repo-root SQLite when .env points at Postgres that is not running.
+# Run the Telegram bot with SQLite sidcar (NEXA_NEXT_LOCAL_SIDECAR=1) so Postgres does not need to be up.
+# For Docker Postgres + host DATABASE_URL: ./scripts/docker_postgres_up.sh then either
+#   NEXA_NEXT_LOCAL_SIDECAR=0 .venv/bin/python -m app.bot.telegram_bot
+# or simply ./scripts/nexa_next_local_all.sh start (auto-starts db when .env is Postgres and Docker exists).
 #
 # Usage (from anywhere):
 #   ./scripts/run_telegram_bot_local.sh
