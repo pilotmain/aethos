@@ -17,6 +17,9 @@ class NexaTask:
     context: dict[str, Any] = field(default_factory=dict)
     state: str = "pending"
     result: dict[str, Any] | None = None
+    auto_generated: bool = False
+    priority: int = 0
+    origin: str = "user"
 
     @classmethod
     def from_scheduler_dev_payload(
@@ -38,6 +41,9 @@ class NexaTask:
                 "job_kind": kind,
                 "scheduler_payload": dict(payload),
             },
+            auto_generated=False,
+            priority=0,
+            origin="scheduler",
         )
 
     @classmethod
@@ -47,6 +53,9 @@ class NexaTask:
             type="system",
             input=(goal or "").strip(),
             context={"session_key": session_key, "user_id": user_id, "iteration": iteration},
+            auto_generated=False,
+            priority=0,
+            origin="long_running",
         )
 
 

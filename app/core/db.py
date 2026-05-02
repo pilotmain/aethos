@@ -664,6 +664,24 @@ def _migrate_agent_jobs_phase38_approval_persistence() -> None:
             conn.execute(text("ALTER TABLE agent_jobs ADD COLUMN approval_decision VARCHAR(64) NULL"))
 
 
+def _migrate_nexa_long_running_phase44() -> None:
+    """Phase 44 — autonomy metadata on long-running sessions."""
+    insp = inspect(engine)
+    if "nexa_long_running_sessions" not in insp.get_table_names():
+        return
+    cols = {c["name"] for c in insp.get_columns("nexa_long_running_sessions")}
+    dialect = engine.dialect.name
+    df_false = "BOOLEAN NOT NULL DEFAULT FALSE" if dialect == "postgresql" else "BOOLEAN NOT NULL DEFAULT 0"
+    with engine.begin() as conn:
+        if "auto_generated" not in cols:
+            conn.execute(text(f"ALTER TABLE nexa_long_running_sessions ADD COLUMN auto_generated {df_false}"))
+        if "priority" not in cols:
+            conn.execute(text("ALTER TABLE nexa_long_running_sessions ADD COLUMN priority INTEGER NOT NULL DEFAULT 0"))
+        if "origin" not in cols:
+            t = "VARCHAR(64) NOT NULL DEFAULT 'user'" if dialect == "postgresql" else "VARCHAR(64) NOT NULL DEFAULT 'user'"
+            conn.execute(text(f"ALTER TABLE nexa_long_running_sessions ADD COLUMN origin {t}"))
+
+
 def _migrate_nexa_dev_steps_phase25() -> None:
     """Phase 25 — iteration + structured JSON on dev steps."""
     insp = inspect(engine)
@@ -712,6 +730,7 @@ def ensure_schema() -> None:
     _migrate_nexa_missions_input_text()
     _migrate_nexa_tasks_timing()
     _migrate_nexa_dev_steps_phase25()
+    _migrate_nexa_long_running_phase44()
     _migrate_agent_jobs_phase38_approval_persistence()
 
 

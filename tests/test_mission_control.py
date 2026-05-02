@@ -17,6 +17,16 @@ from app.services.mission_control.scoring import score_mission_item
 from app.services.trust_audit_constants import ACCESS_SENSITIVE_EGRESS_WARNING, NETWORK_EXTERNAL_SEND_BLOCKED
 
 
+def test_mission_control_state_includes_autonomy_phase44(api_client: tuple[TestClient, str]) -> None:
+    client, _uid = api_client
+    r = client.get("/api/v1/mission-control/state?hours=24")
+    assert r.status_code == 200
+    body = r.json()
+    assert isinstance(body.get("autonomous_tasks"), list)
+    assert isinstance(body.get("autonomy_decisions"), list)
+    assert isinstance(body.get("autonomy_feedback"), list)
+
+
 def test_mission_control_state_shape(api_client: tuple[TestClient, str]) -> None:
     client, _uid = api_client
     r = client.get("/api/v1/mission-control/state?hours=24")

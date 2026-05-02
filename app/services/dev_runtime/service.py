@@ -32,6 +32,7 @@ from app.services.dev_runtime.privacy import (
 )
 from app.services.dev_runtime.step_record import create_dev_step
 from app.services.dev_runtime.tester import run_repo_tests
+from app.services.dev_runtime.failure_intel import classify_dev_failure, select_fix_strategy
 from app.services.dev_runtime.workspace import get_workspace
 from app.services.events.envelope import emit_runtime_event
 from app.services.mission_control.nexa_next_state import update_state
@@ -440,6 +441,14 @@ def run_dev_mission(
             },
         }
         result_payload["pr_ready"] = is_pr_ready({**result_payload, "status": "completed"})
+        _fc = classify_dev_failure(
+            error_text=None,
+            tests_passed=tests_passed,
+            adapter_round_ok=not has_runtime_errors,
+            privacy_blocked=False,
+        )
+        result_payload["failure_classification"] = _fc
+        result_payload["fix_strategy_hint"] = select_fix_strategy(_fc)
 
         run.result_json = result_payload
         run.status = "completed"
@@ -470,6 +479,8 @@ def run_dev_mission(
             "pr_ready": result_payload["pr_ready"],
             "has_runtime_errors": has_runtime_errors,
             "pipeline": result_payload.get("pipeline"),
+            "failure_classification": result_payload.get("failure_classification"),
+            "fix_strategy_hint": result_payload.get("fix_strategy_hint"),
         }
 
     except PrivacyBlockedError as exc:
@@ -483,6 +494,12 @@ def run_dev_mission(
             payload={"run_id": rid, "status": "blocked", "error": str(exc)},
         )
         update_state([])
+        _fcb = classify_dev_failure(
+            error_text=str(exc),
+            tests_passed=False,
+            adapter_round_ok=True,
+            privacy_blocked=True,
+        )
         return {
             "ok": False,
             "run_id": rid,
@@ -493,6 +510,8 @@ def run_dev_mission(
             "tests_passed": False,
             "pr_ready": False,
             "has_runtime_errors": False,
+            "failure_classification": _fcb,
+            "fix_strategy_hint": select_fix_strategy(_fcb),
         }
 
     except Exception as exc:
@@ -506,6 +525,12 @@ def run_dev_mission(
             payload={"run_id": rid, "status": "failed", "error": str(exc)},
         )
         update_state([])
+        _fcf = classify_dev_failure(
+            error_text=str(exc),
+            tests_passed=False,
+            adapter_round_ok=False,
+            privacy_blocked=False,
+        )
         return {
             "ok": False,
             "run_id": rid,
@@ -516,6 +541,8 @@ def run_dev_mission(
             "tests_passed": False,
             "pr_ready": False,
             "has_runtime_errors": True,
+            "failure_classification": _fcf,
+            "fix_strategy_hint": select_fix_strategy(_fcf),
         }
 
 

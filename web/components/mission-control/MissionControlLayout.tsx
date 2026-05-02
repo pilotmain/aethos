@@ -15,6 +15,7 @@ import { PrivacyTrustPanel } from "@/components/mission-control/PrivacyTrustPane
 import { OfflineModeBanner } from "@/components/mission-control/OfflineModeBanner";
 import { PrivacyIndicatorBadge } from "@/components/mission-control/PrivacyIndicatorBadge";
 import { DevOpsPanel } from "@/components/mission-control/DevOpsPanel";
+import { AutonomyIntelligencePanel } from "@/components/mission-control/AutonomyIntelligencePanel";
 import { Phase22Overview } from "@/components/mission-control/Phase22Overview";
 import { ProviderTransparencyPanel } from "@/components/mission-control/ProviderTransparencyPanel";
 import { TokenEconomyPanel } from "@/components/mission-control/TokenEconomyPanel";
@@ -285,6 +286,17 @@ export function MissionControlLayout() {
                 Array.isArray(snap?.channel_activity) ? snap!.channel_activity!.length : undefined
               }
               autonomous={Boolean(snap?.runtime && (snap.runtime as { autonomous_mode?: boolean }).autonomous_mode)}
+            />
+          ) : null}
+
+          {configured ? (
+            <AutonomyIntelligencePanel
+              shellLight={shellLight}
+              autonomousTasks={snap?.autonomous_tasks as Record<string, unknown>[] | undefined}
+              autonomyDecisions={snap?.autonomy_decisions as Record<string, unknown>[] | undefined}
+              autonomyFeedback={snap?.autonomy_feedback as Record<string, unknown>[] | undefined}
+              loading={snapLoading && configured}
+              onRefresh={() => void refreshMc()}
             />
           ) : null}
 

@@ -10,6 +10,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
+from app.models.autonomy import NexaAutonomousTask, NexaAutonomyDecisionLog, NexaTaskFeedback
 from app.models.dev_runtime import NexaDevRun, NexaDevWorkspace
 from app.models.long_running_session import NexaLongRunningSession
 from app.models.nexa_next_runtime import NexaArtifact, NexaExternalCall, NexaMission, NexaMissionTask
@@ -493,6 +494,9 @@ def build_execution_snapshot(
     long_running_out: list[dict[str, Any]] = []
     scheduler_jobs_out: list[dict[str, Any]] = []
     channel_activity_out: list[dict[str, Any]] = []
+    autonomous_tasks_out: list[dict[str, Any]] = []
+    autonomy_decisions_out: list[dict[str, Any]] = []
+    autonomy_feedback_out: list[dict[str, Any]] = []
     if user_id:
         ws_rows = list(
             db.scalars(
@@ -553,6 +557,12 @@ def build_execution_snapshot(
                 "pipeline": (r.result_json or {}).get("pipeline")
                 if isinstance(r.result_json, dict)
                 else None,
+                "failure_classification": (r.result_json or {}).get("failure_classification")
+                if isinstance(r.result_json, dict)
+                else None,
+                "fix_strategy_hint": (r.result_json or {}).get("fix_strategy_hint")
+                if isinstance(r.result_json, dict)
+                else None,
                 "privacy_note": "Outbound adapter context is gated; stored output is redacted.",
                 "privacy_warnings": None,
             }
@@ -573,6 +583,9 @@ def build_execution_snapshot(
                 "iteration": x.iteration,
                 "interval_seconds": x.interval_seconds,
                 "active": x.active,
+                "auto_generated": bool(getattr(x, "auto_generated", False)),
+                "priority": int(getattr(x, "priority", 0) or 0),
+                "origin": str(getattr(x, "origin", None) or "user"),
                 "updated_at": x.updated_at.isoformat() if x.updated_at else None,
             }
             for x in lr_rows
@@ -607,6 +620,61 @@ def build_execution_snapshot(
             if isinstance(ev, dict)
         ][-15:]
 
+        at_rows = list(
+            db.scalars(
+                select(NexaAutonomousTask)
+                .where(NexaAutonomousTask.user_id == user_id)
+                .order_by(NexaAutonomousTask.priority.desc(), NexaAutonomousTask.created_at.desc())
+                .limit(40)
+            ).all()
+        )
+        autonomous_tasks_out = [
+            {
+                "id": t.id,
+                "title": (t.title or "")[:2000],
+                "state": t.state,
+                "priority": int(t.priority or 0),
+                "auto_generated": bool(t.auto_generated),
+                "origin": t.origin,
+                "created_at": t.created_at.isoformat() if t.created_at else None,
+            }
+            for t in at_rows
+        ]
+        ad_rows = list(
+            db.scalars(
+                select(NexaAutonomyDecisionLog)
+                .where(NexaAutonomyDecisionLog.user_id == user_id)
+                .order_by(NexaAutonomyDecisionLog.created_at.desc())
+                .limit(25)
+            ).all()
+        )
+        autonomy_decisions_out = [
+            {
+                "id": d.id,
+                "summary": (d.summary or "")[:1200],
+                "created_at": d.created_at.isoformat() if d.created_at else None,
+            }
+            for d in ad_rows
+        ]
+        fb_rows = list(
+            db.scalars(
+                select(NexaTaskFeedback)
+                .where(NexaTaskFeedback.user_id == user_id)
+                .order_by(NexaTaskFeedback.created_at.desc())
+                .limit(40)
+            ).all()
+        )
+        autonomy_feedback_out = [
+            {
+                "id": f.id,
+                "task_id": f.task_id,
+                "outcome": f.outcome,
+                "reason": (f.reason or "")[:800],
+                "created_at": f.created_at.isoformat() if f.created_at else None,
+            }
+            for f in fb_rows
+        ]
+
     exec_payload: dict[str, Any] = {
         "missions": missions_out,
         "tasks": tasks_out,
@@ -635,6 +703,9 @@ def build_execution_snapshot(
         "long_running_sessions": long_running_out,
         "scheduler_jobs": scheduler_jobs_out,
         "channel_activity": channel_activity_out,
+        "autonomous_tasks": autonomous_tasks_out,
+        "autonomy_decisions": autonomy_decisions_out,
+        "autonomy_feedback": autonomy_feedback_out,
     }
 
     uid_early = (user_id or "").strip()

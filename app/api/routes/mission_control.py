@@ -10,6 +10,7 @@ Phase 15 — locked contracts (stable JSON/WebSocket; do not rename or remove):
 - ``POST /mission-control/override-alert`` — Phase 19 dismiss warning-level integrity alerts (authenticated).
 - ``GET /mission-control/export/{mission_id}`` — Phase 20 export mission bundle (authenticated).
 - ``POST /mission-control/import`` — Phase 20 import mission bundle (authenticated).
+- ``POST /mission-control/autonomy/tasks/{task_id}/interrupt`` — Phase 44 interrupt autonomous task (authenticated).
 
 Unified Mission Control payload (execution + dashboard) is ``GET /mission-control/state``.
 ``GET /mission-control/summary`` is gone (HTTP 410 — use ``/state``).
@@ -18,6 +19,7 @@ Unified Mission Control payload (execution + dashboard) is ``GET /mission-contro
 from __future__ import annotations
 
 import asyncio
+from datetime import datetime, timezone
 from typing import Literal
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect, status
@@ -27,6 +29,7 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.core.db import get_db
 from app.core.security import get_valid_web_user_id
+from app.models.autonomy import NexaAutonomousTask
 from app.models.nexa_next_runtime import NexaMission
 from app.services.audit_service import audit
 from app.services.mission_control.cleanup_actions import (
@@ -50,6 +53,7 @@ from app.services.mission_control.nexa_next_state import (
     build_execution_snapshot,
 )
 from app.services.mission_control.ui_state import dismiss_attention_item
+from app.services.autonomy.feedback import record_task_feedback
 
 router = APIRouter(prefix="/mission-control", tags=["mission-control"])
 
@@ -145,6 +149,43 @@ def mission_control_state(
 ) -> dict:
     """Unified Mission Control state — execution snapshot plus orchestration/trust dashboard."""
     return build_execution_snapshot(db, user_id=app_user_id, hours=hours)
+
+
+@router.post("/autonomy/tasks/{task_id}/interrupt")
+def mission_control_interrupt_autonomous_task(
+    task_id: str,
+    db: Session = Depends(get_db),
+    app_user_id: str = Depends(get_valid_web_user_id),
+) -> dict:
+    """Phase 44 — mark an autonomous queued task as interrupted (logged + feedback row)."""
+    tid = (task_id or "").strip()
+    if not tid:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="empty task id")
+    row = db.get(NexaAutonomousTask, tid)
+    if row is None or row.user_id != app_user_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Task not found")
+    if row.state in ("completed", "interrupted", "cancelled"):
+        return {"ok": True, "task_id": tid, "state": row.state, "idempotent": True}
+    row.state = "interrupted"
+    row.updated_at = datetime.now(timezone.utc)
+    db.commit()
+    record_task_feedback(
+        db,
+        user_id=app_user_id,
+        task_id=tid,
+        outcome="fail",
+        reason="user_interrupt",
+        meta={"via": "mission_control"},
+    )
+    audit(
+        db,
+        event_type="mission_control.autonomy.task.interrupted",
+        actor="nexa",
+        user_id=app_user_id,
+        message=f"Interrupted autonomous task {tid}",
+        metadata={"task_id": tid},
+    )
+    return {"ok": True, "task_id": tid, "state": row.state}
 
 
 @router.post("/override-alert")

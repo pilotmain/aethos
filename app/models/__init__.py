@@ -4,6 +4,7 @@ from app.models.agent_heartbeat import AgentHeartbeat
 from app.models.agent_job import AgentJob
 from app.models.agent_run import AgentRun
 from app.models.agent_team import AgentAssignment, AgentOrganization, AgentRoleAssignment
+from app.models.autonomy import NexaAutonomousTask, NexaAutonomyDecisionLog, NexaTaskFeedback
 from app.models.audit_log import AuditLog
 from app.models.audit_retention_policy import AuditRetentionPolicy
 from app.models.brain_dump import BrainDump
@@ -77,6 +78,9 @@ __all__ = [
     "NexaMissionTask",
     "NexaArtifact",
     "NexaExternalCall",
+    "NexaAutonomousTask",
+    "NexaAutonomyDecisionLog",
+    "NexaTaskFeedback",
     "NexaSchedulerJob",
     "NexaLongRunningSession",
     "NexaDevWorkspace",

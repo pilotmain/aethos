@@ -141,6 +141,9 @@ def upsert_db_session(
     interval_seconds: int = 300,
     state: dict[str, Any] | None = None,
     active: bool = True,
+    auto_generated: bool = False,
+    priority: int = 0,
+    origin: str = "user",
 ) -> NexaLongRunningSession:
     """Create or update a DB-backed session (survives API restart)."""
     pk = _stable_session_pk(user_id, session_key)
@@ -165,6 +168,9 @@ def upsert_db_session(
             iteration=0,
             last_tick_at=None,
             active=active,
+            auto_generated=bool(auto_generated),
+            priority=max(0, int(priority or 0)),
+            origin=(origin or "user").strip()[:64] or "user",
             created_at=now,
             updated_at=now,
         )
