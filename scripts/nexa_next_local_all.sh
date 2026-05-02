@@ -13,8 +13,19 @@
 #   ./scripts/nexa_next_local_all.sh stop
 #   ./scripts/nexa_next_local_all.sh status
 #
+# Database (important):
+#   By default this script sets NEXA_NEXT_LOCAL_SIDECAR=1 so the app uses repo-root SQLite
+#   (overwhelm_reset.db) even if .env says postgresql://127.0.0.1:5434 — avoiding "connection refused"
+#   when Docker Postgres is not running.
+#   To use Postgres from .env instead, start the DB first:
+#     NEXA_NEXT_LOCAL_START_POSTGRES=1 ./scripts/nexa_next_local_all.sh start
+#   (requires Docker; starts `docker compose` service `db` using POSTGRES_HOST_PORT from .env.)
+#
 # Bot: starts automatically if .env contains a non-empty TELEGRAM_BOT_TOKEN. Opt out with:
 #   NEXA_NEXT_START_BOT=0   (or false / no)
+#
+# Running only the bot (manual): use ./scripts/run_telegram_bot_local.sh — do not use a random global
+# Python/venv without NEXA_NEXT_LOCAL_SIDECAR=1 or you will hit Postgres connection errors.
 #
 # Important: run only ``start`` if you want the stack to stay up. Running ``stop`` tears down
 # API + web — so do not chain ``start`` then ``stop`` unless you mean to shut down immediately.
@@ -104,6 +115,48 @@ _one_proc_status() {
   fi
 }
 
+_postgres_host_port_from_env_file() {
+  local f="$ROOT/.env"
+  [ -f "$f" ] || { echo "5433"; return 0; }
+  local line
+  line="$(grep -E '^[[:space:]]*POSTGRES_HOST_PORT=' "$f" 2>/dev/null | tail -1 || true)"
+  [ -n "${line:-}" ] || { echo "5433"; return 0; }
+  line="${line#*=}"
+  line="${line// /}"
+  line="${line//\"/}"
+  line="${line//\'/}"
+  echo "${line:-5433}"
+}
+
+_wait_for_tcp() {
+  local host="$1" port="$2" max="${3:-50}"
+  local i=0
+  echo -n "Waiting for ${host}:${port} … " >&2
+  while [ "$i" -lt "$max" ]; do
+    if command -v nc &>/dev/null; then
+      nc -z "$host" "$port" 2>/dev/null && { echo "OK" >&2; return 0; }
+    elif "$PYTHON" - <<PY 2>/dev/null
+import socket, sys
+s = socket.socket()
+s.settimeout(0.4)
+try:
+    s.connect(("${host}", int("${port}")))
+    s.close()
+    sys.exit(0)
+except OSError:
+    sys.exit(1)
+PY
+    then
+      echo "OK" >&2
+      return 0
+    fi
+    sleep 1
+    i=$((i + 1))
+  done
+  echo "timed out" >&2
+  return 1
+}
+
 cmd_status() {
   echo "Configured ports: API=${API_PORT} WEB=${WEB_PORT}"
   echo "Health: $(api_health_url)"
@@ -134,8 +187,31 @@ cmd_start() {
 
   export API_BASE_URL="http://127.0.0.1:${API_PORT}"
   export NEXA_WEB_ORIGINS="http://localhost:${WEB_PORT},http://127.0.0.1:${WEB_PORT}"
-  # Forces SQLite in app when .env points at Postgres that is not running (see app/core/config.py).
-  export NEXA_NEXT_LOCAL_SIDECAR=1
+
+  _start_pg=0
+  case "${NEXA_NEXT_LOCAL_START_POSTGRES:-}" in
+    1|true|TRUE|yes|YES) _start_pg=1 ;;
+  esac
+  if [ "$_start_pg" -eq 1 ]; then
+    if command -v docker &>/dev/null && [ -f "${ROOT}/docker-compose.yml" ]; then
+      echo "Starting Postgres via Docker (service db); using DATABASE_URL from .env (SQLite sidcar off)."
+      (cd "$ROOT" && docker compose up -d db)
+      _pg_port="$(_postgres_host_port_from_env_file)"
+      export POSTGRES_HOST_PORT="${_pg_port}"
+      if ! _wait_for_tcp 127.0.0.1 "$_pg_port" 55; then
+        echo "Postgres did not become reachable; falling back to SQLite (NEXA_NEXT_LOCAL_SIDECAR=1)." >&2
+        export NEXA_NEXT_LOCAL_SIDECAR=1
+      else
+        export NEXA_NEXT_LOCAL_SIDECAR=0
+      fi
+    else
+      echo "NEXA_NEXT_LOCAL_START_POSTGRES=1 but docker or docker-compose.yml missing — using SQLite sidcar." >&2
+      export NEXA_NEXT_LOCAL_SIDECAR=1
+    fi
+  else
+    export NEXA_NEXT_LOCAL_SIDECAR=1
+    echo "Local DB: SQLite at ${ROOT}/overwhelm_reset.db (NEXA_NEXT_LOCAL_SIDECAR=1; Postgres in .env ignored)."
+  fi
 
   if [ -f "$API_PIDF" ]; then
     old="$(cat "$API_PIDF" 2>/dev/null || true)"
@@ -147,7 +223,14 @@ cmd_start() {
   fi
 
   echo "Starting API (uvicorn) on 0.0.0.0:${API_PORT} …"
-  nohup "$UVICORN" app.main:app --reload --host 0.0.0.0 --port "${API_PORT}" >>"$API_LOG" 2>&1 &
+  # Pass DB mode explicitly so nohup children match this shell even if .env differs.
+  if [ "${NEXA_NEXT_LOCAL_SIDECAR:-1}" = "1" ] || [ "${NEXA_NEXT_LOCAL_SIDECAR:-}" = "true" ]; then
+    nohup env NEXA_NEXT_LOCAL_SIDECAR=1 API_BASE_URL="${API_BASE_URL}" NEXA_WEB_ORIGINS="${NEXA_WEB_ORIGINS}" \
+      "$UVICORN" app.main:app --reload --host 0.0.0.0 --port "${API_PORT}" >>"$API_LOG" 2>&1 &
+  else
+    nohup env NEXA_NEXT_LOCAL_SIDECAR=0 API_BASE_URL="${API_BASE_URL}" NEXA_WEB_ORIGINS="${NEXA_WEB_ORIGINS}" \
+      "$UVICORN" app.main:app --reload --host 0.0.0.0 --port "${API_PORT}" >>"$API_LOG" 2>&1 &
+  fi
   echo $! >"$API_PIDF"
 
   echo "Starting Next.js on port ${WEB_PORT} (API base → ${API_BASE_URL}) …"
@@ -169,12 +252,31 @@ cmd_start() {
     0|false|no|NO|False) _skip_bot=1 ;;
   esac
   _has_bot_token=0
-  if [ -f "${ROOT}/.env" ] && grep -qE '^[[:space:]]*TELEGRAM_BOT_TOKEN[[:space:]]*=[[:space:]]*[^[:space:]#]+' "${ROOT}/.env" 2>/dev/null; then
+  if [ -f "${ROOT}/.env" ] && "$PYTHON" -c "
+import re
+from pathlib import Path
+p = Path(r'''${ROOT}''') / '.env'
+t = p.read_text(encoding='utf-8', errors='replace')
+for ln in t.splitlines():
+    s = ln.strip()
+    if not s or s.startswith('#'):
+        continue
+    m = re.match(r'^(?:export\s+)?TELEGRAM_BOT_TOKEN\s*=\s*(.*)$', s, re.I)
+    if not m:
+        continue
+    v = m.group(1).strip().strip('\"').strip(\"'\")
+    raise SystemExit(0 if v else 1)
+raise SystemExit(1)
+" 2>/dev/null; then
     _has_bot_token=1
   fi
   if [ "$_skip_bot" -eq 0 ] && [ "$_has_bot_token" -eq 1 ]; then
-    echo "Starting Telegram bot (python -m app.bot.telegram_bot) …"
-    nohup "$PYTHON" -m app.bot.telegram_bot >>"$BOT_LOG" 2>&1 &
+    echo "Starting Telegram bot (python -m app.bot.telegram_bot, same DB mode as API) …"
+    if [ "${NEXA_NEXT_LOCAL_SIDECAR:-1}" = "1" ] || [ "${NEXA_NEXT_LOCAL_SIDECAR:-}" = "true" ]; then
+      nohup env NEXA_NEXT_LOCAL_SIDECAR=1 API_BASE_URL="${API_BASE_URL}" "$PYTHON" -m app.bot.telegram_bot >>"$BOT_LOG" 2>&1 &
+    else
+      nohup env NEXA_NEXT_LOCAL_SIDECAR=0 API_BASE_URL="${API_BASE_URL}" "$PYTHON" -m app.bot.telegram_bot >>"$BOT_LOG" 2>&1 &
+    fi
     echo $! >"$BOT_PIDF"
     echo "  Bot log: ${BOT_LOG}"
   elif [ "$_skip_bot" -eq 1 ]; then
