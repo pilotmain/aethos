@@ -16,12 +16,16 @@ _log = get_logger("gateway")
 
 
 def gateway_finalize_chat_reply(text: str, *, source: str = "gateway") -> str:
-    """Log when outgoing copy still matches Phase 48 blocked legacy patterns."""
-    from app.services.identity.legacy_strings import legacy_identity_violations
+    """Normalize user-visible copy: log legacy markers, then scrub when needed (Phase 51)."""
+    from app.services.identity.scrub import gateway_identity_needs_scrub, scrub_legacy_identity_text
 
-    bad = legacy_identity_violations(text)
-    if bad:
-        _log.warning("gateway.identity_legacy_patterns source=%s hits=%s", source, bad)
+    if gateway_identity_needs_scrub(text):
+        _log.warning(
+            "gateway.identity_scrub source=%s preview=%s",
+            source,
+            (text or "")[:240],
+        )
+        return scrub_legacy_identity_text(text)
     return text
 
 
@@ -57,10 +61,10 @@ class NexaGateway:
     """
 
     def compose_llm_reply(self, *args: Any, **kwargs: Any) -> str:
-        """Phase 36 — sole supported external wrapper around legacy ``build_response``."""
-        from app.services.legacy_behavior_utils import build_response
+        """Phase 36 / 51 — delegate to :func:`compose_nexa_response` (legacy ``build_response``)."""
+        from app.services.response_engine import compose_nexa_response
 
-        return build_response(*args, **kwargs)
+        return compose_nexa_response(*args, **kwargs)
 
     def _try_structured_route(self, gctx: GatewayContext, text: str, db: Session) -> dict[str, Any] | None:
         """Dev runs, missions, and dev hints only — ``None`` means generic chat."""

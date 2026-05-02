@@ -979,7 +979,8 @@ def handle_general_agent_request(
     routing_agent_key: str | None = None,
 ) -> str:
     from app.services.gateway.runtime import NexaGateway
-    from app.services.legacy_behavior_utils import apply_tone, build_context, map_intent_to_behavior
+    from app.services.legacy_behavior_utils import apply_tone, build_context
+    from app.services.response_engine import map_intent_to_nexa_behavior
     from app.services.intent_classifier import get_intent
 
     intent = get_intent(text, conversation_snapshot=conversation_snapshot)
@@ -994,7 +995,7 @@ def handle_general_agent_request(
         conversation_snapshot=conversation_snapshot,
         routing_agent_key=routing_agent_key,
     )
-    b = map_intent_to_behavior(intent, ctx)
+    b = map_intent_to_nexa_behavior(intent, ctx)
     return apply_tone(
         f"{body}\n\n_({b} — no route matched; ask me in plain language or describe a dev task.)_",
         ctx.memory,
@@ -1039,7 +1040,7 @@ def handle_agent_request(
         raw = handle_ops_agent_request(db, app_user_id, text)
     elif key == "developer":
         raw = (
-            "💻 **Development** — describe what to fix or say “tell Cursor to …”. "
+            "💻 **Development** — describe what to fix or ask me to run a dev task. "
             "Nexa runs it through the same autonomous dev path you already use."
         )
     elif key == "qa":
@@ -1129,7 +1130,7 @@ def handle_agent_mention(
     elif agent_key == "developer":
         raw = (
             "💻 Describe the coding task in natural language — Nexa runs it on the same autonomous dev path "
-            "as “tell Cursor to …” in chat."
+            "and can inspect your workspace or prepare a focused repair plan."
         )
     else:
         raw = handle_general_agent_request(

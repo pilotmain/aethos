@@ -372,6 +372,7 @@ When the user implies a business goal (launch, market, analyze a site, plan, shi
   - analyze positioning for example.com
   - summarize https://example.com with sources
   - turn the answer into a short PDF-style deliverable when useful
+  - use /doc when a formatted write-up is the right output
   - decide one product tradeoff in a sentence
 - When the user clearly commits ("yes, do that", "go ahead", "run with it"), reply with the clearest plain-language next move instead of stalling.
 - If the user message is trivial (thanks, ok, hi), or the user only wanted a one-line fact, set next_steps to null.

@@ -29,20 +29,22 @@ def start_message_for_role(role: str) -> str:
         return (
             "Welcome to **Nexa**.\n\n"
             "You have **owner** access on this bot.\n\n"
-            "Try:\n"
-            "• /dev doctor — local health, DB, and access summary\n"
-            "• /command — roster and command reference\n"
-            "• `run dev:` or `run mission:` in chat when the worker is set up\n"
-            "• /help for the full list\n\n"
+            "Tell me what you want done. Examples:\n"
+            "• run dev: fix failing tests\n"
+            "• run mission: summarize today’s priorities\n"
+            "• create agent: research assistant for market analysis\n\n"
+            "Use `/dev doctor` for local health, DB, and access summary. "
+            "`/help` lists operational commands.\n\n"
             "Nexa still needs your project paths and local worker on the machine you control; "
             "strangers on this link only get the guest view unless you add their Telegram id in env."
         )
     if r == "trusted":
         return (
             "Welcome to **Nexa**.\n\n"
-            "You have **trusted** access: chat, planning, and some read-only stack checks."
-            " Dev and Ops execution on the host is reserved for the owner of this instance.\n\n"
-            "Try @reset, /command, or /access to see your capabilities, and /help for commands."
+            "You have **trusted** access: chat, planning, and some read-only stack checks. "
+            "Dev and Ops execution on the host is reserved for the owner of this instance.\n\n"
+            "Describe what you want in plain language, or use `/access` to see your capabilities "
+            "and `/help` for commands."
         )
     if r == "blocked":
         return "This account does not have access to this Nexa instance."
@@ -50,8 +52,8 @@ def start_message_for_role(role: str) -> str:
         "Welcome to **Nexa**.\n\n"
         "You can:\n"
         "• ask questions and use normal chat\n"
-        "• organize and plan with @reset\n"
-        "• see high-level help with /agents, /command, and /access\n"
+        "• describe plans and next steps in your own words\n"
+        "• use `/access` to see what is enabled and `/help` for operational commands\n"
         "• add your own **OpenAI** or **Anthropic** key for chat: `/key set …` (if the host enabled encrypted storage; see /help and README)\n"
         "• /help for commands\n\n"
         "Automated development tasks and host-side operations on this instance are **restricted** until the owner "
@@ -64,14 +66,15 @@ def help_message(has_active_plan: bool, focus_task: str | None) -> str:
         return (
             "Nexa — I can help you move forward.\n\n"
             f"Where to start: {focus_task}\n\n"
-            "Or send a fresh brain dump whenever, or /agents to see your agents."
+            "Or send a fresh brain dump whenever — describe the outcome you want in plain language."
         )
     return (
         "You can use Nexa in three simple ways:\n\n"
         "1. Dump everything on your mind — I’ll simplify it to next steps\n"
         "2. Say you're stuck — a small nudge to move\n"
         "3. Status updates and “not done” — to keep the loop going\n\n"
-        "Type /help for the full command list, or /agents to see the agent roster."
+        "Type /help for the full command list. Describe missions and dev work naturally "
+        "(for example `run mission: …` or `run dev: …`)."
     )
 
 
@@ -125,7 +128,7 @@ def is_weak_input(text: str) -> bool:
     if t in {".", "..", "...", "?", "!", "?!", "!?", "…"}:
         return True
 
-    if len(t) <= 5 and all(ch in ".!?…\s" for ch in t):
+    if len(t) <= 5 and all(ch in ".!?… \t\n\r" for ch in t):
         return True
 
     if re.fullmatch(r"[.!?…\s]{1,6}", t):

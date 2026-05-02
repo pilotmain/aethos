@@ -35,7 +35,7 @@ def parse_run_dev_goal(text: str) -> str | None:
     return None
 
 
-def _format_dev_run_chat(res: dict[str, Any]) -> str:
+def format_dev_run_summary(res: dict[str, Any]) -> str:
     rid = str(res.get("run_id") or "")
     if res.get("ok"):
         parts = [
@@ -109,7 +109,7 @@ def try_scheduled_dev_mission(
     )
     return {
         "mode": "chat",
-        "text": _format_dev_run_chat(res),
+        "text": format_dev_run_summary(res),
         "dev_run": res,
     }
 
@@ -129,8 +129,8 @@ def handle_run_dev_gateway(text: str, user_id: str, db: Session) -> dict[str, An
         return {
             "mode": "chat",
             "text": (
-                "Add a goal after `run dev:` — for example: `run dev: fix failing tests` "
-                "with a dev workspace registered at POST /api/v1/dev/workspaces."
+                "Add a goal after `run dev:` — for example: `run dev: fix failing tests`. "
+                "Register or pick a dev workspace in Mission Control first if you have not already."
             ),
         }
 
@@ -139,19 +139,21 @@ def handle_run_dev_gateway(text: str, user_id: str, db: Session) -> dict[str, An
         return {
             "mode": "chat",
             "text": (
-                "No dev workspaces yet. Register one with POST /api/v1/dev/workspaces (repo path), "
-                "then use `run dev: …` again or POST /api/v1/dev/runs."
+                "No dev workspaces yet. Add or select a repo in Mission Control under Dev workspace, "
+                "then say `run dev: …` with your goal."
             ),
         }
 
     if len(rows) > 1:
-        bits = [f"{w.name or 'workspace'} ({w.id[:8]}…)" for w in rows[:8]]
-        extra = f" (+{len(rows) - 8} more)" if len(rows) > 8 else ""
+        lines = [f"- {(w.name or w.id[:8]).strip()}" for w in rows[:16]]
+        more = len(rows) - 16
+        tail = f"\n… and {more} more." if more > 0 else ""
         return {
             "mode": "chat",
             "text": (
-                f"You have {len(rows)} dev workspaces — pick one for POST /api/v1/dev/runs "
-                f"(workspace_id + goal). Registered: {', '.join(bits)}{extra}."
+                "I can run this. Which workspace should I use?\n"
+                + "\n".join(lines)
+                + tail
             ),
         }
 
@@ -159,9 +161,9 @@ def handle_run_dev_gateway(text: str, user_id: str, db: Session) -> dict[str, An
     res = run_dev_mission(db, user_id, wid, goal_field)
     return {
         "mode": "chat",
-        "text": _format_dev_run_chat(res),
+        "text": format_dev_run_summary(res),
         "dev_run": res,
     }
 
 
-__all__ = ["handle_run_dev_gateway", "parse_run_dev_goal", "try_scheduled_dev_mission"]
+__all__ = ["format_dev_run_summary", "handle_run_dev_gateway", "parse_run_dev_goal", "try_scheduled_dev_mission"]

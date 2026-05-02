@@ -34,7 +34,7 @@ def test_compose_llm_reply_delegates(monkeypatch: pytest.MonkeyPatch) -> None:
     mock = MagicMock(return_value="ok")
 
     monkeypatch.setattr(
-        "app.services.legacy_behavior_utils.build_response",
+        "app.services.response_engine.compose_nexa_response",
         mock,
     )
     body = NexaGateway().compose_llm_reply("x", "general_chat", MagicMock())

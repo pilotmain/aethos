@@ -54,6 +54,24 @@ memory_service = MemoryService()
 web_job_svc = AgentJobService()
 
 
+def _text_from_gateway_payload(
+    gw_out: dict[str, Any] | None, fallback_intent: str
+) -> tuple[str | None, str]:
+    """Map :meth:`NexaGateway.handle_message` dict to web reply text and intent."""
+    if not isinstance(gw_out, dict):
+        return None, fallback_intent
+    t = (gw_out.get("text") or "").strip()
+    if t:
+        return t, str(gw_out.get("intent") or fallback_intent or "general_chat")
+    if gw_out.get("mission") is not None:
+        st = str(gw_out.get("status") or "completed")
+        return (
+            f"Mission {st.replace('_', ' ')} — open Mission Control to review tasks and results.",
+            "run_mission",
+        )
+    return None, fallback_intent
+
+
 def _response_kind_to_tool(rk: str | None) -> str:
     m = {
         "public_web": "public_web_reader",
@@ -782,14 +800,49 @@ def process_web_message(
             rt = route_agent(tstrip, context_snapshot=snap)
             rt = apply_memory_aware_route_adjustment(rt, tstrip, snap, db)
             rkey = str(rt.get("agent_key") or "nexa")
-            reply = handle_agent_request(
-                db,
-                app_user_id,
-                tstrip,
-                memory_service=memory_service,
-                orchestrator=orchestrator,
-                context_snapshot=snap,
+
+            from app.services.gateway.context import GatewayContext
+            from app.services.gateway.runtime import NexaGateway
+            from app.services.user_capabilities import (
+                get_telegram_role_for_app_user,
+                is_owner_role,
             )
+
+            perms: dict[str, Any] = {}
+            extras: dict[str, Any] = {
+                "web_session_id": wid,
+                "routing_agent_key": rkey,
+                "via_gateway": True,
+            }
+            if username:
+                extras["username"] = username
+            if tid is not None:
+                extras["telegram_user_id"] = str(tid)
+                extras["telegram_chat_id"] = (tchat or "") or ""
+                extras["telegram_username"] = username
+                role = get_telegram_role_for_app_user(db, app_user_id)
+                perms["telegram_role"] = role
+                if is_owner_role(role):
+                    perms["owner"] = True
+
+            gctx = GatewayContext(
+                user_id=app_user_id,
+                channel="web",
+                permissions=perms,
+                extras=extras,
+            )
+            gw_out = NexaGateway().handle_message(gctx, tstrip, db=db)
+            reply, intent_use = _text_from_gateway_payload(gw_out, intent)
+            if reply is None:
+                reply = handle_agent_request(
+                    db,
+                    app_user_id,
+                    tstrip,
+                    memory_service=memory_service,
+                    orchestrator=orchestrator,
+                    context_snapshot=snap,
+                )
+                intent_use = intent
             reply = _prepend_inject_ack(_merge_idle_host_jobs(reply))
             (
                 reply,
@@ -804,7 +857,7 @@ def process_web_message(
                 reply=reply,
             )
             wm = _reply_metadata((user_text or "").strip(), rkey, reply)
-            intent_use = intent_guard if intent_guard else intent
+            intent_use = intent_guard if intent_guard else intent_use
             rk_use = rk_guard if rk_guard else wm.response_kind
             pre = infer_decision_for_web_main(
                 user_text=tstrip,
