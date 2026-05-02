@@ -57,7 +57,7 @@ def _line_for_developer(db: Session, app_user_id: str) -> str:
     )
     if lj:
         return f"idle — last dev job #{lj.id} ({lj.status or '—'})"
-    return "idle — queue a job with /improve or @dev …"
+    return "idle — ask Nexa to run a development task or improve this code."
 
 
 def _line_for_ops() -> str:

@@ -22,8 +22,8 @@ DEFAULT_AGENTS: dict[str, dict[str, object]] = {
         "allowed_tools": ["memory", "tasks", "telegram"],
     },
     "developer": {
-        "display_name": "Developer Agent",
-        "description": "Handles code changes through the autonomous dev loop (Dev Agent).",
+        "display_name": "Development",
+        "description": "Runs code changes through Nexa’s autonomous dev loop.",
         "allowed_tools": ["git", "tests", "aider", "safe_file_read"],
     },
     "qa": {

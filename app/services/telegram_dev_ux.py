@@ -111,7 +111,7 @@ def format_grouped_dev_queue(jobs) -> str:
         return f"**{title}**\n{body}{more}"
 
     out_lines = [
-        "Nexa **dev** queue (recent, grouped; not full history).",
+        "Nexa **development** activity (recent, grouped; not full history).",
         "",
         _sub(act, "Active (pipeline / worker)", "— (none)"),
         "",
@@ -171,7 +171,7 @@ def format_job_detail_telegram(job) -> str:
 
 
 def format_dev_agent_status_telegram(db, app_user_id: str) -> str:
-    """`@dev status` / `/dev status` — default project profile, latest job, worker heartbeat."""
+    """Development status — default project profile, latest task, worker heartbeat."""
     from app.services.agent_job_service import AgentJobService
     from app.services.dev_orchestrator.project_intelligence import detect_project_profile
     from app.services.project_registry import get_default_project
@@ -180,7 +180,7 @@ def format_dev_agent_status_telegram(db, app_user_id: str) -> str:
     js = AgentJobService()
     j = js.get_latest(db, app_user_id)
     lines: list[str] = [
-        "**Dev Agent — status (Nexa)**",
+        "**Development status (Nexa)**",
         "",
     ]
     if j:

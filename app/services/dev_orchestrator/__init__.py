@@ -1,4 +1,4 @@
-"""Dev Agent orchestration: project signals, task classification, execution decisions."""
+"""Development orchestration: project signals, task classification, execution decisions."""
 
 from app.services.dev_orchestrator.dev_job_planner import (
     create_planned_dev_job,

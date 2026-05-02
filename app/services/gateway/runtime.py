@@ -14,6 +14,26 @@ from app.services.metrics.runtime import record_mission_completed, record_missio
 
 _log = get_logger("gateway")
 
+
+def gateway_finalize_chat_reply(text: str, *, source: str = "gateway") -> str:
+    """Log when outgoing copy still matches Phase 48 blocked legacy patterns."""
+    from app.services.identity.legacy_strings import legacy_identity_violations
+
+    bad = legacy_identity_violations(text)
+    if bad:
+        _log.warning("gateway.identity_legacy_patterns source=%s hits=%s", source, bad)
+    return text
+
+
+def _finalize_gateway_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    """Normalize user-visible strings on shallow gateway result dicts."""
+    if not isinstance(payload, dict):
+        return payload
+    t = payload.get("text")
+    if isinstance(t, str):
+        return {**payload, "text": gateway_finalize_chat_reply(t, source="gateway_payload")}
+    return payload
+
 # Legacy constant — Phase 35 routes generic chat through :meth:`handle_full_chat` instead.
 GATEWAY_CHAT_FALLBACK_TEXT = "No mission detected"
 
@@ -165,7 +185,7 @@ class NexaGateway:
 
         if user_row.is_new and intent == "general_chat" and is_weak_input(raw):
             sm = start_message()
-            return {"mode": "chat", "text": sm, "intent": intent}
+            return {"mode": "chat", "text": gateway_finalize_chat_reply(sm, source="start_message"), "intent": intent}
 
         if intent == "brain_dump":
             _log.warning(
@@ -182,7 +202,10 @@ class NexaGateway:
             if result.get("needs_more_context"):
                 return {
                     "mode": "chat",
-                    "text": apply_tone(no_tasks_response(), beh_ctx.memory),
+                    "text": gateway_finalize_chat_reply(
+                        apply_tone(no_tasks_response(), beh_ctx.memory),
+                        source="no_tasks_response",
+                    ),
                     "intent": intent,
                 }
             orchestrator.users.mark_user_onboarded(db, uid)
@@ -198,7 +221,7 @@ class NexaGateway:
                 conversation_snapshot=snap,
                 routing_agent_key=routing_agent_key,
             )
-            return {"mode": "chat", "text": reply, "intent": intent}
+            return {"mode": "chat", "text": gateway_finalize_chat_reply(reply, source="brain_dump_reply"), "intent": intent}
 
         t_clean = strip_correction_prefix(raw)
         stripped = raw
@@ -208,7 +231,7 @@ class NexaGateway:
                 (t_clean or "").strip() or stripped,
                 conversation_snapshot=snap,
             )
-            return {"mode": "chat", "text": gq, "intent": "general_answer"}
+            return {"mode": "chat", "text": gateway_finalize_chat_reply(gq, source="general_answer"), "intent": "general_answer"}
 
         reply = self.compose_llm_reply(
             raw,
@@ -220,7 +243,7 @@ class NexaGateway:
             conversation_snapshot=snap,
             routing_agent_key=routing_agent_key,
         )
-        return {"mode": "chat", "text": reply, "intent": intent}
+        return {"mode": "chat", "text": gateway_finalize_chat_reply(reply, source="full_chat_reply"), "intent": intent}
 
     def handle_message(
         self,
@@ -251,10 +274,10 @@ class NexaGateway:
             return self.handle_full_chat(gctx, text, db=db_inner)
 
         if db is not None:
-            return _route(db)
+            return _finalize_gateway_payload(_route(db))
 
         with SessionLocal() as session:
-            return _route(session)
+            return _finalize_gateway_payload(_route(session))
 
     def _run_mission(
         self,

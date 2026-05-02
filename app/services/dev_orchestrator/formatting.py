@@ -25,7 +25,7 @@ def format_dev_execution_plan(
     rpath = getattr(project, "repo_path", None) or project_profile.repo_path or "—"
 
     return (
-        f"Dev Agent execution plan\n\n"
+        f"Development execution plan\n\n"
         f"Project: {dname}\n"
         f"Repo: {rpath}\n"
         f"Detected type: {project_types}\n"

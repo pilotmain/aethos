@@ -124,7 +124,7 @@ def _public_url_read_response(
                 body = (
                     body
                     + "\n\n_The static page has limited text; it may be JavaScript-rendered. "
-                    "As owner, you can try: `@research browser preview <url>` (Playwright on the host — see doctor)._"
+                    "As owner, you can ask for a **browser preview** of a public URL (Playwright on the host — see doctor)._"
                 )
             elif is_owner_role(rrole) and not s.nexa_browser_preview_enabled:
                 body = (
@@ -355,7 +355,7 @@ def _append_marketing_thin_page_note(
         return (
             b
             + "\n\n_The static page has limited text; it may be JavaScript-rendered. "
-            "As owner, you can try: `@research browser preview <url>` (Playwright on the host — see doctor)._"
+            "As owner, you can ask for a **browser preview** of a public URL (Playwright on the host — see doctor)._"
         )
     if is_owner_role(rrole) and not s.nexa_browser_preview_enabled:
         return (
@@ -727,8 +727,8 @@ def handle_qa_agent_request(
     if block:
         return block
     return (
-        "🧪 **QA Agent** (Nexa) — I can help with test plans, failures, and regressions. "
-        "Try: `@qa review job 4` or describe a failure. Use `@dev` to queue a code fix (same dev job path).\n\n"
+        "🧪 **Quality review** (Nexa) — I can help with test plans, failures, and regressions. "
+        "Describe a failure or ask me to review a job by number. I can also **run a dev task** to propose a code fix on the same path.\n\n"
         f"Your request: {text[:1200]}"
     )
 
@@ -915,7 +915,7 @@ def handle_research_agent_request(
     if not t or len(t) < 2:
         return (
             "🔎 **Research** (Nexa) — add a topic, e.g. "
-            "`@research Ethiopian economy update` or a specific question."
+            "e.g. **Ethiopian economy update** or a specific question."
         )
     from app.services.browser_preview import format_preview_for_chat, preview_public_page
     from app.services.general_answer_service import answer_general_question
@@ -996,7 +996,7 @@ def handle_general_agent_request(
     )
     b = map_intent_to_behavior(intent, ctx)
     return apply_tone(
-        f"{body}\n\n_({b} — no specialist route matched. Try @nexa or @dev.)_",
+        f"{body}\n\n_({b} — no route matched; ask me in plain language or describe a dev task.)_",
         ctx.memory,
     )
 
@@ -1039,8 +1039,8 @@ def handle_agent_request(
         raw = handle_ops_agent_request(db, app_user_id, text)
     elif key == "developer":
         raw = (
-            "💻 **Dev Agent** — queue work with /improve, a natural “tell Cursor to…”, or `@dev …` "
-            "(the Dev Agent is the same autonomous **dev job** path you already use)."
+            "💻 **Development** — describe what to fix or say “tell Cursor to …”. "
+            "Nexa runs it through the same autonomous dev path you already use."
         )
     elif key == "qa":
         raw = handle_qa_agent_request(db, app_user_id, text)
@@ -1127,7 +1127,10 @@ def handle_agent_mention(
     elif agent_key == "personal_admin":
         raw = handle_personal_admin_request(db, app_user_id, text)
     elif agent_key == "developer":
-        raw = "💻 Use `@dev` <task> to queue a dev job (same path as /improve or “tell cursor to…”)."
+        raw = (
+            "💻 Describe the coding task in natural language — Nexa runs it on the same autonomous dev path "
+            "as “tell Cursor to …” in chat."
+        )
     else:
         raw = handle_general_agent_request(
             db,

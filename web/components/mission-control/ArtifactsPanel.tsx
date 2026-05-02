@@ -89,7 +89,7 @@ export function ArtifactsPanel() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-sm font-medium text-zinc-200">Artifacts</h2>
-          <p className="text-xs text-zinc-500">Outputs grouped by agent (from Mission Control state).</p>
+          <p className="text-xs text-zinc-500">Outputs grouped by role (from Mission Control state).</p>
         </div>
         <button
           type="button"

@@ -30,7 +30,7 @@ def ensure_clean_worktree(cwd: str | Path | None = None) -> None:
         return
     if (r.stdout or "").strip():
         raise RuntimeError(
-            "Dev Agent paused because the repo has uncommitted changes.\n\n"
+            "Development is paused because the repo has uncommitted changes.\n\n"
             "Run:\n"
             "git status\n\n"
             "Then choose:\n"

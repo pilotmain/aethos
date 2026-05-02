@@ -133,7 +133,7 @@ export function Phase22Overview(props: {
               shellLight ? "border-zinc-200 bg-white text-zinc-900" : "border-zinc-700/80 bg-zinc-900/40 text-zinc-100"
             }`}
           >
-            <div className={`mb-1 text-xs font-medium ${cardTitle}`}>Long-running agents</div>
+            <div className={`mb-1 text-xs font-medium ${cardTitle}`}>Long-running sessions</div>
             <p className={`text-2xl font-semibold tabular-nums ${stat}`}>
               {typeof longRunningCount === "number" ? longRunningCount : "—"}
             </p>
@@ -144,7 +144,7 @@ export function Phase22Overview(props: {
               shellLight ? "border-zinc-200 bg-white text-zinc-900" : "border-zinc-700/80 bg-zinc-900/40 text-zinc-100"
             }`}
           >
-            <div className={`mb-1 text-xs font-medium ${cardTitle}`}>Scheduler jobs</div>
+            <div className={`mb-1 text-xs font-medium ${cardTitle}`}>Scheduled tasks</div>
             <p className={`text-2xl font-semibold tabular-nums ${stat}`}>
               {typeof schedulerJobCount === "number" ? schedulerJobCount : "—"}
             </p>

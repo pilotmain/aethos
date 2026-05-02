@@ -152,5 +152,5 @@ def format_dev_scope_mvp(
         f"• One integration you truly need (e.g. email or SMS)\n"
         f"• Basic tests on the main flow\n\n"
         f"**Repo:** `{rp}`\n"
-        f"Next: queue real work with `@dev` in this project."
+        f"Next: run a real dev task in this project from chat."
     )[:10_000]

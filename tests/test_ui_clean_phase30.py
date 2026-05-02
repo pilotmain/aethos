@@ -40,8 +40,8 @@ def _web_source_files() -> list[Path]:
 
 def test_suggestions_ts_uses_nexa_next_phrases() -> None:
     text = (ROOT / "web/lib/suggestions.ts").read_text(encoding="utf-8")
-    assert "run mission" in text
-    assert "create agent:" in text
+    assert "run dev task" in text
+    assert "create a plan" in text
     assert "@dev" not in text
 
 

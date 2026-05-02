@@ -1,14 +1,14 @@
 const SEEDS = [
-  "run dev: fix failing tests in the test suite",
-  "run mission: ship the current milestone",
-  "run dev: review the repo and suggest improvements",
-  "create agent: API documentation reviewer",
+  "run dev task: fix this failing test",
+  "analyze this problem and suggest next steps",
+  "create a plan for shipping the current milestone",
+  "review the repo and suggest improvements",
   "show memory",
   "show system status",
 ] as const;
 
 /**
- * When the user is typing, suggest a few dev / mission phrases (lightweight, no network).
+ * Lightweight typing hints — natural language only (Phase 48).
  */
 export function getInputSuggestions(typed: string, limit = 4): string[] {
   const q = (typed || "").trim();
@@ -28,9 +28,9 @@ export function getInputSuggestions(typed: string, limit = 4): string[] {
     return ["add a README section about installation", "update project documentation for new env vars"].slice(0, limit);
   }
   if (low.includes("test") || low.includes("fix")) {
-    return ["run dev: fix the failing tests", "run dev: run tests and report"].slice(0, limit);
+    return ["run dev task: fix the failing tests", "analyze why tests are failing"].slice(0, limit);
   }
-  return [`run dev: ${q}`].slice(0, limit);
+  return [`run dev task: ${q}`].slice(0, limit);
 }
 
 export function jobNeedsBadge(status: string): { label: string; tone: "emerald" | "amber" | "zinc" | "rose" } {

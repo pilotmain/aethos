@@ -32,7 +32,7 @@ export type AutonomyStats = {
   success_rate?: number | null;
 };
 
-/** Phase 44–45 — autonomous queue, decisions, feedback, and execution stats from MC state. */
+/** Phase 44–45 — autonomous tasks, decisions, feedback, and execution stats from MC state. */
 export function AutonomyIntelligencePanel(props: {
   shellLight: boolean;
   autonomousTasks?: AutonomousTaskRow[];
@@ -103,7 +103,7 @@ export function AutonomyIntelligencePanel(props: {
           <p className={`mb-2 text-xs font-medium ${cardTitle}`}>Autonomous tasks ({tasks.length})</p>
           <ul className="max-h-52 space-y-2 overflow-y-auto text-xs">
             {tasks.length === 0 ? (
-              <li className={shellLight ? "text-zinc-500" : "text-zinc-500"}>None queued.</li>
+              <li className={shellLight ? "text-zinc-500" : "text-zinc-500"}>None pending.</li>
             ) : (
               tasks.map((t) => (
                 <li

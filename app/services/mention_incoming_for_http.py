@@ -215,7 +215,7 @@ def run_explicit_mention(
     m_body = (mr.text or "").strip()
     if not m_body:
         return ExplicitMentionResult(
-            "Add a message after your @mention — e.g. `@dev fix the tests` or `@ops status`.",
+            "Add a message after your mention with what you want done — e.g. fix the tests, or ask for system status.",
             "mention_no_body",
             None,
         )

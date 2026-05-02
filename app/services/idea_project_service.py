@@ -50,7 +50,7 @@ def commit_pending_idea_as_project(
         f"Default provider: `{p.provider_key}`\n"
         f"Repo: `—` (set later or `create repo for {p.key}`)\n\n"
         f"Workflow: Strategy → Marketing → Dev → QA → Ops\n\n"
-        f"**Next:** `@strategy validate {p.key}`"
+        f"**Next:** ask Nexa to **validate strategy** for `{p.key}`"
     )[:10_000]
 
 
@@ -107,7 +107,7 @@ def queue_dev_workspace_scaffold(
     *,
     telegram_chat_id: str | None,
 ) -> str:
-    """@dev create project <key> — approval job; scaffolds under NEXA_WORKSPACE_ROOT."""
+    """Queue workspace scaffold for a new project key — approval task; scaffolds under NEXA_WORKSPACE_ROOT."""
     from app.core.config import get_settings
     from app.services.agent_job_service import AgentJobService
 

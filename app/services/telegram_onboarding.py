@@ -54,7 +54,7 @@ def start_message_for_role(role: str) -> str:
         "• see high-level help with /agents, /command, and /access\n"
         "• add your own **OpenAI** or **Anthropic** key for chat: `/key set …` (if the host enabled encrypted storage; see /help and README)\n"
         "• /help for commands\n\n"
-        "Dev Agent and host-side Ops on this instance are **restricted** until the owner "
+        "Automated development tasks and host-side operations on this instance are **restricted** until the owner "
         "adds you to the trusted list. Use /access to see what is enabled for you."
     )
 

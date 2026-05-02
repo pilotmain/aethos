@@ -159,13 +159,13 @@ _FAKE_ASYNC = (
 
 _TRACKING_NOTE = (
     "\n\n—\n_Note: I don’t have a **tracked assignment id** or **host job id** for this reply yet. "
-    "Say **assign @dev to …** or **ask my team to …** so Nexa records work you can check with "
-    "**status of assignment N**._"
+    "Ask Nexa to **record this as assigned work** or describe what you want queued so you can check "
+    "**status of assignment N** later._"
 )
 
 _DEV_DISABLED = (
     "\n\n—\n_Dev execution isn’t enabled here (host executor / Cursor off), so I can’t confirm "
-    "code runs or that @dev is executing — I can still outline steps._"
+    "code runs on your machine yet — I can still outline steps._"
 )
 
 # Shown when the user asks @dev to do code work but no execution backend is configured (no job id on turn).

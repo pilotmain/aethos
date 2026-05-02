@@ -92,7 +92,7 @@ export function JobInlineCard({ job, onUpdated, onNotify, compact }: Props) {
           ) : (
             <div className="flex flex-wrap gap-x-4 gap-y-0.5">
               <span>
-                Agent: <b className="text-zinc-200">Dev</b>
+                Worker: <b className="text-zinc-200">development</b>
               </span>
               <span>
                 Tool: <b className="text-zinc-200">{tool}</b>
@@ -134,9 +134,9 @@ export function JobInlineCard({ job, onUpdated, onNotify, compact }: Props) {
       )}
       {!compact && !isHost && (
         <details className="mt-2 text-[10px] text-zinc-500">
-          <summary className="cursor-pointer text-zinc-500">Why Dev?</summary>
+          <summary className="cursor-pointer text-zinc-500">Why development?</summary>
           <p className="mt-1 leading-relaxed text-zinc-500">
-            This looks like a file or code change, so Nexa created a Dev Agent job.
+            This looks like a file or code change, so Nexa started a development task.
             {job.approval_required
               ? " Approval is required because the job may modify files in your repo when it runs."
               : ""}
@@ -147,7 +147,7 @@ export function JobInlineCard({ job, onUpdated, onNotify, compact }: Props) {
         <details className="mt-2 text-[10px] text-zinc-500">
           <summary className="cursor-pointer text-zinc-500">Why local?</summary>
           <p className="mt-1 leading-relaxed text-zinc-500">
-            Chat never runs shell directly. Nexa queued a host-executor job; after you approve, the worker runs only
+            Chat never runs shell directly. Nexa scheduled a host-executor task; after you approve, the worker runs only
             allowlisted tools on your machine.
           </p>
         </details>

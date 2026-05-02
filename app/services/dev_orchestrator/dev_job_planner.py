@@ -1,4 +1,4 @@
-"""Central Dev Agent job planning and creation (orchestrator + payload + policy)."""
+"""Central development job planning and creation (orchestrator + payload + policy)."""
 
 from __future__ import annotations
 
@@ -90,7 +90,7 @@ def prepare_dev_job_plan(
     project = get_project_by_key(db, pk) if pk else get_default_project(db)
 
     if not project:
-        raise ValueError("No project configured for Dev Agent.")
+        raise ValueError("No project configured for development tasks.")
 
     plan = build_dev_execution_plan(project, task_text)
     explicit = extract_explicit_dev_tool_request(task_text)
@@ -149,7 +149,7 @@ def create_planned_dev_job(
     dec = plan["decision"]
 
     tit = (title or "").strip() or (task_text or "").strip().split("\n", 1)[0].strip()
-    tit = tit[:255] if tit else "Dev Agent task"
+    tit = tit[:255] if tit else "Development task"
     inst = (instruction or task_text or "").strip()
 
     ac = AgentJobCreate(
@@ -182,7 +182,7 @@ def format_planned_dev_reply(
     tail = f"\n\n**Repo (worker):** `{repo_line}`" if repo_line else ""
     return (
         f"{plan_message}\n\n"
-        f"Queued Dev Agent job #{job_id}.\n"
+        f"Queued development task #{job_id}.\n"
         f"Tool: `{decision.tool_key}` · Mode: `{decision.mode}` · Risk: `{decision.risk_level}`\n\n"
-        f"Reply `approve job #{job_id}` to queue the worker.{tail}"
+        f"Reply `approve job #{job_id}` to run the worker.{tail}"
     )

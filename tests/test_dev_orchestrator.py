@@ -202,7 +202,7 @@ def test_execution_plan_contains_fields(tmp_path: Path) -> None:
     p = _proj(repo_path=str(tmp_path), key="nexa", display_name="Nexa")
     out = build_dev_execution_plan(p, "update readme")
     msg = out["message"]
-    assert "Dev Agent execution plan" in msg
+    assert "Development execution plan" in msg
     assert "Tool:" in msg or "Execution:" in msg
     frag = out["payload_fragment"]
     assert frag["execution_decision"]["tool_key"]

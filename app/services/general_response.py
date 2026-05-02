@@ -117,7 +117,7 @@ def simple_greeting_reply(text: str = "") -> str:
     )
     return (
         f"{reply}\n\n"
-        "You can talk normally, or use agents like @dev, @ops, @strategy, @qa, @marketing, @research, or @reset."
+        "You can talk in natural language — ask me to run a dev task, analyze a problem, plan work, or reset focus."
     )
 
 

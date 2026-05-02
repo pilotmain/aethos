@@ -1,4 +1,4 @@
-"""@strategy / @marketing / @dev subcommands for idea-to-project pipeline."""
+"""Natural-language and scoped workflows for the idea-to-project pipeline (strategy, marketing, development)."""
 
 from __future__ import annotations
 
@@ -91,7 +91,7 @@ def try_dev_scope_workflow(
         return None
     pr, err = _load_project(m.group(1), db=db, cctx=cctx)
     if err or pr is None:
-        return f"💻 **Dev Agent** (Nexa)\n\n{err or 'Could not load project.'}"
+        return f"💻 **Development** (Nexa)\n\n{err or 'Could not load project.'}"
     cctx.active_project = pr.key
     db.add(cctx)
     try:

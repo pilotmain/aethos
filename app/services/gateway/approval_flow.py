@@ -224,11 +224,11 @@ def try_gateway_approval_route(
             base = {
                 "mode": "chat",
                 "text": (
-                    f"Dev Agent accepted job #{job.id}.\n\n"
+                    f"Nexa accepted dev task #{job.id}.\n\n"
                     f"Project: `{pk}`\n"
                     f"Tool: `{tool}`\n"
                     f"Mode: `{mode}`\n"
-                    f"Status: queued for worker.\n"
+                    f"Status: scheduled for execution.\n"
                 ),
                 "intent": "approval",
             }

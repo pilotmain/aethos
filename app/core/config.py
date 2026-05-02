@@ -148,12 +148,12 @@ class Settings(BaseSettings):
     # When true, approves every needs_commit_approval dev job (no title filter). Trusted machine only.
     operator_auto_approve_all_commits: bool = False
 
-    # Autonomous dev worker: one checkout — limit concurrent in-flight dev agent jobs
+    # Autonomous dev worker: one checkout — limit concurrent in-flight development tasks
     dev_agent_max_active_jobs: int = 1
     dev_agent_timeout_seconds: int = 1800
     dev_agent_test_timeout_seconds: int = 600
 
-    # Dev workspace: new project scaffold (`@dev create project <key>`) and /dev workspace
+    # Dev workspace: new project scaffold (ask Nexa to create a project for a key) and /dev workspace
     nexa_workspace_root: str = Field(
         default_factory=lambda: str(Path.home() / "nexa-projects")
     )

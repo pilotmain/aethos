@@ -398,14 +398,14 @@ def _format_job_line(job) -> str:
         from app.services.dev_orchestrator.retry_advisor import advise_retry
 
         body = (
-            f"Dev Agent job #{job.id} failed.\n\n"
+            f"Development task #{job.id} failed.\n\n"
             f"{job.error_message or 'No error details available.'}\n\n"
             f"Retry advice:\n{advise_retry(job)}"
         )
         return body[:4000]
     if wtype == "dev_executor" and st in {"ready_for_review", "needs_commit_approval", "review_approved", "commit_approved", "completed"}:
         res = (job.result or "").strip() or "No review text yet."
-        head = f"Dev Agent job #{job.id} — {st}.\n\n" if st != "completed" else f"Dev Agent job #{job.id} (complete):\n\n"
+        head = f"Development task #{job.id} — {st}.\n\n" if st != "completed" else f"Development task #{job.id} (complete):\n\n"
         tail = ""
         if st == "ready_for_review":
             tail = f"\n\nReply: approve review job #{job.id}"
@@ -2667,8 +2667,8 @@ async def _handle_incoming_text_impl(update: Update, context: ContextTypes.DEFAU
                             )
                         else:
                             await update.message.reply_text(
-                                "No job # in that text and you have no dev jobs in the list yet. "
-                                "Start one with /improve … or describe the coding task (`run dev:` on web). Ask for your jobs list anytime. "
+                                "No job # in that text and you have no dev tasks in the list yet. "
+                                "Describe the coding task in chat or use run dev on the web app. Ask for your recent task list anytime. "
                                 "I do not store these jobs in the same memory as your plan/task notes."
                             )
                     return
@@ -2718,7 +2718,7 @@ async def _handle_incoming_text_impl(update: Update, context: ContextTypes.DEFAU
                                 repo_line=None,
                             )
                             await update.message.reply_text(
-                                f"{msg_cmd}\n\n(`{cmd}` — same Dev Agent job queue as /improve.)"
+                                f"{msg_cmd}\n\n(`{cmd}` — same autonomous development path as other dev commands.)"
                             )
                         else:
                             job = job_service.create_job(
@@ -2864,11 +2864,11 @@ async def _handle_incoming_text_impl(update: Update, context: ContextTypes.DEFAU
                     instruction, needs_more_detail = build_cursor_instruction(text, replied_text=replied_text)
                     if needs_more_detail:
                         await update.message.reply_text(
-                            "I can queue a Dev Agent job, but I need one more sentence with the actual task."
+                            "I can run a development task for you, but I need one more sentence with the actual work."
                         )
                         return
                     tit = _title_from_instruction(
-                        instruction, fallback="Dev Agent request from chat"
+                        instruction, fallback="Development task from chat"
                     )
                     _keys_nl = list_project_keys(db)
                     pk_nl, inst_core = parse_dev_project_phrase(

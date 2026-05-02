@@ -1,4 +1,4 @@
-"""Nexa agent registry for command-center UX and mention help."""
+"""Nexa capability registry for mention routing and help copy."""
 
 AGENTS: dict[str, dict[str, object]] = {
     "reset": {
@@ -13,14 +13,14 @@ AGENTS: dict[str, dict[str, object]] = {
         ],
     },
     "dev": {
-        "display_name": "Dev Agent",
+        "display_name": "Development",
         "emoji": "💻",
-        "description": "Works on code through the local autonomous dev loop.",
+        "description": "Runs code changes through the local development loop.",
         "capabilities": [
             "code changes",
             "bug fixes",
             "refactors",
-            "worker jobs",
+            "scheduled tasks",
             "test runs",
         ],
     },
@@ -41,7 +41,7 @@ AGENTS: dict[str, dict[str, object]] = {
         "description": "Checks system health, worker status, and execution state.",
         "capabilities": [
             "worker heartbeat",
-            "job queue",
+            "task status",
             "runtime health",
             "logs",
         ],
@@ -93,12 +93,17 @@ _CATALOG_ORDER: tuple[str, ...] = (
 
 
 def format_available_agents_block() -> str:
-    """Lines like \"🧠 @reset\" for error UX."""
+    """Short capability lines for help UX (identity-clean; no legacy command hints)."""
     parts: list[str] = []
     for key in _CATALOG_ORDER:
         meta = AGENTS.get(key) or {}
         em = str(meta.get("emoji") or "•")
-        parts.append(f"{em} @{key}")
+        name = str(meta.get("display_name") or key)
+        desc = str(meta.get("description") or "").strip()
+        line = f"{em} **{name}**"
+        if desc:
+            line += f" — {desc}"
+        parts.append(line)
     parts.append("")
-    parts.append("(You can also **create custom agents** with your own @handle.)")
+    parts.append("(You can also ask Nexa to **create a custom role** with instructions and safety boundaries.)")
     return "\n".join(parts)

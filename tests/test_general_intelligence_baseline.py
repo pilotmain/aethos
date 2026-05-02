@@ -35,8 +35,8 @@ def test_simple_greeting_reply_pools_and_hint(monkeypatch) -> None:
     monkeypatch.setattr("random.choice", lambda seq: seq[0])
     g = simple_greeting_reply("Good morning")
     assert "Good morning" in g or "Morning" in g
-    assert "You can talk normally" in g
-    assert "@dev" in g
+    assert "natural language" in g
+    assert "@dev" not in g
     g2 = simple_greeting_reply("hi")
     assert g2.startswith("Hi — I") and "here" in g2  # first option in "hi" pool
 
@@ -96,7 +96,7 @@ def test_dirty_worktree_message_content(mock_run) -> None:
     with pytest.raises(RuntimeError) as ei:
         ensure_clean_worktree("/tmp")
     msg = str(ei.value)
-    assert "Dev Agent paused" in msg
+    assert "Development is paused" in msg
     assert re.search(r"git\s+status", msg)
     assert "uncommitted" in msg
 

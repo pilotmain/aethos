@@ -320,9 +320,8 @@ def dispatch_assignment(db: Session, *, assignment_id: int, user_id: str) -> dic
     handle = row.assigned_to_handle
     if handle == normalize_agent_key(DEFAULT_ORCHESTRATOR):
         msg = (
-            "I could not auto-route this goal to a specialist from keywords alone. "
-            "Name the agents or say e.g. **assign @research-analyst to summarize …** "
-            "after you have created those custom agents."
+            "I could not auto-route this goal from keywords alone. "
+            "Describe the work in one clear message, or finish creating your custom specialist profiles and refer to them by name."
         )
         row.status = "completed"
         row.completed_at = _now()

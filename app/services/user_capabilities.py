@@ -20,7 +20,7 @@ ACCESS_RESTRICTED = (
     "If you need Dev, Ops, or project admin, ask the bot owner to grant access."
 )
 
-DEV_EXECUTION_RESTRICTED = "Dev Agent execution is restricted on this Nexa instance."
+DEV_EXECUTION_RESTRICTED = "Development execution is restricted on this Nexa instance."
 
 OPS_EXECUTION_RESTRICTED = "Ops execution is restricted on this Nexa instance."
 
@@ -193,7 +193,7 @@ def format_access_command_text(role: str) -> str:
     if r == "owner":
         lines += [
             "• Chat: enabled",
-            "• Dev Agent (queue & host work): enabled",
+            "• Development tasks (run & host work): enabled",
             "• Ops: enabled",
             "• Memory (global file write): enabled",
             "• Project admin: enabled",
@@ -202,8 +202,8 @@ def format_access_command_text(role: str) -> str:
         lines += [
             "• Chat: enabled",
             "• Reset / planning: enabled",
-            "• Read-only dev stack (e.g. /dev health, /dev queue) where allowed: enabled",
-            "• Dev job queue: disabled by default (owner runs host execution)",
+            "• Read-only dev stack (e.g. /dev health, /dev status) where allowed: enabled",
+            "• Development task runs: disabled by default (owner runs host execution)",
             "• Ops: read-only (status, logs) where allowlisted — no deploy/restart",
             "• Project admin: disabled; summary views only (no host paths to others)",
         ]
@@ -214,8 +214,8 @@ def format_access_command_text(role: str) -> str:
     else:  # guest
         lines += [
             "• Chat: enabled",
-            "• Reset / planning: enabled (use @reset, /command, /help)",
-            "• Dev Agent: disabled",
+            "• Reset / planning: enabled (say “reset” or ask Nexa for slash-command help)",
+            "• Development tasks: disabled",
             "• Ops: disabled",
             "• Project lists with host details: not shown (ask the owner to grant access)",
         ]
