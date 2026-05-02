@@ -44,6 +44,8 @@ Host-only API with hot reload (no compose api/bot containers):
 NEXA_NEXT_LOCAL_FULL_STACK=0 ./scripts/nexa_next_local_all.sh start
 ```
 
+See **`docs/LOCAL_DOCKER_TELEGRAM.md`** for the Compose-first default, Telegram log checks, and **`db:5432`** vs **`127.0.0.1:5434`**.
+
 ## Defaults
 
 - Prefer **local / BYOK** configuration: add keys via `/key set` or `.env`, not inline chat.
