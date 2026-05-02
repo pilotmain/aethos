@@ -20,6 +20,7 @@ Valid intents:
 - capability_question: user asks what the assistant can do, cannot do, or whether it can help with a specific domain
 - help_request: user asks for help, but does not provide actual tasks yet
 - followup_reply: user says they did not complete something, or replies to a check-in
+- stuck_dev: user is blocked on a technical problem (build/test error, deploy, CI, config, tooling) — not general life overwhelm
 - stuck: user says they are stuck, blocked, frozen, overwhelmed without listing tasks, or cannot start
 - status_update: user says they completed something
 - correction: user says the assistant misunderstood, asks it to answer the question, or rejects the previous response
@@ -32,6 +33,7 @@ Important rules:
 - If the user says "No, answer the question" or similar, classify as correction.
 - If the user lists 2 or more concrete tasks, classify as brain_dump.
 - If the user says only "I feel overwhelmed" without tasks, classify as stuck.
+- If the message is about errors, failing builds/tests, deployment, CI, K8s/EKS, Docker, databases, or auth config AND the user is blocked or asking for a fix, classify as stuck_dev (not generic stuck).
 - If the user message (after trimming) starts with "create" and contains the word "agent", classify as create_custom_agent — except vague multi-agent capability questions (e.g. "can you create multi agents that communicate"); those are capability_question.
 - If uncertain, choose general_chat, not brain_dump.
 
@@ -53,6 +55,7 @@ VALID_INTENTS = {
     "help_request",
     "followup_reply",
     "stuck",
+    "stuck_dev",
     "status_update",
     "correction",
     "general_chat",
@@ -76,6 +79,78 @@ TASK_VERBS = [
     "pick up",
     "prepare",
 ]
+
+
+def looks_like_stuck_dev(message: str) -> bool:
+    """Heuristic: tooling/build/deploy blockage (Phase 49), distinct from generic overwhelm."""
+    t = (message or "").lower()
+    if len(t) < 8:
+        return False
+    dev_hints = (
+        "pytest",
+        "npm ",
+        "pip ",
+        "docker",
+        "kubernetes",
+        "k8s",
+        "helm",
+        "terraform",
+        "gradle",
+        "cargo",
+        "typescript",
+        "eslint",
+        "jest",
+        "vitest",
+        "build",
+        "compile",
+        "traceback",
+        "exception",
+        "segfault",
+        "deploy",
+        "pipeline",
+        "github action",
+        "gitlab ci",
+        "mongodb",
+        "mongo ",
+        "postgres",
+        "redis",
+        "kafka",
+        "grpc",
+        "oidc",
+        "oauth",
+        "ingress",
+        "eks ",
+        "ci/",
+        "http 401",
+        "http 500",
+        "timeout",
+    )
+    if not any(h in t for h in dev_hints):
+        return False
+    pain = (
+        "stuck",
+        "blocked",
+        "can't",
+        "cant ",
+        "cannot ",
+        "won't",
+        "wont ",
+        "doesn't work",
+        "doesnt work",
+        "not working",
+        "broken",
+        "fails",
+        "failed",
+        "failing",
+        "error",
+        "help me fix",
+        "figure out",
+        "debug",
+        "why ",
+        "how do i fix",
+        "how can i fix",
+    )
+    return any(p in t for p in pain)
 
 
 def looks_like_brain_dump(text: str) -> bool:
@@ -171,6 +246,9 @@ def classify_intent_fallback(message: str) -> dict:
         ]
     ):
         return {"intent": "correction", "confidence": 0.9, "reason": "correction phrase"}
+
+    if looks_like_stuck_dev(message):
+        return {"intent": "stuck_dev", "confidence": 0.9, "reason": "dev blockage heuristic"}
 
     if re.search(r"\bstuck\b|can't start|cant start|\bfrozen\b", t):
         return {"intent": "stuck", "confidence": 0.9, "reason": "stuck phrase"}
@@ -277,6 +355,10 @@ def get_intent(
 
     if intent == "brain_dump" and confidence < 0.72:
         return "general_chat"
+
+    if intent == "stuck" and looks_like_stuck_dev(t0):
+        intent = "stuck_dev"
+
     return intent
 
 

@@ -153,7 +153,7 @@ export function MissionControlLayout() {
               <h1 className={`text-lg font-semibold tracking-tight ${shellLight ? "text-zinc-900" : "text-zinc-50"}`}>
                 Mission Control
               </h1>
-              <p className={`text-[11px] ${headerSub}`}>Work graph · live stream · artifacts</p>
+              <p className={`text-[11px] ${headerSub}`}>What&apos;s live · activity · your outputs</p>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-3 text-xs">

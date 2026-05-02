@@ -69,6 +69,8 @@ MICRO_PERSONALITY_MOVES = """You may use natural openers at times, such as: "Yea
 
 ANSWER_FIRST_RULE = """Always answer the user's question before redirecting. If there is a question, address it first."""
 
+ACTION_ORIENTED_RULE = """When the user wants help doing something, default to action: lead with what you will do or investigate, not a long capability disclaimer. One short check-in is enough (e.g. whether to run something against their workspace) — do not stack multiple permission questions. After the main answer, you may offer one light next step (“Want me to check X or run Y?”) when it clearly helps."""
+
 
 STRUCTURE_VARIATION_RULE = """Do not reuse the same sentence structure as in typical templated responses. Vary how you open and how you end."""
 
@@ -399,6 +401,16 @@ If is_stuck_loop is true:
 NUDGE_PROMPT_FULL = NUDGE_PROMPT + NUDGE_PROMPT_EXTRA
 UNSTICK_PROMPT_FULL = UNSTICK_PROMPT + UNSTICK_PROMPT_EXTRA
 
+# Appended for intent stuck_dev (tooling / build / deploy / config snags)
+STUCK_DEV_COMPOSER_EXTRA = """
+
+This turn is **stuck_dev**: the user is blocked on a technical problem (build, test, error output, deploy, config, K8s/EKS, Docker, CI, DB/OIDC, etc.).
+- Give a **short** diagnosis-style outline: reproduce → isolate → fix → verify (adapt to what they said).
+- If the stack is hinted (e.g. Mongo, OIDC, Kubernetes), name likely failure modes in plain language — no dashboard tone.
+- Offer execution plainly: they can have Nexa run a **development task** on their workspace after approval — one sentence, not a manual.
+- Keep **next_steps** to 2–4 concrete lines when useful (commands or checks); otherwise null.
+"""
+
 
 def _conversation_context_block(ctx: ResponseContext) -> str:
     if (
@@ -535,6 +547,7 @@ def _build_system_prompt(ctx: ResponseContext, strategy_body: str) -> str:
         voice,
         MICRO_PERSONALITY_MOVES,
         ANSWER_FIRST_RULE,
+        ACTION_ORIENTED_RULE,
         STRUCTURE_VARIATION_RULE,
         VARIATION_RULE,
         LIST_FORMATTING_LLM_GUIDANCE,
@@ -765,6 +778,22 @@ def fallback_compose_response(
             "suggested_microstep": None,
             "next_steps": None,
         }
+    if b == "unstick" and ctx.intent == "stuck_dev":
+        return {
+            "message": (
+                "Sounds like a build or tooling snag.\n\n"
+                "Paste the shortest error or failing command, note what changed before it broke, "
+                "and I’ll outline a tight fix path. If you want execution on your workspace, say so — "
+                "development tasks run after approval."
+            ),
+            "should_ask_followup": True,
+            "followup_question": "Want me to narrow down repro first, or sketch the patch sequence?",
+            "suggested_microstep": None,
+            "next_steps": [
+                "paste command + first lines of stderr",
+                "note dependency / config change before it broke",
+            ],
+        }
     if b == "unstick" and ctx.focus_task:
         if ctx.is_stuck_loop or ctx.focus_attempts >= 2:
             micro = _hash_pick(
@@ -964,7 +993,10 @@ def compose_nudge_response(ctx: ResponseContext) -> ComposedResponse:
 
 
 def compose_unstick_response(ctx: ResponseContext) -> ComposedResponse:
-    return _run_strategy(ctx, UNSTICK_PROMPT_FULL)
+    body = UNSTICK_PROMPT_FULL
+    if (ctx.intent or "").strip() == "stuck_dev":
+        body = UNSTICK_PROMPT_FULL + STUCK_DEV_COMPOSER_EXTRA
+    return _run_strategy(ctx, body)
 
 
 def compose_clarify_response(ctx: ResponseContext) -> ComposedResponse:

@@ -123,6 +123,8 @@ def map_intent_to_behavior(intent: str, _context: Context) -> str:
         return "clarify"
     if intent == "brain_dump":
         return "reduce"
+    if intent == "stuck_dev":
+        return "unstick"
     if intent == "stuck":
         return "unstick"
     if intent == "status_update":
