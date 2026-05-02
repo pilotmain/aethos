@@ -152,8 +152,8 @@ def sessions_spawn(db: Session, *, user_id: str, payload: dict[str, Any]) -> dic
             )
         elif not (s.nexa_host_executor_enabled or s.cursor_enabled):
             raise ValueError(
-                "This approval policy requires execution backends; enable host executor or Cursor, "
-                "or use approval_policy.mode=plan_only."
+                "This approval policy requires execution backends; enable host executor or IDE-linked "
+                "execution, or use approval_policy.mode=plan_only."
             )
 
     spawn_group_id = "spawn_" + uuid.uuid4().hex[:12]

@@ -164,13 +164,13 @@ _TRACKING_NOTE = (
 )
 
 _DEV_DISABLED = (
-    "\n\n—\n_Dev execution isn’t enabled here (host executor / Cursor off), so I can’t confirm "
+    "\n\n—\n_Dev execution isn’t enabled here (host executor off), so I can’t confirm "
     "code runs on your machine yet — I can still outline steps._"
 )
 
 # Shown when the user asks @dev to do code work but no execution backend is configured (no job id on turn).
 _DEV_EXECUTION_NOT_ENABLED_LEAD = (
-    "**Dev execution is not enabled** on this host (host executor and Cursor are off). "
+    "**Dev execution is not enabled** on this host (host executor and IDE-linked runners are off). "
     "What follows is guidance only — nothing runs on your machine until execution is enabled.\n\n"
 )
 

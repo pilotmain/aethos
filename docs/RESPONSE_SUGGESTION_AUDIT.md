@@ -12,6 +12,7 @@ Decision table for paths that historically produced “suggest instead of execut
 | `agent_orchestrator.py` developer route | “tell Cursor” phrasing | Action-oriented Nexa copy | Rewritten |
 | `telegram_onboarding.py` | Slash-first, `@reset`, `/agents` | Intent-first examples; minimal `/help` | Rewritten |
 | `command_help.py` | Already intent-first | Unchanged | Keep |
+| `response_sanitizer.py` | `_DEV_DISABLED` / execution-lead mentioned Cursor | Nexa-neutral wording (host executor / IDE-linked) | Rewritten |
 | `instant_dev_assist.format_assist_appendix` | Context appendix | Still appends in gateway full chat via `_merge_phase50_assist` | Keep |
 
 Review periodically when adding new outbound strings.
