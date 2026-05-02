@@ -24,12 +24,28 @@ from app.services.host_executor_intent import (
     safe_relative_path,
     title_for_payload,
 )
+from app.services.input_secret_guard import secret_paste_chat_reply, user_message_contains_inline_secret
 from app.services.local_file_intent import infer_local_file_request
 from app.services.nexa_safety_policy import stamp_host_payload
 from app.services.nexa_workspace_project_registry import (
     active_project_relative_base,
     merge_payload_with_project_base,
 )
+
+
+def _secret_guard_reply_if_needed(user_text: str):
+    """Block host/path routing when the user pasted env keys or token-like secrets."""
+    if not user_message_contains_inline_secret(user_text):
+        return None
+    from app.services.next_action_apply import NextActionApplicationResult
+
+    return NextActionApplicationResult(
+        secret_paste_chat_reply(),
+        user_text,
+        False,
+        True,
+        None,
+    )
 
 
 def _agent_team_chat_blocks_folder_heuristics(text: str) -> bool:
@@ -385,6 +401,10 @@ def evaluate_deterministic_host_permission_turn(
     if not t0:
         return None
 
+    sg0 = _secret_guard_reply_if_needed(t0)
+    if sg0 is not None:
+        return sg0
+
     if custom_agent_message_blocks_folder_heuristics(t0) or _agent_team_chat_blocks_folder_heuristics(
         t0
     ):
@@ -580,6 +600,10 @@ def try_apply_host_executor_turn(
     t0 = (user_text or "").strip()
     if not t0:
         return None
+
+    sg0 = _secret_guard_reply_if_needed(t0)
+    if sg0 is not None:
+        return sg0
 
     if custom_agent_message_blocks_folder_heuristics(t0) or _agent_team_chat_blocks_folder_heuristics(
         t0

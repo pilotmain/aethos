@@ -65,8 +65,15 @@ def _text_from_gateway_payload(
         return t, str(gw_out.get("intent") or fallback_intent or "general_chat")
     if gw_out.get("mission") is not None:
         st = str(gw_out.get("status") or "completed")
+        mdoc = gw_out.get("mission")
+        title = ""
+        if isinstance(mdoc, dict):
+            title = str(mdoc.get("title") or "").strip()[:160]
+        head = f"Mission {st.replace('_', ' ')}"
+        if title:
+            head = f"{head} — {title}"
         return (
-            f"Mission {st.replace('_', ' ')} — open Mission Control to review tasks and results.",
+            f"{head} — open Mission Control for full results and task output.",
             "run_mission",
         )
     return None, fallback_intent

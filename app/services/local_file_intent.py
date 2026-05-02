@@ -55,6 +55,110 @@ GENERIC_PATH_WORDS: frozenset[str] = frozenset(
     }
 )
 
+# Single-token fragments after “in / under / at …” that are almost always tech stack, not disk paths.
+_TECH_INFRA_NOT_PATH: frozenset[str] = frozenset(
+    {
+        "http",
+        "https",
+        "spring",
+        "springboot",
+        "eks",
+        "k8s",
+        "kubernetes",
+        "mongo",
+        "mongodb",
+        "postgres",
+        "postgresql",
+        "mysql",
+        "mariadb",
+        "redis",
+        "oidc",
+        "oauth",
+        "jwt",
+        "docker",
+        "podman",
+        "nginx",
+        "terraform",
+        "helm",
+        "kafka",
+        "rabbitmq",
+        "elasticsearch",
+        "prometheus",
+        "grafana",
+        "istio",
+        "vault",
+        "jenkins",
+        "atlas",
+        "graphql",
+        "grpc",
+        "django",
+        "flask",
+        "fastapi",
+        "typescript",
+        "javascript",
+        "golang",
+        "rust",
+        "react",
+        "vue",
+        "angular",
+        "nodejs",
+        "npm",
+        "yarn",
+        "pnpm",
+        "tomcat",
+        "jetty",
+        "quarkus",
+        "micronaut",
+        "hibernate",
+        "jdbc",
+        "jpa",
+        "irsa",
+        "aws",
+        "gcp",
+        "azure",
+        "nomad",
+        "consul",
+        "argocd",
+        "gitlab",
+        "github",
+        "cursor",
+        "vscode",
+    }
+)
+
+
+def _line_signals_infra_without_paths(line: str) -> bool:
+    """Stack / cloud discussion without a concrete on-disk path → defer to LLM, not path UX."""
+    if re.search(r"(?:/Users/|/home/|/tmp/|~/|\./)", line):
+        return False
+    low = (line or "").lower()
+    for tok in _TECH_INFRA_NOT_PATH:
+        if len(tok) < 3:
+            continue
+        if re.search(rf"\b{re.escape(tok)}\b", low):
+            return True
+    return False
+
+
+def _is_tech_stack_keyword_fragment(path_candidate: str) -> bool:
+    """True when the fragment is likely prose (stack names), not a filesystem path."""
+    raw = (path_candidate or "").strip()
+    if not raw:
+        return False
+    if "/" in raw or "\\" in raw:
+        return False
+    if raw.startswith((".", "/", "~")):
+        return False
+    if "://" in raw:
+        return True
+    first = (raw.split()[0] if raw.split() else "").strip()
+    seg = _first_segment_lower(first)
+    if seg in _TECH_INFRA_NOT_PATH:
+        return True
+    if seg in GENERIC_PATH_WORDS:
+        return True
+    return False
+
 
 def _first_segment_lower(path_candidate: str) -> str:
     s = (path_candidate or "").strip().strip("./")
@@ -93,9 +197,13 @@ def _extract_path_fragment(line: str) -> str:
     m2 = re.search(r"\b(?:in|under|at)\s+([\w.~][\w./~-]{1,400})", line, re.I)
     if m2:
         frag = m2.group(1).rstrip(".,;)")
+        if "://" in frag:
+            return ""
         first_tok = (frag.split()[0] if frag else "").strip()
         seg0 = _first_segment_lower(first_tok)
         if seg0 in GENERIC_PATH_WORDS:
+            return ""
+        if seg0 in _TECH_INFRA_NOT_PATH:
             return ""
         return frag
     # Generic Unix absolute path (e.g. /bad/path/file.txt) — not only /Users, /tmp, …
@@ -281,6 +389,8 @@ def _read_multiple_intent_for_folder_path(
     keyword: str | None = None,
 ) -> LocalFileIntent:
     """``read_multiple_files`` for a folder path: inside work root (relative) or outside (abs targets)."""
+    if _is_tech_stack_keyword_fragment(path_raw):
+        return LocalFileIntent(matched=False)
     try:
         p_user = Path(path_raw).expanduser().resolve()
         p_root = Path(get_settings().host_executor_work_root).expanduser().resolve()
@@ -401,6 +511,8 @@ def infer_local_file_request(
     elif ls_m:
         path_raw = (ls_m.group(1) or "").strip()
     if path_raw:
+        if _is_tech_stack_keyword_fragment(path_raw):
+            return LocalFileIntent(matched=False)
         try:
             p_user = Path(path_raw).expanduser().resolve()
             p_root = Path(get_settings().host_executor_work_root).expanduser().resolve()
@@ -560,7 +672,14 @@ def infer_local_file_request(
         # "read files in my local folder") and creates bogus /app/<token> jobs.
         if not path_guess and intel_op == "structure":
             path_guess = base
+        # URLs → web / fetch routing, not host path clarification.
+        if not path_guess and re.search(r"https?://", line):
+            return LocalFileIntent(matched=False)
+        if path_guess and _is_tech_stack_keyword_fragment(path_guess):
+            return LocalFileIntent(matched=False)
         if not path_guess:
+            if _line_signals_infra_without_paths(line):
+                return LocalFileIntent(matched=False)
             ax = _missing_path_clarification_axis(line)
             return LocalFileIntent(
                 matched=True,

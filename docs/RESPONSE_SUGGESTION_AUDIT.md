@@ -13,6 +13,8 @@ Decision table for paths that historically produced “suggest instead of execut
 | `telegram_onboarding.py` | Slash-first, `@reset`, `/agents` | Intent-first examples; minimal `/help` | Rewritten |
 | `command_help.py` | Already intent-first | Unchanged | Keep |
 | `response_sanitizer.py` | `_DEV_DISABLED` / execution-lead mentioned Cursor | Nexa-neutral wording (host executor / IDE-linked) | Rewritten |
+| `local_file_intent.py` | “in EKS” / stack words → bogus paths; URLs → path UX | Tech-keyword denylist, URL deferral, infra-without-path → no host match | Rewritten |
+| `input_secret_guard.py` | — | Block pasted API keys before host/path routing | Added |
 | `instant_dev_assist.format_assist_appendix` | Context appendix | Still appends in gateway full chat via `_merge_phase50_assist` | Keep |
 
 Review periodically when adding new outbound strings.

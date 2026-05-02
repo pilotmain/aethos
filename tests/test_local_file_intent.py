@@ -146,3 +146,48 @@ def test_infer_analyze_folder_outside_work_root_carries_abs_targets_and_base(
     assert lf.payload.get("nexa_permission_abs_targets") == [str(outer.resolve())]
     assert lf.payload.get("base") == str(outer.resolve())
     assert lf.payload.get("relative_path") == "."
+
+
+def test_infer_infra_keywords_not_filesystem_paths(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Phrases like 'in EKS' / 'Spring' must not resolve as repo-relative folders (Phase 51+ routing)."""
+    monkeypatch.chdir(tmp_path)
+    root = str(tmp_path.resolve())
+
+    class S:
+        host_executor_work_root = root
+
+    with patch("app.services.local_file_intent.get_settings", return_value=S()):
+        lf = infer_local_file_request(
+            "Summarize my MongoDB Atlas + Spring Boot service deployed in EKS with custom OIDC"
+        )
+    assert not lf.matched
+
+
+def test_infer_list_files_in_eks_not_path_error(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    root = str(tmp_path.resolve())
+
+    class S:
+        host_executor_work_root = root
+
+    with patch("app.services.local_file_intent.get_settings", return_value=S()):
+        lf = infer_local_file_request("list files in eks")
+    assert not lf.matched
+
+
+def test_infer_https_only_defers_to_other_routing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    root = str(tmp_path.resolve())
+
+    class S:
+        host_executor_work_root = root
+
+    with patch("app.services.local_file_intent.get_settings", return_value=S()):
+        lf = infer_local_file_request("check https://example.com/path for broken links")
+    assert not lf.matched
