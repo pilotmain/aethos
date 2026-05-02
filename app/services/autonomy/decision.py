@@ -204,7 +204,22 @@ def autonomous_decision_loop(
             payload={"queued": len(inserted), "user_id": uid},
         )
         aggregate_ids.extend(inserted)
-        per_user.append({"user_id": uid, "generated": inserted, "summary": log.summary})
+        goal_ids: list[str] = []
+        try:
+            from app.services.autonomy.goal_engine import generate_and_persist_goals
+
+            goal_ids = generate_and_persist_goals(db, uid)
+            aggregate_ids.extend(goal_ids)
+        except Exception:
+            pass
+        per_user.append(
+            {
+                "user_id": uid,
+                "generated": inserted,
+                "summary": log.summary,
+                "goal_engine_ids": goal_ids,
+            }
+        )
 
     return {
         "ok": True,

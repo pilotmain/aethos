@@ -7,6 +7,7 @@ Read paths reuse ``NEXA_BROWSER_PREVIEW_ENABLED``; click/fill require
 
 from __future__ import annotations
 
+import json
 import uuid
 from pathlib import Path
 from typing import Any
@@ -201,6 +202,114 @@ def fill_form_field(url: str, selector: str, text: str) -> dict[str, Any]:
         return {"ok": False, "error": str(exc)[:2000]}
 
 
+def _append_workflow_memory(session_id: str, record: dict[str, Any]) -> None:
+    """Append one JSON line per workflow step (Phase 46B — navigation memory)."""
+    PREVIEW_DIR.mkdir(parents=True, exist_ok=True)
+    sid = (session_id or "default")[:48]
+    p = PREVIEW_DIR / f"browser_workflow_{sid}.jsonl"
+    line = json.dumps({**record, "session": sid}, ensure_ascii=False, default=str)
+    with p.open("a", encoding="utf-8") as f:
+        f.write(line + "\n")
+
+
+def run_browser_workflow(
+    steps: list[dict[str, Any]],
+    *,
+    session_id: str | None = None,
+) -> dict[str, Any]:
+    """
+    Multi-step public-site automation in one browser session (no credential storage).
+
+    Each step: ``{"action": "open"|"click"|"fill"|"extract"|"wait", ...}``.
+    """
+    ok, reason = _automation_gate()
+    if not ok:
+        return {"ok": False, "error": reason, "results": []}
+    spw = _try_import_sync_playwright()
+    if spw is None:
+        return {"ok": False, "error": "playwright_missing", "results": []}
+    sid = (session_id or uuid.uuid4().hex[:20])[:48]
+    to_ms = _timeout_ms()
+    results: list[dict[str, Any]] = []
+    try:
+        with spw() as p:
+            browser = p.chromium.launch(headless=True)
+            try:
+                ctx = browser.new_context(user_agent=get_settings().nexa_web_user_agent)
+                page = ctx.new_page()
+                page.set_default_timeout(to_ms)
+                for i, step in enumerate(steps):
+                    if not isinstance(step, dict):
+                        results.append({"i": i, "ok": False, "error": "invalid_step"})
+                        continue
+                    act = str(step.get("action") or "").lower().strip()
+                    rec: dict[str, Any] = {"i": i, "action": act}
+                    try:
+                        if act == "open":
+                            u = str(step.get("url") or "").strip()
+                            err = validate_public_url_strict(u)
+                            if err:
+                                rec.update({"ok": False, "error": err})
+                            else:
+                                page.goto(u, wait_until="domcontentloaded", timeout=to_ms)
+                                page.wait_for_timeout(400)
+                                rec.update({"ok": True, "final_url": page.url})
+                        elif act == "click":
+                            u = str(step.get("url") or "").strip()
+                            sel = str(step.get("selector") or "").strip()
+                            err = validate_public_url_strict(u)
+                            if err:
+                                rec.update({"ok": False, "error": err})
+                            elif not sel:
+                                rec.update({"ok": False, "error": "missing_selector"})
+                            else:
+                                page.goto(u, wait_until="domcontentloaded", timeout=to_ms)
+                                page.wait_for_timeout(300)
+                                page.click(sel, timeout=min(to_ms, 30_000))
+                                rec.update({"ok": True, "final_url": page.url, "clicked": sel})
+                        elif act == "fill":
+                            u = str(step.get("url") or "").strip()
+                            sel = str(step.get("selector") or "").strip()
+                            text = str(step.get("text") or "")[:50_000]
+                            err = validate_public_url_strict(u)
+                            if err:
+                                rec.update({"ok": False, "error": err})
+                            elif not sel:
+                                rec.update({"ok": False, "error": "missing_selector"})
+                            else:
+                                page.goto(u, wait_until="domcontentloaded", timeout=to_ms)
+                                page.wait_for_timeout(300)
+                                page.fill(sel, text)
+                                rec.update({"ok": True, "final_url": page.url})
+                        elif act == "extract":
+                            u = str(step.get("url") or "").strip()
+                            mx = int(step.get("max_chars") or 12_000)
+                            err = validate_public_url_strict(u)
+                            if err:
+                                rec.update({"ok": False, "error": err})
+                            else:
+                                page.goto(u, wait_until="domcontentloaded", timeout=to_ms)
+                                page.wait_for_timeout(500)
+                                html = page.content() or ""
+                                txt = extract_visible_text(html, max_chars=mx) or ""
+                                rec.update({"ok": True, "text": txt[:mx], "final_url": page.url})
+                        elif act == "wait":
+                            ms = int(step.get("ms") or 800)
+                            page.wait_for_timeout(min(30_000, max(100, ms)))
+                            rec.update({"ok": True, "final_url": page.url})
+                        else:
+                            rec.update({"ok": False, "error": f"unknown_action:{act}"})
+                    except Exception as exc:
+                        rec.update({"ok": False, "error": str(exc)[:2000]})
+                    _append_workflow_memory(sid, rec)
+                    results.append(rec)
+                return {"ok": True, "session_id": sid, "results": results}
+            finally:
+                browser.close()
+    except Exception as exc:
+        return {"ok": False, "error": str(exc)[:2000], "results": results}
+
+
 def list_visible_links(url: str, *, max_links: int = 40) -> dict[str, Any]:
     """Return up to ``max_links`` absolute hrefs from anchor elements (read-only)."""
     uerr = validate_public_url_strict(url)
@@ -243,5 +352,6 @@ __all__ = [
     "fill_form_field",
     "list_visible_links",
     "open_page",
+    "run_browser_workflow",
     "screenshot_page",
 ]

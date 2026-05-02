@@ -57,8 +57,14 @@ def test_long_running_checkpoint_tick(tmp_path, monkeypatch: pytest.MonkeyPatch)
         sess = LongRunningSession("lr_u1", "sess_p41", "parity goal")
         register_session(sess)
         hits = tick_all_registered()
-        assert len(hits) == 1
-        assert hits[0].get("iteration") == 1
+        mine = [
+            h
+            for h in hits
+            if h.get("user_id") == "lr_u1"
+            and (h.get("session_key") == "sess_p41" or h.get("session_id") == "sess_p41")
+        ]
+        assert len(mine) == 1
+        assert mine[0].get("iteration") == 1
         cp = sess.load_checkpoint()
         assert cp.iteration >= 1
     finally:

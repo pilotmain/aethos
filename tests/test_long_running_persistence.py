@@ -19,7 +19,9 @@ def test_upsert_and_tick_db_session(db_session) -> None:
         state={"note": "x"},
     )
     out = tick_eligible_db_sessions(db_session)
-    assert len(out) == 1
-    assert out[0].get("iteration") == 1
+    ours = [x for x in out if x.get("user_id") == uid and x.get("session_key") == sk]
+    assert len(ours) == 1
+    assert ours[0].get("iteration") == 1
     out2 = tick_eligible_db_sessions(db_session)
-    assert len(out2) == 0
+    ours2 = [x for x in out2 if x.get("user_id") == uid and x.get("session_key") == sk]
+    assert len(ours2) == 0

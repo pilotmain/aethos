@@ -15,9 +15,12 @@ from app.services.dev_runtime.coding_agents.base import CodingAgentRequest, Codi
 from app.services.dev_runtime.coding_agents.registry import choose_adapter
 from app.services.dev_runtime.git_tools import (
     changed_files,
+    checkout_run_branch,
+    commit_quality_preflight,
     create_commit,
     get_diff_summary,
     git_status,
+    rev_parse_head,
 )
 from app.services.dev_runtime.git_tools import (
     prepare_pr_summary as ws_prepare_pr_summary,
@@ -44,7 +47,7 @@ from app.services.dev_runtime.workspace import get_workspace
 from app.services.events.envelope import emit_runtime_event
 from app.services.mission_control.nexa_next_state import update_state
 
-# Phase 41 — documented pipeline surface (analyze → code → test → fix → repeat → commit)
+# Phase 41–46 — documented pipeline surface (→ PR when GitHub enabled)
 DEV_PIPELINE_SEQUENCE: tuple[str, ...] = (
     "analyze",
     "code",
@@ -52,6 +55,7 @@ DEV_PIPELINE_SEQUENCE: tuple[str, ...] = (
     "fix",
     "repeat",
     "commit",
+    "pr",
 )
 
 
@@ -138,8 +142,13 @@ def run_dev_mission(
     )
 
     repo = Path(ws.repo_path)
+    run_branch_name = f"nexa/run-{rid[:16]}"
+    if not from_scheduler:
+        br = checkout_run_branch(repo, run_branch_name)
+        context_accum: dict[str, Any] = {"run_branch": run_branch_name, "branch_checkout": br}
+    else:
+        context_accum = {"run_branch": None, "branch_checkout": {"ok": True, "skipped": True}}
     steps_out: list[dict[str, Any]] = []
-    context_accum: dict[str, Any] = {}
     adapter_used_name = "local_stub"
     mission_goal = (goal or "").strip()
     current_goal = mission_goal
@@ -354,17 +363,24 @@ def run_dev_mission(
 
         cf_end = changed_files(repo)
         commit_result: dict[str, Any] | None = None
+        commit_hash: str | None = None
+        commit_quality: dict[str, Any] | None = None
         if allow_commit:
+            commit_quality = commit_quality_preflight(repo)
             commit_result = create_commit(
                 repo,
                 f"nexa dev: {mission_goal[:120]}",
                 allow_commit=True,
             )
+            if commit_result and commit_result.get("ok"):
+                commit_hash = rev_parse_head(repo)
+            context_accum["commit_quality"] = commit_quality
 
         push_result: dict[str, Any] | None = None
         if allow_push:
             push_result = {"ok": False, "error": "push_not_implemented_use_manual_git_push"}
 
+        github_pr_result: dict[str, Any] | None = None
         # Summary step (plan)
         for step in plan:
             if str(step.get("type") or "") != "summary":
@@ -393,12 +409,22 @@ def run_dev_mission(
                 "tests_passed": tests_passed,
                 "has_runtime_errors": has_runtime_errors,
                 "max_iterations": max_loop_iters,
+                "branch": context_accum.get("run_branch"),
+                "commit_hash": commit_hash,
+                "commit_quality": commit_quality,
             }
             pr_ui = ws_prepare_pr_summary(ws, run_blob)
-            gh = create_pull_request(goal=mission_goal, run_result=run_blob, workspace_id=workspace_id)
+            gh = create_pull_request(
+                goal=mission_goal,
+                run_result=run_blob,
+                workspace_id=workspace_id,
+                repo_path=repo,
+                head_branch=str(context_accum.get("run_branch") or "") or None,
+            )
+            github_pr_result = gh
             if auto_pr:
                 pr_ui["auto_pr_requested"] = True
-                pr_ui["github_pr_stub"] = gh
+                pr_ui["github_pr"] = gh
             pr_ui["pr_ready"] = is_pr_ready(
                 {
                     **run_blob,
@@ -429,6 +455,12 @@ def run_dev_mission(
                 payload={"run_id": rid, "step_type": "summary", "step_id": row.id},
             )
 
+        pl_sum = (
+            f"tests={'ok' if tests_passed else 'fail'}; "
+            f"iters={loop_iterations_executed}; "
+            f"branch={context_accum.get('run_branch') or '—'}; "
+            f"commit={commit_hash or '—'}"
+        )
         result_payload: dict[str, Any] = {
             "steps": steps_out,
             "workspace_id": workspace_id,
@@ -448,6 +480,12 @@ def run_dev_mission(
             "has_runtime_errors": has_runtime_errors,
             "max_iterations": max_loop_iters,
             "stagnation_stopped": stagnation_stop,
+            "branch": context_accum.get("run_branch"),
+            "commit_hash": commit_hash,
+            "commit_quality": commit_quality,
+            "summary": pl_sum,
+            "pipeline_summary": pl_sum,
+            "github_pr": github_pr_result,
             "pipeline": {
                 "sequence": list(DEV_PIPELINE_SEQUENCE),
                 "analyze": {"completed": True},
@@ -459,7 +497,9 @@ def run_dev_mission(
                 "commit": {
                     "attempted": bool(allow_commit),
                     "result": commit_result,
+                    "hash": commit_hash,
                 },
+                "pr": {"result": github_pr_result},
             },
         }
         result_payload["pr_ready"] = is_pr_ready({**result_payload, "status": "completed"})
@@ -503,6 +543,11 @@ def run_dev_mission(
             "pipeline": result_payload.get("pipeline"),
             "failure_classification": result_payload.get("failure_classification"),
             "fix_strategy_hint": result_payload.get("fix_strategy_hint"),
+            "branch": result_payload.get("branch"),
+            "commit_hash": result_payload.get("commit_hash"),
+            "commit_quality": result_payload.get("commit_quality"),
+            "summary": result_payload.get("summary"),
+            "github_pr": result_payload.get("github_pr"),
         }
 
     except PrivacyBlockedError as exc:

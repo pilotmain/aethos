@@ -385,6 +385,8 @@ class Settings(BaseSettings):
     nexa_autonomy_execution_enabled: bool = True
     nexa_autonomy_max_tasks_per_cycle: int = 5
     nexa_autonomy_max_users_per_heartbeat: int = 12
+    # Phase 46 — enqueue higher-level goals as autonomous tasks.
+    nexa_goal_engine_enabled: bool = False
 
     # Phase 23 — AI dev OS (workspace commands, allowlist).
     nexa_dev_allowed_commands: str = (
@@ -408,6 +410,8 @@ class Settings(BaseSettings):
     nexa_codex_enabled: bool = False
     nexa_codex_command: str = "codex"
     nexa_github_pr_enabled: bool = False
+    # Default base branch for REST PRs (Phase 46).
+    nexa_github_default_branch: str = "main"
     github_token: str | None = None
 
     @field_validator("nexa_user_privacy_mode", mode="before")

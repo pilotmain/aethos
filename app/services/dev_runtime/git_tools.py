@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -104,6 +105,91 @@ def get_diff_summary(repo_path: Path | str) -> dict[str, Any]:
     }
 
 
+def rev_parse_head(workspace_root: Path | str) -> str | None:
+    """Return current ``HEAD`` commit hash or ``None``."""
+    root = validate_workspace_path(str(workspace_root))
+    try:
+        r = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=str(root),
+            capture_output=True,
+            text=True,
+            timeout=60.0,
+        )
+        if r.returncode != 0:
+            return None
+        h = (r.stdout or "").strip()
+        return h[:64] if h else None
+    except (subprocess.TimeoutExpired, OSError):
+        return None
+
+
+def checkout_run_branch(workspace_root: Path | str, branch: str) -> dict[str, Any]:
+    """
+    Phase 46 — isolate dev work on ``nexa/run-*`` branches when the tree allows it.
+
+    Creates the branch with ``git checkout -b``; on failure (dirty/conflict), returns ok=False.
+    """
+    root = validate_workspace_path(str(workspace_root))
+    b = (branch or "").strip()
+    if not b or len(b) > 200:
+        return {"ok": False, "error": "invalid_branch_name"}
+    try:
+        r = subprocess.run(
+            ["git", "checkout", "-b", b],
+            cwd=str(root),
+            capture_output=True,
+            text=True,
+            timeout=120.0,
+        )
+        if r.returncode == 0:
+            return {"ok": True, "branch": b}
+        return {
+            "ok": False,
+            "error": "checkout_failed",
+            "stderr": (r.stderr or "")[-4000:],
+            "stdout": (r.stdout or "")[-2000:],
+        }
+    except (subprocess.TimeoutExpired, OSError) as exc:
+        return {"ok": False, "error": str(exc)[:2000]}
+
+
+def commit_quality_preflight(workspace_root: Path | str) -> dict[str, Any]:
+    """Lightweight gate before committing (Phase 46 — production hygiene)."""
+    root = validate_workspace_path(str(workspace_root))
+    ufs = changed_files(root)
+    gs = git_status(root)
+    dirty = bool(ufs) or bool(str(gs.get("stdout") or "").strip())
+    return {
+        "ok": True,
+        "has_changes": dirty,
+        "changed_file_count": len(ufs),
+    }
+
+
+def parse_github_slug_from_repo(workspace_root: Path | str) -> tuple[str, str] | None:
+    """Return ``(owner, repo)`` from ``origin`` remote URL when it looks like GitHub."""
+    root = validate_workspace_path(str(workspace_root))
+    try:
+        r = subprocess.run(
+            ["git", "remote", "get-url", "origin"],
+            cwd=str(root),
+            capture_output=True,
+            text=True,
+            timeout=30.0,
+        )
+        if r.returncode != 0:
+            return None
+        url = (r.stdout or "").strip()
+    except (subprocess.TimeoutExpired, OSError):
+        return None
+    # github.com:owner/repo.git or https://github.com/owner/repo.git
+    m = re.search(r"github\.com[/:]([\w.-]+)/([\w.-]+?)(?:\.git)?(?:\s|$)", url, re.I)
+    if not m:
+        return None
+    return (m.group(1), m.group(2).rstrip("/"))
+
+
 def prepare_pr_summary(workspace: NexaDevWorkspace, run_result: dict[str, Any] | None) -> dict[str, Any]:
     """Merge workspace context with PR summary text for UI / export."""
     from app.services.dev_runtime.pr import prepare_pr_summary as _title_body
@@ -117,11 +203,15 @@ def prepare_pr_summary(workspace: NexaDevWorkspace, run_result: dict[str, Any] |
 
 
 __all__ = [
-    "git_status",
-    "git_diff",
-    "current_branch",
     "changed_files",
+    "checkout_run_branch",
+    "commit_quality_preflight",
     "create_commit",
+    "current_branch",
     "get_diff_summary",
+    "git_diff",
+    "git_status",
+    "parse_github_slug_from_repo",
     "prepare_pr_summary",
+    "rev_parse_head",
 ]

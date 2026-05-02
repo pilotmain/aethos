@@ -499,6 +499,7 @@ def build_execution_snapshot(
     autonomy_decisions_out: list[dict[str, Any]] = []
     autonomy_feedback_out: list[dict[str, Any]] = []
     autonomy_execution_stats: dict[str, Any] = {}
+    phase46_vnext: dict[str, Any] = {}
     if user_id:
         ws_rows = list(
             db.scalars(
@@ -707,6 +708,37 @@ def build_execution_snapshot(
                 }
             )
 
+        from app.services.agents.agent_intel_store import list_agent_intel_profiles
+        from app.services.autonomy.cost_intel import predict_cost
+        from app.services.autonomy.self_improve import system_self_improve
+        from app.services.tasks.unified_task import NexaTask
+
+        goals_mc = [x for x in autonomous_tasks_out if str(x.get("origin") or "") == "goal_engine"]
+        agent_intel = list_agent_intel_profiles(user_id)
+        eff = system_self_improve(db, user_id)
+        sr = autonomy_execution_stats.get("success_rate")
+        conf = round(0.25 + float(sr) * 0.75, 3) if sr is not None else None
+        sample_cost: dict[str, Any] | None = None
+        if at_rows:
+            t0 = at_rows[0]
+            nt = NexaTask(
+                id=t0.id,
+                type="system",
+                input=(t0.title or ""),
+                context={"preview": "mission_control"},
+                auto_generated=bool(t0.auto_generated),
+                priority=int(t0.priority or 0),
+                origin=str(t0.origin or "user"),
+            )
+            sample_cost = predict_cost(nt)
+        phase46_vnext = {
+            "goals": goals_mc,
+            "agent_intel": agent_intel,
+            "system_efficiency": eff,
+            "autonomy_confidence_score": conf,
+            "sample_task_cost_estimate": sample_cost,
+        }
+
     exec_payload: dict[str, Any] = {
         "missions": missions_out,
         "tasks": tasks_out,
@@ -739,6 +771,7 @@ def build_execution_snapshot(
         "autonomy_decisions": autonomy_decisions_out,
         "autonomy_feedback": autonomy_feedback_out,
         "autonomy_execution_stats": autonomy_execution_stats,
+        "phase46": phase46_vnext,
     }
 
     uid_early = (user_id or "").strip()
