@@ -32,10 +32,16 @@ If `.env` uses `postgresql://127.0.0.1:…`, start the bundled DB before the API
 ./scripts/docker_postgres_up.sh
 ```
 
-Or start API + web + bot together (auto-starts `docker compose` service `db` when `.env` is Postgres and Docker is installed):
+One command for local dev (default: **`docker compose up --build -d`** for db + api + bot, then host Next.js → Mission Control uses Docker API **:8010**):
 
 ```bash
 ./scripts/nexa_next_local_all.sh start
+```
+
+Host-only API with hot reload (no compose api/bot containers):
+
+```bash
+NEXA_NEXT_LOCAL_FULL_STACK=0 ./scripts/nexa_next_local_all.sh start
 ```
 
 ## Defaults

@@ -27,3 +27,11 @@ def test_docker_postgres_up_script_present() -> None:
     assert script.is_file()
     text = script.read_text(encoding="utf-8")
     assert "docker compose up -d db" in text
+
+
+def test_nexa_next_local_all_invokes_compose_build() -> None:
+    root = Path(__file__).resolve().parents[1]
+    script = root / "scripts" / "nexa_next_local_all.sh"
+    text = script.read_text(encoding="utf-8")
+    assert "docker compose up --build -d" in text
+    assert "docker_postgres_up.sh" in text
