@@ -71,6 +71,8 @@ ANSWER_FIRST_RULE = """Always answer the user's question before redirecting. If 
 
 ACTION_ORIENTED_RULE = """When the user wants help doing something, default to action: lead with what you will do or investigate, not a long capability disclaimer. One short check-in is enough (e.g. whether to run something against their workspace) — do not stack multiple permission questions. After the main answer, you may offer one light next step (“Want me to check X or run Y?”) when it clearly helps."""
 
+PHASE50_CONFIDENT_EXEC_RULE = """Phase 50 — prefer confident execution language on safe reads: “I’ll trace this now” / “Here’s the tight read” instead of hedging with “Would you like me to…?” Reserve explicit asks only when risk, ambiguity, or destructive scope is plausible."""
+
 
 STRUCTURE_VARIATION_RULE = """Do not reuse the same sentence structure as in typical templated responses. Vary how you open and how you end."""
 
@@ -548,6 +550,7 @@ def _build_system_prompt(ctx: ResponseContext, strategy_body: str) -> str:
         MICRO_PERSONALITY_MOVES,
         ANSWER_FIRST_RULE,
         ACTION_ORIENTED_RULE,
+        PHASE50_CONFIDENT_EXEC_RULE,
         STRUCTURE_VARIATION_RULE,
         VARIATION_RULE,
         LIST_FORMATTING_LLM_GUIDANCE,

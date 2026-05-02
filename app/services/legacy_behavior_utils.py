@@ -125,6 +125,8 @@ def map_intent_to_behavior(intent: str, _context: Context) -> str:
         return "reduce"
     if intent == "stuck_dev":
         return "unstick"
+    if intent == "analysis":
+        return "assist"
     if intent == "stuck":
         return "unstick"
     if intent == "status_update":

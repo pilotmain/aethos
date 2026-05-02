@@ -60,13 +60,18 @@ export function Phase22Overview(props: {
   return (
     <section
       className={`rounded-xl border p-4 transition-colors duration-300 ${
-        shellLight ? "border-zinc-200 bg-white/90" : "border-zinc-800/80 bg-zinc-950/50"
+        shellLight ? "border-zinc-200/90 bg-white/95" : "border-zinc-800/60 bg-zinc-950/40"
       }`}
     >
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <h2 className={`text-sm font-semibold ${shellLight ? "text-zinc-900" : "text-zinc-100"}`}>
-          Autonomy layer
-        </h2>
+        <div>
+          <h2 className={`text-sm font-semibold ${shellLight ? "text-zinc-900" : "text-zinc-100"}`}>
+            Right now
+          </h2>
+          <p className={`mt-0.5 text-[11px] ${shellLight ? "text-zinc-500" : "text-zinc-500"}`}>
+            Memory · schedule · skills — snapshot
+          </p>
+        </div>
         <button
           type="button"
           onClick={() => void load()}

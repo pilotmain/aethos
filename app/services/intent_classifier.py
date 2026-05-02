@@ -21,6 +21,7 @@ Valid intents:
 - help_request: user asks for help, but does not provide actual tasks yet
 - followup_reply: user says they did not complete something, or replies to a check-in
 - stuck_dev: user is blocked on a technical problem (build/test error, deploy, CI, config, tooling) — not general life overwhelm
+- analysis: user wants a deep read of an error, root cause, or postmortem (not a generic chat)
 - stuck: user says they are stuck, blocked, frozen, overwhelmed without listing tasks, or cannot start
 - status_update: user says they completed something
 - correction: user says the assistant misunderstood, asks it to answer the question, or rejects the previous response
@@ -34,6 +35,7 @@ Important rules:
 - If the user lists 2 or more concrete tasks, classify as brain_dump.
 - If the user says only "I feel overwhelmed" without tasks, classify as stuck.
 - If the message is about errors, failing builds/tests, deployment, CI, K8s/EKS, Docker, databases, or auth config AND the user is blocked or asking for a fix, classify as stuck_dev (not generic stuck).
+- If the user asks for root cause, postmortem, or to analyze a specific error/trace, classify as analysis.
 - If the user message (after trimming) starts with "create" and contains the word "agent", classify as create_custom_agent — except vague multi-agent capability questions (e.g. "can you create multi agents that communicate"); those are capability_question.
 - If uncertain, choose general_chat, not brain_dump.
 
@@ -153,6 +155,23 @@ def looks_like_stuck_dev(message: str) -> bool:
     return any(p in t for p in pain)
 
 
+def looks_like_analysis(message: str) -> bool:
+    """Heuristic: user wants error/root-cause analysis (Phase 50)."""
+    t = (message or "").lower()
+    if len(t) < 10:
+        return False
+    return bool(
+        re.search(
+            r"(?i)(root\s+cause|post-?mortem|postmortem|"
+            r"analyze\s+(this|the)\s+(error|failure|issue|traceback|log)|"
+            r"break\s+down\s+(this|the)\s+error|"
+            r"why\s+(did|is|does)\s+(this|it|the)\s+(build|test|deploy|pipeline)|"
+            r"error\s+analysis|incident\s+review)\b",
+            t,
+        )
+    )
+
+
 def looks_like_brain_dump(text: str) -> bool:
     t = text.lower().strip()
 
@@ -249,6 +268,9 @@ def classify_intent_fallback(message: str) -> dict:
 
     if looks_like_stuck_dev(message):
         return {"intent": "stuck_dev", "confidence": 0.9, "reason": "dev blockage heuristic"}
+
+    if looks_like_analysis(message):
+        return {"intent": "analysis", "confidence": 0.86, "reason": "error analysis or root cause"}
 
     if re.search(r"\bstuck\b|can't start|cant start|\bfrozen\b", t):
         return {"intent": "stuck", "confidence": 0.9, "reason": "stuck phrase"}

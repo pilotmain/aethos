@@ -42,4 +42,30 @@ def minimize_response_length(
     return text[: max_chars - 1].rstrip() + "…"
 
 
-__all__ = ["humanize_response", "minimize_response_length"]
+_RE_FILLER_PARA = re.compile(
+    r"(?is)^(I hope this helps\.?|Feel free to ask.*|Let me know if you (have )?any questions\.?)\s*$"
+)
+
+
+def enforce_precision(text: str) -> str:
+    """Drop duplicate paragraphs and chatty filler lines (Phase 50 precision layer)."""
+    if not (text and text.strip()):
+        return text
+    blocks = re.split(r"\n\s*\n+", text)
+    out: list[str] = []
+    seen_norm: set[str] = set()
+    for block in blocks:
+        raw = block.strip()
+        if not raw:
+            continue
+        if _RE_FILLER_PARA.match(raw):
+            continue
+        norm = re.sub(r"\s+", " ", raw.lower()).rstrip(".!? ")
+        if len(norm) >= 8 and norm in seen_norm:
+            continue
+        seen_norm.add(norm)
+        out.append(raw)
+    return "\n\n".join(out).strip()
+
+
+__all__ = ["enforce_precision", "humanize_response", "minimize_response_length"]

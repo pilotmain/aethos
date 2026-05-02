@@ -212,12 +212,17 @@ def finalize_user_facing_text(
     text: str, *, user_preferences: dict[str, str] | None = None
 ) -> str:
     from app.services.memory_preferences import get_effective_owner_pronoun
-    from app.services.response_humanization import humanize_response, minimize_response_length
+    from app.services.response_humanization import (
+        enforce_precision,
+        humanize_response,
+        minimize_response_length,
+    )
 
     c = clean_response_formatting(text)
     c = soften_capability_downgrade_phrases(c)
     c = _apply_owner_pronoun_fixes_prose(c, get_effective_owner_pronoun(user_preferences))
     c = humanize_response(c)
+    c = enforce_precision(c)
     c = minimize_response_length(c)
     return c
 

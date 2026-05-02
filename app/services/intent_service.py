@@ -6,6 +6,8 @@ INTENTS = [
     "help_request",
     "followup_reply",
     "stuck",
+    "stuck_dev",
+    "analysis",
     "status_update",
     "correction",
     "general_chat",

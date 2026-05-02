@@ -25,6 +25,16 @@ def gateway_finalize_chat_reply(text: str, *, source: str = "gateway") -> str:
     return text
 
 
+def _merge_phase50_assist(reply: str, raw: str, intent: str) -> str:
+    """Append deterministic dev appendix with context hints for action-first routing (Phase 50)."""
+    from app.services.instant_dev_assist import format_assist_appendix
+
+    app = format_assist_appendix(user_text=raw, intent=intent)
+    if not app:
+        return reply
+    return (reply.rstrip() + "\n\n" + app).strip()
+
+
 def _finalize_gateway_payload(payload: dict[str, Any]) -> dict[str, Any]:
     """Normalize user-visible strings on shallow gateway result dicts."""
     if not isinstance(payload, dict):
@@ -243,6 +253,7 @@ class NexaGateway:
             conversation_snapshot=snap,
             routing_agent_key=routing_agent_key,
         )
+        reply = _merge_phase50_assist(reply, raw, intent)
         return {"mode": "chat", "text": gateway_finalize_chat_reply(reply, source="full_chat_reply"), "intent": intent}
 
     def handle_message(
