@@ -40,9 +40,8 @@ def maybe_dev_gateway_hint(text: str, user_id: str, db: Session) -> dict[str, An
         return {
             "mode": "chat",
             "text": (
-                "I can investigate this, but I need a workspace first. "
-                "Add or select your repo in Mission Control, then say “run dev: investigate this” "
-                "with the specifics you care about."
+                "I can investigate this once a workspace is connected in Mission Control. "
+                "Describe what’s failing and I’ll dig in — or say if you want me to run fixes automatically on your repo."
             ),
             "dev_routing_hint": True,
         }

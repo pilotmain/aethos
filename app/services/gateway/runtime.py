@@ -191,7 +191,11 @@ class NexaGateway:
         from app.services.memory.memory_index import MemoryIndex
         from app.services.memory_service import MemoryService
         from app.services.orchestrator_service import OrchestratorService
-        from app.services.telegram_onboarding import is_weak_input, start_message
+        from app.services.telegram_onboarding import (
+            is_weak_input,
+            onboarding_deterministic_reply,
+            weak_input_response,
+        )
 
         uid = gctx.user_id
         channel = gctx.channel
@@ -254,8 +258,8 @@ class NexaGateway:
         _attach_memory_brain(beh_ctx)
 
         if user_row.is_new and intent == "general_chat" and is_weak_input(raw):
-            sm = start_message()
-            return {"mode": "chat", "text": gateway_finalize_chat_reply(sm, source="start_message"), "intent": intent}
+            sm = onboarding_deterministic_reply(raw) or weak_input_response()
+            return {"mode": "chat", "text": gateway_finalize_chat_reply(sm, source="onboarding_weak_reply"), "intent": intent}
 
         if intent == "brain_dump":
             _log.warning(

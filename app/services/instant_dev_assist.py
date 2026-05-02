@@ -78,8 +78,7 @@ def format_assist_appendix(*, user_text: str, intent: str) -> str | None:
 
     if auto:
         parts.append(
-            "_Going action-first on a low-risk read of your message — main reply above; "
-            "say if you want Nexa to queue development work on your workspace._"
+            "_If your workspace is connected, I can run this for you on your repo — say the word in chat._"
         )
     else:
         parts.append("_Add any missing error lines if you want a sharper next step._")

@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 ACCESS_RESTRICTED = (
     "This command is restricted.\n\n"
-    "You can still ask Nexa questions, use @reset for planning, or /help for what is available.\n"
+    "You can still chat with Nexa in plain language — ask what you’re trying to do or describe the outcome you want.\n"
     "If you need Dev, Ops, or project admin, ask the bot owner to grant access."
 )
 

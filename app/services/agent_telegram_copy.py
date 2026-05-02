@@ -1,33 +1,27 @@
-"""Nexa-Next strings for Telegram (no legacy slash roster / persona chips)."""
+"""Nexa-Next strings for Telegram (natural language; no legacy slash roster)."""
 
 
 WELCOME_NEXA = (
-    "Welcome to **Nexa** — a privacy-first AI dev OS for missions, dev runs, and chat. "
-    "Use **@nexa**, **run dev:** for coding tasks on your worker, **run mission:** for structured work, "
-    "and **create agent:** for custom agents. See /help for the full command list."
+    "Welcome to **Nexa** — a privacy-first AI assistant for missions, development, and chat. "
+    "Describe what you want in plain language: fixes, plans, research, or automation."
 )
 
 
 def format_agents_list() -> str:
     return (
         "Nexa — agents\n\n"
-        "· @nexa — default assistant\n"
-        "· Custom agents — `create agent: …` in chat, `/agent` in Telegram, or the web app\n\n"
-        "Try: `run dev: fix the failing test` · `run mission: ship the milestone` · `@nexa hello`"
+        "· Default assistant — just talk in this chat\n"
+        "· Custom agents — describe one in words, or manage them in the web app\n\n"
+        "Examples: “fix the failing test”, “plan the release”, “what should I focus on?”"
     )
 
 
 def format_command_center() -> str:
     return (
         "Nexa\n\n"
-        "Workflows:\n"
-        "· run dev: … — dev runtime (registered workspace)\n"
-        "· run mission: … — structured mission\n"
-        "· create agent: … — custom agent\n\n"
-        "Chat:\n"
-        "· @nexa — assistant\n\n"
-        "Try:\n"
-        "run dev: add a README section\n"
-        "run mission: close the release checklist\n"
-        "@nexa what should I focus on?"
+        "You can:\n"
+        "· Work on a connected repository (Mission Control + your workspace)\n"
+        "· Run structured missions when you describe the outcome\n"
+        "· Create or use agents by describing what you need\n\n"
+        "Chat naturally — no command memorization required."
     )

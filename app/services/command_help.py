@@ -1,17 +1,17 @@
-"""Nexa-Next intent-first reference for natural-language ‘what can you do’ questions (no slash-first UX)."""
+"""Intent-first reference when users ask what they can do (plain language, no slash roster)."""
 
 
 def format_command_help_response() -> str:
-    return """Nexa-Next — intent first
+    return """Nexa-Next — describe what you want
 
-Describe what you want in plain language. Useful phrases:
+You can use normal language for:
 
-run mission: "…" — multi-step missions (tasks, artifacts)
-run dev: "…" — dev runtime on a registered workspace (tests, coding tasks)
-create agent: … — describe a custom agent (parsed server-side); saved agents use @your-handle
-show memory — what Nexa remembers (web memory APIs)
-show system status — host health and channels
+• Multi-step missions and deliverables — say the outcome you want.
+• Development work on a connected repo — connect your workspace in Mission Control, then describe the bug or test failure.
+• Custom agents — describe the role and what it should do.
+• Memory — ask what’s stored or ask to remember something.
+• System status — ask how the host is doing.
 
-Paste a public https:// link for read-only summaries when web access is enabled on the host.
+Paste a public https:// link for read-only summaries when the host allows web access.
 
-Nexa routes missions, dev runs, memory, and chat — you do not need to memorize slash commands."""
+You don’t need special syntax — Nexa routes from what you say."""

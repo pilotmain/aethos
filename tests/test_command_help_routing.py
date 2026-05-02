@@ -15,9 +15,7 @@ def test_is_command_not_helpful() -> None:
 def test_format_command_has_nexa_next_workflows() -> None:
     body = format_command_help_response()
     assert "Nexa" in body
-    assert "run dev" in body
-    assert "run mission" in body
-    assert "create agent" in body
+    assert "Mission Control" in body or "development" in body.lower()
     assert "/agents" not in body
     assert "@dev" not in body
     assert "Command Center" not in body
@@ -33,4 +31,4 @@ def test_build_response_command_overrides_projection() -> None:
     )
     assert "Active agents right now" not in out
     assert "Command Center" not in out
-    assert "run dev" in out or "run mission" in out
+    assert "mission" in out.lower() or "deliverable" in out.lower()

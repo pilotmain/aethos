@@ -1,4 +1,4 @@
-"""Telegram-first copy for onboarding, help, and weak-input handling."""
+"""Telegram-first copy for onboarding, help, and weak-input handling — natural language first."""
 
 from __future__ import annotations
 
@@ -8,14 +8,14 @@ from app.services.general_response import should_skip_weak_input_for_substantive
 
 
 def first_time_nexa_start_text() -> str:
-    """No BYOK row in the DB yet — short default onboarding for all roles (until someone stores a key)."""
+    """No BYOK row yet — welcome without command syntax."""
     return (
-        "Welcome to **Nexa**.\n\n"
-        "Setup takes about 30 seconds:\n"
-        "1. Add an API key:\n"
-        "   `/key set openai sk-…`  or  `/key set anthropic sk-ant-…`\n"
-        "2. Ask anything.\n\n"
-        "No dev install required on your side. A key is for the LLM only, not for Dev or Ops. Use /access to see your role."
+        "Welcome to Nexa.\n\n"
+        "Tell me what you want to get done — I’ll take care of it.\n\n"
+        "You can ask me to fix code issues, run development tasks, plan projects, analyze problems, "
+        "create agents, or automate workflows. Just describe the goal — no special syntax.\n\n"
+        "When you’re ready for full LLM replies on this host, add an API key the way your setup documents "
+        "(Mission Control or host configuration)."
     )
 
 
@@ -25,56 +25,47 @@ def start_message() -> str:
 
 def start_message_for_role(role: str) -> str:
     r = (role or "guest").strip() or "guest"
+    base = (
+        "Welcome to Nexa.\n\n"
+        "Tell me what you want to get done — I’ll take care of it.\n\n"
+        "You can ask me to fix code issues, run development tasks, plan projects, analyze problems, "
+        "create agents, or automate workflows. No commands needed — just describe the goal.\n\n"
+    )
     if r == "owner":
         return (
-            "Welcome to **Nexa**.\n\n"
-            "You have **owner** access on this bot.\n\n"
-            "Tell me what you want done. Examples:\n"
-            "• run dev: fix failing tests\n"
-            "• run mission: summarize today’s priorities\n"
-            "• create agent: research assistant for market analysis\n\n"
-            "Use `/dev doctor` for local health, DB, and access summary. "
-            "`/help` lists operational commands.\n\n"
-            "Nexa still needs your project paths and local worker on the machine you control; "
-            "strangers on this link only get the guest view unless you add their Telegram id in env."
+            base
+            + "You have **owner** access on this bot.\n\n"
+            + "If something needs your repo or Mission Control connected, I’ll tell you.\n\n"
+            + "Only people you trust should use this link; others see the guest experience unless you allow them."
         )
     if r == "trusted":
         return (
-            "Welcome to **Nexa**.\n\n"
-            "You have **trusted** access: chat, planning, and some read-only stack checks. "
-            "Dev and Ops execution on the host is reserved for the owner of this instance.\n\n"
-            "Describe what you want in plain language, or use `/access` to see your capabilities "
-            "and `/help` for commands."
+            base
+            + "You have **trusted** access: chat, planning, and read-only checks where enabled. "
+            + "Host-side development and operations stay with the owner of this instance.\n\n"
+            + "Say what you’re trying to accomplish — I’ll help within what’s enabled for you."
         )
     if r == "blocked":
         return "This account does not have access to this Nexa instance."
     return (
-        "Welcome to **Nexa**.\n\n"
-        "You can:\n"
-        "• ask questions and use normal chat\n"
-        "• describe plans and next steps in your own words\n"
-        "• use `/access` to see what is enabled and `/help` for operational commands\n"
-        "• add your own **OpenAI** or **Anthropic** key for chat: `/key set …` (if the host enabled encrypted storage; see /help and README)\n"
-        "• /help for commands\n\n"
-        "Automated development tasks and host-side operations on this instance are **restricted** until the owner "
-        "adds you to the trusted list. Use /access to see what is enabled for you."
+        base
+        + "You can chat, describe plans in your own words, and ask questions. "
+        + "Automated development and host operations stay **restricted** until the owner adds you to the trusted list.\n\n"
+        + "Tell me what you’re trying to do — I’ll help within what’s enabled for you."
     )
 
 
 def help_message(has_active_plan: bool, focus_task: str | None) -> str:
     if has_active_plan and focus_task:
         return (
-            "Nexa — I can help you move forward.\n\n"
-            f"Where to start: {focus_task}\n\n"
-            "Or send a fresh brain dump whenever — describe the outcome you want in plain language."
+            "Nexa — I’m here to help you move forward.\n\n"
+            f"A good place to start: {focus_task}\n\n"
+            "Describe what you want in plain language — I’ll take it from there."
         )
     return (
-        "You can use Nexa in three simple ways:\n\n"
-        "1. Dump everything on your mind — I’ll simplify it to next steps\n"
-        "2. Say you're stuck — a small nudge to move\n"
-        "3. Status updates and “not done” — to keep the loop going\n\n"
-        "Type /help for the full command list. Describe missions and dev work naturally "
-        "(for example `run mission: …` or `run dev: …`)."
+        "Nexa — describe what you want in plain language.\n\n"
+        "I can help with brain dumps, planning next steps, when you’re stuck, status updates, "
+        "development work when your workspace is connected, and structured missions — just say what you need."
     )
 
 
@@ -85,14 +76,35 @@ def capability_response() -> str:
 
 
 def clarify_general_response() -> str:
-    return "What’s going on in your head right now? A rough list is enough — I’ll help you make it smaller."
+    return "What’s on your mind? A rough list is enough — I’ll help you narrow it down."
 
 
 def weak_input_response() -> str:
-    return (
-        "Send me everything that's on your mind right now.\n\n"
-        "I'll turn it into a simple plan."
-    )
+    return "What are you trying to get done? Describe it in a sentence or two."
+
+
+def onboarding_deterministic_reply(text: str) -> str | None:
+    """
+    Short, human replies for very common openers (no internal jargon).
+
+    Returns None so callers can fall back to weak_input_response() or the LLM.
+    """
+    t = (text or "").strip().lower()
+    if not t:
+        return None
+    if t in {"hi", "hey", "hello", "yo", "sup", "hiya"}:
+        return "Hey — what are you trying to get done?"
+    if t in {"i need help", "help me", "need help"} or (
+        t.startswith("i need help") and len(t) < 48
+    ):
+        return "Got you. What kind of help — coding, planning, or something else?"
+    if any(x in t for x in ("test", "tests")) and any(x in t for x in ("fail", "failing", "broken")):
+        return (
+            "Alright — I’ll help you fix that.\n\n"
+            "Share the error or tell me what’s failing, and I’ll walk you through it or run it for you "
+            "if your workspace is connected."
+        )
+    return None
 
 
 def is_weak_input(text: str) -> bool:

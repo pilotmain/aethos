@@ -32,7 +32,7 @@ def test_parse_unknown() -> None:
 def test_agents_list_is_nexa_next_only() -> None:
     body = format_agents_list()
     assert "Nexa" in body
-    assert "@nexa" in body
+    assert "assistant" in body.lower() or "chat" in body.lower()
     assert "@dev" not in body
     assert "@ops" not in body
 
@@ -42,7 +42,7 @@ def test_command_center_format_nexa_next() -> None:
     assert "Nexa" in cmd
     assert "Command Center" not in cmd
     assert "@dev" not in cmd
-    assert "run dev" in cmd
+    assert "Mission Control" in cmd or "workspace" in cmd.lower()
 
 
 def test_catalog_matches_spec_keys() -> None:

@@ -10,8 +10,7 @@ from app.services.local_file_intent import infer_local_file_request
 
 
 def test_capability_question_has_no_legacy_identity_in_helpers() -> None:
-    # Spot-check: scrub layer still catches blocked tokens if they leak.
-    assert gateway_identity_needs_scrub("tell Cursor to fix") or True
+    assert gateway_identity_needs_scrub("Tell Cursor to fix the bug")
 
 
 def test_stack_sentence_not_local_path(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:

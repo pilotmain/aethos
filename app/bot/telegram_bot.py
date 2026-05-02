@@ -95,6 +95,7 @@ from app.services.startup_config_log import log_sanitized_nexa_config, maybe_log
 from app.services.telegram_access_audit import log_access_denied
 from app.services.telegram_memory_commands import handle_memory_command
 from app.services.telegram_onboarding import (
+    onboarding_deterministic_reply,
     first_time_nexa_start_text,
     help_message,
     is_weak_input,
@@ -2195,7 +2196,7 @@ async def _handle_incoming_text_impl(update: Update, context: ContextTypes.DEFAU
                     m_body = (mr.text or "").strip()
                     if not m_body:
                         await update.message.reply_text(
-                            "Add a message after your @mention — e.g. `@nexa hello` or `run dev: fix the tests`."
+                            "Add a message after your @mention — for example what you want fixed or planned."
                         )
                         return
                     if m_key == "strategy":
@@ -3073,7 +3074,7 @@ async def _handle_incoming_text_impl(update: Update, context: ContextTypes.DEFAU
                 if is_weak_input(tstrip):
                     ctx_weak = build_context(db, app_user_id, memory_service, orchestrator)
                     logger.info("incoming weak_input text_preview=%r", tstrip[:120])
-                    reply = weak_input_response()
+                    reply = onboarding_deterministic_reply(tstrip) or weak_input_response()
                     out = apply_tone(reply, ctx_weak.memory)
                     await update.message.reply_text(out)
                     _persist_conversation_turn(

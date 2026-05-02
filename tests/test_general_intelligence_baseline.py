@@ -15,7 +15,7 @@ from app.services.general_response import (
 from app.services.intent_classifier import is_command_question
 from app.services.ops_handler import handle_nexa_ops_mention
 from app.services.ops_router import parse_ops_command
-from app.services.telegram_onboarding import is_weak_input
+from app.services.telegram_onboarding import is_weak_input, onboarding_deterministic_reply
 
 
 def test_hello_simple_greeting() -> None:
@@ -55,6 +55,13 @@ def test_direct_question_not_weak() -> None:
 def test_what_are_commands() -> None:
     assert is_command_question("What are the commands you understand?") is True
     assert is_weak_input("What are the commands you understand?") is False
+
+
+def test_onboarding_deterministic_short_opener() -> None:
+    hi = onboarding_deterministic_reply("hi")
+    assert hi is not None and "get done" in hi.lower()
+    hlp = onboarding_deterministic_reply("i need help")
+    assert hlp is not None and "coding" in hlp.lower()
 
 
 def test_ops_status_parsing_variants() -> None:
