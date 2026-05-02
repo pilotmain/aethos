@@ -1,6 +1,52 @@
-"""Phase 44 — classify dev run outcomes and suggest remediation strategies."""
+"""Phase 44–45 — classify dev run outcomes and suggest remediation strategies."""
 
 from __future__ import annotations
+
+
+def refine_dev_failure_detail(test_summary: str | None, error_text: str | None) -> str:
+    """Narrow ``test_failure`` into build vs test signals for adaptive fixes (Phase 45C)."""
+    blob = f"{test_summary or ''} {error_text or ''}".lower()
+    build_markers = (
+        "typescript error",
+        "cannot find module",
+        "npm err",
+        "compilation",
+        "syntaxerror",
+        "esbuild",
+        "webpack",
+        "build failed",
+        "tsc ",
+        "cargo build",
+        "go build",
+    )
+    if any(m in blob for m in build_markers):
+        return "build_error"
+    return "test_error"
+
+
+def adaptive_next_goal(
+    mission_goal: str,
+    _current_goal: str,
+    detail: str,
+    test_summary: str,
+) -> str:
+    """Pivot instruction text when tests fail (Phase 45C)."""
+    ts = (test_summary or "").strip()
+    if detail == "build_error":
+        return f"Fix build/compile errors before re-running tests: {ts[:1400]}"
+    return f"Fix failing tests: {ts[:1200]}"
+
+
+def detect_stagnation_signal(sig: str, prev_sig: str | None, count: int) -> tuple[bool, int, str | None]:
+    """Stop when the same failure summary repeats without progress (Phase 45C)."""
+    s = (sig or "").strip()
+    if not s:
+        return False, count, prev_sig
+    if prev_sig is not None and s == prev_sig:
+        count += 1
+    else:
+        count = 0
+    return (count >= 2, count, s)
 
 
 def classify_dev_failure(
@@ -32,4 +78,19 @@ def select_fix_strategy(failure_class: str) -> str:
     }.get(failure_class, "manual_review")
 
 
-__all__ = ["classify_dev_failure", "select_fix_strategy"]
+def select_fix_strategy_detail(detail: str) -> str:
+    """Phase 45C — strategy keyed off :func:`refine_dev_failure_detail` output."""
+    return {
+        "build_error": "apply_build_fix_strategy",
+        "test_error": "apply_test_fix_strategy",
+    }.get(detail, "iterate_fix_loop_with_focused_tests")
+
+
+__all__ = [
+    "adaptive_next_goal",
+    "classify_dev_failure",
+    "detect_stagnation_signal",
+    "refine_dev_failure_detail",
+    "select_fix_strategy",
+    "select_fix_strategy_detail",
+]

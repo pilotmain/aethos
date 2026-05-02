@@ -381,6 +381,10 @@ class Settings(BaseSettings):
     nexa_autonomous_mode: bool = False
     # Phase 43 — when True with ``nexa_autonomous_mode``, DB long-running ticks invoke the gateway.
     nexa_long_running_gateway_tick: bool = False
+    # Phase 45 — autonomous task execution (gateway) per heartbeat / direct API.
+    nexa_autonomy_execution_enabled: bool = True
+    nexa_autonomy_max_tasks_per_cycle: int = 5
+    nexa_autonomy_max_users_per_heartbeat: int = 12
 
     # Phase 23 — AI dev OS (workspace commands, allowlist).
     nexa_dev_allowed_commands: str = (

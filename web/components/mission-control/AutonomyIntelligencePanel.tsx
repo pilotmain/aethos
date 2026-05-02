@@ -15,18 +15,41 @@ type AutonomousTaskRow = {
 };
 
 type DecisionRow = { id: string; summary?: string };
-type FeedbackRow = { id: string; task_id?: string; outcome?: string; reason?: string };
+type FeedbackRow = {
+  id: string;
+  task_id?: string;
+  outcome?: string;
+  reason?: string;
+  iterations?: unknown;
+  cost_usd?: unknown;
+  success?: unknown;
+};
 
-/** Phase 44 — autonomous queue, decisions, and feedback from Mission Control state. */
+type AutonomyStats = {
+  execution_attempts?: number;
+  execution_successes?: number;
+  success_rate?: number | null;
+};
+
+/** Phase 44–45 — autonomous queue, decisions, feedback, and execution stats from MC state. */
 export function AutonomyIntelligencePanel(props: {
   shellLight: boolean;
   autonomousTasks?: AutonomousTaskRow[];
   autonomyDecisions?: DecisionRow[];
   autonomyFeedback?: FeedbackRow[];
+  autonomyExecutionStats?: AutonomyStats;
   loading?: boolean;
   onRefresh?: () => void;
 }) {
-  const { shellLight, autonomousTasks, autonomyDecisions, autonomyFeedback, loading, onRefresh } = props;
+  const {
+    shellLight,
+    autonomousTasks,
+    autonomyDecisions,
+    autonomyFeedback,
+    autonomyExecutionStats,
+    loading,
+    onRefresh,
+  } = props;
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
@@ -93,7 +116,13 @@ export function AutonomyIntelligencePanel(props: {
                       </p>
                       <p className={`mt-1 ${cardTitle}`}>
                         state={t.state ?? "—"} · pri={t.priority ?? "—"} · {t.origin ?? "—"}
+                        {(t as { executing?: boolean }).executing ? " · executing" : ""}
                       </p>
+                      {(t as { last_reply_preview?: string }).last_reply_preview ? (
+                        <p className={`mt-1 line-clamp-2 ${cardTitle}`}>
+                          {(t as { last_reply_preview?: string }).last_reply_preview}
+                        </p>
+                      ) : null}
                     </div>
                     {t.state === "pending" ? (
                       <button

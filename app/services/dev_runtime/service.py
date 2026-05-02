@@ -32,7 +32,14 @@ from app.services.dev_runtime.privacy import (
 )
 from app.services.dev_runtime.step_record import create_dev_step
 from app.services.dev_runtime.tester import run_repo_tests
-from app.services.dev_runtime.failure_intel import classify_dev_failure, select_fix_strategy
+from app.services.dev_runtime.failure_intel import (
+    adaptive_next_goal,
+    classify_dev_failure,
+    detect_stagnation_signal,
+    refine_dev_failure_detail,
+    select_fix_strategy,
+    select_fix_strategy_detail,
+)
 from app.services.dev_runtime.workspace import get_workspace
 from app.services.events.envelope import emit_runtime_event
 from app.services.mission_control.nexa_next_state import update_state
@@ -139,6 +146,9 @@ def run_dev_mission(
     loop_iterations_executed = 0
     tests_passed = False
     has_runtime_errors = False
+    stagnation_count = 0
+    last_failure_sig: str | None = None
+    stagnation_stop = False
 
     try:
         run.status = "running"
@@ -327,7 +337,17 @@ def run_dev_mission(
             parsed = test_bundle.get("parsed") or {}
             context_accum["failures"] = parsed
             context_accum["last_test_failures"] = test_bundle.get("summary")
-            current_goal = f"Fix failing tests: {test_bundle.get('summary', '')[:1200]}"
+            sig = str(test_bundle.get("summary") or "")[:2000]
+            abort, stagnation_count, last_failure_sig = detect_stagnation_signal(
+                sig, last_failure_sig, stagnation_count
+            )
+            if abort:
+                stagnation_stop = True
+                has_runtime_errors = True
+                break
+            detail = refine_dev_failure_detail(test_bundle.get("summary"), None)
+            context_accum["last_fix_strategy"] = select_fix_strategy_detail(detail)
+            current_goal = adaptive_next_goal(mission_goal, current_goal, detail, sig)
 
         if not tests_passed and not has_runtime_errors and loop_iterations_executed >= max_loop_iters:
             pass  # exhausted without pass
@@ -427,12 +447,14 @@ def run_dev_mission(
             "tests_passed": tests_passed,
             "has_runtime_errors": has_runtime_errors,
             "max_iterations": max_loop_iters,
+            "stagnation_stopped": stagnation_stop,
             "pipeline": {
                 "sequence": list(DEV_PIPELINE_SEQUENCE),
                 "analyze": {"completed": True},
                 "code_test_loop": {
                     "iterations": loop_iterations_executed,
                     "tests_passed": tests_passed,
+                    "stagnation_stop": stagnation_stop,
                 },
                 "commit": {
                     "attempted": bool(allow_commit),

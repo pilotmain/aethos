@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from collections import defaultdict
 from datetime import datetime, timezone
 from typing import Any
@@ -497,6 +498,7 @@ def build_execution_snapshot(
     autonomous_tasks_out: list[dict[str, Any]] = []
     autonomy_decisions_out: list[dict[str, Any]] = []
     autonomy_feedback_out: list[dict[str, Any]] = []
+    autonomy_execution_stats: dict[str, Any] = {}
     if user_id:
         ws_rows = list(
             db.scalars(
@@ -628,18 +630,40 @@ def build_execution_snapshot(
                 .limit(40)
             ).all()
         )
-        autonomous_tasks_out = [
-            {
-                "id": t.id,
-                "title": (t.title or "")[:2000],
-                "state": t.state,
-                "priority": int(t.priority or 0),
-                "auto_generated": bool(t.auto_generated),
-                "origin": t.origin,
-                "created_at": t.created_at.isoformat() if t.created_at else None,
-            }
-            for t in at_rows
-        ]
+        exec_attempts = 0
+        exec_successes = 0
+        autonomous_tasks_out = []
+        for t in at_rows:
+            try:
+                tctx = json.loads(t.context_json or "{}")
+            except json.JSONDecodeError:
+                tctx = {}
+            ex = tctx.get("execution") or {}
+            if ex.get("at"):
+                exec_attempts += 1
+            if ex.get("success") is True:
+                exec_successes += 1
+            autonomous_tasks_out.append(
+                {
+                    "id": t.id,
+                    "title": (t.title or "")[:2000],
+                    "state": t.state,
+                    "priority": int(t.priority or 0),
+                    "auto_generated": bool(t.auto_generated),
+                    "origin": t.origin,
+                    "created_at": t.created_at.isoformat() if t.created_at else None,
+                    "executing": t.state == "running",
+                    "last_run_at": ex.get("at"),
+                    "execution_success": ex.get("success"),
+                    "estimated_cost_usd": ex.get("cost_usd"),
+                    "last_reply_preview": (ex.get("reply_preview") or "")[:280],
+                }
+            )
+        autonomy_execution_stats = {
+            "execution_attempts": exec_attempts,
+            "execution_successes": exec_successes,
+            "success_rate": round(exec_successes / exec_attempts, 4) if exec_attempts else None,
+        }
         ad_rows = list(
             db.scalars(
                 select(NexaAutonomyDecisionLog)
@@ -664,16 +688,24 @@ def build_execution_snapshot(
                 .limit(40)
             ).all()
         )
-        autonomy_feedback_out = [
-            {
-                "id": f.id,
-                "task_id": f.task_id,
-                "outcome": f.outcome,
-                "reason": (f.reason or "")[:800],
-                "created_at": f.created_at.isoformat() if f.created_at else None,
-            }
-            for f in fb_rows
-        ]
+        autonomy_feedback_out = []
+        for f in fb_rows:
+            try:
+                mj = json.loads(f.meta_json or "{}")
+            except json.JSONDecodeError:
+                mj = {}
+            autonomy_feedback_out.append(
+                {
+                    "id": f.id,
+                    "task_id": f.task_id,
+                    "outcome": f.outcome,
+                    "reason": (f.reason or "")[:800],
+                    "created_at": f.created_at.isoformat() if f.created_at else None,
+                    "iterations": mj.get("iterations"),
+                    "cost_usd": mj.get("cost"),
+                    "success": mj.get("success"),
+                }
+            )
 
     exec_payload: dict[str, Any] = {
         "missions": missions_out,
@@ -706,6 +738,7 @@ def build_execution_snapshot(
         "autonomous_tasks": autonomous_tasks_out,
         "autonomy_decisions": autonomy_decisions_out,
         "autonomy_feedback": autonomy_feedback_out,
+        "autonomy_execution_stats": autonomy_execution_stats,
     }
 
     uid_early = (user_id or "").strip()

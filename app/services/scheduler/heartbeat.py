@@ -35,6 +35,17 @@ def run_heartbeat_cycle() -> dict[str, Any]:
             _log.debug("heartbeat long_running ticks=%s", len(lr))
     except Exception:
         _log.debug("heartbeat long_running tick skipped", exc_info=True)
+    if getattr(s, "nexa_autonomous_mode", False) and getattr(s, "nexa_autonomy_execution_enabled", True):
+        try:
+            from app.core.db import SessionLocal
+            from app.services.autonomy.executor import run_autonomy_executor_for_all_pending_users
+
+            with SessionLocal() as db:
+                exo = run_autonomy_executor_for_all_pending_users(db)
+            if exo.get("users"):
+                _log.debug("heartbeat autonomy executor users=%s", exo.get("users"))
+        except Exception:
+            _log.debug("heartbeat autonomy executor skipped", exc_info=True)
     _log.debug("heartbeat tick")
     return {"ok": True, "event": "system.heartbeat"}
 

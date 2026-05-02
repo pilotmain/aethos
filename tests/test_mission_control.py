@@ -25,6 +25,7 @@ def test_mission_control_state_includes_autonomy_phase44(api_client: tuple[TestC
     assert isinstance(body.get("autonomous_tasks"), list)
     assert isinstance(body.get("autonomy_decisions"), list)
     assert isinstance(body.get("autonomy_feedback"), list)
+    assert isinstance(body.get("autonomy_execution_stats"), dict)
 
 
 def test_mission_control_state_shape(api_client: tuple[TestClient, str]) -> None:

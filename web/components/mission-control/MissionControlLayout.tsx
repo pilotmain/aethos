@@ -295,6 +295,7 @@ export function MissionControlLayout() {
               autonomousTasks={snap?.autonomous_tasks as Record<string, unknown>[] | undefined}
               autonomyDecisions={snap?.autonomy_decisions as Record<string, unknown>[] | undefined}
               autonomyFeedback={snap?.autonomy_feedback as Record<string, unknown>[] | undefined}
+              autonomyExecutionStats={snap?.autonomy_execution_stats as Record<string, unknown> | undefined}
               loading={snapLoading && configured}
               onRefresh={() => void refreshMc()}
             />
