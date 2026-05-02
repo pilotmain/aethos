@@ -28,7 +28,7 @@ def test_goal_engine_inserts_tasks_when_enabled(db_session, tmp_path, monkeypatc
         for i in range(25):
             ms.append_entry(uid, kind="note", title=f"note-{i}", body_md="body")
         ids = generate_and_persist_goals(db_session, uid)
-        assert len(ids) >= 1
+        assert len(ids) >= 2
         from sqlalchemy import select
 
         from app.models.autonomy import NexaAutonomousTask
@@ -36,6 +36,7 @@ def test_goal_engine_inserts_tasks_when_enabled(db_session, tmp_path, monkeypatc
         rows = list(db_session.scalars(select(NexaAutonomousTask).where(NexaAutonomousTask.user_id == uid)).all())
         origins = {getattr(r, "origin", None) for r in rows}
         assert "goal_engine" in origins
+        assert "goal_spawn" in origins
     finally:
         monkeypatch.delenv("NEXA_GOAL_ENGINE_ENABLED", raising=False)
         monkeypatch.delenv("NEXA_AUTONOMOUS_MODE", raising=False)
@@ -52,4 +53,6 @@ def test_mission_control_phase46_slice(db_session) -> None:
     p46 = snap["phase46"]
     assert "goals" in p46
     assert "agent_intel" in p46
-    assert p46.get("system_efficiency", {}).get("phase") == 46
+    assert p46.get("system_efficiency", {}).get("phase") == 47
+    assert "goal_tracking" in p46
+    assert "autonomy_rate_control" in p46

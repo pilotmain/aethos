@@ -5,17 +5,18 @@ import { useCallback, useState } from "react";
 import { formatMissionControlApiError, webFetch } from "@/lib/api";
 import { isConfigured } from "@/lib/config";
 
-type AutonomousTaskRow = {
+export type AutonomousTaskRow = {
   id: string;
   title?: string;
   state?: string;
   priority?: number;
   auto_generated?: boolean;
   origin?: string;
+  goal_id?: string | null;
 };
 
-type DecisionRow = { id: string; summary?: string };
-type FeedbackRow = {
+export type DecisionRow = { id: string; summary?: string };
+export type FeedbackRow = {
   id: string;
   task_id?: string;
   outcome?: string;
@@ -25,7 +26,7 @@ type FeedbackRow = {
   success?: unknown;
 };
 
-type AutonomyStats = {
+export type AutonomyStats = {
   execution_attempts?: number;
   execution_successes?: number;
   success_rate?: number | null;
@@ -63,8 +64,8 @@ export function AutonomyIntelligencePanel(props: {
           method: "POST",
         });
         onRefresh?.();
-      } catch (e) {
-        setErr(formatMissionControlApiError(e));
+      } catch (e: unknown) {
+        setErr(formatMissionControlApiError(e instanceof Error ? e.message : String(e)));
       } finally {
         setBusy(null);
       }

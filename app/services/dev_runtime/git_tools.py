@@ -167,6 +167,60 @@ def commit_quality_preflight(workspace_root: Path | str) -> dict[str, Any]:
     }
 
 
+def repo_sanity_check(workspace_root: Path | str) -> dict[str, Any]:
+    """Phase 47 — verify git is usable before heavy dev work.
+
+    Repos without any commits yet are allowed (no HEAD); work may create the first commit.
+    """
+    root = validate_workspace_path(str(workspace_root))
+    gs = git_status(root)
+    if not gs.get("ok"):
+        return {"ok": False, "error": "git_status_failed", "git_status": gs}
+    head = rev_parse_head(root)
+    if not head:
+        return {"ok": True, "head": None, "empty_repo": True}
+    return {"ok": True, "head": head[:64]}
+
+
+def validate_commit(workspace_root: Path | str) -> dict[str, Any]:
+    """
+    Phase 47 — post-commit validation: git HEAD exists and repo tests pass.
+
+    Intended immediately after a successful ``git commit``.
+    """
+    from app.services.dev_runtime.tester import run_repo_tests
+
+    root = validate_workspace_path(str(workspace_root))
+    rp = rev_parse_head(root)
+    if not rp:
+        return {"ok": False, "error": "missing_head_after_commit"}
+    tests = run_repo_tests(root)
+    ok = bool(tests.get("ok"))
+    return {"ok": ok, "head": rp[:64], "tests": tests}
+
+
+def rollback_last_commit(workspace_root: Path | str, *, allow_commit: bool) -> dict[str, Any]:
+    """Undo the last commit on the current branch (dangerous; gated)."""
+    if not allow_commit:
+        return {"ok": False, "error": "rollback_not_allowed"}
+    root = validate_workspace_path(str(workspace_root))
+    try:
+        r = subprocess.run(
+            ["git", "reset", "--hard", "HEAD~1"],
+            cwd=str(root),
+            capture_output=True,
+            text=True,
+            timeout=120.0,
+        )
+        return {
+            "ok": r.returncode == 0,
+            "returncode": r.returncode,
+            "stderr": (r.stderr or "")[-4000:],
+        }
+    except (subprocess.TimeoutExpired, OSError) as exc:
+        return {"ok": False, "error": str(exc)[:2000]}
+
+
 def parse_github_slug_from_repo(workspace_root: Path | str) -> tuple[str, str] | None:
     """Return ``(owner, repo)`` from ``origin`` remote URL when it looks like GitHub."""
     root = validate_workspace_path(str(workspace_root))
@@ -213,5 +267,8 @@ __all__ = [
     "git_status",
     "parse_github_slug_from_repo",
     "prepare_pr_summary",
+    "repo_sanity_check",
     "rev_parse_head",
+    "rollback_last_commit",
+    "validate_commit",
 ]

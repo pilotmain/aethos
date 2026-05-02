@@ -15,6 +15,7 @@ from app.models.dev_runtime import NexaDevRun
 from app.models.nexa_next_runtime import NexaMission
 from app.services.autonomy.intelligence import build_intelligent_context
 from app.services.autonomy.prioritize import prioritize_tasks
+from app.services.autonomy.rate_control import autonomy_rate_control
 from app.services.events.unified_event import emit_unified_event
 from app.services.memory.memory_store import MemoryStore
 from app.services.tasks.unified_task import NexaTask
@@ -72,6 +73,18 @@ def autonomous_decision_loop(
     for (uid,) in targets:
         uid = uid.strip()
         if not uid:
+            continue
+
+        rc = autonomy_rate_control(db, uid)
+        if not rc.get("allowed"):
+            per_user.append(
+                {
+                    "user_id": uid,
+                    "generated": [],
+                    "summary": "Autonomy rate limit",
+                    "rate_control": rc,
+                }
+            )
             continue
 
         failed_runs = list(
@@ -158,7 +171,7 @@ def autonomous_decision_loop(
             per_user.append({"user_id": uid, "generated": [], "summary": summary})
             continue
 
-        ordered = prioritize_tasks(candidates)
+        ordered = prioritize_tasks(candidates, user_id=uid)
         inserted: list[str] = []
         for t in ordered[:3]:
             title = t.input.strip()[:8000]
@@ -173,6 +186,7 @@ def autonomous_decision_loop(
                 priority=min(100, max(0, int(t.priority))),
                 auto_generated=True,
                 origin="autonomy",
+                goal_id=getattr(t, "goal_id", None),
                 context_json=json.dumps(
                     {"nexa_task": {"type": t.type, "context": t.context}, "decision": "autonomous_decision_loop"},
                     ensure_ascii=False,

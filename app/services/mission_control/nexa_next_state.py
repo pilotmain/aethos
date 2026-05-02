@@ -652,6 +652,7 @@ def build_execution_snapshot(
                     "priority": int(t.priority or 0),
                     "auto_generated": bool(t.auto_generated),
                     "origin": t.origin,
+                    "goal_id": getattr(t, "goal_id", None),
                     "created_at": t.created_at.isoformat() if t.created_at else None,
                     "executing": t.state == "running",
                     "last_run_at": ex.get("at"),
@@ -710,6 +711,7 @@ def build_execution_snapshot(
 
         from app.services.agents.agent_intel_store import list_agent_intel_profiles
         from app.services.autonomy.cost_intel import predict_cost
+        from app.services.autonomy.rate_control import autonomy_rate_control
         from app.services.autonomy.self_improve import system_self_improve
         from app.services.tasks.unified_task import NexaTask
 
@@ -729,14 +731,56 @@ def build_execution_snapshot(
                 auto_generated=bool(t0.auto_generated),
                 priority=int(t0.priority or 0),
                 origin=str(t0.origin or "user"),
+                goal_id=getattr(t0, "goal_id", None),
             )
             sample_cost = predict_cost(nt)
+        goal_tracking: list[dict[str, Any]] = []
+        for gr in at_rows:
+            if str(getattr(gr, "origin", "") or "") != "goal_engine":
+                continue
+            subs = int(
+                db.scalar(
+                    select(func.count())
+                    .select_from(NexaAutonomousTask)
+                    .where(NexaAutonomousTask.user_id == user_id, NexaAutonomousTask.goal_id == gr.id)
+                )
+                or 0
+            )
+            done_subs = int(
+                db.scalar(
+                    select(func.count())
+                    .select_from(NexaAutonomousTask)
+                    .where(
+                        NexaAutonomousTask.user_id == user_id,
+                        NexaAutonomousTask.goal_id == gr.id,
+                        NexaAutonomousTask.state == "completed",
+                    )
+                )
+                or 0
+            )
+            goal_tracking.append(
+                {
+                    "goal_id": gr.id,
+                    "title": (gr.title or "")[:500],
+                    "spawned_tasks": subs,
+                    "completed_spawned": done_subs,
+                    "success_rate": round(done_subs / subs, 4) if subs else None,
+                }
+            )
+        rate_snap = autonomy_rate_control(db, user_id)
         phase46_vnext = {
             "goals": goals_mc,
             "agent_intel": agent_intel,
             "system_efficiency": eff,
             "autonomy_confidence_score": conf,
             "sample_task_cost_estimate": sample_cost,
+            "goal_tracking": goal_tracking,
+            "autonomy_rate_control": rate_snap,
+            "autonomy_stability": {
+                "rate_allowed": bool(rate_snap.get("allowed")),
+                "pending_tasks": rate_snap.get("pending_tasks"),
+                "tokens_today": rate_snap.get("tokens_today"),
+            },
         }
 
     exec_payload: dict[str, Any] = {

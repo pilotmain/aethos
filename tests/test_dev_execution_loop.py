@@ -142,7 +142,10 @@ def test_adapter_failure_stops_loop(db_session, tmp_path, monkeypatch) -> None:
                 error="boom",
             )
 
-    monkeypatch.setattr("app.services.dev_runtime.service.choose_adapter", lambda _pref: Boom())
+    def _choose_stub(_pref=None, *, user_id=None, task_goal=None):
+        return Boom()
+
+    monkeypatch.setattr("app.services.dev_runtime.service.choose_adapter", _choose_stub)
 
     wid = __import__("uuid").uuid4().hex[:12]
     from app.models.dev_runtime import NexaDevWorkspace

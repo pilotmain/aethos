@@ -14,9 +14,16 @@ import { IntegrityAlertBanner } from "@/components/mission-control/IntegrityAler
 import { PrivacyTrustPanel } from "@/components/mission-control/PrivacyTrustPanel";
 import { OfflineModeBanner } from "@/components/mission-control/OfflineModeBanner";
 import { PrivacyIndicatorBadge } from "@/components/mission-control/PrivacyIndicatorBadge";
-import { DevOpsPanel } from "@/components/mission-control/DevOpsPanel";
-import { AutonomyIntelligencePanel } from "@/components/mission-control/AutonomyIntelligencePanel";
+import { DevOpsPanel, type DevRunRow } from "@/components/mission-control/DevOpsPanel";
+import {
+  AutonomyIntelligencePanel,
+  type AutonomousTaskRow,
+  type DecisionRow,
+  type FeedbackRow,
+  type AutonomyStats,
+} from "@/components/mission-control/AutonomyIntelligencePanel";
 import { Phase22Overview } from "@/components/mission-control/Phase22Overview";
+import { ProductionIntelPanel } from "@/components/mission-control/ProductionIntelPanel";
 import { ProviderTransparencyPanel } from "@/components/mission-control/ProviderTransparencyPanel";
 import { TokenEconomyPanel } from "@/components/mission-control/TokenEconomyPanel";
 import type { UiTheme } from "@/components/settings/UserSettingsPanel";
@@ -292,12 +299,20 @@ export function MissionControlLayout() {
           {configured ? (
             <AutonomyIntelligencePanel
               shellLight={shellLight}
-              autonomousTasks={snap?.autonomous_tasks as Record<string, unknown>[] | undefined}
-              autonomyDecisions={snap?.autonomy_decisions as Record<string, unknown>[] | undefined}
-              autonomyFeedback={snap?.autonomy_feedback as Record<string, unknown>[] | undefined}
-              autonomyExecutionStats={snap?.autonomy_execution_stats as Record<string, unknown> | undefined}
+              autonomousTasks={snap?.autonomous_tasks as unknown as AutonomousTaskRow[] | undefined}
+              autonomyDecisions={snap?.autonomy_decisions as unknown as DecisionRow[] | undefined}
+              autonomyFeedback={snap?.autonomy_feedback as unknown as FeedbackRow[] | undefined}
+              autonomyExecutionStats={snap?.autonomy_execution_stats as unknown as AutonomyStats | undefined}
               loading={snapLoading && configured}
               onRefresh={() => void refreshMc()}
+            />
+          ) : null}
+
+          {configured ? (
+            <ProductionIntelPanel
+              shellLight={shellLight}
+              phase46={snap?.phase46 as Record<string, unknown> | undefined}
+              loading={snapLoading && configured}
             />
           ) : null}
 
@@ -305,7 +320,7 @@ export function MissionControlLayout() {
             <DevOpsPanel
               shellLight={shellLight}
               workspaces={snap?.dev_workspaces}
-              runs={snap?.dev_runs}
+              runs={snap?.dev_runs as unknown as DevRunRow[] | undefined}
               loading={snapLoading && configured}
             />
           ) : null}

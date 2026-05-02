@@ -682,6 +682,17 @@ def _migrate_nexa_long_running_phase44() -> None:
             conn.execute(text(f"ALTER TABLE nexa_long_running_sessions ADD COLUMN origin {t}"))
 
 
+def _migrate_nexa_autonomous_goal_id() -> None:
+    """Phase 47 — link spawned tasks to parent goal rows."""
+    insp = inspect(engine)
+    if "nexa_autonomous_tasks" not in insp.get_table_names():
+        return
+    cols = {c["name"] for c in insp.get_columns("nexa_autonomous_tasks")}
+    with engine.begin() as conn:
+        if "goal_id" not in cols:
+            conn.execute(text("ALTER TABLE nexa_autonomous_tasks ADD COLUMN goal_id VARCHAR(64) NULL"))
+
+
 def _migrate_nexa_dev_steps_phase25() -> None:
     """Phase 25 — iteration + structured JSON on dev steps."""
     insp = inspect(engine)
@@ -731,6 +742,7 @@ def ensure_schema() -> None:
     _migrate_nexa_tasks_timing()
     _migrate_nexa_dev_steps_phase25()
     _migrate_nexa_long_running_phase44()
+    _migrate_nexa_autonomous_goal_id()
     _migrate_agent_jobs_phase38_approval_persistence()
 
 

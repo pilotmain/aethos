@@ -20,6 +20,7 @@ class NexaTask:
     auto_generated: bool = False
     priority: int = 0
     origin: str = "user"
+    goal_id: str | None = None
 
     @classmethod
     def from_scheduler_dev_payload(
@@ -44,6 +45,7 @@ class NexaTask:
             auto_generated=False,
             priority=0,
             origin="scheduler",
+            goal_id=None,
         )
 
     @classmethod
@@ -56,6 +58,7 @@ class NexaTask:
             auto_generated=False,
             priority=0,
             origin="long_running",
+            goal_id=None,
         )
 
 

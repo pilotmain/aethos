@@ -13,6 +13,7 @@ from app.core.config import get_settings
 from app.models.autonomy import NexaAutonomousTask
 from app.services.autonomy.efficiency import compress_context
 from app.services.autonomy.feedback import record_task_feedback
+from app.services.autonomy.rate_control import autonomy_rate_control
 from app.services.autonomy.intelligence import build_intelligent_context
 from app.services.autonomy.safety import should_execute
 from app.services.events.unified_event import emit_unified_event
@@ -63,6 +64,7 @@ def build_autonomy_gateway_context(row: NexaAutonomousTask) -> GatewayContext:
         priority=int(row.priority or 0),
         auto_generated=bool(row.auto_generated),
         origin=str(row.origin or "autonomy"),
+        goal_id=getattr(row, "goal_id", None),
     )
     intel = build_intelligent_context(task, user_id=uid, max_chars=2200, memory_fn=MemoryIndex())
     intel = compress_context(intel)
@@ -96,6 +98,16 @@ def execute_autonomous_tasks(
     cap = max(1, min(cap, 8))
     if not getattr(s, "nexa_autonomous_mode", False) or not getattr(s, "nexa_autonomy_execution_enabled", True):
         return {"ok": False, "skipped": True, "reason": "autonomy_execution_off", "results": []}
+
+    rc = autonomy_rate_control(db, user_id)
+    if not rc.get("allowed"):
+        return {
+            "ok": False,
+            "skipped": True,
+            "reason": rc.get("reason"),
+            "rate_control": rc,
+            "results": [],
+        }
 
     rows = get_pending_tasks(db, user_id, limit=cap)
     gw = NexaGateway()
@@ -165,6 +177,18 @@ def execute_autonomous_tasks(
                 user_id=user_id,
                 payload={"success": success, "cost_usd": cost},
             )
+            try:
+                from app.services.agents.agent_intel_store import record_agent_outcome
+
+                mode = str(out.get("mode") or "gateway")[:64]
+                record_agent_outcome(
+                    user_id,
+                    mode,
+                    success=success,
+                    meta={"task_id": row.id, "goal_id": getattr(row, "goal_id", None)},
+                )
+            except Exception:
+                pass
             results.append({"id": row.id, "success": success, "cost_usd": cost})
         except Exception as exc:
             row.state = "failed"

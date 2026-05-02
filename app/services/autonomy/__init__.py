@@ -11,10 +11,12 @@ from app.services.autonomy.feedback import record_task_feedback
 from app.services.autonomy.intelligence import build_intelligent_context, update_memory_weights
 from app.services.autonomy.planner import autonomous_planner
 from app.services.autonomy.prioritize import prioritize_tasks
+from app.services.autonomy.rate_control import autonomy_rate_control
 from app.services.autonomy.safety import should_execute
 
 __all__ = [
     "autonomous_decision_loop",
+    "autonomy_rate_control",
     "autonomous_planner",
     "build_intelligent_context",
     "compress_context",

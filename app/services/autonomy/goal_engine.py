@@ -1,4 +1,4 @@
-"""Phase 46D — higher-level goals decomposed into autonomous tasks."""
+"""Phase 46D / 47B — higher-level goals and bound execution tasks per goal."""
 
 from __future__ import annotations
 
@@ -30,9 +30,8 @@ def _pending_title_exists(db: Session, user_id: str, title: str) -> bool:
 
 def generate_and_persist_goals(db: Session, user_id: str) -> list[str]:
     """
-    Derive a small set of strategic goals from memory depth and enqueue them.
-
-    Goals are stored as :class:`NexaAutonomousTask` rows with ``origin='goal_engine'``.
+    Derive a small set of strategic goals from memory depth and enqueue them,
+    each with at least one bound execution child task (``goal_id`` link).
     """
     if not getattr(get_settings(), "nexa_goal_engine_enabled", False):
         return []
@@ -64,12 +63,48 @@ def generate_and_persist_goals(db: Session, user_id: str) -> list[str]:
             priority=88,
             auto_generated=True,
             origin="goal_engine",
+            goal_id=None,
             context_json=json.dumps(
-                {"nexa_task": {"type": "goal", "context": {"source": "goal_engine"}}, "phase": 46},
+                {
+                    "nexa_task": {"type": "goal", "context": {"source": "goal_engine"}},
+                    "phase": 47,
+                    "is_goal_root": True,
+                },
                 ensure_ascii=False,
             )[:50_000],
         )
         db.add(row)
+        short = g.replace("Goal: ", "").strip()[:200]
+        child_title = f"Execute goal work ({tid[:8]}): {short}"
+        if not _pending_title_exists(db, uid, child_title):
+            cid = str(uuid.uuid4())
+            child = NexaAutonomousTask(
+                id=cid,
+                user_id=uid,
+                title=child_title,
+                state="pending",
+                priority=80,
+                auto_generated=True,
+                origin="goal_spawn",
+                goal_id=tid,
+                context_json=json.dumps(
+                    {
+                        "nexa_task": {
+                            "type": "system",
+                            "context": {
+                                "parent_goal_id": tid,
+                                "source": "goal_engine_spawn",
+                                "goal_binding": True,
+                            },
+                        },
+                        "goal_binding": True,
+                        "phase": 47,
+                    },
+                    ensure_ascii=False,
+                )[:50_000],
+            )
+            db.add(child)
+            inserted.append(cid)
         inserted.append(tid)
     if inserted:
         db.commit()

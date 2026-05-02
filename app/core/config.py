@@ -387,6 +387,9 @@ class Settings(BaseSettings):
     nexa_autonomy_max_users_per_heartbeat: int = 12
     # Phase 46 — enqueue higher-level goals as autonomous tasks.
     nexa_goal_engine_enabled: bool = False
+    # Phase 47 — autonomy stability (pending-queue depth + daily token ceiling).
+    nexa_autonomy_max_pending_tasks: int = 48
+    nexa_autonomy_daily_token_ceiling: int = 400_000
 
     # Phase 23 — AI dev OS (workspace commands, allowlist).
     nexa_dev_allowed_commands: str = (

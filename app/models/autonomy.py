@@ -26,6 +26,7 @@ class NexaAutonomousTask(Base):
     priority: Mapped[int] = mapped_column(Integer(), default=0, nullable=False)
     auto_generated: Mapped[bool] = mapped_column(Boolean(), default=True, nullable=False)
     origin: Mapped[str] = mapped_column(String(64), default="autonomy", nullable=False)
+    goal_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     context_json: Mapped[str] = mapped_column(Text(), default="{}", nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utc_now, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utc_now, onupdate=_utc_now, nullable=False)

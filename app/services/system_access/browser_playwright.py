@@ -202,6 +202,42 @@ def fill_form_field(url: str, selector: str, text: str) -> dict[str, Any]:
         return {"ok": False, "error": str(exc)[:2000]}
 
 
+def _transient_playwright_error(msg: str) -> bool:
+    m = (msg or "").lower()
+    return any(
+        x in m
+        for x in (
+            "timeout",
+            "navigation",
+            "net::err",
+            "target page",
+            "crash",
+            "connection",
+            "ns_error",
+        )
+    )
+
+
+def _navigation_error_hint(msg: str) -> bool:
+    return any(x in (msg or "").lower() for x in ("navigation", "404", "500", "net::err", "dns"))
+
+
+def _goto_with_retry(page: Any, url: str, *, to_ms: int, max_attempts: int = 3) -> None:
+    last_exc: Exception | None = None
+    for att in range(max_attempts):
+        try:
+            page.goto(url, wait_until="domcontentloaded", timeout=to_ms)
+            return
+        except Exception as exc:
+            last_exc = exc
+            if att < max_attempts - 1 and _transient_playwright_error(str(exc)):
+                page.wait_for_timeout(min(2500, 350 * (att + 1)))
+                continue
+    if last_exc:
+        raise last_exc
+    raise RuntimeError("goto_failed")
+
+
 def _append_workflow_memory(session_id: str, record: dict[str, Any]) -> None:
     """Append one JSON line per workflow step (Phase 46B — navigation memory)."""
     PREVIEW_DIR.mkdir(parents=True, exist_ok=True)
@@ -251,7 +287,7 @@ def run_browser_workflow(
                             if err:
                                 rec.update({"ok": False, "error": err})
                             else:
-                                page.goto(u, wait_until="domcontentloaded", timeout=to_ms)
+                                _goto_with_retry(page, u, to_ms=to_ms)
                                 page.wait_for_timeout(400)
                                 rec.update({"ok": True, "final_url": page.url})
                         elif act == "click":
@@ -263,9 +299,17 @@ def run_browser_workflow(
                             elif not sel:
                                 rec.update({"ok": False, "error": "missing_selector"})
                             else:
-                                page.goto(u, wait_until="domcontentloaded", timeout=to_ms)
+                                _goto_with_retry(page, u, to_ms=to_ms)
                                 page.wait_for_timeout(300)
-                                page.click(sel, timeout=min(to_ms, 30_000))
+                                for catt in range(3):
+                                    try:
+                                        page.click(sel, timeout=min(to_ms, 30_000))
+                                        break
+                                    except Exception as cexc:
+                                        if catt < 2 and _transient_playwright_error(str(cexc)):
+                                            page.wait_for_timeout(300 * (catt + 1))
+                                            continue
+                                        raise
                                 rec.update({"ok": True, "final_url": page.url, "clicked": sel})
                         elif act == "fill":
                             u = str(step.get("url") or "").strip()
@@ -277,7 +321,7 @@ def run_browser_workflow(
                             elif not sel:
                                 rec.update({"ok": False, "error": "missing_selector"})
                             else:
-                                page.goto(u, wait_until="domcontentloaded", timeout=to_ms)
+                                _goto_with_retry(page, u, to_ms=to_ms)
                                 page.wait_for_timeout(300)
                                 page.fill(sel, text)
                                 rec.update({"ok": True, "final_url": page.url})
@@ -288,10 +332,18 @@ def run_browser_workflow(
                             if err:
                                 rec.update({"ok": False, "error": err})
                             else:
-                                page.goto(u, wait_until="domcontentloaded", timeout=to_ms)
+                                _goto_with_retry(page, u, to_ms=to_ms)
                                 page.wait_for_timeout(500)
                                 html = page.content() or ""
                                 txt = extract_visible_text(html, max_chars=mx) or ""
+                                if len(txt.strip()) < 20:
+                                    try:
+                                        alt = (page.inner_text("body") or "")[:mx]
+                                        if len(alt) > len(txt):
+                                            txt = alt
+                                            rec["extract_fallback"] = "inner_text_body"
+                                    except Exception:
+                                        pass
                                 rec.update({"ok": True, "text": txt[:mx], "final_url": page.url})
                         elif act == "wait":
                             ms = int(step.get("ms") or 800)
@@ -300,7 +352,13 @@ def run_browser_workflow(
                         else:
                             rec.update({"ok": False, "error": f"unknown_action:{act}"})
                     except Exception as exc:
-                        rec.update({"ok": False, "error": str(exc)[:2000]})
+                        rec.update(
+                            {
+                                "ok": False,
+                                "error": str(exc)[:2000],
+                                "navigation_error": _navigation_error_hint(str(exc)),
+                            }
+                        )
                     _append_workflow_memory(sid, rec)
                     results.append(rec)
                 return {"ok": True, "session_id": sid, "results": results}

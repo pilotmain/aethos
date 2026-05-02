@@ -20,7 +20,10 @@ from app.services.dev_runtime.git_tools import (
     create_commit,
     get_diff_summary,
     git_status,
+    repo_sanity_check,
     rev_parse_head,
+    rollback_last_commit,
+    validate_commit,
 )
 from app.services.dev_runtime.git_tools import (
     prepare_pr_summary as ws_prepare_pr_summary,
@@ -162,6 +165,9 @@ def run_dev_mission(
     try:
         run.status = "running"
         run.started_at = _utc_now()
+        san = repo_sanity_check(repo)
+        if not san.get("ok"):
+            raise RuntimeError(f"repo_sanity_failed:{san.get('error')}")
         plan = build_dev_plan(goal, ws)
         run.plan_json = plan
         db.commit()
@@ -226,7 +232,11 @@ def run_dev_mission(
             iteration += 1
             loop_iterations_executed = iteration
 
-            adapter_impl = choose_adapter(preferred_agent)
+            adapter_impl = choose_adapter(
+                preferred_agent,
+                user_id=user_id,
+                task_goal=current_goal,
+            )
             adapter_used_name = adapter_impl.name
 
             diff_payload = get_diff_summary(repo)
@@ -297,6 +307,17 @@ def run_dev_mission(
             db.commit()
 
             tests_ok = bool(test_bundle.get("ok"))
+            try:
+                from app.services.agents.agent_intel_store import record_agent_outcome
+
+                record_agent_outcome(
+                    user_id,
+                    adapter_used_name,
+                    success=bool(ca.ok and tests_ok),
+                    meta={"run_id": rid, "iteration": iteration},
+                )
+            except Exception:
+                pass
             pivot_next = not tests_ok and iteration < max_loop_iters
             step_blob = {
                 "id": row_loop.id,
@@ -374,6 +395,18 @@ def run_dev_mission(
             )
             if commit_result and commit_result.get("ok"):
                 commit_hash = rev_parse_head(repo)
+                vc = validate_commit(repo)
+                if not vc.get("ok"):
+                    rb = rollback_last_commit(repo, allow_commit=True)
+                    commit_hash = None
+                    commit_result = {
+                        **commit_result,
+                        "ok": False,
+                        "post_commit_validation": vc,
+                        "rolled_back": rb,
+                    }
+                    context_accum["commit_validation_failed"] = vc
+                    context_accum["commit_rollback"] = rb
             context_accum["commit_quality"] = commit_quality
 
         push_result: dict[str, Any] | None = None

@@ -60,9 +60,16 @@ export type MissionControlSnapshot = {
   long_running_sessions?: Array<Record<string, unknown>>;
   scheduler_jobs?: Array<Record<string, unknown>>;
   channel_activity?: Array<Record<string, unknown>>;
+  token_economy?: Record<string, unknown>;
+  autonomous_tasks?: Array<Record<string, unknown>>;
+  autonomy_decisions?: Array<Record<string, unknown>>;
+  autonomy_feedback?: Array<Record<string, unknown>>;
+  autonomy_execution_stats?: Record<string, unknown>;
   maintenance?: {
     sql_purge_enabled?: boolean;
   };
+  /** Phase 46–47 — goals, agent intel, autonomy stability (Mission Control vNext). */
+  phase46?: Record<string, unknown>;
 };
 
 function snapshotFromStore(): MissionControlSnapshot | null {
