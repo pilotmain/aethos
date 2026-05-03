@@ -27,6 +27,7 @@ class ExecutionLoopResult:
     blocker: str | None = None
     progress: list[str] = field(default_factory=list)
     verified: bool = False
+    intent: str | None = None  # e.g. external_execution_continue for bounded Railway probes
 
 
 def _markdown_progress(lines: list[str]) -> str:
@@ -131,6 +132,7 @@ def try_execute_or_explain(
             if "### Progress" not in t:
                 t = _ensure_progress_prefix(t, fb)
             ran = "retrying railway investigation" in t.lower() or "verified checks" in t.lower()
+            ext_intent = str(out.get("intent") or "").strip()
             return ExecutionLoopResult(
                 handled=True,
                 text=t,
@@ -138,6 +140,7 @@ def try_execute_or_explain(
                 blocker=None,
                 progress=[],
                 verified="verified checks" in t.lower(),
+                intent=ext_intent or "external_execution_continue",
             )
 
     # --- Resume prefs / follow-up for external_execution fragment
@@ -154,14 +157,28 @@ def try_execute_or_explain(
             t,
             ["Starting investigation", "Recording deploy/hosted preferences"],
         )
-        return ExecutionLoopResult(handled=True, text=t, ran=False, progress=[])
+        rs_intent = str(_resume.get("intent") or "").strip()
+        return ExecutionLoopResult(
+            handled=True,
+            text=t,
+            ran=False,
+            progress=[],
+            intent=rs_intent or "external_execution_continue",
+        )
 
     # --- Direct probe (local CLI auth + probe markers)
     out = maybe_start_external_probe_from_turn(db, uid, raw, cctx, conversation_snapshot=snap)
     if out is not None:
         t = str(out.get("text") or "").strip()
         t = _ensure_progress_prefix(t, ["Starting investigation", "Running read-only Railway diagnostics"])
-        return ExecutionLoopResult(handled=True, text=t, ran=True, progress=[])
+        pr_intent = str(out.get("intent") or "").strip()
+        return ExecutionLoopResult(
+            handled=True,
+            text=t,
+            ran=True,
+            progress=[],
+            intent=pr_intent or "external_execution_continue",
+        )
 
     applies = _execution_loop_applies(raw, snap)
     if not applies:

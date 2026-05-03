@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
+import pytest
+
 from app.services.external_execution_runner import (
     BoundedRailwayInvestigation,
     format_investigation_for_chat,
@@ -33,7 +35,11 @@ def test_format_report_first_policy_note() -> None:
     assert "deploy" in txt.lower()
 
 
-def test_format_respects_deploy_when_ready_policy_copy() -> None:
+def test_format_respects_deploy_when_ready_policy_copy(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        "app.services.external_execution_runner._operator_zero_nag",
+        lambda: False,
+    )
     inv = BoundedRailwayInvestigation(skipped_reason="no_workspace")
     inv.deploy_blocked_by_policy = False
     inv.policy_note = "_Deploy is **not** triggered automatically._"

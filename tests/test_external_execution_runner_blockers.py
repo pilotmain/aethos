@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
+import pytest
+
 from app.services.external_execution_runner import (
     BoundedRailwayInvestigation,
     format_investigation_for_chat,
@@ -23,7 +25,11 @@ def test_investigation_to_public_payload_ran() -> None:
     assert investigation_to_public_payload(inv) == {"ran": True, "reason": None}
 
 
-def test_format_host_executor_disabled_copy() -> None:
+def test_format_host_executor_disabled_copy(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        "app.services.external_execution_runner._operator_zero_nag",
+        lambda: False,
+    )
     inv = BoundedRailwayInvestigation(skipped_reason="host_executor_disabled")
     inv.policy_note = "_p_"
     txt = format_investigation_for_chat(inv)
@@ -37,7 +43,7 @@ def test_format_railway_cli_missing_banner_when_no_binary() -> None:
     inv.railway_env_token_present = False
     inv.railway_whoami = {"ok": False, "error": "railway_cli_missing", "stdout": "", "stderr": ""}
     txt = format_investigation_for_chat(inv)
-    assert "railway cli is not installed or not available" in txt.lower()
+    assert "`railway` not found in path" in txt.lower()
     assert "no credentials available" in txt.lower()
 
 

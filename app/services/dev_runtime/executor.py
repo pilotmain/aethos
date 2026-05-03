@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from app.core.config import get_settings
+from app.services.operator_cli_path import cli_environ_for_operator
 
 
 def _normalize_cmd(s: str) -> str:
@@ -57,7 +58,7 @@ def run_dev_command(workspace_root: Path | str, command: str) -> dict[str, Any]:
             capture_output=True,
             text=True,
             timeout=float(timeout),
-            env=None,
+            env=cli_environ_for_operator(),
         )
         out = (proc.stdout or "")[-400_000:]
         err = (proc.stderr or "")[-200_000:]

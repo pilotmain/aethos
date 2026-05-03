@@ -38,12 +38,12 @@ def test_apply_precise_drops_cli_missing_when_user_assumes_installed(monkeypatch
         "app.core.config.get_settings",
         lambda: SimpleNamespace(nexa_operator_mode=True, nexa_operator_precise_short_responses=True),
     )
-    body = "_Vercel CLI is not installed or not available in PATH on this worker._\n\n```\nnoop\n```"
+    body = "`vercel` not found in PATH. Run `which vercel` in your terminal on this host and retry.\n\n```\nnoop\n```"
     out = apply_precise_operator_response(
         body,
         user_text="I have everything installed on this machine",
     )
-    assert "not installed" not in out.lower()
+    assert "not found in path" not in out.lower()
     assert "noop" in out
 
 
@@ -52,7 +52,7 @@ def test_format_probe_ultra_short(monkeypatch: pytest.MonkeyPatch) -> None:
         "app.core.config.get_settings",
         lambda: SimpleNamespace(nexa_operator_mode=True, nexa_operator_precise_short_responses=True),
     )
-    assert format_probe_readonly_intro(detected_provider="vercel") == "Running probes…"
+    assert format_probe_readonly_intro(detected_provider="vercel") == "Running read-only probes…"
 
 
 def test_gateway_finalize_skips_verbose_intro_when_precise(monkeypatch: pytest.MonkeyPatch) -> None:

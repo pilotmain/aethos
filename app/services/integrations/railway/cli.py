@@ -7,17 +7,17 @@ entirely from this module + runner (fixed templates).
 
 from __future__ import annotations
 
-import os
-import shutil
 import subprocess
 from typing import Any
+
+from app.services.operator_cli_path import cli_environ_for_operator, which_operator_cli
 
 # First argument after `railway` — diagnostic / read-only surface only.
 _ALLOWED_SUBCOMMANDS = frozenset({"whoami", "status", "logs"})
 
 
 def railway_binary_on_path() -> bool:
-    return shutil.which("railway") is not None
+    return which_operator_cli("railway") is not None
 
 
 def run_railway_cli(
@@ -74,7 +74,7 @@ def run_railway_cli(
         }
 
     argv = ["railway", sub, *extras]
-    env = os.environ.copy()
+    env = cli_environ_for_operator()
     if extra_env:
         env.update(extra_env)
     try:

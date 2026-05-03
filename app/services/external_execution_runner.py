@@ -409,9 +409,7 @@ def format_investigation_for_chat(result: BoundedRailwayInvestigation) -> str:
         return f"{preamble}{core}\n\n---\n\n{summary}".strip()
 
     if not result.railway_cli_present:
-        lines.append(
-            "**Railway CLI is not installed or not available in this environment.**"
-        )
+        lines.append("`railway` not found in PATH on this worker. Run `which railway` and retry, or set `RAILWAY_TOKEN`.")
         if not getattr(result, "railway_env_token_present", False):
             lines.append("")
             lines.append(

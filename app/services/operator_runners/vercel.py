@@ -2,17 +2,21 @@
 
 from __future__ import annotations
 
-import shutil
 import subprocess
 from typing import Any
 
+from app.services.operator_cli_path import cli_environ_for_operator, which_operator_cli
 from app.services.operator_runners.base import evidence_shell, format_operator_progress
 
 _TIMEOUT = 60.0
 
+_CLI_MISSING = (
+    "`vercel` not found in PATH. Run `which vercel` in your terminal on this host and retry."
+)
+
 
 def _vercel_bin() -> str | None:
-    return shutil.which("vercel")
+    return which_operator_cli("vercel")
 
 
 def _run_vercel_allowlisted(argv: list[str], *, cwd: str | None) -> dict[str, Any]:
@@ -29,6 +33,7 @@ def _run_vercel_allowlisted(argv: list[str], *, cwd: str | None) -> dict[str, An
         return {"ok": False, "error": "vercel_subcommand_not_allowed", "stdout": "", "stderr": ""}
     if not _vercel_bin():
         return {"ok": False, "error": "vercel_cli_missing", "stdout": "", "stderr": ""}
+    env = cli_environ_for_operator()
     try:
         proc = subprocess.run(
             argv,
@@ -36,6 +41,7 @@ def _run_vercel_allowlisted(argv: list[str], *, cwd: str | None) -> dict[str, An
             capture_output=True,
             text=True,
             timeout=_TIMEOUT,
+            env=env,
         )
         return {
             "ok": proc.returncode == 0,
@@ -75,11 +81,11 @@ def run_vercel_operator_readonly(*, cwd: str | None = None) -> tuple[str, dict[s
 
     ev = evidence_shell(provider="vercel", commands=cmds, workspace_path=cwd)
 
-    lines: list[str] = [format_operator_progress(progress), "", "---", "", "### CLI output", ""]
+    lines: list[str] = [format_operator_progress(progress), "", "### CLI output", ""]
     verified = bool(whoami.get("ok") and (whoami.get("stdout") or "").strip())
 
     if whoami.get("error") == "vercel_cli_missing":
-        lines.append("_Vercel CLI is not installed or not available in PATH on this worker._")
+        lines.append(_CLI_MISSING)
     else:
         lines.append("**vercel whoami**")
         if whoami.get("stderr"):
@@ -98,8 +104,5 @@ def run_vercel_operator_readonly(*, cwd: str | None = None) -> tuple[str, dict[s
             lines.extend(["```", proj["stdout"][:6000], "```"])
 
     body = "\n".join(lines).strip()
-    body += (
-        "\n\n---\n\n"
-        "_Read-only diagnostics only — no deploy or git write was performed from this step._"
-    )
+    body += "\n\n_Read-only diagnostics — no deploy or git write from this step._"
     return body, ev, progress, verified

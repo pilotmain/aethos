@@ -2,10 +2,22 @@
 
 from __future__ import annotations
 
+from types import SimpleNamespace
+
+import pytest
+
 from app.services.external_execution_credentials import format_secure_external_credential_setup
 
 
-def test_secure_setup_template_never_contains_placeholder_secret() -> None:
+def test_secure_setup_template_never_contains_placeholder_secret(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        "app.core.config.get_settings",
+        lambda: SimpleNamespace(
+            nexa_operator_mode=False,
+            nexa_operator_zero_nag=False,
+            nexa_operator_session_credential_reuse=False,
+        ),
+    )
     body = format_secure_external_credential_setup("railway")
     assert "your_token_here" in body.lower() or "your_token" in body.lower()
     assert "supersecret999" not in body

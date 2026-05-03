@@ -2,17 +2,19 @@
 
 from __future__ import annotations
 
-import shutil
 import subprocess
 from typing import Any
 
+from app.services.operator_cli_path import cli_environ_for_operator, which_operator_cli
 from app.services.operator_runners.base import evidence_shell, format_operator_progress
 
 _TIMEOUT = 45.0
 
+_GH_MISSING = "`gh` not found in PATH. Run `which gh` in your terminal on this host and retry."
+
 
 def _gh_bin() -> str | None:
-    return shutil.which("gh")
+    return which_operator_cli("gh")
 
 
 def _run_allowlisted(argv: list[str], *, cwd: str | None) -> dict[str, Any]:
@@ -24,6 +26,7 @@ def _run_allowlisted(argv: list[str], *, cwd: str | None) -> dict[str, Any]:
         return {"ok": False, "error": "gh_subcommand_not_allowed", "stdout": "", "stderr": ""}
     if not _gh_bin():
         return {"ok": False, "error": "gh_cli_missing", "stdout": "", "stderr": ""}
+    env = cli_environ_for_operator()
     try:
         proc = subprocess.run(
             argv,
@@ -31,6 +34,7 @@ def _run_allowlisted(argv: list[str], *, cwd: str | None) -> dict[str, Any]:
             capture_output=True,
             text=True,
             timeout=_TIMEOUT,
+            env=env,
         )
         return {
             "ok": proc.returncode == 0,
@@ -50,10 +54,10 @@ def run_github_operator_readonly(*, cwd: str | None = None) -> tuple[str, dict[s
     cmds = [{"argv": ["gh", "auth", "status"], "result": auth}]
     ev = evidence_shell(provider="github", commands=cmds, workspace_path=cwd)
 
-    lines: list[str] = [format_operator_progress(progress), "", "---", "", "### gh auth status", ""]
+    lines: list[str] = [format_operator_progress(progress), "", "### gh auth status", ""]
     verified = bool(auth.get("ok"))
     if auth.get("error") == "gh_cli_missing":
-        lines.append("_GitHub CLI (`gh`) is not installed or not in PATH._")
+        lines.append(_GH_MISSING)
     elif auth.get("stdout"):
         lines.append("```")
         lines.append(auth["stdout"][:6000])
@@ -64,5 +68,5 @@ def run_github_operator_readonly(*, cwd: str | None = None) -> tuple[str, dict[s
         lines.append("```")
 
     body = "\n".join(lines).strip()
-    body += "\n\n---\n\n_Read-only — no PR or push performed._"
+    body += "\n\n_Read-only — no PR or push performed._"
     return body, ev, progress, verified

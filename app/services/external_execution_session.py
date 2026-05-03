@@ -239,7 +239,7 @@ def format_probe_readonly_intro(*, detected_provider: str | None = None) -> str:
         from app.services.intent_focus_filter import operator_precise_short_enabled
 
         if operator_precise_short_enabled():
-            return "Running probes…"
+            return "Running read-only probes…"
     except Exception:  # noqa: BLE001
         pass
     dp = (detected_provider or "").strip().lower()
@@ -281,7 +281,7 @@ def format_followup_acknowledgment(
             from app.services.intent_focus_filter import operator_precise_short_enabled
 
             if operator_precise_short_enabled():
-                return "Running checks — output below.\n"
+                return "Got it — running checks; output below.\n"
         except Exception:  # noqa: BLE001
             pass
         probe_intro = ""

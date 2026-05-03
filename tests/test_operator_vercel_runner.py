@@ -13,7 +13,7 @@ def test_vercel_runner_reports_cli_missing(monkeypatch: pytest.MonkeyPatch) -> N
 
     body, ev, _prog, verified = run_vercel_operator_readonly(cwd=None)
     low = body.lower()
-    assert "vercel cli is not installed or not available" in low or "not available in path" in low
+    assert "`vercel` not found in path" in low
     assert verified is False
     assert ev.get("provider") == "vercel"
 

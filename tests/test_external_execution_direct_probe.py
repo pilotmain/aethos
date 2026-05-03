@@ -27,8 +27,8 @@ def test_maybe_start_probe_when_railway_local_auth_and_permission(db_session, mo
     )
     assert out is not None
     txt = out.get("text") or ""
-    assert "railway whoami" in txt.lower()
-    assert "host execution is disabled" in txt.lower()
+    assert "verified checks" in txt.lower()
+    assert "local execution bridge" in txt.lower() or "host executor" in txt.lower()
 
 
 def test_maybe_start_returns_none_without_railway_context(db_session, monkeypatch) -> None:
@@ -96,4 +96,6 @@ def test_gateway_handle_full_chat_runs_direct_probe(db_session, monkeypatch) -> 
         db=db_session,
     )
     assert payload.get("intent") == "external_execution_continue"
-    assert "host execution is disabled" in (payload.get("text") or "").lower()
+    assert "local execution bridge" in (payload.get("text") or "").lower() or "host executor" in (
+        payload.get("text") or ""
+    ).lower()

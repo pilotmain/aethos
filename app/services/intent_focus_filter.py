@@ -222,7 +222,25 @@ _CLI_ASSUME_DROP_SUBSTRINGS = (
     "not available in path",
     "skipped — vercel cli",
     "_vercel cli is not",
+    "`vercel` not found in path",
+    "`gh` not found in path",
+    "not found in path. run `which vercel`",
+    "not found in path. run `which gh`",
 )
+
+
+def clean_operator_reply_format(body: str) -> str:
+    """Drop markdown HR clutter and excessive blank lines from operator/execution replies."""
+    if not (body or "").strip():
+        return body
+    lines: list[str] = []
+    for ln in body.splitlines():
+        if ln.strip() == "---":
+            continue
+        lines.append(ln)
+    text = "\n".join(lines)
+    text = re.sub(r"\n{3,}", "\n\n", text).strip()
+    return text
 
 
 def apply_precise_operator_response(body: str, *, user_text: str) -> str:
@@ -275,6 +293,7 @@ __all__ = [
     "apply_focus_discipline_to_operator_execution_text",
     "apply_operator_zero_nag_surface",
     "apply_precise_operator_response",
+    "clean_operator_reply_format",
     "extract_focused_intent",
     "operator_precise_short_enabled",
     "strip_unrelated_providers_from_reply",

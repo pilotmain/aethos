@@ -5,12 +5,22 @@ from __future__ import annotations
 import json
 import uuid
 
+import pytest
+
 from app.services.conversation_context_service import get_or_create_context
 from app.services.gateway.context import GatewayContext
 from app.services.gateway.runtime import NexaGateway
 
 
-def test_gateway_railway_api_key_paste_secure_setup(db_session) -> None:
+def test_gateway_railway_api_key_paste_secure_setup(db_session, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        "app.core.config.get_settings",
+        lambda: __import__("types").SimpleNamespace(
+            nexa_operator_mode=False,
+            nexa_operator_zero_nag=False,
+            nexa_operator_session_credential_reuse=False,
+        ),
+    )
     uid = f"sec_setup_{uuid.uuid4().hex[:10]}"
     msg = "here is railway api key = abc123secretvalue and i approve"
     out = NexaGateway().handle_message(

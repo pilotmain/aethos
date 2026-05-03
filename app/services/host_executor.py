@@ -16,6 +16,7 @@ from typing import Any
 
 from app.core.config import REPO_ROOT, get_settings
 from app.services.host_executor_intent import safe_relative_path
+from app.services.operator_cli_path import cli_environ_for_operator
 
 logger = logging.getLogger(__name__)
 
@@ -124,6 +125,7 @@ def _run_argv(
             capture_output=True,
             text=True,
             timeout=timeout,
+            env=cli_environ_for_operator(),
         )
     except subprocess.TimeoutExpired:
         logger.warning("host_executor timeout argv0=%s", argv[:1])

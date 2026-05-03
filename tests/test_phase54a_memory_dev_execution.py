@@ -43,6 +43,10 @@ def test_should_prompt_for_dev_workspace_help() -> None:
 @pytest.mark.usefixtures("nexa_runtime_clean")
 def test_zero_workspace_guidance(monkeypatch: pytest.MonkeyPatch, nexa_runtime_clean) -> None:
     monkeypatch.setattr(
+        "app.services.gateway.runtime.get_settings",
+        lambda: __import__("types").SimpleNamespace(nexa_operator_mode=False, nexa_operator_zero_nag=True),
+    )
+    monkeypatch.setattr(
         "app.services.dev_runtime.workspace.list_workspaces",
         lambda db, uid: [],
     )

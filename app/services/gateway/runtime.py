@@ -43,6 +43,7 @@ def gateway_finalize_operator_or_execution_reply(
         apply_focus_discipline_to_operator_execution_text,
         apply_operator_zero_nag_surface,
         apply_precise_operator_response,
+        clean_operator_reply_format,
     )
     from app.services.operator_orchestration_intro import maybe_prepend_operator_orchestration_intro
 
@@ -61,6 +62,8 @@ def gateway_finalize_operator_or_execution_reply(
         getattr(settings, "nexa_operator_precise_short_responses", True)
     ):
         layered = apply_precise_operator_response(layered, user_text=user_text)
+    if bool(getattr(settings, "nexa_operator_mode", False)):
+        layered = clean_operator_reply_format(layered)
     return gateway_finalize_chat_reply(layered, source=layer)
 
 
@@ -376,7 +379,7 @@ class NexaGateway:
                     "ran": loop_st.ran,
                     "blocker": loop_st.blocker,
                     "verified": loop_st.verified,
-                    "intent": "execution_loop",
+                    "intent": loop_st.intent or "execution_loop",
                 }
 
         return self._try_structured_route(gctx, text, db)
@@ -509,7 +512,7 @@ class NexaGateway:
                     "ran": loop_fb.ran,
                     "blocker": loop_fb.blocker,
                     "verified": loop_fb.verified,
-                    "intent": "execution_loop",
+                    "intent": loop_fb.intent or "execution_loop",
                 }
 
         if not gctx.extras.get("gateway_structured_ran"):
@@ -732,7 +735,7 @@ class NexaGateway:
                     "ran": loop_result.ran,
                     "blocker": loop_result.blocker,
                     "verified": loop_result.verified,
-                    "intent": "execution_loop",
+                    "intent": loop_result.intent or "execution_loop",
                 }
 
             structured = self._try_structured_route(gctx, text, db_inner)

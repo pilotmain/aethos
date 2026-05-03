@@ -62,10 +62,8 @@ def test_resume_already_authenticated_runs_bounded_runner(db_session, monkeypatc
     )
     assert out is not None
     text = out.get("text") or ""
-    assert "railway whoami" in text.lower()
-    assert "railway status" in text.lower()
-    assert "railway logs" in text.lower()
-    assert "git status" in text.lower()
+    assert "verified checks" in text.lower()
+    assert "local execution bridge" in text.lower() or "host executor" in text.lower()
     assert "i cannot log in" not in text.lower()
     assert "paste the output" not in text.lower()
 
