@@ -7,6 +7,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from app.services.hosted_service_mission_gate import hosted_service_mission_blocked
 from app.services.swarm.mission_parser import parse_mission as strict_parse
 
 _RE_LOOSE_AT_TASK = re.compile(r"^\s*@([\w-]{2,64})\s*:\s*(.+)$")
@@ -36,12 +37,15 @@ def parse_loose_mission(text: str) -> dict[str, Any] | None:
 
         m_at = _RE_LOOSE_AT_TASK.match(line)
         if m_at:
+            hk = (m_at.group(1) or "").strip()
+            if hk.lower() in ("http", "https"):
+                continue
             task_body = (m_at.group(2) or "").strip()
             if len(task_body) < 5:
                 continue
             tasks.append(
                 {
-                    "role": m_at.group(1),
+                    "role": hk,
                     "task": task_body,
                     "depends_on": [],
                 }
@@ -54,6 +58,10 @@ def parse_loose_mission(text: str) -> dict[str, Any] | None:
         role, task = line.split(":", 1)
         role = role.strip()
         task = task.strip()
+
+        rl = role.lower()
+        if rl in ("http", "https") or role.startswith("//"):
+            continue
 
         if role.lower() == "mission":
             title = task.strip('"').strip("'") if task else title
@@ -85,6 +93,8 @@ def parse_loose_mission(text: str) -> dict[str, Any] | None:
 
 def parse_mission(text: str) -> dict[str, Any] | None:
     """Strict mission document if possible; otherwise loose ``Role:`` lines."""
+    if hosted_service_mission_blocked(text or ""):
+        return None
     mission = strict_parse(text or "")
     if mission:
         return mission

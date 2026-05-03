@@ -26,5 +26,12 @@ def format_telegram_gateway_reply(gw: dict[str, Any]) -> str:
     if st in ("completed", "timeout"):
         title = (gw.get("mission") or {}).get("title") if isinstance(gw.get("mission"), dict) else None
         head = (title or "Mission").strip()[:200]
+        verified = gw.get("execution_verified")
+        if st == "completed" and verified is False:
+            return (
+                f"{head}: completed on Nexa’s side, but **execution was not verified** "
+                f"(e.g. heartbeat-only or empty agent output — **no hosted deploy/repo fix is implied**). "
+                f"Open Mission Control for details."
+            )
         return f"{head}: {st}. See Mission Control on the web for full output."
     return json.dumps(gw, default=str, indent=0)[:4000]

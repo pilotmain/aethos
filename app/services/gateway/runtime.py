@@ -193,6 +193,11 @@ class NexaGateway:
         if dev_out is not None:
             return dev_out
 
+        from app.services.hosted_service_mission_gate import hosted_service_mission_blocked
+
+        if hosted_service_mission_blocked(raw_t):
+            return None
+
         mission = parse_mission(text)
         if mission:
             return self._run_mission(mission, uid, db, source_text=text)
@@ -550,11 +555,16 @@ class NexaGateway:
         except Exception:
             _log.warning("memory.persist_failed", exc_info=True)
 
+        from app.services.mission_execution_truth import mission_agents_execution_verified
+
+        execution_verified = bool(mission_agents_execution_verified(result))
+
         return {
             "status": "timeout" if timed_out else "completed",
             "mission": mission,
             "result": result,
             "timed_out": timed_out,
+            "execution_verified": execution_verified,
         }
 
     def describe_capabilities(self) -> dict[str, bool]:
