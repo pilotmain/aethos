@@ -190,6 +190,9 @@ def try_execute_or_explain(
 
     access = assess_external_execution_access(db, uid)
 
+    # ``should_gate_external_execution`` returns False when operator + zero-nag so the bounded
+    # runner can emit compact skip reasons instead of a long access preamble.
+
     if should_gate_external_execution(raw, access):
         prog = ["Starting investigation", "Checking Railway access", "Checking local workspace"]
         if not access.dev_workspace_registered:
@@ -216,8 +219,12 @@ def try_execute_or_explain(
             verified=False,
         )
 
+    from app.core.config import get_settings
+
+    _s = get_settings()
+    _op_zn = bool(getattr(_s, "nexa_operator_mode", False)) and bool(getattr(_s, "nexa_operator_zero_nag", True))
     collected: dict[str, object] = {
-        "deploy_mode": "report_then_approve",
+        "deploy_mode": "deploy_when_ready" if _op_zn else "report_then_approve",
         "permission_to_probe": True,
         "auth_method": "token_env" if access.railway_token_present else "local_cli",
     }

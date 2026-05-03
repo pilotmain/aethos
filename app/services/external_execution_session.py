@@ -24,6 +24,18 @@ FLOW_SUBKEY = "external_execution"
 TTL_SECONDS = 45 * 60
 
 
+def _operator_zero_nag_enabled() -> bool:
+    try:
+        from app.core.config import get_settings
+
+        s = get_settings()
+        return bool(getattr(s, "nexa_operator_mode", False)) and bool(
+            getattr(s, "nexa_operator_zero_nag", True)
+        )
+    except Exception:  # noqa: BLE001
+        return False
+
+
 def _utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
@@ -231,6 +243,12 @@ def format_probe_readonly_intro(*, detected_provider: str | None = None) -> str:
         )
     else:
         head = "Got it — running **read-only CLI checks** this worker is configured for.\n\n"
+    if _operator_zero_nag_enabled():
+        return (
+            f"{head}"
+            "Typical commands: `railway whoami` / `status` / `logs`, `vercel whoami`, `git status`.\n\n"
+            "_Diagnostics only on this turn._"
+        )
     return (
         f"{head}"
         "Typical commands:\n"
@@ -250,6 +268,15 @@ def format_followup_acknowledgment(
     auth = (collected.get("auth_method") or "").strip()
     deploy = (collected.get("deploy_mode") or "").strip()
     uid = (user_id or "").strip()
+
+    if _operator_zero_nag_enabled():
+        probe_intro = ""
+        if collected.get("permission_to_probe"):
+            probe_intro = (
+                format_probe_readonly_intro(detected_provider=str(collected.get("detected_provider") or ""))
+                + "\n\n---\n\n"
+            )
+        return (probe_intro + "Got it — running read-only checks now; output below when this host allows it.\n").strip()
 
     probe_intro = ""
     if collected.get("permission_to_probe"):
@@ -366,7 +393,10 @@ def try_resume_external_execution_turn(
         if collected.get("permission_to_probe") and not collected.get("auth_method"):
             collected["auth_method"] = "local_cli"
         if collected.get("auth_method") and not collected.get("deploy_mode"):
-            collected.setdefault("deploy_mode", "report_then_approve")
+            collected.setdefault(
+                "deploy_mode",
+                "deploy_when_ready" if _operator_zero_nag_enabled() else "report_then_approve",
+            )
 
     has_auth = bool(collected.get("auth_method"))
     has_deploy = bool(collected.get("deploy_mode"))
@@ -391,11 +421,16 @@ def try_resume_external_execution_turn(
                 "I want to align with your setup — please confirm:\n"
                 "- **Hosted CLI:** Railway (or other) **logged in locally** on this machine, **or** token env vars?\n"
             )
-        reply = (
-            f"{lead}"
-            "- Deploy: **report findings first** (no deploy until you approve), or ok to deploy after fixes?\n\n"
-            "Short reply is fine (e.g. “CLI locally, report first”)."
-        )
+        if _operator_zero_nag_enabled():
+            reply = (
+                "One line please: **CLI locally** or **token env**, and **deploy when ready** or **diagnosis only**."
+            )
+        else:
+            reply = (
+                f"{lead}"
+                "- Deploy: **report findings first** (no deploy until you approve), or ok to deploy after fixes?\n\n"
+                "Short reply is fine (e.g. “CLI locally, report first”)."
+            )
         st = _load_top_level(cctx.current_flow_state_json)
         ex = dict(st.get(FLOW_SUBKEY) or {})
         ex["status"] = "awaiting_followup"
@@ -568,7 +603,9 @@ def maybe_start_external_probe_from_turn(
 
     collected: dict[str, Any] = {
         "auth_method": "local_cli",
-        "deploy_mode": "report_then_approve",
+        "deploy_mode": (
+            "deploy_when_ready" if _operator_zero_nag_enabled() else "report_then_approve"
+        ),
         "permission_to_probe": True,
     }
     from app.services.provider_router import detect_primary_provider, extract_urls_from_text
@@ -642,6 +679,11 @@ def scrub_generic_login_refusal_when_local_auth_claimed(reply: str, user_text: s
     )
     if not generic_refusal:
         return reply
+    if _operator_zero_nag_enabled():
+        return (
+            "Bounded read-only checks on this host are the next step (`railway whoami`, `railway status`, "
+            "`railway logs`, `git status`). If the worker blocks them, the **Progress** section names why."
+        )
     return (
         "I should try bounded read-only checks on this host first (`railway whoami`, `railway status`, "
         "`railway logs`, `git status`). If something prevents that, I'll report the exact blocker "

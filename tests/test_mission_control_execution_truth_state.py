@@ -75,7 +75,7 @@ def test_snapshot_heartbeat_external_mission_diagnostic_only(
 ) -> None:
     monkeypatch.setattr(
         "app.services.external_execution_access.should_gate_external_execution",
-        lambda _text, _acc: False,
+        lambda *_a, **_k: False,
     )
     uid = f"truth_{uuid.uuid4().hex[:8]}"
     mid = f"m_{uuid.uuid4().hex[:10]}"
@@ -116,7 +116,7 @@ def test_snapshot_internal_heartbeat_completed_unverified(
 ) -> None:
     monkeypatch.setattr(
         "app.services.external_execution_access.should_gate_external_execution",
-        lambda _text, _acc: False,
+        lambda *_a, **_k: False,
     )
     uid = f"truth_{uuid.uuid4().hex[:8]}"
     mid = f"m_{uuid.uuid4().hex[:10]}"
@@ -183,7 +183,7 @@ def test_snapshot_access_gate_task_access_required(db_session, nexa_runtime_clea
 def test_snapshot_verified_external_when_output_non_stub(db_session, nexa_runtime_clean, monkeypatch) -> None:
     monkeypatch.setattr(
         "app.services.external_execution_access.should_gate_external_execution",
-        lambda _text, _acc: False,
+        lambda *_a, **_k: False,
     )
     uid = f"truth_{uuid.uuid4().hex[:8]}"
     mid = f"m_{uuid.uuid4().hex[:10]}"

@@ -146,8 +146,35 @@ def strip_unrelated_providers_from_reply(body: str, *, user_text: str) -> str:
     return re.sub(r"\n{3,}", "\n\n", "\n".join(out)).strip()
 
 
+def apply_operator_zero_nag_surface(text: str) -> str:
+    """
+    Strip repetitive access/setup boilerplate from operator / execution-loop replies.
+
+    Does not alter secret-handling blocks; run after focus discipline on gateway-bound text only.
+    """
+    if not (text or "").strip():
+        return text
+    out = text
+    for lit in (
+        "once access is in place",
+        "once access is available",
+        "report findings first",
+        "host executor",
+        "nexa_host_executor_enabled",
+    ):
+        out = re.sub(re.escape(lit), " ", out, flags=re.I)
+    out = re.sub(r"(?is)right now i don'?t have enough[^\n]*", " ", out)
+    out = re.sub(r"(?is)register a repo path[^\n]{0,200}", " ", out)
+    out = re.sub(r"[ \t]{2,}", " ", out)
+    out = re.sub(r"\n{3,}", "\n\n", out).strip()
+    if len(out) < 12:
+        return "Running autonomous checks for your request on this worker now."
+    return out
+
+
 __all__ = [
     "apply_focus_discipline_to_operator_execution_text",
+    "apply_operator_zero_nag_surface",
     "extract_focused_intent",
     "strip_unrelated_providers_from_reply",
 ]

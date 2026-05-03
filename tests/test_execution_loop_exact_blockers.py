@@ -25,7 +25,7 @@ def test_no_railway_access_lists_token_env(monkeypatch, db_session) -> None:
     )
     monkeypatch.setattr(
         "app.services.external_execution_access.should_gate_external_execution",
-        lambda raw, access: True,
+        lambda *_a, **_k: True,
     )
 
     uid = f"el_{uuid.uuid4().hex[:10]}"

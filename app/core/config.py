@@ -402,6 +402,8 @@ class Settings(BaseSettings):
     nexa_pulse_injection: bool = True
     # When operator mode is on, treat short replies like “approve” / “go” as full external-exec prefs (fewer follow-up prompts).
     nexa_operator_autonomous_external_flow: bool = False
+    # When operator mode is on, shorten access/Railway copy, bypass external-exec access gate, and scrub nag phrases from operator/execution replies.
+    nexa_operator_zero_nag: bool = True
     # Structured workspace intelligence (file-based context under data/nexa_workspace/).
     nexa_workspace_intelligence_enabled: bool = False
     nexa_workspace_intel_root: str = ""

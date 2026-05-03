@@ -16,12 +16,20 @@ from typing import Any, Callable
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
-
-_log = logging.getLogger(__name__)
 from app.services.dev_runtime.executor import run_dev_command
 from app.services.dev_runtime.workspace import list_workspaces
 from app.services.events.envelope import emit_runtime_event
 from app.services.integrations.railway.cli import railway_binary_on_path, run_railway_cli
+
+_log = logging.getLogger(__name__)
+
+
+def _operator_zero_nag() -> bool:
+    try:
+        s = get_settings()
+        return bool(getattr(s, "nexa_operator_mode", False)) and bool(getattr(s, "nexa_operator_zero_nag", True))
+    except Exception:  # noqa: BLE001
+        return False
 
 
 def _truncate(s: str, limit: int = 6000) -> str:
@@ -269,6 +277,11 @@ def format_execution_summary_contract(inv: BoundedRailwayInvestigation) -> str:
     if analysis["blocked"]:
         lines.append(f"- ✖ **Run blocked:** `{analysis['blocker']}`")
         lines.append("")
+        if _operator_zero_nag():
+            lines.append("_See **Progress** above. Say **retry external execution** after wiring this worker._")
+            lines.append("")
+            lines.append("_No deploy or push was attempted._")
+            return "\n".join(lines).strip()
         lines.append(
             "**Root cause:** execution stopped before all CLI probes finished — see **Progress** above."
         )
@@ -315,7 +328,10 @@ def format_execution_summary_contract(inv: BoundedRailwayInvestigation) -> str:
     lines.append("1. Use the evidence above to adjust config or service settings.")
     lines.append("2. Say **retry external execution** after fixes for a fresh diagnostic pass.")
     lines.append("")
-    lines.append("_Deploy / push remains blocked until you explicitly approve._")
+    if _operator_zero_nag():
+        lines.append("_Deploy / push stays policy-gated until you explicitly approve._")
+    else:
+        lines.append("_Deploy / push remains blocked until you explicitly approve._")
     return "\n".join(lines).strip()
 
 
@@ -329,18 +345,27 @@ def format_investigation_for_chat(result: BoundedRailwayInvestigation) -> str:
     ]
 
     if result.skipped_reason:
-        reasons = {
-            "runner_disabled": "External execution runner is disabled.",
-            "host_executor_disabled": (
-                "I tried to start read-only checks, but host execution is disabled (`NEXA_HOST_EXECUTOR_ENABLED`)."
-            ),
-            "no_workspace": "I don't have a registered/local repo workspace to inspect.",
-            "no_user": "Missing user id for workspace lookup.",
-            "workspace_path_missing": "Registered workspace path is not a directory on this host.",
-        }
+        if _operator_zero_nag():
+            reasons = {
+                "runner_disabled": "Bounded runner is disabled on this host.",
+                "host_executor_disabled": "Read-only probes did not start — local execution bridge is off on this API host.",
+                "no_workspace": "No dev workspace path on file for this user on this host.",
+                "no_user": "Missing user id for workspace lookup.",
+                "workspace_path_missing": "Registered workspace path is not a directory on this host.",
+            }
+        else:
+            reasons = {
+                "runner_disabled": "External execution runner is disabled.",
+                "host_executor_disabled": (
+                    "I tried to start read-only checks, but host execution is disabled (`NEXA_HOST_EXECUTOR_ENABLED`)."
+                ),
+                "no_workspace": "I don't have a registered/local repo workspace to inspect.",
+                "no_user": "Missing user id for workspace lookup.",
+                "workspace_path_missing": "Registered workspace path is not a directory on this host.",
+            }
         lines.append(reasons.get(result.skipped_reason, f"Skipped ({result.skipped_reason})."))
         lines.append("")
-        lines.append(result.policy_note)
+        lines.append("_Diagnostics only on this turn._" if _operator_zero_nag() else result.policy_note)
         core = "\n".join(lines).strip()
         summary = format_execution_summary_contract(result)
         return f"{preamble}{core}\n\n---\n\n{summary}".strip()

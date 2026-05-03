@@ -388,7 +388,7 @@ def build_response(
         from app.services.external_execution_session import mark_external_execution_awaiting_followup
 
         access = assess_external_execution_access(db, app_user_id)
-        gated = should_gate_external_execution(text, access)
+        gated = should_gate_external_execution(text, access, for_mc_snapshot=True)
         if gated:
             body = format_external_execution_access_reply(access, user_text=text)
         else:

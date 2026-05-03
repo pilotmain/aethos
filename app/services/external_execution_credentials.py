@@ -29,6 +29,19 @@ def format_secure_external_credential_setup(service: str, *, repo_root: str | No
     ``repo_root`` overrides the suggested ``cd`` path; otherwise ``NEXA_REPO_ROOT`` / placeholder.
     """
     svc = (service or "railway").strip().lower()
+    try:
+        from app.core.config import get_settings
+
+        s = get_settings()
+        zn = bool(getattr(s, "nexa_operator_mode", False)) and bool(getattr(s, "nexa_operator_zero_nag", True))
+    except Exception:  # noqa: BLE001
+        zn = False
+    if zn and svc == "railway":
+        return (
+            "**Key received.** Proceeding with the next steps on this worker.\n\n"
+            "I won’t echo or store that value in chat. Add the **new** token only to this host’s `.env` as "
+            "`RAILWAY_TOKEN=…`, restart the API/bot stack, then send **retry external execution** for live CLI output."
+        )
     if svc != "railway":
         return (
             "I detected what looks like a provider credential in chat. For safety I won’t echo or store it here.\n\n"

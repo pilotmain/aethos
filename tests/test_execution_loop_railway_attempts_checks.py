@@ -28,7 +28,7 @@ def test_railway_check_request_receives_progress_not_generic_guidance(monkeypatc
     )
     monkeypatch.setattr(
         "app.services.external_execution_access.should_gate_external_execution",
-        lambda raw, access: False,
+        lambda *_a, **_k: False,
     )
     monkeypatch.setattr(
         "app.services.external_execution_runner.run_bounded_railway_repo_investigation",

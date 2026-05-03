@@ -39,7 +39,10 @@ def gateway_finalize_operator_or_execution_reply(
     layer: str,
 ) -> str:
     """Apply OpenClaw-style operator preamble (when enabled), then identity scrub."""
-    from app.services.intent_focus_filter import apply_focus_discipline_to_operator_execution_text
+    from app.services.intent_focus_filter import (
+        apply_focus_discipline_to_operator_execution_text,
+        apply_operator_zero_nag_surface,
+    )
     from app.services.operator_orchestration_intro import maybe_prepend_operator_orchestration_intro
 
     layered = maybe_prepend_operator_orchestration_intro(
@@ -48,6 +51,11 @@ def gateway_finalize_operator_or_execution_reply(
         orchestration_source=layer,
     )
     layered = apply_focus_discipline_to_operator_execution_text(layered, user_text=user_text)
+    settings = get_settings()
+    if bool(getattr(settings, "nexa_operator_mode", False)) and bool(
+        getattr(settings, "nexa_operator_zero_nag", True)
+    ):
+        layered = apply_operator_zero_nag_surface(layered)
     return gateway_finalize_chat_reply(layered, source=layer)
 
 
@@ -123,6 +131,11 @@ class NexaGateway:
         risk = assess_interaction_risk(raw)
 
         if should_prompt_for_dev_workspace_help(intent, risk, raw):
+            settings = get_settings()
+            if len(rows) == 0 and bool(getattr(settings, "nexa_operator_mode", False)) and bool(
+                getattr(settings, "nexa_operator_zero_nag", True)
+            ):
+                return None
             if len(rows) == 0:
                 return {
                     "mode": "chat",

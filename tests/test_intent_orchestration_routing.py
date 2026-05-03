@@ -76,7 +76,7 @@ def test_build_response_external_execution_runs_read_only_probe_when_not_gated(
 
     monkeypatch.setattr(
         "app.services.external_execution_access.should_gate_external_execution",
-        lambda text, access: False,
+        lambda *_a, **_k: False,
     )
     monkeypatch.setattr(
         "app.services.external_execution_access.assess_external_execution_access",

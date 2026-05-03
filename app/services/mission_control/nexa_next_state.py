@@ -473,7 +473,7 @@ def build_execution_snapshot(
             m["is_external_execution"] = hosted_service_mission_blocked(it)
             if user_id:
                 acc = assess_external_execution_access(db, user_id)
-                m["requires_access"] = should_gate_external_execution(it, acc)
+                m["requires_access"] = should_gate_external_execution(it, acc, for_mc_snapshot=True)
             else:
                 m["requires_access"] = False
 

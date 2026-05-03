@@ -4,6 +4,9 @@ End-to-end operator orchestration entry (read-only diagnostics first).
 Runs when ``NEXA_OPERATOR_MODE`` is enabled and the user message looks like an
 operator task (provider cues, workspace path, deploy/fix language).
 
+With ``nexa_operator_zero_nag`` (default on), the gateway finalizer strips repetitive
+access/setup boilerplate from operator and execution-loop replies.
+
 Railway-only turns remain in :mod:`app.services.execution_loop` to avoid duplicate
 bounded runs unless combined with other providers in the same message.
 """
