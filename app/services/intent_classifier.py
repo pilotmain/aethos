@@ -15,6 +15,8 @@ INTENT_CLASSIFIER_PROMPT = """You are an intent classifier for Nexa.
 Classify the user's message into exactly one intent.
 
 Valid intents:
+- orchestrate_system: user wants a Nexa-wide status report — Mission Control, missions, dev runs, what succeeded/failed, act as orchestrator (not asking for a disk path)
+- external_investigation: user is asking about a hosted provider/service (Railway, Render, deploy health, production outage) without necessarily naming local files
 - brain_dump: user is listing tasks, responsibilities, errands, or things they need to organize
 - create_custom_agent: user wants to create a new Nexa custom agent (message starts with "create" and mentions "agent")
 - capability_question: user asks what the assistant can do, cannot do, or whether it can help with a specific domain
@@ -36,6 +38,8 @@ Important rules:
 - If the user says only "I feel overwhelmed" without tasks, classify as stuck.
 - If the message is about errors, failing builds/tests, deployment, CI, K8s/EKS, Docker, databases, or auth config AND the user is blocked or asking for a fix, classify as stuck_dev (not generic stuck).
 - If the user asks for root cause, postmortem, or to analyze a specific error/trace, classify as analysis.
+- If the user asks to check Mission Control, report what succeeded/failed, act as orchestrator, wants an update on missions/runs — classify as orchestrate_system (not general_chat).
+- If the user focuses on Railway/hosted deploy/service health/production outage — classify as external_investigation unless they only want local repo debugging paths.
 - If the user message (after trimming) starts with "create" and contains the word "agent", classify as create_custom_agent — except vague multi-agent capability questions (e.g. "can you create multi agents that communicate"); those are capability_question.
 - If uncertain, choose general_chat, not brain_dump.
 
@@ -51,6 +55,8 @@ User message: {message}"""
 INTENT_CLASSIFIER_SYSTEM = INTENT_CLASSIFIER_PROMPT.rsplit("User message:", 1)[0].strip()
 
 VALID_INTENTS = {
+    "orchestrate_system",
+    "external_investigation",
     "brain_dump",
     "create_custom_agent",
     "capability_question",
@@ -156,6 +162,58 @@ def looks_like_stuck_dev(message: str) -> bool:
     return any(p in t for p in pain)
 
 
+def looks_like_orchestrate_system(message: str) -> bool:
+    """User wants MC/orchestration overview — must not route to local file path clarification."""
+    t = (message or "").lower()
+    if len(t) < 6:
+        return False
+    cues = (
+        "mission control",
+        "what succeeded",
+        "what failed",
+        "report back",
+        "give me a report",
+        "summarize what",
+        "what ran",
+        "what happened",
+        "status of my",
+        "update me on",
+        "update me",
+        "orchestrat",
+        "act as orchestrator",
+        "as orchestrator",
+        "run overview",
+        "which missions",
+        "show me missions",
+        "active work",
+        "nexa forge",
+    )
+    return any(c in t for c in cues)
+
+
+def looks_like_external_investigation(message: str) -> bool:
+    """Hosted infra / deploy context — not a request to read a local folder by default."""
+    if looks_like_orchestrate_system(message):
+        return False
+    t = (message or "").lower()
+    if len(t) < 6:
+        return False
+    if re.search(r"https?://", t):
+        return True
+    if re.search(
+        r"\b(railway|render\.com|fly\.io|flyctl|heroku|vercel|netlify|cloudflare)\b",
+        t,
+    ):
+        return True
+    if "production" in t and any(x in t for x in ("down", "outage", "crash", "unhealthy")):
+        return True
+    if "deploy" in t and "service" in t:
+        return True
+    if "service" in t and any(x in t for x in ("crash", "crashed", "failing", "unhealthy")):
+        return True
+    return False
+
+
 def looks_like_analysis(message: str) -> bool:
     """Heuristic: user wants error/root-cause analysis (Phase 50)."""
     t = (message or "").lower()
@@ -208,6 +266,12 @@ def looks_like_brain_dump(text: str) -> bool:
 
 def classify_intent_fallback(message: str) -> dict:
     t = message.lower().strip()
+
+    if looks_like_orchestrate_system(message):
+        return {"intent": "orchestrate_system", "confidence": 0.92, "reason": "mission control / orchestration cues"}
+
+    if looks_like_external_investigation(message):
+        return {"intent": "external_investigation", "confidence": 0.9, "reason": "hosted infra / deploy cues"}
 
     if is_multi_agent_capability_question(message):
         return {
@@ -374,6 +438,12 @@ def get_intent(
     tl0 = t0.lower()
     if tl0.startswith("create") and "agent" in tl0:
         return "create_custom_agent"
+
+    if looks_like_orchestrate_system(t0):
+        return "orchestrate_system"
+
+    if looks_like_external_investigation(t0):
+        return "external_investigation"
 
     result = classify_intent_llm(
         message,

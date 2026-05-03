@@ -123,6 +123,10 @@ _TECH_INFRA_NOT_PATH: frozenset[str] = frozenset(
         "github",
         "cursor",
         "vscode",
+        "railway",
+        "render",
+        "deploy",
+        "deployment",
     }
 )
 
@@ -487,6 +491,14 @@ def infer_local_file_request(
     """
     t = (user_text or "").strip()
     if not t or len(t) > 4_000:
+        return LocalFileIntent(matched=False)
+
+    from app.services.intent_classifier import (
+        looks_like_external_investigation,
+        looks_like_orchestrate_system,
+    )
+
+    if looks_like_orchestrate_system(t) or looks_like_external_investigation(t):
         return LocalFileIntent(matched=False)
 
     if custom_agent_message_blocks_folder_heuristics(t) or _agent_team_chat_blocks_folder_heuristics(

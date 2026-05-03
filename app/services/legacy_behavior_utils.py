@@ -128,6 +128,8 @@ def build_context(
 def map_intent_to_behavior(intent: str, _context: Context) -> str:
     if intent == "create_custom_agent":
         return "clarify"
+    if intent in ("orchestrate_system", "external_investigation"):
+        return "assist"
     if intent == "brain_dump":
         return "reduce"
     if intent == "stuck_dev":
@@ -362,6 +364,30 @@ def build_response(
     if is_command_question(text):
         r = apply_tone(format_command_help_response(), context.memory)
         return _out(r)
+    if intent == "orchestrate_system" and db is not None and (app_user_id or "").strip():
+        from app.services.orchestrator_status_reply import format_orchestrator_mc_snapshot
+
+        return _out(format_orchestrator_mc_snapshot(db, str(app_user_id).strip()))
+    if intent == "orchestrate_system":
+        return _out(
+            "Open **Mission Control** in the web app for live mission, task, and dev-run status. "
+            "When you’re signed in through chat, I can pull the same snapshot for your user id."
+        )
+    if intent == "external_investigation" and db is not None and (app_user_id or "").strip():
+        from app.services.orchestrator_status_reply import format_orchestrator_mc_snapshot
+
+        intro = (
+            "I can’t log into your cloud provider (e.g. Railway) from this session unless you’ve "
+            "connected API/CLI access. Below is **Nexa-side** activity (missions/dev runs) — it may not "
+            "reflect the host dashboard if nothing was recorded.\n\n"
+        )
+        return _out(intro + format_orchestrator_mc_snapshot(db, str(app_user_id).strip()))
+    if intent == "external_investigation":
+        return _out(
+            "I don’t have your hosted service credentials here. Share the error text, deploy id, or "
+            "what the provider UI shows, and I’ll help you triage—or connect access safely if you want "
+            "hands-on runs."
+        )
     if is_multi_agent_capability_question((text or "").strip()):
         return _out(reply_multi_agent_capability_clarification())
     if intent == "create_custom_agent" and db is not None and (app_user_id or "").strip():
