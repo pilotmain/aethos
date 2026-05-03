@@ -305,6 +305,12 @@ def try_operator_execution(
     from app.services.provider_router import apply_router_to_operator_hints
 
     hints = apply_router_to_operator_hints(raw, hints)
+    from app.services.intent_focus_filter import extract_focused_intent
+
+    focused = extract_focused_intent(raw)
+    if focused.get("ignore_railway"):
+        hints["railway"] = False
+        logger.info("operator_execution.focused_intent ignore_railway=true (Vercel-scoped turn)")
     ws_path = _extract_workspace_path(raw)
 
     vercel_cue = hints["vercel"]

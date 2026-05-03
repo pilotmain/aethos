@@ -464,8 +464,11 @@ def _snapshot_hints_railway_or_deploy(snap: dict[str, Any] | None) -> bool:
 def text_has_railway_execution_context(text: str, conversation_snapshot: dict[str, Any] | None) -> bool:
     """True when the turn or snapshot signals Railway / hosted execution context."""
     raw = (text or "").strip()
+    from app.services.intent_focus_filter import extract_focused_intent
     from app.services.provider_router import should_skip_railway_bounded_path
 
+    if extract_focused_intent(raw).get("ignore_railway"):
+        return False
     if should_skip_railway_bounded_path(raw):
         logger.info("external_execution.railway_context_skipped vercel_dominant preview=%s", raw[:120])
         return False

@@ -167,10 +167,14 @@ def try_execute_or_explain(
     if not applies:
         return ExecutionLoopResult(handled=False, text="")
 
+    from app.services.intent_focus_filter import extract_focused_intent
     from app.services.provider_router import should_skip_railway_bounded_path
 
-    if should_skip_railway_bounded_path(raw):
-        logger.info("execution_loop.skip_railway_bounded_path uid=%s (Vercel-dominant or ambiguous)", uid)
+    if extract_focused_intent(raw).get("ignore_railway") or should_skip_railway_bounded_path(raw):
+        logger.info(
+            "execution_loop.skip_railway_bounded_path uid=%s (focused_intent or vercel-dominant)",
+            uid,
+        )
         return ExecutionLoopResult(handled=False, text="")
 
     # --- Bounded runner path (same safe commands as external_execution_runner)

@@ -39,6 +39,7 @@ def gateway_finalize_operator_or_execution_reply(
     layer: str,
 ) -> str:
     """Apply OpenClaw-style operator preamble (when enabled), then identity scrub."""
+    from app.services.intent_focus_filter import apply_focus_discipline_to_operator_execution_text
     from app.services.operator_orchestration_intro import maybe_prepend_operator_orchestration_intro
 
     layered = maybe_prepend_operator_orchestration_intro(
@@ -46,6 +47,7 @@ def gateway_finalize_operator_or_execution_reply(
         user_text=user_text,
         orchestration_source=layer,
     )
+    layered = apply_focus_discipline_to_operator_execution_text(layered, user_text=user_text)
     return gateway_finalize_chat_reply(layered, source=layer)
 
 
