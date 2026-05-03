@@ -574,14 +574,17 @@ def _build_system_prompt(ctx: ResponseContext, strategy_body: str) -> str:
     return "\n\n".join(p for p in parts if p)
 
 
-def _invoke_llm(system: str, user_content: str) -> dict[str, Any]:
+def _invoke_llm(system: str, user_content: str, ctx: ResponseContext | None = None) -> dict[str, Any]:
+    from app.services.llm_routing import resolve_anthropic_model_for_composer
+
     settings, anth_client, oai_client = _get_clients()
     m = get_merged_api_keys()
+    anth_model = resolve_anthropic_model_for_composer(ctx)
     if anth_client:
         try:
-            logger.warning("LLM_CALL_TRIGGERED provider=anthropic")
+            logger.warning("LLM_CALL_TRIGGERED provider=anthropic model=%s", anth_model)
             msg = anth_client.messages.create(
-                model=settings.anthropic_model,
+                model=anth_model,
                 max_tokens=2048,
                 temperature=0.8,
                 system=system,
@@ -590,7 +593,7 @@ def _invoke_llm(system: str, user_content: str) -> dict[str, Any]:
             try:
                 record_anthropic_message_usage(
                     msg,
-                    model=settings.anthropic_model,
+                    model=anth_model,
                     used_user_key=m.has_user_anthropic,
                 )
             except Exception:  # noqa: BLE001
@@ -998,7 +1001,7 @@ def _run_strategy(ctx: ResponseContext, strategy_body: str) -> ComposedResponse:
         system = _build_system_prompt(ctx, strategy_body)
         user_content = _composer_user_payload_json(ctx) + JSON_SUFFIX
         try:
-            data = _invoke_llm(system, user_content)
+            data = _invoke_llm(system, user_content, ctx)
             validated = validate_composed_response(data)
             if validated:
                 return validated

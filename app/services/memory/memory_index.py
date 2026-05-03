@@ -8,6 +8,7 @@ from typing import Any
 
 from app.services.memory.embedding import cosine_similarity, embed_text_primary
 from app.services.memory.memory_store import MemoryStore
+from app.services.memory.pro_intel import apply_pro_memory_ranking
 
 
 class MemoryIndex:
@@ -61,7 +62,13 @@ class MemoryIndex:
             score = cosine_similarity(qv, sv)
             scored.append((score, e))
         scored.sort(key=lambda x: x[0], reverse=True)
-        return [e for _, e in scored[:limit]]
+        trimmed = scored[:limit]
+        enriched: list[dict[str, Any]] = []
+        for sc, e in trimmed:
+            row = dict(e)
+            row["_similarity"] = float(sc)
+            enriched.append(row)
+        return apply_pro_memory_ranking(user_id, q, enriched)
 
 
 __all__ = ["MemoryIndex"]

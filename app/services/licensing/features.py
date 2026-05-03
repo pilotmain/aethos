@@ -13,20 +13,32 @@ from app.services.licensing.verify import verify_license_token
 FEATURE_SANDBOX_ADVANCED = "sandbox_advanced"
 FEATURE_CREDENTIAL_VAULT_OS = "credential_vault_os"
 FEATURE_SKILL_SCANNER = "skill_security_scanner"
+# Phase B — Open Core Pro differentiation (optional ``nexa-ext-pro``).
+FEATURE_SMART_ROUTING = "smart_routing"
+FEATURE_MEMORY_INTEL = "memory_intel"
+FEATURE_AUTO_DEV = "auto_dev"
+FEATURE_WORKFLOWS_ADVANCED = "workflows_advanced"
+# Legacy / alias IDs (keep for existing license tokens)
 FEATURE_ROUTING_COST_OPT = "routing_cost_optimization"
 FEATURE_MEMORY_GRAPH = "memory_graph"
 FEATURE_VOICE_RUNTIME = "voice_runtime"
 FEATURE_WORKFLOW_PRO = "workflow_pro"
+# Alias: prefer FEATURE_WORKFLOWS_ADVANCED in new licenses.
+FEATURE_VOICE = FEATURE_VOICE_RUNTIME
 
 _COMMERCIAL_FEATURES: FrozenSet[str] = frozenset(
     {
         FEATURE_SANDBOX_ADVANCED,
         FEATURE_CREDENTIAL_VAULT_OS,
         FEATURE_SKILL_SCANNER,
+        FEATURE_SMART_ROUTING,
         FEATURE_ROUTING_COST_OPT,
+        FEATURE_MEMORY_INTEL,
         FEATURE_MEMORY_GRAPH,
-        FEATURE_VOICE_RUNTIME,
+        FEATURE_AUTO_DEV,
+        FEATURE_WORKFLOWS_ADVANCED,
         FEATURE_WORKFLOW_PRO,
+        FEATURE_VOICE_RUNTIME,
     }
 )
 
@@ -78,13 +90,18 @@ def licensed_feature_ids() -> frozenset[str]:
 
 
 __all__ = [
+    "FEATURE_AUTO_DEV",
     "FEATURE_CREDENTIAL_VAULT_OS",
     "FEATURE_MEMORY_GRAPH",
+    "FEATURE_MEMORY_INTEL",
     "FEATURE_ROUTING_COST_OPT",
     "FEATURE_SANDBOX_ADVANCED",
     "FEATURE_SKILL_SCANNER",
+    "FEATURE_SMART_ROUTING",
+    "FEATURE_VOICE",
     "FEATURE_VOICE_RUNTIME",
     "FEATURE_WORKFLOW_PRO",
+    "FEATURE_WORKFLOWS_ADVANCED",
     "has_pro_feature",
     "licensed_feature_ids",
 ]

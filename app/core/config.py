@@ -82,6 +82,9 @@ class Settings(BaseSettings):
     anthropic_api_key: str | None = None
     # Default: current Haiku (3.5 snapshot `claude-3-5-haiku-20241022` is retired on the API)
     anthropic_model: str = "claude-haiku-4-5-20251001"
+    # Optional Pro tier overrides when ``nexa_ext.routing`` + ``smart_routing`` license is active.
+    nexa_pro_anthropic_strong_model: str | None = None
+    nexa_pro_anthropic_fast_model: str | None = None
     openai_api_key: str | None = None
     openai_model: str = "gpt-4o-mini"
     use_real_llm: bool = False

@@ -12,7 +12,6 @@ from app.services.execution_policy import (
     user_said_do_not_run,
 )
 
-
 def should_execute_now(
     intent: str,
     workspace_count: int,
@@ -73,9 +72,33 @@ def should_auto_execute_dev(user_text: str, intent: str, *, workspace_count: int
     """
     True when a dev investigation mission should run automatically (single workspace,
     safe intent, low risk). Delegates to :func:`should_auto_execute_dev_turn`.
+
+    With ``nexa_ext.dev_execution`` + ``auto_dev`` license, may extend policy when OSS returns False.
     """
     risk = assess_interaction_risk(user_text)
-    return should_auto_execute_dev_turn(intent, risk, workspace_count, user_text)
+    core = should_auto_execute_dev_turn(intent, risk, workspace_count, user_text)
+    if core:
+        return True
+    from app.services.extensions import get_extension
+    from app.services.licensing.features import FEATURE_AUTO_DEV, has_pro_feature
+
+    mod = get_extension("dev_execution")
+    if mod is None or not has_pro_feature(FEATURE_AUTO_DEV):
+        return False
+    fn = getattr(mod, "should_execute", None)
+    if not callable(fn):
+        return False
+    task = {
+        "intent": intent,
+        "workspace_count": workspace_count,
+        "user_text": user_text,
+        "risk": risk,
+    }
+    ctx = {"core_allowed": False}
+    try:
+        return bool(fn(task, ctx))
+    except Exception:
+        return False
 
 
 def should_use_decisive_dev_tone(intent: str) -> bool:

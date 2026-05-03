@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nexa-ext-pro"
+version = "0.1.0"
+description = "Official Nexa Pro extensions (sandbox, routing, memory intel, dev execution)"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Proprietary" }
+authors = [{ name = "Nexa" }]
+dependencies = []
+
+[project.optional-dependencies]
+docker = ["cloudpickle>=3.0"]
+
+[tool.setuptools]
+packages = ["nexa_ext"]
