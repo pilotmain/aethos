@@ -196,6 +196,11 @@ class Settings(BaseSettings):
     # Required to encrypt per-user API keys in the database (NEXA_SECRET_KEY). Not optional on shared hosts.
     nexa_secret_key: str | None = None
 
+    # Open-core / optional commercial tier — signed license JWT-like token (see app/services/licensing).
+    # Without NEXA_LICENSE_PUBLIC_KEY_PEM, license strings are ignored (OSS default).
+    nexa_license_key: str | None = None
+    nexa_license_public_key_pem: str | None = None
+
     # Web UI: optional shared secret for `Authorization: Bearer` (in addition to X-User-Id). Unset = bearer not required.
     nexa_web_api_token: str | None = None
     # CORS: comma-separated origins (e.g. the Next dev server).
