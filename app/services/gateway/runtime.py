@@ -219,6 +219,46 @@ class NexaGateway:
         db: Session,
     ) -> dict[str, Any] | None:
         """Telegram runs this before feature-specific handlers so missions/dev stay first."""
+        _uid = (gctx.user_id or "").strip()
+        raw_t = (text or "").strip()
+        if _uid and raw_t:
+            from app.services.memory.context_injection import build_memory_context_for_turn
+
+            turn = build_memory_context_for_turn(_uid, raw_t, purpose="gateway_structured")
+            if turn.get("used"):
+                if gctx.memory is None:
+                    gctx.memory = {}
+                gctx.memory.update(turn)
+
+        from app.services.conversation_context_service import build_context_snapshot, get_or_create_context
+        from app.services.execution_loop import try_execute_or_explain
+        from app.services.external_execution_credentials import maybe_handle_external_credential_chat_turn
+
+        cred_st = maybe_handle_external_credential_chat_turn(db, user_id=_uid, user_text=raw_t)
+        if cred_st is not None:
+            return cred_st
+
+        if _uid and raw_t:
+            _cctx_st = get_or_create_context(db, _uid)
+            _snap_st = build_context_snapshot(_cctx_st, db)
+            loop_st = try_execute_or_explain(
+                user_text=raw_t,
+                gctx=gctx,
+                db=db,
+                snapshot=_snap_st,
+            )
+            gctx.extras["execution_loop_attempted"] = True
+            if loop_st.handled:
+                return {
+                    "mode": "chat",
+                    "text": gateway_finalize_chat_reply(loop_st.text, source="execution_loop"),
+                    "execution_loop": True,
+                    "ran": loop_st.ran,
+                    "blocker": loop_st.blocker,
+                    "verified": loop_st.verified,
+                    "intent": "execution_loop",
+                }
+
         return self._try_structured_route(gctx, text, db)
 
     def try_approval_only(
@@ -290,6 +330,30 @@ class NexaGateway:
         if cred_full is not None:
             return cred_full
 
+        cctx = get_or_create_context(db, uid)
+        snap = build_context_snapshot(cctx, db)
+
+        if not gctx.extras.get("execution_loop_attempted"):
+            from app.services.execution_loop import try_execute_or_explain
+
+            loop_fb = try_execute_or_explain(
+                user_text=raw,
+                gctx=gctx,
+                db=db,
+                snapshot=snap,
+            )
+            gctx.extras["execution_loop_attempted"] = True
+            if loop_fb.handled:
+                return {
+                    "mode": "chat",
+                    "text": gateway_finalize_chat_reply(loop_fb.text, source="execution_loop"),
+                    "execution_loop": True,
+                    "ran": loop_fb.ran,
+                    "blocker": loop_fb.blocker,
+                    "verified": loop_fb.verified,
+                    "intent": "execution_loop",
+                }
+
         if not gctx.extras.get("gateway_structured_ran"):
             auto_early = self._maybe_auto_dev_investigation(gctx, text, db)
             if auto_early is not None:
@@ -322,50 +386,6 @@ class NexaGateway:
                         if _k in ("via_gateway", "memory_context"):
                             continue
                         beh_ctx_inner.memory.setdefault(_k, _v)
-
-        cctx = get_or_create_context(db, uid)
-        snap = build_context_snapshot(cctx, db)
-
-        from app.services.external_execution_session import (
-            maybe_start_external_probe_from_turn,
-            try_resume_external_execution_turn,
-            try_retry_external_execution_turn,
-        )
-
-        _retry = try_retry_external_execution_turn(db, uid, raw, cctx)
-        if _retry is not None:
-            rt_text = str(_retry.get("text") or "").strip()
-            return {
-                "mode": "chat",
-                "text": gateway_finalize_chat_reply(rt_text, source="external_execution_retry"),
-                "intent": str(_retry.get("intent") or "external_execution_continue"),
-            }
-
-        _resume = try_resume_external_execution_turn(db, uid, raw, cctx)
-        if _resume is not None:
-            rt_text = str(_resume.get("text") or "").strip()
-            if not rt_text:
-                rt_text = (
-                    "Got it — I’ve recorded your Railway/deploy preferences.\n\n"
-                    "Send **retry external execution** to run read-only checks on this worker with fresh progress "
-                    "and output—or describe the next error in one line."
-                )
-            return {
-                "mode": "chat",
-                "text": gateway_finalize_chat_reply(rt_text, source="external_execution_resume"),
-                "intent": str(_resume.get("intent") or "external_execution_continue"),
-            }
-
-        _probe = maybe_start_external_probe_from_turn(
-            db, uid, raw, cctx, conversation_snapshot=snap
-        )
-        if _probe is not None:
-            pt = str(_probe.get("text") or "").strip()
-            return {
-                "mode": "chat",
-                "text": gateway_finalize_chat_reply(pt, source="external_execution_probe"),
-                "intent": str(_probe.get("intent") or "external_execution_continue"),
-            }
 
         rt = route_agent(raw, context_snapshot=snap)
         rt = apply_memory_aware_route_adjustment(rt, raw, snap, db)
@@ -473,6 +493,7 @@ class NexaGateway:
         db: Session | None = None,
     ) -> dict[str, Any]:
         gctx.extras.setdefault("via_gateway", True)
+        gctx.extras["execution_loop_attempted"] = False
         _log.debug(
             "gateway admission channel=%s permission_keys=%s extra_keys=%s",
             gctx.channel,
@@ -485,6 +506,8 @@ class NexaGateway:
         load_plugins()
 
         def _route(db_inner: Session) -> dict[str, Any]:
+            from app.services.conversation_context_service import build_context_snapshot, get_or_create_context
+            from app.services.execution_loop import try_execute_or_explain
             from app.services.external_execution_credentials import maybe_handle_external_credential_chat_turn
 
             raw_gate = (text or "").strip()
@@ -496,6 +519,26 @@ class NexaGateway:
             )
             if cred_gate is not None:
                 return cred_gate
+
+            _cctx_loop = get_or_create_context(db_inner, uid_gate)
+            _snap_loop = build_context_snapshot(_cctx_loop, db_inner)
+            loop_result = try_execute_or_explain(
+                user_text=raw_gate,
+                gctx=gctx,
+                db=db_inner,
+                snapshot=_snap_loop,
+            )
+            gctx.extras["execution_loop_attempted"] = True
+            if loop_result.handled:
+                return {
+                    "mode": "chat",
+                    "text": gateway_finalize_chat_reply(loop_result.text, source="execution_loop"),
+                    "execution_loop": True,
+                    "ran": loop_result.ran,
+                    "blocker": loop_result.blocker,
+                    "verified": loop_result.verified,
+                    "intent": "execution_loop",
+                }
 
             structured = self._try_structured_route(gctx, text, db_inner)
             if structured is not None:
