@@ -323,8 +323,9 @@ def try_operator_execution(
 
     from app.services.operator_pulse import format_pulse_section, read_pulse_standing_orders
 
-    # Fresh read every operator turn (no cache).
-    pulse = read_pulse_standing_orders(ws_resolved)
+    pulse_enabled = bool(getattr(settings, "nexa_pulse_injection", True))
+    # Fresh read every operator turn when injection is enabled (no cache).
+    pulse = read_pulse_standing_orders(ws_resolved) if pulse_enabled else None
 
     sections: list[str] = []
     evidence: dict[str, Any] = {}

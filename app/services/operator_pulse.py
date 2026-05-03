@@ -57,6 +57,21 @@ def format_pulse_section(content: str) -> str:
     return "### Standing orders (PULSE.md)\n\n" + content.strip()
 
 
+def get_pulse_context(workspace_root: str | Path | None, *, max_chars: int = 800) -> str:
+    """
+    Compact standing-orders block for prompts or summaries (OpenClaw-style memory hint).
+
+    Separate from :func:`read_pulse_standing_orders` (full reply section); this caps
+    more aggressively for token-light prefix use.
+    """
+    body = read_pulse_standing_orders(workspace_root)
+    if not body:
+        return ""
+    cap = max(200, min(int(max_chars), _MAX_INJECT_CHARS))
+    snippet = body if len(body) <= cap else body[: cap - 20].rstrip() + "\n… (truncated)"
+    return f"\nStanding orders (PULSE.md):\n{snippet}\n"
+
+
 def pulse_requests_no_production_deploy(pulse: str | None) -> bool:
     """
     Lightweight standing-order hint: skip production deploy when PULSE clearly forbids it.
@@ -78,6 +93,7 @@ def pulse_requests_no_production_deploy(pulse: str | None) -> bool:
 
 __all__ = [
     "format_pulse_section",
+    "get_pulse_context",
     "pulse_requests_no_production_deploy",
     "read_pulse_standing_orders",
 ]

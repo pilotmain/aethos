@@ -229,4 +229,51 @@ def try_execute_or_explain(
     )
 
 
-__all__ = ["ExecutionLoopResult", "try_execute_or_explain"]
+def run_deterministic_steps(
+    steps: list[dict[str, Any]],
+    *,
+    context: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """
+    Minimal synchronous multi-step runner (light NexaForge / Lobster-style slice).
+
+    Each step is a dict with ``id`` (optional), ``tool`` (required), and optional ``args``.
+
+    - ``noop`` — succeeds immediately.
+    - ``echo`` — returns ``args["message"]`` in the result.
+    - ``vercel_deploy`` / ``railway_deploy`` / ``deploy`` — unless
+      ``context["operator_deploy_allowed"]`` is true, stops with
+      ``status: approval_needed`` and ``token`` set to the step id.
+
+    Unknown tools yield ``ok: False`` with ``error: unknown_tool`` for that step only.
+    """
+    ctx = context if isinstance(context, dict) else {}
+    results: dict[str, Any] = {}
+    deploy_like = frozenset({"vercel_deploy", "railway_deploy", "deploy"})
+    for step in steps:
+        if not isinstance(step, dict):
+            continue
+        sid = str(step.get("id") or "step")
+        tool = str(step.get("tool") or "").strip()
+        args = step.get("args") if isinstance(step.get("args"), dict) else {}
+        if tool in deploy_like:
+            if ctx.get("operator_deploy_allowed") is True:
+                results[sid] = {"ok": True, "tool": tool, "simulated": True}
+            else:
+                return {
+                    "status": "approval_needed",
+                    "token": sid,
+                    "results": results,
+                    "pending": tool,
+                }
+            continue
+        if tool == "noop":
+            results[sid] = {"ok": True, "tool": tool}
+        elif tool == "echo":
+            results[sid] = {"ok": True, "tool": tool, "message": args.get("message", "")}
+        else:
+            results[sid] = {"ok": False, "error": "unknown_tool", "tool": tool}
+    return {"status": "complete", "results": results}
+
+
+__all__ = ["ExecutionLoopResult", "run_deterministic_steps", "try_execute_or_explain"]
