@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import os
 import subprocess
 from typing import Any
 
 from app.services.operator_cli_path import cli_environ_for_operator, which_operator_cli
 from app.services.operator_runners.base import evidence_shell, format_operator_progress
+from app.services.operator_shell_cli import profile_shell_enabled, run_allowlisted_argv_via_login_shell
 
 _TIMEOUT = 60.0
 
@@ -31,9 +33,31 @@ def _run_vercel_allowlisted(argv: list[str], *, cwd: str | None) -> dict[str, An
     allowed_projects = sub == "projects" and tail in ([], ["ls"])
     if not (allowed_whoami or allowed_project_ls or allowed_projects):
         return {"ok": False, "error": "vercel_subcommand_not_allowed", "stdout": "", "stderr": ""}
+    env = cli_environ_for_operator()
+    if profile_shell_enabled():
+        r = run_allowlisted_argv_via_login_shell(
+            argv,
+            cwd=cwd if cwd is not None else os.getcwd(),
+            timeout=_TIMEOUT,
+            env=env,
+        )
+        if r.get("error"):
+            if r.get("error") == "timeout":
+                return {"ok": False, "error": "timeout", "stdout": "", "stderr": ""}
+            return {
+                "ok": False,
+                "error": str(r.get("error")),
+                "stdout": (r.get("stdout") or "").strip(),
+                "stderr": (r.get("stderr") or "").strip(),
+            }
+        return {
+            "ok": bool(r.get("ok")),
+            "exit_code": int(r.get("exit_code") or 0),
+            "stdout": (r.get("stdout") or "").strip(),
+            "stderr": (r.get("stderr") or "").strip(),
+        }
     if not _vercel_bin():
         return {"ok": False, "error": "vercel_cli_missing", "stdout": "", "stderr": ""}
-    env = cli_environ_for_operator()
     try:
         proc = subprocess.run(
             argv,

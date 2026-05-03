@@ -408,6 +408,8 @@ class Settings(BaseSettings):
     nexa_operator_session_credential_reuse: bool = True
     # Ultra-short operator / execution-loop replies: collapse progress prose and strip boilerplate (not fenced CLI output).
     nexa_operator_precise_short_responses: bool = True
+    # Run allowlisted CLIs (vercel, gh, railway, git in host executor) via bash -lc after sourcing nvm.sh + rc files.
+    nexa_operator_cli_profile_shell: bool = True
     # Structured workspace intelligence (file-based context under data/nexa_workspace/).
     nexa_workspace_intelligence_enabled: bool = False
     nexa_workspace_intel_root: str = ""

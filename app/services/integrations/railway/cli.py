@@ -7,10 +7,12 @@ entirely from this module + runner (fixed templates).
 
 from __future__ import annotations
 
+import os
 import subprocess
 from typing import Any
 
 from app.services.operator_cli_path import cli_environ_for_operator, which_operator_cli
+from app.services.operator_shell_cli import profile_shell_enabled, run_allowlisted_argv_via_login_shell
 
 # First argument after `railway` — diagnostic / read-only surface only.
 _ALLOWED_SUBCOMMANDS = frozenset({"whoami", "status", "logs"})
@@ -65,7 +67,13 @@ def run_railway_cli(
                     "stderr": "",
                 }
 
-    if not railway_binary_on_path():
+    argv = ["railway", sub, *extras]
+    env = cli_environ_for_operator()
+    if extra_env:
+        env.update(extra_env)
+
+    use_shell = profile_shell_enabled()
+    if not use_shell and not railway_binary_on_path():
         return {
             "ok": False,
             "error": "railway_cli_missing",
@@ -73,10 +81,29 @@ def run_railway_cli(
             "stderr": "",
         }
 
-    argv = ["railway", sub, *extras]
-    env = cli_environ_for_operator()
-    if extra_env:
-        env.update(extra_env)
+    if use_shell:
+        r = run_allowlisted_argv_via_login_shell(
+            argv,
+            cwd=cwd if cwd is not None else os.getcwd(),
+            timeout=timeout,
+            env=env,
+        )
+        if r.get("error"):
+            return {
+                "ok": False,
+                "error": r.get("error"),
+                "stdout": (r.get("stdout") or "")[-120_000:],
+                "stderr": (r.get("stderr") or "")[-80_000:],
+                "argv": argv,
+            }
+        return {
+            "ok": bool(r.get("ok")),
+            "returncode": int(r.get("exit_code") or 0),
+            "stdout": (r.get("stdout") or "")[-120_000:],
+            "stderr": (r.get("stderr") or "")[-80_000:],
+            "argv": argv,
+        }
+
     try:
         proc = subprocess.run(
             argv,

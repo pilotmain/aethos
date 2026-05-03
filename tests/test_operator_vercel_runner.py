@@ -8,6 +8,7 @@ import pytest
 
 
 def test_vercel_runner_reports_cli_missing(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("app.services.operator_runners.vercel.profile_shell_enabled", lambda: False)
     monkeypatch.setattr("app.services.operator_runners.vercel._vercel_bin", lambda: None)
     from app.services.operator_runners.vercel import run_vercel_operator_readonly
 
@@ -20,6 +21,7 @@ def test_vercel_runner_reports_cli_missing(monkeypatch: pytest.MonkeyPatch) -> N
 
 @patch("app.services.operator_runners.vercel.subprocess.run")
 def test_vercel_runner_whoami_ok(mock_run, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("app.services.operator_runners.vercel.profile_shell_enabled", lambda: False)
     monkeypatch.setattr("app.services.operator_runners.vercel._vercel_bin", lambda: "/bin/vercel")
 
     class Proc:

@@ -17,6 +17,7 @@ from typing import Any
 from app.core.config import REPO_ROOT, get_settings
 from app.services.host_executor_intent import safe_relative_path
 from app.services.operator_cli_path import cli_environ_for_operator
+from app.services.operator_shell_cli import profile_shell_enabled, run_allowlisted_argv_via_login_shell
 
 logger = logging.getLogger(__name__)
 
@@ -118,6 +119,41 @@ def _run_argv(
     cwd: Path,
     timeout: int,
 ) -> tuple[int, str, str]:
+    if (
+        profile_shell_enabled()
+        and argv
+        and (argv[0] or "") == "git"
+    ):
+        out = run_allowlisted_argv_via_login_shell(
+            argv,
+            cwd=str(cwd),
+            timeout=float(timeout),
+            env=cli_environ_for_operator(),
+        )
+        if out.get("error") == "timeout":
+            logger.warning("host_executor profile_shell timeout argv0=%s", argv[:1])
+            return -1, "", "timeout"
+        if out.get("error"):
+            logger.warning(
+                "host_executor profile_shell argv0=%s err=%s",
+                argv[:1],
+                str(out.get("error"))[:200],
+            )
+            return (
+                -1,
+                (out.get("stdout") or "")[:24_000],
+                (out.get("stderr") or "")[:24_000],
+            )
+        code = int(out.get("exit_code") if out.get("exit_code") is not None else (0 if out.get("ok") else 1))
+        so = (out.get("stdout") or "")[:24_000]
+        se = (out.get("stderr") or "")[:24_000]
+        logger.info(
+            "host_executor profile_shell argv0=%s exit=%s ok=%s",
+            argv[0] if argv else "",
+            code,
+            code == 0,
+        )
+        return code, so, se
     try:
         r = subprocess.run(  # noqa: S603 — argv constructed only from allowlists
             argv,
