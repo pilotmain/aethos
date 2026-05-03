@@ -406,6 +406,8 @@ class Settings(BaseSettings):
     nexa_operator_zero_nag: bool = True
     # Hold pasted provider tokens in this API process RAM only (bounded CLI auth); never logged or echoed.
     nexa_operator_session_credential_reuse: bool = True
+    # Ultra-short operator / execution-loop replies: collapse progress prose and strip boilerplate (not fenced CLI output).
+    nexa_operator_precise_short_responses: bool = True
     # Structured workspace intelligence (file-based context under data/nexa_workspace/).
     nexa_workspace_intelligence_enabled: bool = False
     nexa_workspace_intel_root: str = ""

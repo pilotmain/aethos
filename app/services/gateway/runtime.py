@@ -42,6 +42,7 @@ def gateway_finalize_operator_or_execution_reply(
     from app.services.intent_focus_filter import (
         apply_focus_discipline_to_operator_execution_text,
         apply_operator_zero_nag_surface,
+        apply_precise_operator_response,
     )
     from app.services.operator_orchestration_intro import maybe_prepend_operator_orchestration_intro
 
@@ -56,6 +57,10 @@ def gateway_finalize_operator_or_execution_reply(
         getattr(settings, "nexa_operator_zero_nag", True)
     ):
         layered = apply_operator_zero_nag_surface(layered)
+    if bool(getattr(settings, "nexa_operator_mode", False)) and bool(
+        getattr(settings, "nexa_operator_precise_short_responses", True)
+    ):
+        layered = apply_precise_operator_response(layered, user_text=user_text)
     return gateway_finalize_chat_reply(layered, source=layer)
 
 

@@ -87,6 +87,20 @@ def _format_live_progress_steps(lines: list[str]) -> str:
     return f"### Live progress\n\n{body}"
 
 
+def _precise_short_enabled() -> bool:
+    try:
+        from app.services.intent_focus_filter import operator_precise_short_enabled
+
+        return operator_precise_short_enabled()
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def _format_live_progress_precise(provider: str | None) -> str:
+    p = (provider or "operator").strip() or "operator"
+    return f"→ **{p}**: running checks…"
+
+
 def _http_verify_strict_ok(ver: Any) -> bool:
     if not isinstance(ver, dict) or not ver.get("ok"):
         return False
@@ -122,6 +136,10 @@ def _compute_strict_operator_verified(evidence: dict[str, Any], runner_ok: bool)
 
 
 def _append_verified_mission_footer(text: str, *, strict_verified: bool, evidence: dict[str, Any]) -> str:
+    if _precise_short_enabled():
+        if not strict_verified or not (text or "").strip():
+            return text
+        return text.rstrip() + "\n\n**Verified.**"
     if not strict_verified or not (text or "").strip():
         return text
     phases = evidence.get("phases")
@@ -438,7 +456,7 @@ def try_operator_execution(
 
     merged = "\n\n---\n\n".join(sections)
 
-    if pulse:
+    if pulse and not _precise_short_enabled():
         merged = merged + "\n\n---\n\n" + format_pulse_section(pulse)
 
     phases_ok = True
@@ -453,11 +471,17 @@ def try_operator_execution(
     merged = forbid_unverified_success_language(strict_verified=strict_v, body=merged)
     merged = _append_verified_mission_footer(merged, strict_verified=strict_v, evidence=evidence)
 
-    live_block = _format_live_progress_steps(live)
+    if _precise_short_enabled():
+        live_block = _format_live_progress_precise(primary_provider)
+    else:
+        live_block = _format_live_progress_steps(live)
     if live_block:
         merged = live_block + "\n\n---\n\n" + merged
     elif not any(x in merged for x in ("### Progress", "→ ")):
-        merged = format_operator_progress(progress or ["Starting operator diagnostics"]) + "\n\n---\n\n" + merged
+        if _precise_short_enabled():
+            merged = _format_live_progress_precise(primary_provider) + "\n\n---\n\n" + merged
+        else:
+            merged = format_operator_progress(progress or ["Starting operator diagnostics"]) + "\n\n---\n\n" + merged
 
     needs_verify = False
     ph = evidence.get("phases")

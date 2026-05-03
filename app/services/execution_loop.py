@@ -38,6 +38,13 @@ def _ensure_progress_prefix(text: str, fallback_progress: list[str]) -> str:
     t = (text or "").strip()
     if "### Progress" in t or "→ Starting investigation" in t:
         return t
+    try:
+        from app.services.intent_focus_filter import operator_precise_short_enabled
+
+        if operator_precise_short_enabled():
+            return f"→ Running checks…\n\n---\n\n{t}"
+    except Exception:  # noqa: BLE001
+        pass
     if not fallback_progress:
         return t
     return f"{_markdown_progress(fallback_progress)}\n\n---\n\n{t}"

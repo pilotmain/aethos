@@ -30,7 +30,11 @@ def test_maybe_prepend_intro_skipped_when_operator_mode_off(monkeypatch: pytest.
 def test_maybe_prepend_intro_when_operator_mode_on(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         "app.services.operator_orchestration_intro.get_settings",
-        lambda: __import__("types").SimpleNamespace(nexa_operator_mode=True, nexa_operator_proactive_intro=True),
+        lambda: __import__("types").SimpleNamespace(
+            nexa_operator_mode=True,
+            nexa_operator_proactive_intro=True,
+            nexa_operator_precise_short_responses=False,
+        ),
     )
     body = "### Progress\n\nx"
     out = maybe_prepend_operator_orchestration_intro(
@@ -72,10 +76,12 @@ def test_format_pulse_section() -> None:
 @pytest.mark.usefixtures("nexa_runtime_clean")
 def test_operator_loop_appends_pulse_when_workspace_resolved(tmp_path, db_session, monkeypatch: pytest.MonkeyPatch) -> None:
     (tmp_path / "PULSE.md").write_text("Run `npm test` before every push.", encoding="utf-8")
-    monkeypatch.setattr(
-        "app.services.operator_execution_loop.get_settings",
-        lambda: __import__("types").SimpleNamespace(nexa_operator_mode=True),
+    _s = __import__("types").SimpleNamespace(
+        nexa_operator_mode=True,
+        nexa_operator_precise_short_responses=False,
     )
+    monkeypatch.setattr("app.core.config.get_settings", lambda: _s)
+    monkeypatch.setattr("app.services.operator_execution_loop.get_settings", lambda: _s)
     monkeypatch.setattr(
         "app.services.operator_runners.vercel.run_vercel_operator_readonly",
         lambda cwd=None: (
@@ -104,7 +110,9 @@ def test_gateway_prepends_intro_for_operator_reply(db_session, monkeypatch: pyte
     _op_settings = __import__("types").SimpleNamespace(
         nexa_operator_mode=True,
         nexa_operator_proactive_intro=True,
+        nexa_operator_precise_short_responses=False,
     )
+    monkeypatch.setattr("app.core.config.get_settings", lambda: _op_settings)
     monkeypatch.setattr(
         "app.services.operator_execution_loop.get_settings",
         lambda: _op_settings,
@@ -138,6 +146,7 @@ def test_gateway_no_intro_when_proactive_disabled(db_session, monkeypatch: pytes
         nexa_operator_mode=True,
         nexa_operator_proactive_intro=False,
     )
+    monkeypatch.setattr("app.core.config.get_settings", lambda: _op_settings)
     monkeypatch.setattr(
         "app.services.operator_execution_loop.get_settings",
         lambda: _op_settings,
@@ -164,10 +173,12 @@ def test_gateway_no_intro_when_proactive_disabled(db_session, monkeypatch: pytes
 @pytest.mark.usefixtures("nexa_runtime_clean")
 def test_pulse_reread_each_operator_turn(tmp_path, db_session, monkeypatch: pytest.MonkeyPatch) -> None:
     (tmp_path / "PULSE.md").write_text("alpha-standing-order", encoding="utf-8")
-    monkeypatch.setattr(
-        "app.services.operator_execution_loop.get_settings",
-        lambda: __import__("types").SimpleNamespace(nexa_operator_mode=True),
+    _s = __import__("types").SimpleNamespace(
+        nexa_operator_mode=True,
+        nexa_operator_precise_short_responses=False,
     )
+    monkeypatch.setattr("app.core.config.get_settings", lambda: _s)
+    monkeypatch.setattr("app.services.operator_execution_loop.get_settings", lambda: _s)
     monkeypatch.setattr(
         "app.services.operator_runners.vercel.run_vercel_operator_readonly",
         lambda cwd=None: (
@@ -200,10 +211,12 @@ def test_pulse_reread_each_operator_turn(tmp_path, db_session, monkeypatch: pyte
 @pytest.mark.usefixtures("nexa_runtime_clean")
 def test_live_progress_ordering_before_pulse_body(tmp_path, db_session, monkeypatch: pytest.MonkeyPatch) -> None:
     (tmp_path / "PULSE.md").write_text("orders", encoding="utf-8")
-    monkeypatch.setattr(
-        "app.services.operator_execution_loop.get_settings",
-        lambda: __import__("types").SimpleNamespace(nexa_operator_mode=True),
+    _s = __import__("types").SimpleNamespace(
+        nexa_operator_mode=True,
+        nexa_operator_precise_short_responses=False,
     )
+    monkeypatch.setattr("app.core.config.get_settings", lambda: _s)
+    monkeypatch.setattr("app.services.operator_execution_loop.get_settings", lambda: _s)
     monkeypatch.setattr(
         "app.services.operator_runners.vercel.run_vercel_operator_readonly",
         lambda cwd=None: (
@@ -232,10 +245,12 @@ def test_live_progress_ordering_before_pulse_body(tmp_path, db_session, monkeypa
 @pytest.mark.usefixtures("nexa_runtime_clean")
 def test_pulse_skips_deploy_when_forbidden(tmp_path, db_session, monkeypatch: pytest.MonkeyPatch) -> None:
     (tmp_path / "PULSE.md").write_text("Do not deploy to production without CFO sign-off.\n", encoding="utf-8")
-    monkeypatch.setattr(
-        "app.services.operator_execution_loop.get_settings",
-        lambda: __import__("types").SimpleNamespace(nexa_operator_mode=True),
+    _s = __import__("types").SimpleNamespace(
+        nexa_operator_mode=True,
+        nexa_operator_precise_short_responses=False,
     )
+    monkeypatch.setattr("app.core.config.get_settings", lambda: _s)
+    monkeypatch.setattr("app.services.operator_execution_loop.get_settings", lambda: _s)
     monkeypatch.setattr(
         "app.services.operator_runners.vercel.run_vercel_operator_readonly",
         lambda cwd=None: (
@@ -268,10 +283,12 @@ def test_pulse_skips_deploy_when_forbidden(tmp_path, db_session, monkeypatch: py
 
 @pytest.mark.usefixtures("nexa_runtime_clean")
 def test_no_mission_complete_footer_when_verify_not_healthy(tmp_path, db_session, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(
-        "app.services.operator_execution_loop.get_settings",
-        lambda: __import__("types").SimpleNamespace(nexa_operator_mode=True),
+    _s = __import__("types").SimpleNamespace(
+        nexa_operator_mode=True,
+        nexa_operator_precise_short_responses=False,
     )
+    monkeypatch.setattr("app.core.config.get_settings", lambda: _s)
+    monkeypatch.setattr("app.services.operator_execution_loop.get_settings", lambda: _s)
     monkeypatch.setattr(
         "app.services.operator_runners.vercel.run_vercel_operator_readonly",
         lambda cwd=None: (

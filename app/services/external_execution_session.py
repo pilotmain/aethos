@@ -235,6 +235,13 @@ def _finalize_fragment_after_ack(db: Session, cctx: ConversationContext, collect
 
 def format_probe_readonly_intro(*, detected_provider: str | None = None) -> str:
     """Product copy — bounded read-only diagnostics (neutral; no Railway-first framing)."""
+    try:
+        from app.services.intent_focus_filter import operator_precise_short_enabled
+
+        if operator_precise_short_enabled():
+            return "Running probes…"
+    except Exception:  # noqa: BLE001
+        pass
     dp = (detected_provider or "").strip().lower()
     if dp == "vercel":
         head = (
@@ -270,6 +277,13 @@ def format_followup_acknowledgment(
     uid = (user_id or "").strip()
 
     if _operator_zero_nag_enabled():
+        try:
+            from app.services.intent_focus_filter import operator_precise_short_enabled
+
+            if operator_precise_short_enabled():
+                return "Running checks — output below.\n"
+        except Exception:  # noqa: BLE001
+            pass
         probe_intro = ""
         if collected.get("permission_to_probe"):
             probe_intro = (

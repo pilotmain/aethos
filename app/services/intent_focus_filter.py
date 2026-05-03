@@ -172,9 +172,110 @@ def apply_operator_zero_nag_surface(text: str) -> str:
     return out
 
 
+def operator_precise_short_enabled() -> bool:
+    """True when operator mode wants compact prose (fenced command blocks preserved elsewhere)."""
+    try:
+        from app.core.config import get_settings
+
+        s = get_settings()
+        return bool(getattr(s, "nexa_operator_mode", False)) and bool(
+            getattr(s, "nexa_operator_precise_short_responses", True)
+        )
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def _user_assumes_cli_ready(user_text: str) -> bool:
+    t = (user_text or "").lower()
+    return any(
+        x in t
+        for x in (
+            "everything installed",
+            "cli installed",
+            "have the cli",
+            "have everything",
+            "already installed",
+            "all tools installed",
+        )
+    )
+
+
+_PRECISE_DROP_SUBSTRINGS = (
+    "read-only diagnostics",
+    "read-only —",
+    "i will inspect",
+    "i'll inspect",
+    "progress and command output",
+    "only where your host flags",
+    "real blockers with evidence",
+    "diagnostics only on this turn",
+    "full evidence is in the logs",
+    "command output in sections above",
+    "mission complete.",
+    "no deploy or git write",
+    "no pr or push performed",
+)
+
+_CLI_ASSUME_DROP_SUBSTRINGS = (
+    "cli is not installed",
+    "cli missing",
+    "not available in path",
+    "skipped — vercel cli",
+    "_vercel cli is not",
+)
+
+
+def apply_precise_operator_response(body: str, *, user_text: str) -> str:
+    """
+    Collapse verbose operator/execution prose; preserve ``` fenced blocks (CLI stdout/stderr).
+
+    Does not remove factual phase ``` blocks or markdown tables inside fences.
+    """
+    if not operator_precise_short_enabled() or not (body or "").strip():
+        return body
+    assume_cli = _user_assumes_cli_ready(user_text)
+    raw = body
+    raw = re.sub(r"(?is)^### Live progress\b[^\n]*\n[\s\S]*?(?=\n---|\n### |\Z)", "", raw)
+    raw = re.sub(r"(?is)^### Progress\b[^\n]*\n(?:→[^\n]*\n)+(?=\n---|\n### |\Z)", "→ Running checks…\n\n", raw, count=1)
+    parts = re.split(r"(```[\s\S]*?```)", raw)
+    out: list[str] = []
+    for seg in parts:
+        if seg.startswith("```"):
+            out.append(seg)
+            continue
+        lines: list[str] = []
+        for ln in seg.splitlines():
+            st = ln.strip()
+            if not st:
+                lines.append("")
+                continue
+            low = ln.lower()
+            if any(b in low for b in _PRECISE_DROP_SUBSTRINGS):
+                continue
+            if assume_cli and any(b in low for b in _CLI_ASSUME_DROP_SUBSTRINGS):
+                continue
+            lines.append(ln)
+        chunk = "\n".join(lines)
+        chunk = re.sub(r"\n{3,}", "\n\n", chunk).strip()
+        out.append(chunk)
+    rebuilt: list[str] = []
+    for seg in out:
+        if seg.startswith("```"):
+            rebuilt.append(seg)
+        elif seg.strip():
+            rebuilt.append(seg.strip())
+    merged = "\n\n".join(rebuilt)
+    merged = re.sub(r"\n{3,}", "\n\n", merged).strip()
+    if len(merged) < 8:
+        return body
+    return merged
+
+
 __all__ = [
     "apply_focus_discipline_to_operator_execution_text",
     "apply_operator_zero_nag_surface",
+    "apply_precise_operator_response",
     "extract_focused_intent",
+    "operator_precise_short_enabled",
     "strip_unrelated_providers_from_reply",
 ]

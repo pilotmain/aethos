@@ -35,6 +35,8 @@ def maybe_prepend_operator_orchestration_intro(
     s = get_settings()
     if not bool(getattr(s, "nexa_operator_mode", False)):
         return body
+    if bool(getattr(s, "nexa_operator_precise_short_responses", True)):
+        return body
     if not bool(getattr(s, "nexa_operator_proactive_intro", True)):
         return body
     b = (body or "").strip()
