@@ -248,6 +248,28 @@ class NexaGateway:
         if _uid and raw_t:
             _cctx_st = get_or_create_context(db, _uid)
             _snap_st = build_context_snapshot(_cctx_st, db)
+            from app.services.operator_execution_loop import try_operator_execution
+
+            op_st = try_operator_execution(
+                user_text=raw_t,
+                gctx=gctx,
+                db=db,
+                snapshot=_snap_st,
+            )
+            gctx.extras["operator_execution_attempted"] = True
+            if op_st.handled:
+                return {
+                    "mode": "chat",
+                    "text": gateway_finalize_chat_reply(op_st.text, source="operator_execution"),
+                    "operator_execution": True,
+                    "operator_provider": op_st.provider,
+                    "ran": op_st.ran,
+                    "verified": op_st.verified,
+                    "blocker": op_st.blocker,
+                    "operator_evidence": op_st.evidence,
+                    "intent": "operator_execution",
+                }
+
             loop_st = try_execute_or_explain(
                 user_text=raw_t,
                 gctx=gctx,
@@ -291,6 +313,7 @@ class NexaGateway:
         db: Session,
     ) -> dict[str, Any]:
         """Telegram: structured routing already ran; run approval NL + full chat."""
+        gctx.extras["operator_execution_attempted"] = False
         approval = self._try_approval_route(gctx, text, db)
         if approval is not None:
             return approval
@@ -339,6 +362,29 @@ class NexaGateway:
 
         cctx = get_or_create_context(db, uid)
         snap = build_context_snapshot(cctx, db)
+
+        if not gctx.extras.get("operator_execution_attempted"):
+            from app.services.operator_execution_loop import try_operator_execution
+
+            op_fb = try_operator_execution(
+                user_text=raw,
+                gctx=gctx,
+                db=db,
+                snapshot=snap,
+            )
+            gctx.extras["operator_execution_attempted"] = True
+            if op_fb.handled:
+                return {
+                    "mode": "chat",
+                    "text": gateway_finalize_chat_reply(op_fb.text, source="operator_execution"),
+                    "operator_execution": True,
+                    "operator_provider": op_fb.provider,
+                    "ran": op_fb.ran,
+                    "verified": op_fb.verified,
+                    "blocker": op_fb.blocker,
+                    "operator_evidence": op_fb.evidence,
+                    "intent": "operator_execution",
+                }
 
         if not gctx.extras.get("execution_loop_attempted"):
             from app.services.execution_loop import try_execute_or_explain
@@ -501,6 +547,7 @@ class NexaGateway:
     ) -> dict[str, Any]:
         gctx.extras.setdefault("via_gateway", True)
         gctx.extras["execution_loop_attempted"] = False
+        gctx.extras["operator_execution_attempted"] = False
         _log.debug(
             "gateway admission channel=%s permission_keys=%s extra_keys=%s",
             gctx.channel,
@@ -529,6 +576,28 @@ class NexaGateway:
 
             _cctx_loop = get_or_create_context(db_inner, uid_gate)
             _snap_loop = build_context_snapshot(_cctx_loop, db_inner)
+            from app.services.operator_execution_loop import try_operator_execution
+
+            op_result = try_operator_execution(
+                user_text=raw_gate,
+                gctx=gctx,
+                db=db_inner,
+                snapshot=_snap_loop,
+            )
+            gctx.extras["operator_execution_attempted"] = True
+            if op_result.handled:
+                return {
+                    "mode": "chat",
+                    "text": gateway_finalize_chat_reply(op_result.text, source="operator_execution"),
+                    "operator_execution": True,
+                    "operator_provider": op_result.provider,
+                    "ran": op_result.ran,
+                    "verified": op_result.verified,
+                    "blocker": op_result.blocker,
+                    "operator_evidence": op_result.evidence,
+                    "intent": "operator_execution",
+                }
+
             loop_result = try_execute_or_explain(
                 user_text=raw_gate,
                 gctx=gctx,
