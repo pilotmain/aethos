@@ -9,6 +9,7 @@ import { MissionBuilderPanel } from "@/components/mission-control/MissionBuilder
 import { MissionControlLiveEvents } from "@/components/mission-control/MissionControlLiveEvents";
 import { MissionControlMaintenanceControls } from "@/components/mission-control/MissionControlMaintenanceControls";
 import { MissionGraph } from "@/components/mission-control/MissionGraph";
+import { NexaForgePanel } from "@/components/mission-control/NexaForgePanel";
 import type { IntegrityAlertRow } from "@/components/mission-control/IntegrityAlertBanner";
 import { IntegrityAlertBanner } from "@/components/mission-control/IntegrityAlertBanner";
 import { PrivacyTrustPanel } from "@/components/mission-control/PrivacyTrustPanel";
@@ -22,6 +23,7 @@ import {
   type FeedbackRow,
   type AutonomyStats,
 } from "@/components/mission-control/AutonomyIntelligencePanel";
+import { ActiveWorkPanel } from "@/components/mission-control/ActiveWorkPanel";
 import { Phase22Overview } from "@/components/mission-control/Phase22Overview";
 import { ProductionIntelPanel } from "@/components/mission-control/ProductionIntelPanel";
 import { ProviderTransparencyPanel } from "@/components/mission-control/ProviderTransparencyPanel";
@@ -282,6 +284,16 @@ export function MissionControlLayout() {
           ) : null}
 
           {configured ? (
+            <ActiveWorkPanel
+              shellLight={shellLight}
+              devRuns={snap?.dev_runs}
+              missionTasks={snap?.tasks}
+              autonomousTasks={snap?.autonomous_tasks as Record<string, unknown>[] | undefined}
+              loading={snapLoading && configured}
+            />
+          ) : null}
+
+          {configured ? (
             <SafetyAndReadinessPanel
               shellLight={shellLight}
               data={snap?.safety_readiness as Record<string, unknown> | undefined}
@@ -345,6 +357,8 @@ export function MissionControlLayout() {
           </div>
 
           <ArtifactsPanel />
+
+          {configured ? <NexaForgePanel shellLight={shellLight} /> : null}
         </main>
 
         <aside className="hidden w-full max-w-sm shrink-0 lg:block lg:w-80 lg:max-w-none">

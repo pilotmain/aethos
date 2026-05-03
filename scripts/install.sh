@@ -25,6 +25,7 @@ NONINTERACTIVE="${NEXA_NONINTERACTIVE:-0}"
 SKIP_KEYS=0
 NO_CLONE=0
 DRY_RUN=0
+GUIDED=0
 BOOTSTRAP_EXTRA=()
 
 usage() {
@@ -35,14 +36,49 @@ usage() {
   echo "  --no-docker     Pass through to nexa_bootstrap.py (venv + .env only)."
   echo "  --start MODE    none | docker | host (overrides auto detection)."
   echo "  --skip-keys     Do not prompt for API keys / Telegram token."
+  echo "  --guided        Short interactive tour: OS hint, local-first, Telegram, then bootstrap."
   echo "  --dry-run       Print planned steps only (no bootstrap, no starts)."
   echo "  -h, --help      This help."
+}
+
+run_guided_intro() {
+  echo ""
+  echo "=== Nexa guided setup (Phase 55) ==="
+  echo "Detected: $(uname -s) $(uname -m)"
+  echo ""
+  echo "Tip: for privacy-first runs, set NEXA_LOCAL_FIRST=true in .env (see docs/INSTALL.md)."
+  echo ""
+  if [ -t 0 ] && [ "${NONINTERACTIVE:-0}" != "1" ]; then
+    read -r -p "Add Telegram bot token during key prompts? [y/N] " tg_yn || true
+    case "${tg_yn:-}" in
+      y|Y|yes|YES)
+        echo "(You will be asked for TELEGRAM_BOT_TOKEN in the optional keys step.)"
+        ;;
+      *)
+        echo "(Skipping Telegram — you can add TELEGRAM_BOT_TOKEN to .env later.)"
+        ;;
+    esac
+    read -r -p "Open docs/SETUP.md when finished? [y/N] " doc_yn || true
+    case "${doc_yn:-}" in
+      y|Y|yes|YES)
+        if command -v open >/dev/null 2>&1; then
+          GUIDED_OPEN_DOC=1
+        elif command -v xdg-open >/dev/null 2>&1; then
+          GUIDED_OPEN_DOC=1
+        else
+          echo "Open ${ROOT}/docs/SETUP.md in your editor when ready."
+        fi
+        ;;
+    esac
+  fi
+  echo ""
 }
 
 while [ "${1:-}" != "" ]; do
   case "$1" in
     --no-clone) NO_CLONE=1; shift ;;
     --dry-run) DRY_RUN=1; shift ;;
+    --guided) GUIDED=1; shift ;;
     --no-docker) BOOTSTRAP_EXTRA+=(--no-docker); shift ;;
     --start)
       START_MODE="${2:-}"
@@ -93,6 +129,10 @@ fi
 mkdir -p "${ROOT}/.runtime"
 
 echo "=== Nexa install — repo: ${ROOT} ==="
+
+if [ "$GUIDED" = 1 ]; then
+  run_guided_intro
+fi
 
 echo "Running: python3 scripts/nexa_bootstrap.py ..."
 python3 scripts/nexa_bootstrap.py "${BOOTSTRAP_EXTRA[@]}"
@@ -262,3 +302,11 @@ esac
 
 echo ""
 echo "Done. Docs: ${ROOT}/docs/SETUP.md"
+
+if [ "${GUIDED_OPEN_DOC:-}" = 1 ] && [ -f "${ROOT}/docs/SETUP.md" ]; then
+  if command -v open >/dev/null 2>&1; then
+    open "${ROOT}/docs/SETUP.md" 2>/dev/null || true
+  elif command -v xdg-open >/dev/null 2>&1; then
+    xdg-open "${ROOT}/docs/SETUP.md" 2>/dev/null || true
+  fi
+fi

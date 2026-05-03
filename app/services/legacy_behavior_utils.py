@@ -33,6 +33,13 @@ from app.services.telegram_onboarding import capability_response, clarify_genera
 
 logger = logging.getLogger(__name__)
 
+
+def _decisive_skip_plan_followup(intent: str) -> bool:
+    from app.services.execution_trigger import should_use_decisive_dev_tone
+
+    return should_use_decisive_dev_tone(intent)
+
+
 QUESTION_BACK_SUFFIX = "\n\nWhich one feels easiest to start right now?"
 
 BEHAVIORS = [
@@ -427,11 +434,21 @@ def build_response(
     base = append_microstep_if_useful(base, composed)
     if composed["should_ask_followup"] and composed["followup_question"]:
         base += "\n\n" + composed["followup_question"]
-    elif behavior in ("reduce", "assist") and context.has_active_plan:
+    elif (
+        behavior in ("reduce", "assist")
+        and context.has_active_plan
+        and not _decisive_skip_plan_followup(intent)
+    ):
         base += QUESTION_BACK_SUFFIX
     base = apply_tone(base, context.memory)
     nxt = composed.get("next_steps")
-    if should_append_next_steps(behavior, (text or "").strip(), nxt, assistant_text=base):
+    if should_append_next_steps(
+        behavior,
+        (text or "").strip(),
+        nxt,
+        assistant_text=base,
+        intent=intent,
+    ):
         block = format_next_steps_block(nxt or [])
         if block:
             base = f"{base}\n\n{block}"

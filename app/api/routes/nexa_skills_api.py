@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
 from app.core.security import get_valid_web_user_id
+from app.services.skills.marketplace import can_install_entry, load_catalog
 from app.services.skills.registry import list_skill_docs, save_skill_doc
 
 router = APIRouter(prefix="/skills", tags=["skills"])
@@ -24,6 +25,23 @@ class SkillDefinition(BaseModel):
 @router.get("")
 def skills_list(app_user_id: str = Depends(get_valid_web_user_id)) -> dict[str, Any]:
     return {"ok": True, "skills": list_skill_docs(app_user_id)}
+
+
+@router.get("/marketplace/catalog")
+def skills_marketplace_catalog(app_user_id: str = Depends(get_valid_web_user_id)) -> dict[str, Any]:
+    """NexaForge soft launch — local JSON catalog + safe-preview install eligibility."""
+    entries = load_catalog()
+    preview: list[dict[str, Any]] = []
+    for meta in entries:
+        ok, errs = can_install_entry(meta)
+        preview.append(
+            {
+                **meta,
+                "install_preview_ok": ok,
+                "install_preview_errors": errs,
+            }
+        )
+    return {"ok": True, "catalog": preview}
 
 
 @router.post("")

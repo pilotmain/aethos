@@ -3,7 +3,9 @@ from datetime import UTC, date, datetime, timedelta
 
 from sqlalchemy.orm import Session
 
+from app.core.config import get_settings
 from app.models import Plan, Task
+from app.services.memory.memory_index import MemoryIndex
 from app.repositories.task_repo import TaskRepository
 from app.schemas.task import TaskCreate
 from app.services.checkin_service import CheckInService
@@ -57,7 +59,26 @@ class OrchestratorService:
             }
         user = self.users.get_or_create(db, user_id)
         prefs = self.memory.get_preferences(db, user_id)
-        extracted = self.llm.extract_tasks(text=text, now=datetime.now(UTC).replace(tzinfo=None))
+        text_for_llm = text
+        if get_settings().nexa_memory_layer_enabled and (text or "").strip():
+            hits = MemoryIndex().semantic_search(user_id, (text or "").strip()[:2000], limit=8)
+            if hits:
+                mem_lines: list[str] = []
+                for e in hits:
+                    t = str(e.get("title") or "").strip()
+                    p = str(e.get("preview") or "").strip()[:400]
+                    if t or p:
+                        mem_lines.append(f"- {t}\n  {p}".strip())
+                if mem_lines:
+                    text_for_llm = (
+                        "[Relevant memory]\n"
+                        + "\n".join(mem_lines)
+                        + "\n\n[Brain dump]\n"
+                        + (text or "").strip()
+                    )[:50_000]
+        extracted = self.llm.extract_tasks(
+            text=text_for_llm, now=datetime.now(UTC).replace(tzinfo=None)
+        )
         prov = []
         if self.llm.client:
             prov.append("anthropic")

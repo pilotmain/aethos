@@ -58,7 +58,7 @@ def test_maybe_auto_dev_prepends_intro(monkeypatch: pytest.MonkeyPatch, nexa_run
     monkeypatch.setattr("app.services.intent_classifier.get_intent", lambda *a, **k: "stuck_dev")
     monkeypatch.setattr("app.services.execution_policy.assess_interaction_risk", lambda t: "low")
     monkeypatch.setattr(
-        "app.services.execution_policy.should_auto_execute_dev_turn",
+        "app.services.execution_trigger.should_auto_execute_dev",
         lambda *a, **k: True,
     )
     monkeypatch.setattr("app.services.dev_runtime.service.run_dev_mission", _fake_run)

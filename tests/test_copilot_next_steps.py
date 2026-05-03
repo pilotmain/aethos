@@ -46,6 +46,12 @@ def test_should_append_respects_trivial() -> None:
         ["@marketing …", "x"],
     )
     assert not should_append_next_steps("nudge", "help", ["a", "b"])
+    assert not should_append_next_steps(
+        "assist",
+        "my tests are failing in CI",
+        ["run pytest", "check logs"],
+        intent="analysis",
+    )
 
 
 def test_validate_composed_accepts_next_steps() -> None:

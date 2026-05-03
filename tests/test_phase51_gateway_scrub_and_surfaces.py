@@ -57,6 +57,11 @@ def test_scrub_legacy_rest_hint() -> None:
 
 @pytest.mark.usefixtures("nexa_runtime_clean")
 def test_gateway_web_stuck_dev_includes_phase50_appendix(monkeypatch: pytest.MonkeyPatch, db_session) -> None:
+    # Phase 55 defaults to decisive dev chat (no appendix); re-enable merge for this regression.
+    monkeypatch.setattr(
+        "app.services.execution_trigger.should_merge_phase50_assist",
+        lambda intent: True,
+    )
     monkeypatch.setattr(
         NexaGateway,
         "_maybe_auto_dev_investigation",

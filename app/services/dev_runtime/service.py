@@ -48,6 +48,8 @@ from app.services.dev_runtime.failure_intel import (
 )
 from app.services.dev_runtime.workspace import get_workspace
 from app.services.events.envelope import emit_runtime_event
+from app.core.config import get_settings
+from app.services.memory.memory_index import MemoryIndex
 from app.services.mission_control.nexa_next_state import update_state
 
 # Phase 41–46 — documented pipeline surface (→ PR when GitHub enabled)
@@ -87,6 +89,32 @@ def _coding_result_to_dict(ca: CodingAgentResult) -> dict[str, Any]:
         "commands_run": list(ca.commands_run or []),
         "test_result": ca.test_result,
     }
+
+
+def _merge_dev_memory_notes(user_id: str, goal: str, memory_notes: str | None) -> str | None:
+    """Blend caller notes with semantic memory hits for dev planning (Phase 55)."""
+    base = (memory_notes or "").strip()
+    if not get_settings().nexa_memory_layer_enabled:
+        return base[:4000] if base else None
+    q = (goal or "").strip()[:2000]
+    if not q:
+        return base[:4000] if base else None
+    hits = MemoryIndex().semantic_search(user_id, q, limit=8)
+    if not hits:
+        return base[:4000] if base else None
+    lines: list[str] = []
+    for e in hits:
+        title = str(e.get("title") or "").strip()
+        prev = str(e.get("preview") or "").strip()[:500]
+        blob = f"- {title}\n{prev}".strip() if title or prev else ""
+        if blob:
+            lines.append(blob)
+    if not lines:
+        return base[:4000] if base else None
+    chunk = "\n\n".join(lines)[:3000]
+    if base:
+        return (base + "\n\n[Memory recall]\n" + chunk)[:4000]
+    return ("[Memory recall]\n" + chunk)[:4000]
 
 
 def run_dev_mission(
@@ -169,7 +197,7 @@ def run_dev_mission(
         san = repo_sanity_check(repo)
         if not san.get("ok"):
             raise RuntimeError(f"repo_sanity_failed:{san.get('error')}")
-        mem_trim = (memory_notes or "").strip()[:4000] or None
+        mem_trim = _merge_dev_memory_notes(user_id, mission_goal, memory_notes)
         plan = build_dev_plan(goal, ws, memory_notes=mem_trim)
         run.plan_json = plan
         db.commit()

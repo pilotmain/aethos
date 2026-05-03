@@ -31,8 +31,11 @@ def gateway_finalize_chat_reply(text: str, *, source: str = "gateway") -> str:
 
 def _merge_phase50_assist(reply: str, raw: str, intent: str) -> str:
     """Append deterministic dev appendix with context hints for action-first routing (Phase 50)."""
+    from app.services.execution_trigger import should_merge_phase50_assist
     from app.services.instant_dev_assist import format_assist_appendix
 
+    if not should_merge_phase50_assist(intent):
+        return reply
     app = format_assist_appendix(user_text=raw, intent=intent)
     if not app:
         return reply
@@ -79,9 +82,9 @@ class NexaGateway:
         from app.services.dev_runtime.workspace import list_workspaces
         from app.services.execution_policy import (
             assess_interaction_risk,
-            should_auto_execute_dev_turn,
             should_prompt_for_dev_workspace_help,
         )
+        from app.services.execution_trigger import should_auto_execute_dev
         from app.services.intent_classifier import get_intent
 
         uid = (gctx.user_id or "").strip()
@@ -123,7 +126,7 @@ class NexaGateway:
 
         if len(rows) != 1:
             return None
-        if not should_auto_execute_dev_turn(intent, risk, len(rows), raw):
+        if not should_auto_execute_dev(raw, intent, workspace_count=len(rows)):
             return None
         goal = raw[:8000]
         mem_notes = mem_sum[:4000] if mem_sum else None
@@ -247,6 +250,11 @@ class NexaGateway:
         channel = gctx.channel
         raw = (text or "").strip()
         from app.services.memory.context_injection import build_memory_context_for_turn
+
+        if not gctx.extras.get("gateway_structured_ran"):
+            auto_early = self._maybe_auto_dev_investigation(gctx, text, db)
+            if auto_early is not None:
+                return auto_early
 
         if not (isinstance(gctx.memory, dict) and gctx.memory.get("used")):
             turn_mem = build_memory_context_for_turn(uid, raw, purpose="chat")
@@ -400,6 +408,7 @@ class NexaGateway:
             approval = self._try_approval_route(gctx, text, db_inner)
             if approval is not None:
                 return approval
+            gctx.extras["gateway_structured_ran"] = True
             return self.handle_full_chat(gctx, text, db=db_inner)
 
         if db is not None:

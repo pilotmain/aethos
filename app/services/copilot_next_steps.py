@@ -93,7 +93,13 @@ def should_append_next_steps(
     next_steps: list[str] | None,
     *,
     assistant_text: str | None = None,
+    intent: str | None = None,
 ) -> bool:
+    if intent:
+        from app.services.execution_trigger import should_use_decisive_dev_tone
+
+        if should_use_decisive_dev_tone(intent):
+            return False
     if not next_steps:
         return False
     if behavior not in ("clarify", "assist", "reduce"):
