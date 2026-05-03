@@ -13,8 +13,10 @@ pip install nexa-ext-pro
 From a checkout of `nexa-next` (editable):
 
 ```bash
-pip install -e ./nexa-ext-pro
+python -m pip install -e ./nexa-ext-pro
 ```
+
+Use `python -m pip` so installs land in the same interpreter as your Nexa API/bot (some shells alias `pip` to another virtualenv).
 
 Set `NEXA_LICENSE_KEY` and `NEXA_LICENSE_PUBLIC_KEY_PEM` to a signed token whose `features` list includes the capability you need (see Nexa licensing docs).
 
