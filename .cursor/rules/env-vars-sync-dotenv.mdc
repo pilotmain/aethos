@@ -1,28 +1,21 @@
 ---
-description: Whenever new Settings/env vars are added to the codebase, sync them into .env.example and .env
+description: Mandatory — when adding Settings/env vars, sync .env.example AND local .env in the same task
 alwaysApply: true
 ---
 
-# Environment variables — keep `.env` and `.env.example` in sync
+# Environment variables — keep `.env.example` and `.env` in sync (mandatory)
 
-Whenever you **add or rename** a configuration value that is loaded from the environment (typically new fields on `Settings` in `app/core/config.py`, or new documented `os.environ` reads used in production paths):
+Whenever you **add or rename** a configuration value loaded from the environment (new fields on `Settings` in `app/core/config.py`, or production-path `os.environ` reads):
 
-## 1. `.env.example` (committed template)
+## Same task — do all of this before marking the work done
 
-- Add a line for each new variable (or update the existing line if renamed).
-- Use a **safe default** when the app’s `Settings` default is public and non-secret (e.g. `false`, `8000`, `15`).
-- For **secrets, API keys, tokens, passwords, or host-specific URLs**, use an **empty value** and a short comment explaining what to fill in (never commit real secrets).
-- Group new vars in a short commented section (e.g. `# Phase N — …`) when it helps.
+1. **`.env.example`** (committed template) — add or update the line(s), with comments. Use safe public defaults where the app defaults are non-secret. Secrets: `KEY=` empty.
 
-## 2. `.env` (local; gitignored)
+2. **`.env`** (repo root, gitignored) — **always add the same variable(s)** when `.env` exists locally. This is **not optional**: operators rely on the local file staying aligned with new flags.
+   - Use the **same safe default** as in `.env.example` when it is not secret.
+   - For values **only the operator provides** (API keys, tokens, personal paths): `VAR=` **empty** plus a short `# Set yourself — …` comment.
+   - **Never** delete or overwrite unrelated existing keys. **Never** duplicate keys: if `VAR` already exists, only update when renaming/fixing as part of the task.
 
-- If `.env` exists in the repo root, **merge in** the same new variables:
-  - Prefer the **same safe default** as in `.env.example` when it is not secret.
-  - If the value **requires the user** (API key, token, personal path), add `VAR=` **empty** (or leave unset only if the file uses a pattern where omission is clearer) and a **one-line comment** such as `# Set yourself — …`.
-- **Do not** remove or overwrite existing user-filled values. **Do not** duplicate keys: if `VAR` already exists, update only when you intentionally rename or fix it as part of the task.
+3. **Verification** — `grep` the new env name in `.env.example` and `.env` to catch typos vs Pydantic’s env name (`nexa_*` → `NEXA_*`).
 
-## 3. Verification
-
-- After edits, a quick `grep` for the new field name across `.env.example` (and `.env` if touched) avoids typos vs `Settings` attribute → env name mapping (Pydantic `NEXA_*` / `UPPER_SNAKE`).
-
-This rule applies to **any task** that introduces new env-driven configuration, not only large phases.
+This applies to **every** task that introduces env-driven configuration, including small flags and one-off features.
