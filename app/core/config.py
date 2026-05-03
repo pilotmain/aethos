@@ -306,6 +306,8 @@ class Settings(BaseSettings):
     # Host executor: allowlisted local actions via local_tool jobs + user approval (local_tool_worker).
     # When false, host-executor jobs fail fast on the worker. No effect on the API process unless it enqueues jobs.
     nexa_host_executor_enabled: bool = False
+    # Phase 58 — after external-exec prefs, run bounded `railway` + `git status` on registered workspace (never deploy).
+    nexa_external_execution_runner_enabled: bool = True
     # Default cwd and path base for file_read / file_write / git_* (repo root by default).
     host_executor_work_root: str = Field(default_factory=lambda: str(_PROJECT_ROOT))
     host_executor_timeout_seconds: int = 120

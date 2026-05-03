@@ -290,8 +290,25 @@ def try_resume_external_execution_turn(
         return {"mode": "chat", "text": reply, "intent": "external_execution_continue"}
 
     reply = format_followup_acknowledgment(collected, db=db, user_id=uid)
+    inv_block = ""
+    try:
+        from app.services.external_execution_runner import (
+            format_investigation_for_chat,
+            run_bounded_railway_repo_investigation,
+        )
+
+        inv = run_bounded_railway_repo_investigation(db, uid, collected)
+        inv_block = format_investigation_for_chat(inv)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("external_execution.runner_failed uid=%s err=%s", uid, exc)
+        inv_block = f"_Could not run bounded investigation on this host: {exc}_"
+
+    full_reply = reply
+    if (inv_block or "").strip():
+        full_reply = f"{reply}\n\n---\n\n{inv_block.strip()}"
+
     _finalize_fragment_after_ack(db, cctx, collected)
-    return {"mode": "chat", "text": reply, "intent": "external_execution_continue"}
+    return {"mode": "chat", "text": full_reply, "intent": "external_execution_continue"}
 
 
 __all__ = [
