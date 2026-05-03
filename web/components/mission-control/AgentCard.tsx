@@ -2,15 +2,12 @@
 
 import { motion } from "framer-motion";
 
-const STATUS_RING: Record<string, string> = {
-  queued: "border-zinc-600",
-  pending: "border-zinc-600",
-  running: "border-orange-500/80 shadow-[0_0_12px_rgba(249,115,22,0.25)]",
-  completed: "border-emerald-600/60",
-  failed: "border-red-500/70",
-  blocked: "border-amber-500/60",
-  cancelled: "border-zinc-700",
-};
+import {
+  agentExecutionRing,
+  executionBadge,
+  executionHint,
+  type ExecutionState,
+} from "@/lib/mission-control/executionPresentation";
 
 function truncate(s: string, max: number): string {
   const t = s.trim();
@@ -29,6 +26,8 @@ export type AgentCardProps = {
   active?: boolean;
   /** Subtle emphasis on the current execution path (Phase 14). */
   pathHighlight?: boolean;
+  /** P0 execution truth — only ``verified`` uses success/green styling. */
+  execution_state?: ExecutionState | string | null;
   className?: string;
 };
 
@@ -43,15 +42,18 @@ export function AgentCard({
   nodeId,
   active,
   pathHighlight,
+  execution_state,
   className = "",
 }: AgentCardProps) {
   const st = (status || "unknown").toLowerCase();
-  const ring = STATUS_RING[st] ?? "border-zinc-700";
+  const ring = agentExecutionRing(status, execution_state);
   const pulse = st === "running";
+  const badge = executionBadge(status, execution_state);
+  const hint = executionHint(status, execution_state);
   const activeRing = active ? " ring-2 ring-violet-500/70 ring-offset-2 ring-offset-zinc-950" : "";
   const pathRing =
     pathHighlight && !active
-      ? " shadow-[0_0_0_1px_rgba(52,211,153,0.35)] bg-emerald-950/15"
+      ? " shadow-[0_0_0_1px_rgba(139,92,246,0.35)] bg-violet-950/15"
       : "";
 
   return (
@@ -68,10 +70,13 @@ export function AgentCard({
             <div className="truncate font-mono text-[11px] text-zinc-500">@{handle}</div>
           ) : null}
         </div>
-        <span className="shrink-0 rounded bg-zinc-900/90 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-400">
-          {st}
+        <span
+          className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${badge.pillClass}`}
+        >
+          {badge.label}
         </span>
       </div>
+      {hint ? <p className="mt-1 text-[10px] leading-snug text-amber-200/80">{hint}</p> : null}
       {nodeId ? <div className="mt-1 truncate font-mono text-[10px] text-zinc-600">{nodeId}</div> : null}
       <div className="mt-2 border-t border-zinc-800/80 pt-2 text-[11px] leading-snug text-zinc-400">
         <span className="text-zinc-600">Last output — </span>

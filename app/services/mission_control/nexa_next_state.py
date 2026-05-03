@@ -455,6 +455,54 @@ def build_execution_snapshot(
             }
             for t in task_rows
         ]
+        from app.services.external_execution_access import assess_external_execution_access, should_gate_external_execution
+        from app.services.hosted_service_mission_gate import hosted_service_mission_blocked
+        from app.services.mission_control.execution_state import (
+            derive_mission_execution_state,
+            derive_task_execution_state,
+            task_execution_verified,
+        )
+
+        # Mission flags first — per-task execution_state needs external/access context.
+        for m in missions_out:
+            it = str(m.get("input_text") or "")
+            m["is_external_execution"] = hosted_service_mission_blocked(it)
+            if user_id:
+                acc = assess_external_execution_access(db, user_id)
+                m["requires_access"] = should_gate_external_execution(it, acc)
+            else:
+                m["requires_access"] = False
+
+        mission_by_id = {str(x.get("id") or ""): x for x in missions_out}
+
+        for t in tasks_out:
+            ev = task_execution_verified(t.get("output"))
+            t["execution_verified"] = ev
+            mid = str(t.get("mission_id") or "")
+            mm = mission_by_id.get(mid) or {}
+            t["execution_state"] = derive_task_execution_state(
+                {
+                    **t,
+                    "execution_verified": ev,
+                    "is_external_execution": mm.get("is_external_execution"),
+                    "requires_access": mm.get("requires_access"),
+                }
+            )
+
+        by_mid_mc: dict[str, list[dict[str, Any]]] = defaultdict(list)
+        for t in tasks_out:
+            by_mid_mc[str(t.get("mission_id") or "")].append(t)
+
+        for m in missions_out:
+            mid = str(m.get("id") or "")
+            ts = by_mid_mc.get(mid, [])
+            st_m = str(m.get("status") or "").lower()
+            if st_m == "completed" and ts:
+                m["execution_verified"] = all(bool(x.get("execution_verified")) for x in ts)
+            else:
+                m["execution_verified"] = False
+            m["execution_state"] = derive_mission_execution_state(m, ts)
+
         art_rows = list(
             db.scalars(
                 select(NexaArtifact)

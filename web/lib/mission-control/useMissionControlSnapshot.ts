@@ -20,6 +20,16 @@ export type MissionControlSnapshot = {
     agent_handle?: string;
     status?: string;
     duration_ms?: number | null;
+    execution_verified?: boolean;
+    execution_state?:
+      | "verified"
+      | "diagnostic_only"
+      | "access_required"
+      | "not_executed"
+      | "completed_unverified"
+      | "unknown";
+    is_external_execution?: boolean;
+    requires_access?: boolean;
   }>;
   privacy_indicator?: PrivacyIndicator;
   provider_transparency?: Record<string, unknown>;

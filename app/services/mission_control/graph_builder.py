@@ -57,6 +57,8 @@ def build_graph(state: dict[str, Any]) -> dict[str, Any]:
                     "status": str(task.get("status") or "unknown"),
                     "handle": handle,
                     "mission_id": mission_id,
+                    "execution_verified": task.get("execution_verified"),
+                    "execution_state": task.get("execution_state"),
                 }
             )
 
@@ -113,6 +115,8 @@ def _graph_cache_key(state: dict[str, Any]) -> str:
                 "agent_handle": (t or {}).get("agent_handle"),
                 "status": (t or {}).get("status"),
                 "depends_on": (t or {}).get("depends_on"),
+                "execution_verified": (t or {}).get("execution_verified"),
+                "execution_state": (t or {}).get("execution_state"),
             }
             for t in (state.get("tasks") or [])
             if isinstance(t, dict)

@@ -21,6 +21,8 @@ type GraphNode = {
   status: string;
   handle?: string;
   mission_id?: string;
+  execution_verified?: boolean | null;
+  execution_state?: string | null;
 };
 
 type GraphEdge = { from: string; to: string };
@@ -52,6 +54,7 @@ type TaskRow = {
   agent_handle?: string;
   output?: unknown;
   status?: string;
+  execution_state?: string | null;
 };
 
 function formatTaskOutput(output: unknown): string {
@@ -67,9 +70,11 @@ function formatTaskOutput(output: unknown): string {
 function deriveTasks(st: Record<string, unknown> | null): {
   outputs: Record<string, string>;
   running: Set<string>;
+  executionStateByNode: Record<string, string | undefined>;
 } {
   const outputs: Record<string, string> = {};
   const running = new Set<string>();
+  const executionStateByNode: Record<string, string | undefined> = {};
   const tasks = Array.isArray(st?.tasks) ? (st.tasks as TaskRow[]) : [];
   for (const t of tasks) {
     const mid = String(t.mission_id || "").trim();
@@ -78,8 +83,10 @@ function deriveTasks(st: Record<string, unknown> | null): {
     const id = `${mid}:${h}`;
     outputs[id] = formatTaskOutput(t.output);
     if (String(t.status || "").toLowerCase() === "running") running.add(id);
+    const es = t.execution_state;
+    if (typeof es === "string" && es.trim()) executionStateByNode[id] = es.trim();
   }
-  return { outputs, running };
+  return { outputs, running, executionStateByNode };
 }
 
 /**
@@ -120,7 +127,7 @@ export function MissionGraph() {
       }
     : { nodes: [], edges: [] };
 
-  const { outputs, running } = deriveTasks(getMissionState());
+  const { outputs, running, executionStateByNode } = deriveTasks(getMissionState());
 
   const pathNodes = ancestorNodes(graph.edges, running);
 
@@ -170,6 +177,10 @@ export function MissionGraph() {
             lastOutput={outputs[n.id] ?? null}
             active={running.has(n.id)}
             pathHighlight={pathNodes.has(n.id) && !running.has(n.id)}
+            execution_state={
+              (typeof n.execution_state === "string" && n.execution_state ? n.execution_state : undefined) ??
+              executionStateByNode[n.id]
+            }
           />
         ))}
       </div>
@@ -183,7 +194,7 @@ export function MissionGraph() {
               return (
                 <li
                   key={`${e.from}-${e.to}-${i}`}
-                  className={`transition-colors duration-300 ${onPath ? "text-emerald-300/90" : ""}`}
+                  className={`transition-colors duration-300 ${onPath ? "text-violet-300/90" : ""}`}
                 >
                   {e.from} <span className="text-zinc-600">→</span> {e.to}
                 </li>
