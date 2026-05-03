@@ -12,6 +12,7 @@ from typing import Any
 
 from app.core.config import get_settings
 from app.services.agent_runtime.chat_tools import detect_valid_bounded_mission
+from app.services.execution_truth_guard import apply_execution_truth_disclaimer
 
 # User message hints they expect durable orchestration / assignments.
 _RE_USER_TRACKED = re.compile(
@@ -251,5 +252,8 @@ def sanitize_execution_and_assignment_reply(
             )
         if reply_claims_assignment_without_evidence(out):
             out = out + _TRACKING_NOTE
+
+    if getattr(get_settings(), "nexa_execution_truth_guard_enabled", True):
+        out = apply_execution_truth_disclaimer(user_text or "", out, guard_enabled=True)
 
     return out

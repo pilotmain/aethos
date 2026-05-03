@@ -393,6 +393,8 @@ class Settings(BaseSettings):
     nexa_workspace_intel_root: str = ""
     nexa_workspace_intel_default_token_budget: int = 1500
     nexa_workspace_intel_hard_token_budget: int = 3000
+    # Infra / deployment — prepend honesty banner when chat implies verified cloud work without proof.
+    nexa_execution_truth_guard_enabled: bool = True
     nexa_local_first: bool = False
     nexa_ollama_base_url: str | None = None
     # Phase 39 — local Ollama when NEXA_LOCAL_FIRST routes tools away from remote APIs

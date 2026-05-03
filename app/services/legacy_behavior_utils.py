@@ -317,6 +317,10 @@ def build_response(
     routing_agent_key: str | None = None,
     response_kind: str | None = None,
 ) -> str:
+    from app.services.execution_truth_state import reset_execution_truth_counters
+
+    reset_execution_truth_counters()
+
     from app.services.copilot_next_steps import (
         format_next_steps_block,
         should_append_next_steps,

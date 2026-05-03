@@ -610,6 +610,10 @@ def call_provider(request: ProviderRequest) -> ProviderResponse:
         block_reason=None,
     )
 
+    from app.services.execution_truth_state import note_non_stub_provider_success
+
+    note_non_stub_provider_success(provider=effective_provider)
+
     return ProviderResponse(
         ok=True,
         provider=effective_provider,

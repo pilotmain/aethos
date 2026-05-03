@@ -14,6 +14,8 @@ export type SafetyReadiness = {
   voice_transcribe_provider?: string;
   skill_package_count?: number;
   install_hint?: string;
+  execution_truth_guard_enabled?: boolean;
+  execution_truth_policy?: string;
 };
 
 function badge(shellLight: boolean, ok: boolean, label: string) {
@@ -68,6 +70,24 @@ export function SafetyAndReadinessPanel({
         Sandbox mode, vault, egress policy, token budget, and local skill packages.
       </p>
       <dl className="mt-3 grid gap-2 text-xs sm:grid-cols-2">
+        <div className="sm:col-span-2 rounded-md border border-zinc-200/80 bg-zinc-50/80 p-2 dark:border-zinc-700/80 dark:bg-zinc-900/40">
+          <dt className={shellLight ? "text-zinc-600" : "text-zinc-400"}>Execution integrity</dt>
+          <dd className={`mt-1 font-mono text-[11px] leading-snug ${shellLight ? "text-zinc-800" : "text-zinc-200"}`}>
+            {d.execution_truth_guard_enabled !== false ? (
+              <>
+                Guard on — replies may describe steps; they are{" "}
+                <strong>not</strong> verified cloud deploys unless a tool/dev run completed.
+              </>
+            ) : (
+              <>Truth guard disabled in settings.</>
+            )}
+          </dd>
+          {typeof d.execution_truth_policy === "string" && d.execution_truth_policy.trim() ? (
+            <p className={`mt-1 text-[10px] ${shellLight ? "text-zinc-500" : "text-zinc-500"}`}>
+              {d.execution_truth_policy}
+            </p>
+          ) : null}
+        </div>
         <div className="flex flex-wrap items-center gap-2">
           <dt className={shellLight ? "text-zinc-500" : "text-zinc-500"}>Sandbox</dt>
           <dd className="font-mono text-[11px]">{d.sandbox_mode ?? "—"}</dd>

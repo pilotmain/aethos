@@ -8,3 +8,5 @@ def test_safety_readiness_snapshot_keys() -> None:
     assert "sandbox_mode" in snap
     assert "network_egress_mode" in snap
     assert "skill_package_count" in snap
+    assert "execution_truth_guard_enabled" in snap
+    assert "execution_truth_policy" in snap

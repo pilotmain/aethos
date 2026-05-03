@@ -20,6 +20,11 @@ def build_safety_readiness_snapshot(*, user_id: str | None = None) -> dict[str, 
     )
     docker_ok = shutil.which("docker") is not None
     return {
+        "execution_truth_guard_enabled": bool(getattr(s, "nexa_execution_truth_guard_enabled", True)),
+        "execution_truth_policy": (
+            "Assistant text does not prove live cloud changes unless a recorded tool run or "
+            "dev mission completed with verification."
+        ),
         "sandbox_mode": str(getattr(s, "nexa_sandbox_mode", "process") or "process"),
         "sandbox_docker_available": docker_ok,
         "credential_vault_provider": str(getattr(s, "nexa_credential_vault_provider", "local") or "local"),
