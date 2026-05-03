@@ -101,6 +101,17 @@ def _score_signals(intent_text: str, urls: list[str]) -> dict[str, float]:
         if hit:
             scores[prov] = max(scores.get(prov, 0.0), w)
 
+    url_blob = " ".join(urls).lower()
+    railway_url = "railway.app" in url_blob or "railway.com" in url_blob
+    if not railway_url:
+        # Keyword-only Railway must not beat explicit Vercel/GitHub URLs without a Railway host.
+        if any(x in url_blob for x in ("vercel.com", ".vercel.app", "vercel.app")):
+            scores["railway"] = min(scores.get("railway", 0.0), 0.22)
+            scores["vercel"] = max(scores.get("vercel", 0.0), 1.02)
+        if "github.com" in url_blob or "git@github.com:" in url_blob:
+            scores["railway"] = min(scores.get("railway", 0.0), 0.22)
+            scores["github"] = max(scores.get("github", 0.0), 1.02)
+
     return scores
 
 
@@ -164,6 +175,16 @@ def apply_router_to_operator_hints(text: str, hints: dict[str, bool]) -> dict[st
             out[prov] = True
         if r_s > 0 and scores.get(prov, 0.0) >= r_s + 0.04:
             out["railway"] = False
+
+    url_joined = " ".join(urls).lower()
+    rw_url = "railway.app" in url_joined or "railway.com" in url_joined
+    if not rw_url:
+        if any(x in url_joined for x in ("vercel.com", ".vercel.app", "vercel.app")):
+            out["railway"] = False
+            out["vercel"] = True
+        if "github.com" in url_joined or "git@github.com:" in url_joined:
+            out["railway"] = False
+            out["github"] = True
     return out
 
 
@@ -179,6 +200,13 @@ def should_skip_railway_bounded_path(user_text: str) -> bool:
         return False
     tl = raw.lower()
     urls = extract_urls_from_text(raw)
+    url_joined = " ".join(urls).lower()
+    rw_url = "railway.app" in url_joined or "railway.com" in url_joined
+    if not rw_url:
+        if any(x in url_joined for x in ("vercel.com", ".vercel.app", "vercel.app")):
+            return True
+        if "github.com" in url_joined or "git@github.com:" in url_joined:
+            return True
     scores = _score_signals(raw, urls)
     r_s = scores.get("railway", 0.0)
     if re.search(r"\brailway\b", tl) and r_s >= 0.88:

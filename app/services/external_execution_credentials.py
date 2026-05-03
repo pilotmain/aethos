@@ -1,7 +1,10 @@
 """
 Secure Railway / hosted credential guidance — chat pastes are not worker env (P0).
 
-Never persist secrets from user text; only record structured hints on ConversationContext.
+Optional in-process session reuse (``nexa_operator_session_credential_reuse``) holds pasted tokens in
+RAM for allowlisted CLI subprocess env only — never logs values, never echoes them.
+
+Structured hints on ConversationContext remain non-secret metadata only.
 """
 
 from __future__ import annotations
@@ -21,6 +24,26 @@ logger = logging.getLogger(__name__)
 
 _CREDENTIAL_HINT_SUBKEY = "external_credential_hint"
 
+_TOKEN_EXTRACT_PATTERNS = (
+    re.compile(r"(?i)\b(?:RAILWAY_TOKEN|RAILWAY_API_TOKEN)\s*=\s*([^\s\r\n]+)"),
+    re.compile(r"(?i)\brailway\s+(?:api\s*)?(?:token|key)\s*=\s*([^\s\r\n]+)"),
+)
+
+
+def extract_railway_token_from_user_text(text: str) -> str | None:
+    """Parse a Railway token value from user text — never log the return value."""
+    raw = (text or "").strip()
+    if not raw or len(raw) > 50_000:
+        return None
+    for pat in _TOKEN_EXTRACT_PATTERNS:
+        m = pat.search(raw)
+        if not m:
+            continue
+        val = (m.group(1) or "").strip().strip("\"'")
+        if 8 <= len(val) <= 4096:
+            return val
+    return None
+
 
 def format_secure_external_credential_setup(service: str, *, repo_root: str | None = None) -> str:
     """
@@ -34,8 +57,15 @@ def format_secure_external_credential_setup(service: str, *, repo_root: str | No
 
         s = get_settings()
         zn = bool(getattr(s, "nexa_operator_mode", False)) and bool(getattr(s, "nexa_operator_zero_nag", True))
+        reuse = bool(getattr(s, "nexa_operator_session_credential_reuse", True))
     except Exception:  # noqa: BLE001
         zn = False
+        reuse = False
+    if zn and reuse and svc == "railway":
+        return (
+            "**Key received** — stored in this API process for your session only (never echoed). "
+            "Running bounded checks next…"
+        )
     if zn and svc == "railway":
         return (
             "**Key received.** Proceeding with the next steps on this worker.\n\n"
@@ -124,8 +154,9 @@ def maybe_handle_external_credential_chat_turn(
     user_text: str,
 ) -> dict[str, Any] | None:
     """
-    Railway/API secret pasted in chat → secure setup reply (no LLM, no secret storage).
+    Railway/API secret pasted in chat → secure setup reply (no LLM).
 
+    May store token in RAM when ``nexa_operator_session_credential_reuse`` is enabled (never logged).
     Returns a gateway payload dict or None.
     """
     raw = (user_text or "").strip()
@@ -133,7 +164,27 @@ def maybe_handle_external_credential_chat_turn(
         return None
 
     uid = (user_id or "").strip()
-    logger.info("external_credential.setup_reply user_id=%s (redacted)", uid or None)
+    try:
+        from app.core.config import get_settings
+
+        reuse_enabled = bool(getattr(get_settings(), "nexa_operator_session_credential_reuse", True))
+        operator_on = bool(getattr(get_settings(), "nexa_operator_mode", False))
+    except Exception:  # noqa: BLE001
+        reuse_enabled = False
+        operator_on = False
+
+    extracted = extract_railway_token_from_user_text(raw)
+    stored = False
+    if reuse_enabled and uid and extracted:
+        from app.services.credential_session_store import credential_session_store
+
+        credential_session_store.store(uid, "railway", "railway_token", extracted)
+        stored = True
+    logger.info(
+        "external_credential.setup_reply user_id=%s stored_session=%s (redacted)",
+        uid or None,
+        stored,
+    )
 
     from app.services.credential_session_store import mark_credential_guidance_shown, was_credential_guidance_recent
 
@@ -159,15 +210,19 @@ def maybe_handle_external_credential_chat_turn(
     if uid:
         mark_credential_guidance_shown(uid, _tag)
 
-    return {
+    out: dict[str, Any] = {
         "mode": "chat",
         "text": format_secure_external_credential_setup("railway"),
         "intent": "external_execution_continue",
         "credential_setup": True,
     }
+    if stored and reuse_enabled and operator_on:
+        out["chain_bounded_runner_after_store"] = True
+    return out
 
 
 __all__ = [
+    "extract_railway_token_from_user_text",
     "format_railway_token_not_loaded_retry_reply",
     "format_secure_external_credential_setup",
     "maybe_handle_external_credential_chat_turn",

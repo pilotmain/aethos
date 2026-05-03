@@ -7,6 +7,7 @@ entirely from this module + runner (fixed templates).
 
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 from typing import Any
@@ -25,6 +26,7 @@ def run_railway_cli(
     *,
     cwd: str | None = None,
     timeout: float = 45.0,
+    extra_env: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     """
     Run ``railway <subcommand> ...`` with optional cwd (linked project dir).
@@ -72,6 +74,9 @@ def run_railway_cli(
         }
 
     argv = ["railway", sub, *extras]
+    env = os.environ.copy()
+    if extra_env:
+        env.update(extra_env)
     try:
         proc = subprocess.run(
             argv,
@@ -79,7 +84,7 @@ def run_railway_cli(
             capture_output=True,
             text=True,
             timeout=timeout,
-            env=None,
+            env=env,
         )
         return {
             "ok": proc.returncode == 0,

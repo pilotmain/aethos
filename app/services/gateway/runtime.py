@@ -59,6 +59,46 @@ def gateway_finalize_operator_or_execution_reply(
     return gateway_finalize_chat_reply(layered, source=layer)
 
 
+def merge_credential_payload_with_chained_execution(
+    db: Session,
+    gctx: GatewayContext,
+    *,
+    uid: str,
+    raw_user_text: str,
+    payload: dict[str, Any],
+) -> dict[str, Any]:
+    """Append bounded Railway investigation output after a stored credential ack (same HTTP request)."""
+    if not payload.get("chain_bounded_runner_after_store"):
+        return payload
+    from app.services.conversation_context_service import build_context_snapshot, get_or_create_context
+    from app.services.execution_loop import try_execute_or_explain
+
+    _cctx = get_or_create_context(db, uid)
+    _snap = build_context_snapshot(_cctx, db)
+    loop_st = try_execute_or_explain(
+        user_text="retry external execution",
+        gctx=gctx,
+        db=db,
+        snapshot=_snap,
+    )
+    if not loop_st.handled:
+        payload.pop("chain_bounded_runner_after_store", None)
+        return payload
+    ack = (payload.get("text") or "").rstrip()
+    combined = (ack + "\n\n---\n\n" + (loop_st.text or "").strip()).strip()
+    payload["text"] = gateway_finalize_operator_or_execution_reply(
+        combined,
+        user_text=raw_user_text,
+        layer="execution_loop",
+    )
+    payload["execution_loop"] = True
+    payload["ran"] = loop_st.ran
+    payload["verified"] = loop_st.verified
+    payload["blocker"] = loop_st.blocker
+    payload.pop("chain_bounded_runner_after_store", None)
+    return payload
+
+
 def _merge_phase50_assist(reply: str, raw: str, intent: str) -> str:
     """Append deterministic dev appendix with context hints for action-first routing (Phase 50)."""
     from app.services.execution_trigger import should_merge_phase50_assist
@@ -275,7 +315,13 @@ class NexaGateway:
 
         cred_st = maybe_handle_external_credential_chat_turn(db, user_id=_uid, user_text=raw_t)
         if cred_st is not None:
-            return cred_st
+            return merge_credential_payload_with_chained_execution(
+                db,
+                gctx,
+                uid=_uid,
+                raw_user_text=raw_t,
+                payload=cred_st,
+            )
 
         if _uid and raw_t:
             _cctx_st = get_or_create_context(db, _uid)
@@ -398,7 +444,13 @@ class NexaGateway:
 
         cred_full = maybe_handle_external_credential_chat_turn(db, user_id=(uid or "").strip(), user_text=raw)
         if cred_full is not None:
-            return cred_full
+            return merge_credential_payload_with_chained_execution(
+                db,
+                gctx,
+                uid=(uid or "").strip(),
+                raw_user_text=raw,
+                payload=cred_full,
+            )
 
         cctx = get_or_create_context(db, uid)
         snap = build_context_snapshot(cctx, db)
@@ -620,7 +672,13 @@ class NexaGateway:
                 user_text=raw_gate,
             )
             if cred_gate is not None:
-                return cred_gate
+                return merge_credential_payload_with_chained_execution(
+                    db_inner,
+                    gctx,
+                    uid=uid_gate,
+                    raw_user_text=raw_gate,
+                    payload=cred_gate,
+                )
 
             _cctx_loop = get_or_create_context(db_inner, uid_gate)
             _snap_loop = build_context_snapshot(_cctx_loop, db_inner)

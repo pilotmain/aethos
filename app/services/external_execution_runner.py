@@ -138,10 +138,24 @@ def run_bounded_railway_repo_investigation(
 
     out = BoundedRailwayInvestigation()
     _step("Starting investigation")
+    sess_tok: str | None = None
+    try:
+        if uid and bool(getattr(get_settings(), "nexa_operator_session_credential_reuse", True)):
+            from app.services.credential_session_store import get_session_railway_token
+
+            sess_tok = get_session_railway_token(uid)
+    except Exception:  # noqa: BLE001
+        sess_tok = None
     out.railway_env_token_present = bool(
         (os.environ.get("RAILWAY_TOKEN") or "").strip()
         or (os.environ.get("RAILWAY_API_TOKEN") or "").strip()
+        or (sess_tok or "").strip()
     )
+    _railway_extra_env: dict[str, str] | None = None
+    if sess_tok and not (os.environ.get("RAILWAY_TOKEN") or "").strip() and not (
+        os.environ.get("RAILWAY_API_TOKEN") or ""
+    ).strip():
+        _railway_extra_env = {"RAILWAY_TOKEN": sess_tok}
     _step("Checking Railway auth")
     blocked, note = _deploy_policy_note(collected)
     out.deploy_blocked_by_policy = blocked
@@ -210,15 +224,39 @@ def run_bounded_railway_repo_investigation(
     elif not out.railway_cli_present:
         out.railway_whoami = {"ok": False, "stdout": "", "stderr": "", "error": "railway_cli_missing"}
     else:
-        out.railway_whoami = run_railway_cli("whoami", [], cwd=cwd, timeout=30.0)
+        out.railway_whoami = run_railway_cli(
+            "whoami",
+            [],
+            cwd=cwd,
+            timeout=30.0,
+            extra_env=_railway_extra_env,
+        )
 
     if out.railway_cli_present:
         _step("Running railway status")
-        out.railway_status = run_railway_cli("status", [], cwd=cwd, timeout=40.0)
+        out.railway_status = run_railway_cli(
+            "status",
+            [],
+            cwd=cwd,
+            timeout=40.0,
+            extra_env=_railway_extra_env,
+        )
         _step("Fetching logs")
-        logs = run_railway_cli("logs", ["--tail", "100"], cwd=cwd, timeout=55.0)
+        logs = run_railway_cli(
+            "logs",
+            ["--tail", "100"],
+            cwd=cwd,
+            timeout=55.0,
+            extra_env=_railway_extra_env,
+        )
         if isinstance(logs, dict) and not logs.get("ok") and logs.get("error") != "railway_cli_missing":
-            logs = run_railway_cli("logs", [], cwd=cwd, timeout=55.0)
+            logs = run_railway_cli(
+                "logs",
+                [],
+                cwd=cwd,
+                timeout=55.0,
+                extra_env=_railway_extra_env,
+            )
         out.railway_logs = logs
 
     _step("Inspecting repo")

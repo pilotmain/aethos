@@ -404,6 +404,8 @@ class Settings(BaseSettings):
     nexa_operator_autonomous_external_flow: bool = False
     # When operator mode is on, shorten access/Railway copy, bypass external-exec access gate, and scrub nag phrases from operator/execution replies.
     nexa_operator_zero_nag: bool = True
+    # Hold pasted provider tokens in this API process RAM only (bounded CLI auth); never logged or echoed.
+    nexa_operator_session_credential_reuse: bool = True
     # Structured workspace intelligence (file-based context under data/nexa_workspace/).
     nexa_workspace_intelligence_enabled: bool = False
     nexa_workspace_intel_root: str = ""
