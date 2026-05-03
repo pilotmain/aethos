@@ -21,6 +21,19 @@ def test_parse_followup_preferences_detects_cli_and_report_first() -> None:
     assert out.get("deploy_mode") == "report_then_approve"
 
 
+def test_parse_followup_preferences_cli_locally() -> None:
+    out = parse_followup_preferences("CLI locally", {})
+    assert out.get("auth_method") == "local_cli"
+    assert out.get("permission_to_probe") is True
+    assert out.get("deploy_mode") == "report_then_approve"
+
+
+def test_parse_followup_try_yourself_implies_local_cli() -> None:
+    out = parse_followup_preferences("try yourself", {})
+    assert out.get("permission_to_probe") is True
+    assert out.get("auth_method") == "local_cli"
+
+
 def test_try_resume_returns_ack_when_awaiting(db_session, monkeypatch) -> None:
     monkeypatch.setattr(
         "app.services.external_execution_session._workspace_repo_hint",
@@ -65,7 +78,7 @@ def test_gateway_handle_full_chat_resumes_external_execution(db_session, monkeyp
     gw = NexaGateway()
     payload = gw.handle_full_chat(gctx, "CLI locally. Report first before deploy.", db=db_session)
     assert (payload.get("text") or "").strip()
-    assert payload.get("intent") == "external_execution_continue"
+    assert payload.get("intent") in ("external_execution_continue", "execution_loop")
 
 
 def test_mark_awaiting_sets_fragment(db_session) -> None:

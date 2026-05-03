@@ -156,7 +156,15 @@ def try_execute_or_explain(
         t = _ensure_progress_prefix(t, ["Starting investigation", "Running read-only Railway diagnostics"])
         return ExecutionLoopResult(handled=True, text=t, ran=True, progress=[])
 
-    if not _execution_loop_applies(raw, snap):
+    applies = _execution_loop_applies(raw, snap)
+    if not applies:
+        from app.core.config import get_settings
+
+        if bool(getattr(get_settings(), "nexa_operator_mode", False)):
+            from app.services.intent_classifier import looks_like_external_execution
+
+            applies = looks_like_external_execution(raw)
+    if not applies:
         return ExecutionLoopResult(handled=False, text="")
 
     # --- Bounded runner path (same safe commands as external_execution_runner)

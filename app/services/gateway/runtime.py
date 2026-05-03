@@ -17,7 +17,10 @@ _log = get_logger("gateway")
 
 def gateway_finalize_chat_reply(text: str, *, source: str = "gateway") -> str:
     """Normalize user-visible copy: log legacy markers, then scrub when needed (Phase 51)."""
+    from app.services.external_execution_session import scrub_operator_idle_loop_phrases
     from app.services.identity.scrub import gateway_identity_needs_scrub, scrub_legacy_identity_text
+
+    text = scrub_operator_idle_loop_phrases(text)
 
     if gateway_identity_needs_scrub(text):
         _log.warning(
@@ -137,7 +140,11 @@ class NexaGateway:
             return None
 
         settings = get_settings()
-        if conf == "medium" and bool(getattr(settings, "nexa_execution_confirm_medium", True)):
+        if (
+            conf == "medium"
+            and bool(getattr(settings, "nexa_execution_confirm_medium", True))
+            and not bool(getattr(settings, "nexa_operator_mode", False))
+        ):
             return {
                 "mode": "chat",
                 "text": (

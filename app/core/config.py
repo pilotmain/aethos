@@ -390,6 +390,8 @@ class Settings(BaseSettings):
     nexa_decisive_dev_chat: bool = True
     # Phase 56 — when execution confidence is “medium”, ask before auto-running a dev mission.
     nexa_execution_confirm_medium: bool = True
+    # P0 — autonomous operator: act on clear intent; fewer confirmations (pairs with external_execution_session).
+    nexa_operator_mode: bool = False
     # Structured workspace intelligence (file-based context under data/nexa_workspace/).
     nexa_workspace_intelligence_enabled: bool = False
     nexa_workspace_intel_root: str = ""

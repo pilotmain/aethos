@@ -123,6 +123,14 @@ def parse_followup_preferences(text: str, collected: dict[str, Any]) -> dict[str
     if any(m in t for m in probe_markers):
         out["permission_to_probe"] = True
 
+    # Short grants → local CLI + probe (P0 operator-style; avoids “confirm again” loops)
+    if re.search(r"\bcli\s+locally\b", t) or t.strip() in {"cli locally", "cli locally."}:
+        out["auth_method"] = "local_cli"
+        out["permission_to_probe"] = True
+    if re.search(r"\buse\s+cli\b", t) and "don't use cli" not in t and "do not use cli" not in t:
+        out["auth_method"] = "local_cli"
+        out["permission_to_probe"] = True
+
     if re.search(r"\balready\s+authenticated\b", t) or "already logged in" in t:
         out["auth_method"] = "local_cli"
     if re.search(r"\blog(?:ged)?\s+in\s+locally\b", t) or ("logged in" in t and "local" in t):
@@ -162,6 +170,10 @@ def parse_followup_preferences(text: str, collected: dict[str, Any]) -> dict[str
 
     if out.get("permission_to_probe") and out.get("auth_method") and not out.get("deploy_mode"):
         out["deploy_mode"] = "report_then_approve"
+
+    # Granting probe permission in this flow means “use the CLI on this worker”.
+    if out.get("permission_to_probe") and not out.get("auth_method"):
+        out["auth_method"] = "local_cli"
 
     return out
 
@@ -307,7 +319,27 @@ def try_resume_external_execution_turn(
             "intent": "external_execution_continue",
         }
 
-    collected = parse_followup_preferences(raw, dict(frag.get("collected") or {}))
+    prior_fc = dict(frag.get("collected") or {})
+    collected = parse_followup_preferences(raw, prior_fc)
+    # Never drop prefs already saved on the fragment (stops repeated confirmation).
+    if prior_fc.get("auth_method") and not collected.get("auth_method"):
+        collected["auth_method"] = prior_fc["auth_method"]
+    if prior_fc.get("deploy_mode") and not collected.get("deploy_mode"):
+        collected["deploy_mode"] = prior_fc["deploy_mode"]
+
+    try:
+        from app.core.config import get_settings
+
+        op = bool(getattr(get_settings(), "nexa_operator_mode", False))
+    except Exception:  # noqa: BLE001
+        op = False
+
+    if op:
+        if collected.get("permission_to_probe") and not collected.get("auth_method"):
+            collected["auth_method"] = "local_cli"
+        if collected.get("auth_method") and not collected.get("deploy_mode"):
+            collected.setdefault("deploy_mode", "report_then_approve")
+
     has_auth = bool(collected.get("auth_method"))
     has_deploy = bool(collected.get("deploy_mode"))
 
@@ -351,8 +383,22 @@ def try_resume_external_execution_turn(
     return {"mode": "chat", "text": full_reply, "intent": "external_execution_continue"}
 
 
+def _cli_locally_grants_probe(text: str) -> bool:
+    """Short replies like “CLI locally” grant local CLI + probe without extra confirmation."""
+    t = (text or "").strip().lower()
+    if re.search(r"\bcli\s+locally\b", t):
+        return True
+    if t.strip() in {"cli locally", "cli locally."}:
+        return True
+    if re.search(r"\buse\s+cli\b", t) and len(t) < 160:
+        return True
+    return False
+
+
 def _user_claims_local_cli_auth(text: str) -> bool:
     t = (text or "").strip().lower()
+    if _cli_locally_grants_probe(text):
+        return True
     if re.search(r"\balready\s+authenticated\b", t):
         return True
     if "already logged in" in t:
@@ -454,7 +500,7 @@ def maybe_start_external_probe_from_turn(
 
     if not _user_claims_local_cli_auth(raw):
         return None
-    if not _user_requests_diagnostic_probe(raw):
+    if not _user_requests_diagnostic_probe(raw) and not _cli_locally_grants_probe(raw):
         return None
     if not text_has_railway_execution_context(raw, conversation_snapshot):
         return None
@@ -482,6 +528,26 @@ def maybe_start_external_probe_from_turn(
     if (inv_block or "").strip():
         full_reply = f"{intro}\n\n---\n\n{inv_block.strip()}"
     return {"mode": "chat", "text": full_reply, "intent": "external_execution_continue"}
+
+
+def scrub_operator_idle_loop_phrases(text: str) -> str:
+    """
+    When ``NEXA_OPERATOR_MODE`` is set, tone down repeated confirmation nags in replies.
+
+    Does not remove credential/setup blocks that contain tokens or compose instructions.
+    """
+    if not (text or "").strip():
+        return text
+    try:
+        from app.core.config import get_settings
+
+        if not bool(getattr(get_settings(), "nexa_operator_mode", False)):
+            return text
+    except Exception:  # noqa: BLE001
+        return text
+
+    out = re.sub(r"(?is)(\bconfirm again\b[\s\n]*){4,}", "Confirm once from the output above if needed.\n\n", text)
+    return out
 
 
 def scrub_generic_login_refusal_when_local_auth_claimed(reply: str, user_text: str) -> str:
@@ -702,5 +768,6 @@ __all__ = [
     "clear_external_execution_fragment",
     "parse_followup_preferences",
     "scrub_generic_login_refusal_when_local_auth_claimed",
+    "scrub_operator_idle_loop_phrases",
     "format_probe_readonly_intro",
 ]
