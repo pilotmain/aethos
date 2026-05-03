@@ -128,4 +128,177 @@ def test_gateway_prepends_intro_for_operator_reply(db_session, monkeypatch: pyte
     out = NexaGateway().handle_message(gctx, "tail Vercel logs for my-app.vercel.app", db=db_session)
     text = out.get("text") or ""
     assert "**Understood.**" in text
-    assert "### Progress" in text
+    assert "### Live progress" in text
+    assert text.count("**Understood.**") == 1
+
+
+@pytest.mark.usefixtures("nexa_runtime_clean")
+def test_gateway_no_intro_when_proactive_disabled(db_session, monkeypatch: pytest.MonkeyPatch) -> None:
+    _op_settings = __import__("types").SimpleNamespace(
+        nexa_operator_mode=True,
+        nexa_operator_proactive_intro=False,
+    )
+    monkeypatch.setattr(
+        "app.services.operator_execution_loop.get_settings",
+        lambda: _op_settings,
+    )
+    monkeypatch.setattr(
+        "app.services.operator_orchestration_intro.get_settings",
+        lambda: _op_settings,
+    )
+    monkeypatch.setattr(
+        "app.services.operator_runners.vercel.run_vercel_operator_readonly",
+        lambda cwd=None: (
+            "### Progress\n\n→ x\n",
+            {},
+            [],
+            True,
+        ),
+    )
+    uid = f"op_{uuid.uuid4().hex[:8]}"
+    gctx = GatewayContext(user_id=uid, channel="web")
+    out = NexaGateway().handle_message(gctx, "tail Vercel logs for my-app.vercel.app", db=db_session)
+    assert "**Understood.**" not in (out.get("text") or "")
+
+
+@pytest.mark.usefixtures("nexa_runtime_clean")
+def test_pulse_reread_each_operator_turn(tmp_path, db_session, monkeypatch: pytest.MonkeyPatch) -> None:
+    (tmp_path / "PULSE.md").write_text("alpha-standing-order", encoding="utf-8")
+    monkeypatch.setattr(
+        "app.services.operator_execution_loop.get_settings",
+        lambda: __import__("types").SimpleNamespace(nexa_operator_mode=True),
+    )
+    monkeypatch.setattr(
+        "app.services.operator_runners.vercel.run_vercel_operator_readonly",
+        lambda cwd=None: (
+            "vercel body",
+            {},
+            [],
+            True,
+        ),
+    )
+    uid = f"op_{uuid.uuid4().hex[:8]}"
+    gctx = GatewayContext(user_id=uid, channel="web")
+    r1 = try_operator_execution(
+        user_text=f"check Vercel Workspace: {tmp_path}",
+        gctx=gctx,
+        db=db_session,
+        snapshot={},
+    )
+    assert "alpha-standing-order" in r1.text
+    (tmp_path / "PULSE.md").write_text("beta-replaced-content", encoding="utf-8")
+    r2 = try_operator_execution(
+        user_text=f"check Vercel Workspace: {tmp_path}",
+        gctx=gctx,
+        db=db_session,
+        snapshot={},
+    )
+    assert "beta-replaced-content" in r2.text
+    assert "alpha-standing-order" not in r2.text
+
+
+@pytest.mark.usefixtures("nexa_runtime_clean")
+def test_live_progress_ordering_before_pulse_body(tmp_path, db_session, monkeypatch: pytest.MonkeyPatch) -> None:
+    (tmp_path / "PULSE.md").write_text("orders", encoding="utf-8")
+    monkeypatch.setattr(
+        "app.services.operator_execution_loop.get_settings",
+        lambda: __import__("types").SimpleNamespace(nexa_operator_mode=True),
+    )
+    monkeypatch.setattr(
+        "app.services.operator_runners.vercel.run_vercel_operator_readonly",
+        lambda cwd=None: (
+            "vercel section",
+            {},
+            [],
+            True,
+        ),
+    )
+    uid = f"op_{uuid.uuid4().hex[:8]}"
+    gctx = GatewayContext(user_id=uid, channel="web")
+    r = try_operator_execution(
+        user_text=f"Vercel status Workspace: {tmp_path}",
+        gctx=gctx,
+        db=db_session,
+        snapshot={},
+    )
+    t = r.text
+    assert "### Live progress" in t
+    lp = t.index("### Live progress")
+    pulse_read = t.index("Reading `PULSE.md`")
+    standing = t.index("### Standing orders (PULSE.md)")
+    assert lp < pulse_read < standing
+
+
+@pytest.mark.usefixtures("nexa_runtime_clean")
+def test_pulse_skips_deploy_when_forbidden(tmp_path, db_session, monkeypatch: pytest.MonkeyPatch) -> None:
+    (tmp_path / "PULSE.md").write_text("Do not deploy to production without CFO sign-off.\n", encoding="utf-8")
+    monkeypatch.setattr(
+        "app.services.operator_execution_loop.get_settings",
+        lambda: __import__("types").SimpleNamespace(nexa_operator_mode=True),
+    )
+    monkeypatch.setattr(
+        "app.services.operator_runners.vercel.run_vercel_operator_readonly",
+        lambda cwd=None: (
+            "vercel",
+            {},
+            [],
+            True,
+        ),
+    )
+    deploy_calls: list[str] = []
+
+    def _no_deploy(*_a, **_k):
+        deploy_calls.append("deploy")
+        return {"ok": True, "stdout": ""}
+
+    monkeypatch.setattr("app.services.operator_execution_actions.deploy_vercel", _no_deploy)
+    uid = f"op_{uuid.uuid4().hex[:8]}"
+    gctx = GatewayContext(user_id=uid, channel="web")
+    r = try_operator_execution(
+        user_text=f"deploy to Vercel Workspace: {tmp_path}",
+        gctx=gctx,
+        db=db_session,
+        snapshot={},
+    )
+    assert r.handled is True
+    assert deploy_calls == []
+    assert "Skipped" in r.text or "skipped" in r.text.lower()
+    assert r.verified is True
+
+
+@pytest.mark.usefixtures("nexa_runtime_clean")
+def test_no_mission_complete_footer_when_verify_not_healthy(tmp_path, db_session, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        "app.services.operator_execution_loop.get_settings",
+        lambda: __import__("types").SimpleNamespace(nexa_operator_mode=True),
+    )
+    monkeypatch.setattr(
+        "app.services.operator_runners.vercel.run_vercel_operator_readonly",
+        lambda cwd=None: (
+            "vercel",
+            {},
+            [],
+            True,
+        ),
+    )
+
+    def _fake_deploy(*_a, **_k):
+        return {"ok": True, "returncode": 0, "stdout": "deployed", "stderr": ""}
+
+    def _fake_verify(*_a, **_k):
+        return {"ok": False, "status_code": 502, "url": "https://x.vercel.app", "error": "Bad Gateway"}
+
+    monkeypatch.setattr("app.services.operator_execution_actions.deploy_vercel", _fake_deploy)
+    monkeypatch.setattr("app.services.operator_execution_actions.verify_http_head", _fake_verify)
+
+    uid = f"op_{uuid.uuid4().hex[:8]}"
+    gctx = GatewayContext(user_id=uid, channel="web")
+    msg = (
+        f"deploy to Vercel and verify production Workspace: {tmp_path} "
+        "Production URL: https://x.vercel.app"
+    )
+    r = try_operator_execution(user_text=msg, gctx=gctx, db=db_session, snapshot={})
+    assert r.handled is True
+    assert r.verified is False
+    assert "**Mission complete.**" not in r.text
+    assert "502" in r.text or "failed" in r.text.lower()

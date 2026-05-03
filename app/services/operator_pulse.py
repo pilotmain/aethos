@@ -12,13 +12,17 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-_MAX_BYTES = 12_000
+# ~4k token budget for injection (rough chars; no tokenizer here).
+_MAX_INJECT_CHARS = 12_000
 _DEFAULT_NAMES = ("PULSE.md", "pulse.md")
 
 
 def read_pulse_standing_orders(workspace_root: str | Path | None) -> str | None:
     """
     Return trimmed markdown from ``PULSE.md`` (or ``pulse.md``) under ``workspace_root``.
+
+    **Re-read on every call** — no in-process cache — so edits during a session show up on the
+    next operator turn.
 
     Returns ``None`` if missing, unreadable, or empty.
     """
@@ -43,8 +47,8 @@ def read_pulse_standing_orders(workspace_root: str | Path | None) -> str | None:
         raw = raw.strip()
         if not raw:
             return None
-        if len(raw) > _MAX_BYTES:
-            raw = raw[: _MAX_BYTES - 20] + "\n… (truncated)"
+        if len(raw) > _MAX_INJECT_CHARS:
+            raw = raw[: _MAX_INJECT_CHARS - 20] + "\n… (truncated)"
         return raw
     return None
 
@@ -53,4 +57,27 @@ def format_pulse_section(content: str) -> str:
     return "### Standing orders (PULSE.md)\n\n" + content.strip()
 
 
-__all__ = ["format_pulse_section", "read_pulse_standing_orders"]
+def pulse_requests_no_production_deploy(pulse: str | None) -> bool:
+    """
+    Lightweight standing-order hint: skip production deploy when PULSE clearly forbids it.
+
+    Does not parse natural language deeply — substring guardrails only.
+    """
+    if not (pulse or "").strip():
+        return False
+    pl = pulse.lower()
+    needles = (
+        "do not deploy",
+        "never deploy",
+        "no production deploy",
+        "skip deploy",
+        "do not ship to production",
+    )
+    return any(n in pl for n in needles)
+
+
+__all__ = [
+    "format_pulse_section",
+    "pulse_requests_no_production_deploy",
+    "read_pulse_standing_orders",
+]

@@ -9,7 +9,7 @@ def test_forbid_unverified_softens_deploy_language_when_not_verified() -> None:
     body = "We deployed successfully to production."
     out = forbid_unverified_success_language(verified=False, body=body)
     assert "deployed successfully" in body.lower()
-    assert "diagnostic" in out.lower() or "verified" in out.lower()
+    assert "proof" in out.lower() or "diagnostic" in out.lower() or "verified" in out.lower()
 
 
 def test_forbid_unverified_pass_through_when_verified() -> None:

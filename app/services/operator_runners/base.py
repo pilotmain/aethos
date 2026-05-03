@@ -39,20 +39,43 @@ def detect_provider_hints(text: str) -> dict[str, bool]:
     }
 
 
-def forbid_unverified_success_language(*, verified: bool, body: str) -> str:
+def forbid_unverified_success_language(
+    *,
+    body: str,
+    verified: bool | None = None,
+    strict_verified: bool | None = None,
+) -> str:
     """
-    When no proof exists, soften definitive success words (product truth guard).
+    When strict proof is missing, soften definitive success words (product truth guard).
 
-    Does not strip command output blocks — only adjusts narrative headers if needed.
+    ``strict_verified`` is preferred (deploy + HTTP verify, etc.). If omitted, ``verified``
+    is used for backward compatibility.
     """
-    if verified or not (body or "").strip():
+    ok = strict_verified if strict_verified is not None else verified
+    if ok is None:
+        ok = False
+    if ok or not (body or "").strip():
         return body
     low = body.lower()
-    if any(w in low for w in ("deployed successfully", "healthy now", "fixed and deployed")):
+    risky = (
+        "deployed successfully",
+        "healthy now",
+        "fixed and deployed",
+        "mission complete",
+        "production is healthy",
+        "deployed to production",
+        " successfully deployed",
+    )
+    risky_word = any(w in low for w in risky) or any(
+        w in low for w in (" deployed", " is healthy", "was fixed", "now healthy")
+    )
+    if risky_word:
         return (
             body
             + "\n\n---\n\n"
-            + "_Diagnostic pass only — no deploy/fix verified on this turn without command evidence above._"
+            + "_Claims like “deployed”, “healthy”, or “mission complete” require proof on this stack "
+            + "(e.g. deploy command success **and** a follow-up HTTP verify in the 2xx range). "
+            + "This turn does not meet that bar yet — see evidence above._"
         )
     return body
 

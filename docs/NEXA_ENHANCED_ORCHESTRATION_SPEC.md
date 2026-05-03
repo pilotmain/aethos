@@ -191,6 +191,7 @@ Nexa is “OpenClaw-level magic + better” when:
 
 **Shipped in a bounded slice (code + tests):**
 
+- **Phase 2 (OpenClaw-style chat):** `### Live progress` step lines, strict deploy+verify proof for `verified` / mission footer, PULSE-driven deploy skip, workspace-stripped phase keyword detection (see `docs/NEXA_ENHANCED_ORCHESTRATION_PHASE2.md`).
 - **Proactive gateway copy** when `NEXA_OPERATOR_MODE` is on: first line of operator / execution-loop replies can include a short “Understood / operator-style run” preamble before deterministic output. Toggle with **`NEXA_OPERATOR_PROACTIVE_INTRO`** (default `true`). Implemented in `app/services/operator_orchestration_intro.py` and `gateway_finalize_operator_or_execution_reply` in `app/services/gateway/runtime.py`.
 - **Read-only `PULSE.md` surfacing**: when a workspace root is known for the operator turn, non-empty `PULSE.md` / `pulse.md` text (size-capped) is appended under “Standing orders (PULSE.md)”. Implemented in `app/services/operator_pulse.py` and wired from `try_operator_execution`. This does **not** execute instructions in the file or continue work after the HTTP request ends.
 
