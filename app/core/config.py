@@ -396,6 +396,8 @@ class Settings(BaseSettings):
     nexa_operator_allow_write: bool = False
     nexa_operator_allow_deploy: bool = False
     nexa_operator_auto_retry: bool = False
+    # When operator mode is on, prepend a short “mission accepted” block to operator / execution-loop replies.
+    nexa_operator_proactive_intro: bool = True
     # Structured workspace intelligence (file-based context under data/nexa_workspace/).
     nexa_workspace_intelligence_enabled: bool = False
     nexa_workspace_intel_root: str = ""

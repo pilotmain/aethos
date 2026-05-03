@@ -32,6 +32,23 @@ def gateway_finalize_chat_reply(text: str, *, source: str = "gateway") -> str:
     return text
 
 
+def gateway_finalize_operator_or_execution_reply(
+    body: str,
+    *,
+    user_text: str,
+    layer: str,
+) -> str:
+    """Apply OpenClaw-style operator preamble (when enabled), then identity scrub."""
+    from app.services.operator_orchestration_intro import maybe_prepend_operator_orchestration_intro
+
+    layered = maybe_prepend_operator_orchestration_intro(
+        body,
+        user_text=user_text,
+        orchestration_source=layer,
+    )
+    return gateway_finalize_chat_reply(layered, source=layer)
+
+
 def _merge_phase50_assist(reply: str, raw: str, intent: str) -> str:
     """Append deterministic dev appendix with context hints for action-first routing (Phase 50)."""
     from app.services.execution_trigger import should_merge_phase50_assist
@@ -260,7 +277,11 @@ class NexaGateway:
             if op_st.handled:
                 return {
                     "mode": "chat",
-                    "text": gateway_finalize_chat_reply(op_st.text, source="operator_execution"),
+                    "text": gateway_finalize_operator_or_execution_reply(
+                        op_st.text,
+                        user_text=raw_t,
+                        layer="operator_execution",
+                    ),
                     "operator_execution": True,
                     "operator_provider": op_st.provider,
                     "ran": op_st.ran,
@@ -280,7 +301,11 @@ class NexaGateway:
             if loop_st.handled:
                 return {
                     "mode": "chat",
-                    "text": gateway_finalize_chat_reply(loop_st.text, source="execution_loop"),
+                    "text": gateway_finalize_operator_or_execution_reply(
+                        loop_st.text,
+                        user_text=raw_t,
+                        layer="execution_loop",
+                    ),
                     "execution_loop": True,
                     "ran": loop_st.ran,
                     "blocker": loop_st.blocker,
@@ -376,7 +401,11 @@ class NexaGateway:
             if op_fb.handled:
                 return {
                     "mode": "chat",
-                    "text": gateway_finalize_chat_reply(op_fb.text, source="operator_execution"),
+                    "text": gateway_finalize_operator_or_execution_reply(
+                        op_fb.text,
+                        user_text=raw,
+                        layer="operator_execution",
+                    ),
                     "operator_execution": True,
                     "operator_provider": op_fb.provider,
                     "ran": op_fb.ran,
@@ -399,7 +428,11 @@ class NexaGateway:
             if loop_fb.handled:
                 return {
                     "mode": "chat",
-                    "text": gateway_finalize_chat_reply(loop_fb.text, source="execution_loop"),
+                    "text": gateway_finalize_operator_or_execution_reply(
+                        loop_fb.text,
+                        user_text=raw,
+                        layer="execution_loop",
+                    ),
                     "execution_loop": True,
                     "ran": loop_fb.ran,
                     "blocker": loop_fb.blocker,
@@ -588,7 +621,11 @@ class NexaGateway:
             if op_result.handled:
                 return {
                     "mode": "chat",
-                    "text": gateway_finalize_chat_reply(op_result.text, source="operator_execution"),
+                    "text": gateway_finalize_operator_or_execution_reply(
+                        op_result.text,
+                        user_text=raw_gate,
+                        layer="operator_execution",
+                    ),
                     "operator_execution": True,
                     "operator_provider": op_result.provider,
                     "ran": op_result.ran,
@@ -608,7 +645,11 @@ class NexaGateway:
             if loop_result.handled:
                 return {
                     "mode": "chat",
-                    "text": gateway_finalize_chat_reply(loop_result.text, source="execution_loop"),
+                    "text": gateway_finalize_operator_or_execution_reply(
+                        loop_result.text,
+                        user_text=raw_gate,
+                        layer="execution_loop",
+                    ),
                     "execution_loop": True,
                     "ran": loop_result.ran,
                     "blocker": loop_result.blocker,

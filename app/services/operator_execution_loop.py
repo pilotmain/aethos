@@ -270,6 +270,13 @@ def try_operator_execution(
         return OperatorExecutionResult(handled=False, text="")
 
     merged = "\n\n---\n\n".join(sections)
+
+    from app.services.operator_pulse import format_pulse_section, read_pulse_standing_orders
+
+    pulse = read_pulse_standing_orders(ws_resolved)
+    if pulse:
+        merged = merged + "\n\n---\n\n" + format_pulse_section(pulse)
+
     merged = forbid_unverified_success_language(verified=verified_any, body=merged)
 
     if not any(x in merged for x in ("### Progress", "→ ")):
