@@ -1,0 +1,21 @@
+---
+description: When adding or changing app Settings env-backed fields, document them in .env.example (and local .env placeholders).
+alwaysApply: true
+---
+
+# Environment variables — keep templates in sync with Settings
+
+Whenever you add or rename a field on `app/core/config.py` `Settings` (or another explicit env-driven config), **in the same task**:
+
+1. **`.env.example`** — Add a commented line (or short section) with:
+   - The exact env var name as loaded by Pydantic Settings (typically `SCREAMING_SNAKE` for `nexa_*` fields).
+   - One-line purpose and safe defaults or typical values.
+   - Mark secrets as optional placeholders (`KEY=` only); never commit real secrets.
+
+2. **Developer `.env`** — If the user maintains a local `.env` (gitignored), add matching commented placeholders there too when introducing **new** knobs they need to toggle for the feature (same names as `.env.example`). Do not overwrite existing values.
+
+3. **Cross-reference docs** — If the feature doc lists env vars (e.g. Railway, host executor), those names should match `Settings` / `os.environ` usage in code.
+
+4. **Never** commit real API keys, tokens, or passwords into the repo. Only `.env.example` and commented shells in a local `.env` that is gitignored.
+
+This keeps operator docs, onboarding, and runtime behavior aligned.
