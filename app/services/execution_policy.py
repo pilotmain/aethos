@@ -44,6 +44,29 @@ def contains_destructive_language(text: str) -> bool:
     return assess_interaction_risk(text) == "high"
 
 
+def user_said_do_not_run(text: str) -> bool:
+    """True when the user explicitly opted out of automated execution."""
+    tl = (text or "").lower()
+    for phrase in (
+        "don't run",
+        "do not run",
+        "dont run",
+        "don't execute",
+        "do not execute",
+        "just explain",
+        "only explain",
+        "no execution",
+        "don't change code",
+        "do not change",
+        "theory only",
+        "do not run anything",
+        "don't run anything",
+    ):
+        if phrase in tl:
+            return True
+    return False
+
+
 def should_auto_run_dev_task(
     intent: str,
     risk: str,
@@ -63,23 +86,19 @@ def should_auto_run_dev_task(
         return False
     if contains_destructive_language(text):
         return False
-    tl = (text or "").lower()
-    for phrase in (
-        "don't run",
-        "do not run",
-        "dont run",
-        "don't execute",
-        "do not execute",
-        "just explain",
-        "only explain",
-        "no execution",
-        "don't change code",
-        "do not change",
-        "theory only",
-    ):
-        if phrase in tl:
-            return False
+    if user_said_do_not_run(text):
+        return False
     return True
+
+
+def should_auto_execute_dev_turn(
+    intent: str,
+    risk: str,
+    workspace_count: int,
+    text: str,
+) -> bool:
+    """Phase 53 alias — same rules as :func:`should_auto_run_dev_task`."""
+    return should_auto_run_dev_task(intent, risk, workspace_count, text)
 
 
 __all__ = [
@@ -87,4 +106,6 @@ __all__ = [
     "contains_destructive_language",
     "should_auto_execute",
     "should_auto_run_dev_task",
+    "should_auto_execute_dev_turn",
+    "user_said_do_not_run",
 ]

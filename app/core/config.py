@@ -172,6 +172,8 @@ class Settings(BaseSettings):
     nexa_reports_dir: str | None = None
     nexa_config_dir: str | None = None
     nexa_memory_dir: str | None = None
+    # Telegram voice notes — transcription pipeline (Phase 53 stub until wired).
+    nexa_voice_enabled: bool = False
     nexa_default_dev_tool: str = "aider"
     nexa_default_dev_mode: str = "autonomous_cli"
 

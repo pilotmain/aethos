@@ -56,6 +56,6 @@ def test_sentence_handle_invalid() -> None:
 def test_intent_fallback_multi_agent(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         "app.services.intent_classifier.classify_intent_llm",
-        lambda msg, conversation_snapshot=None: classify_intent_fallback(msg),
+        lambda msg, conversation_snapshot=None, **_: classify_intent_fallback(msg),
     )
     assert get_intent(MULTI_Q) == "capability_question"

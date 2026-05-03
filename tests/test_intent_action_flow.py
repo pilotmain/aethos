@@ -34,7 +34,7 @@ def test_map_intent_stuck_dev_routes_to_unstick_behavior() -> None:
 def test_get_intent_upgrade_stuck_to_stuck_dev(monkeypatch) -> None:
     monkeypatch.setattr(
         "app.services.intent_classifier.classify_intent_llm",
-        lambda msg, conversation_snapshot=None: {
+        lambda msg, conversation_snapshot=None, **_: {
             "intent": "stuck",
             "confidence": 0.95,
             "reason": "mock",

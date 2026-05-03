@@ -58,6 +58,7 @@ VALID_INTENTS = {
     "followup_reply",
     "stuck",
     "stuck_dev",
+    "analysis",
     "status_update",
     "correction",
     "general_chat",
@@ -304,29 +305,41 @@ def classify_intent_fallback(message: str) -> dict:
 
 
 def classify_intent_llm(
-    message: str, conversation_snapshot: dict | None = None
+    message: str,
+    conversation_snapshot: dict | None = None,
+    *,
+    memory_summary: str | None = None,
 ) -> dict:
     from app.services.llm_key_resolution import get_merged_api_keys
+    from app.services.safe_llm_gateway import sanitize_text
 
     s = get_settings()
     m = get_merged_api_keys()
     if not s.use_real_llm or not m.has_any_key:
         return classify_intent_fallback(message)
 
+    mem_note = ""
+    if (memory_summary or "").strip():
+        mem_note = (
+            "User's stored context (helps disambiguate 'my project', 'the stack', 'same as before'):\n"
+            f"{sanitize_text((memory_summary or '').strip()[:2500])}\n\n"
+        )
+
     user_block = message
     if conversation_snapshot:
         import json
-
-        from app.services.safe_llm_gateway import sanitize_text
 
         try:
             snap = json.dumps(conversation_snapshot, ensure_ascii=False)[:3500]
         except (TypeError, ValueError):
             snap = "{}"
         user_block = (
-            "Recent conversation context (JSON, may be partial):\n"
+            mem_note
+            + "Recent conversation context (JSON, may be partial):\n"
             f"{sanitize_text(snap)}\n\nUser message to classify:\n{message}"
         )
+    elif mem_note:
+        user_block = mem_note + f"User message to classify:\n{message}"
 
     try:
         from app.services.llm_usage_context import push_llm_action
@@ -352,14 +365,21 @@ def classify_intent_llm(
 
 
 def get_intent(
-    message: str, conversation_snapshot: dict | None = None
+    message: str,
+    conversation_snapshot: dict | None = None,
+    *,
+    memory_summary: str | None = None,
 ) -> str:
     t0 = (message or "").strip()
     tl0 = t0.lower()
     if tl0.startswith("create") and "agent" in tl0:
         return "create_custom_agent"
 
-    result = classify_intent_llm(message, conversation_snapshot=conversation_snapshot)
+    result = classify_intent_llm(
+        message,
+        conversation_snapshot=conversation_snapshot,
+        memory_summary=memory_summary,
+    )
     intent = result["intent"]
     confidence = result["confidence"]
 

@@ -72,12 +72,12 @@ class NexaGateway:
         text: str,
         db: Session,
     ) -> dict[str, Any] | None:
-        """Phase 52 — auto-run a dev mission when policy + single workspace allow."""
+        """Phase 52/53 — auto-run a dev mission when policy + single workspace allow."""
         from app.services.conversation_context_service import build_context_snapshot, get_or_create_context
         from app.services.dev_runtime.run_dev_gateway import format_dev_run_summary
         from app.services.dev_runtime.service import run_dev_mission
         from app.services.dev_runtime.workspace import list_workspaces
-        from app.services.execution_policy import assess_interaction_risk, should_auto_run_dev_task
+        from app.services.execution_policy import assess_interaction_risk, should_auto_execute_dev_turn
         from app.services.intent_classifier import get_intent
 
         uid = (gctx.user_id or "").strip()
@@ -89,14 +89,22 @@ class NexaGateway:
             return None
         cctx = get_or_create_context(db, uid)
         snap = build_context_snapshot(cctx, db)
-        intent = get_intent(raw, conversation_snapshot=snap)
+        mem_sum = None
+        if isinstance(gctx.memory, dict):
+            mem_sum = str(gctx.memory.get("summary") or "").strip() or None
+        intent = get_intent(raw, conversation_snapshot=snap, memory_summary=mem_sum)
         risk = assess_interaction_risk(raw)
-        if not should_auto_run_dev_task(intent, risk, len(rows), raw):
+        if not should_auto_execute_dev_turn(intent, risk, len(rows), raw):
             return None
-        res = run_dev_mission(db, uid, rows[0].id, raw[:8000])
+        goal = raw[:8000]
+        if mem_sum:
+            goal = f"[Context from your saved notes]\n{mem_sum[:2000]}\n\n[Your message]\n{goal}"
+        res = run_dev_mission(db, uid, rows[0].id, goal)
+        body = format_dev_run_summary(res)
+        intro = "I'll investigate this against your workspace now.\n\n"
         return {
             "mode": "chat",
-            "text": format_dev_run_summary(res),
+            "text": intro + body,
             "dev_run": res,
             "intent": "dev_mission",
         }
@@ -105,7 +113,17 @@ class NexaGateway:
         """Dev runs, missions, and dev hints only — ``None`` means generic chat."""
         from app.services.dev_runtime.gateway_hint import maybe_dev_gateway_hint
         from app.services.dev_runtime.run_dev_gateway import handle_run_dev_gateway, try_scheduled_dev_mission
+        from app.services.memory.context_injection import build_memory_context_for_turn
         from app.services.missions.parser import parse_mission
+
+        _uid = (gctx.user_id or "").strip()
+        raw_t = (text or "").strip()
+        if _uid and raw_t:
+            turn = build_memory_context_for_turn(_uid, raw_t, purpose="gateway_structured")
+            if turn.get("used"):
+                if gctx.memory is None:
+                    gctx.memory = {}
+                gctx.memory.update(turn)
 
         uid = gctx.user_id
         sched_out = try_scheduled_dev_mission(gctx, text, db)
@@ -202,11 +220,12 @@ class NexaGateway:
         raw = (text or "").strip()
         from app.services.memory.context_injection import build_memory_context_for_turn
 
-        turn_mem = build_memory_context_for_turn(uid, raw)
-        if turn_mem.get("used"):
-            if gctx.memory is None:
-                gctx.memory = {}
-            gctx.memory.update(turn_mem)
+        if not (isinstance(gctx.memory, dict) and gctx.memory.get("used")):
+            turn_mem = build_memory_context_for_turn(uid, raw, purpose="chat")
+            if turn_mem.get("used"):
+                if gctx.memory is None:
+                    gctx.memory = {}
+                gctx.memory.update(turn_mem)
 
         orchestrator = OrchestratorService()
         memory_service = MemoryService()
@@ -236,7 +255,10 @@ class NexaGateway:
         rt = apply_memory_aware_route_adjustment(rt, raw, snap, db)
         routing_agent_key = str(gctx.extras.get("routing_agent_key") or rt.get("agent_key") or "nexa")
 
-        intent = get_intent(raw, conversation_snapshot=snap)
+        _mem_for_intent = None
+        if isinstance(gctx.memory, dict):
+            _mem_for_intent = str(gctx.memory.get("summary") or "").strip() or None
+        intent = get_intent(raw, conversation_snapshot=snap, memory_summary=_mem_for_intent)
         _log.info(
             "gateway.full_chat intent=%s llm_classifier_used=%s channel=%s",
             intent,

@@ -41,13 +41,22 @@ def _keyword_tokens(text: str) -> list[str]:
     return out[:12]
 
 
-def build_memory_context_for_turn(user_id: str, text: str, *, max_items: int = 5) -> dict[str, Any]:
+def build_memory_context_for_turn(
+    user_id: str,
+    text: str,
+    *,
+    max_items: int = 5,
+    purpose: str = "chat",
+) -> dict[str, Any]:
     """
     Build structured memory for one user turn.
+
+    ``purpose`` is informational for logs/future filtering (e.g. ``gateway_structured``, ``chat``).
 
     Returns a dict suitable for merging into :attr:`~app.services.gateway.context.GatewayContext.memory`
     and for setting ``memory_context`` on behavior Context.
     """
+    _ = purpose  # reserved for future retrieval tuning
     uid = (user_id or "").strip()
     raw = (text or "").strip()
     idx = MemoryIndex()
@@ -96,11 +105,22 @@ def build_memory_context_for_turn(user_id: str, text: str, *, max_items: int = 5
     memory_context = summary[:4500] if summary else recent[:4500]
 
     used = bool(memory_context.strip())
+    tags: list[str] = []
+    for w in _keyword_tokens(raw):
+        if w not in tags:
+            tags.append(w)
+    for e in items[:max_items]:
+        tl = str(e.get("title") or "").lower()
+        for token in re.findall(r"[a-z][a-z0-9]{2,}", tl):
+            if token not in tags and len(tags) < 24:
+                tags.append(token)
     return {
         "items": items[:max_items],
         "summary": summary,
         "used": used,
         "memory_context": memory_context,
+        "tags": tags[:24],
+        "purpose": purpose,
     }
 
 
