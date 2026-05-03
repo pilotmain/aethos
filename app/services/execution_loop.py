@@ -139,13 +139,13 @@ def try_execute_or_explain(
         t = str(_resume.get("text") or "").strip()
         if not t:
             t = (
-                "Got it — I’ve recorded your Railway/deploy preferences.\n\n"
+                "Got it — I’ve recorded your deploy/hosted preferences.\n\n"
                 "Send **retry external execution** to run read-only checks on this worker with fresh progress "
                 "and output—or describe the next error in one line."
             )
         t = _ensure_progress_prefix(
             t,
-            ["Starting investigation", "Recording Railway/deploy preferences"],
+            ["Starting investigation", "Recording deploy/hosted preferences"],
         )
         return ExecutionLoopResult(handled=True, text=t, ran=False, progress=[])
 
@@ -165,6 +165,12 @@ def try_execute_or_explain(
 
             applies = looks_like_external_execution(raw)
     if not applies:
+        return ExecutionLoopResult(handled=False, text="")
+
+    from app.services.provider_router import should_skip_railway_bounded_path
+
+    if should_skip_railway_bounded_path(raw):
+        logger.info("execution_loop.skip_railway_bounded_path uid=%s (Vercel-dominant or ambiguous)", uid)
         return ExecutionLoopResult(handled=False, text="")
 
     # --- Bounded runner path (same safe commands as external_execution_runner)

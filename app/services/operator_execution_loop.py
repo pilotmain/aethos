@@ -302,6 +302,9 @@ def try_operator_execution(
         return OperatorExecutionResult(handled=False, text="")
 
     hints = detect_provider_hints(raw)
+    from app.services.provider_router import apply_router_to_operator_hints
+
+    hints = apply_router_to_operator_hints(raw, hints)
     ws_path = _extract_workspace_path(raw)
 
     vercel_cue = hints["vercel"]

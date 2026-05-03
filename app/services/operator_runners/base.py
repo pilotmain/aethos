@@ -32,7 +32,12 @@ def detect_provider_hints(text: str) -> dict[str, bool]:
     """Cheap substring/classifier hints (no LLM)."""
     t = (text or "").strip().lower()
     return {
-        "vercel": bool(re.search(r"\bvercel\b", t) or ".vercel.app" in t or "vercel.app" in t),
+        "vercel": bool(
+            re.search(r"\bvercel\b", t)
+            or ".vercel.app" in t
+            or "vercel.app" in t
+            or "vercel.com" in t
+        ),
         "railway": bool(re.search(r"\brailway\b", t) or "railway.app" in t or "railway.com" in t),
         "github": bool(re.search(r"\bgithub\b", t) or "github.com" in t or re.search(r"\bgh\s+", t)),
         "local_git": bool(re.search(r"\bgit\b", t) or "workspace:" in t or "repo" in t),

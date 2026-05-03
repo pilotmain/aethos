@@ -262,7 +262,7 @@ def format_followup_acknowledgment(
         "Got it.\n\n"
         "Next I’ll:\n"
         f"- {auth_line}\n"
-        "- inspect **Railway service status / logs** where the CLI allows\n"
+        "- inspect **hosted service status / logs** (Railway / Vercel / etc.) where the CLI allows\n"
         f"{path_hint}"
         "- diagnose what failed and summarize evidence-backed findings\n"
         f"{deploy_note}"
@@ -464,6 +464,11 @@ def _snapshot_hints_railway_or_deploy(snap: dict[str, Any] | None) -> bool:
 def text_has_railway_execution_context(text: str, conversation_snapshot: dict[str, Any] | None) -> bool:
     """True when the turn or snapshot signals Railway / hosted execution context."""
     raw = (text or "").strip()
+    from app.services.provider_router import should_skip_railway_bounded_path
+
+    if should_skip_railway_bounded_path(raw):
+        logger.info("external_execution.railway_context_skipped vercel_dominant preview=%s", raw[:120])
+        return False
     tl = raw.lower()
     if "railway" in tl:
         return True
