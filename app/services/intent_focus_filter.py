@@ -43,18 +43,25 @@ def extract_focused_intent(user_message: str) -> dict[str, Any]:
         or "github.com" in tl
         or "github.com" in url_blob
         or "push to remote" in tl
+        or "push change" in tl
         or "git push" in tl
         or re.search(r"\bpush\s+(changes|commits|to\s+origin)\b", tl)
+    )
+    aws_scope = bool(
+        re.search(r"\baws\b", tl)
+        or "amazonaws.com" in url_blob
+        or "aws.amazon.com" in url_blob
     )
     railway = bool(re.search(r"\brailway\b", tl) or "railway.app" in url_blob or "railway.com" in url_blob)
 
     intent: dict[str, Any] = {
         "vercel_deploy": vercel_deploy,
         "github_push": github_push,
+        "aws_scope": aws_scope,
         "railway": railway,
         "exact_request": raw,
     }
-    if vercel_deploy and not railway:
+    if (vercel_deploy or github_push or aws_scope) and not railway:
         intent["ignore_railway"] = True
     if railway and not vercel_deploy:
         intent["ignore_vercel_noise"] = True
@@ -76,7 +83,7 @@ def _squash_access_placeholder_wall(body: str, fi: dict[str, Any]) -> str:
     """Shorten generic “once access is in place” screeds when the ask is already Vercel/GitHub scoped."""
     if not body or len(body) < 600:
         return body
-    if not (fi.get("vercel_deploy") or fi.get("github_push")):
+    if not (fi.get("vercel_deploy") or fi.get("github_push") or fi.get("aws_scope")):
         return body
     low = body.lower()
     if "once access is in place" not in low and "once access is available" not in low:
@@ -103,10 +110,44 @@ def apply_focus_discipline_to_operator_execution_text(body: str, *, user_text: s
                 len(b),
             )
     b = _squash_access_placeholder_wall(b, fi)
+    b = strip_unrelated_providers_from_reply(b, user_text=user_text)
     return b
+
+
+def strip_unrelated_providers_from_reply(body: str, *, user_text: str) -> str:
+    """
+    Drop lines that hawk a host provider the user did not ask for (router-driven).
+
+    Preserves code fences and does not shrink already-focused short replies.
+    """
+    if not (body or "").strip() or "```" in body:
+        return body
+    try:
+        from app.services.provider_router import detect_primary_provider, extract_urls_from_text
+    except Exception:  # noqa: BLE001
+        return body
+    prov, conf = detect_primary_provider(user_text, extract_urls_from_text(user_text))
+    if prov == "generic" or conf < 0.25:
+        return body
+    u = (user_text or "").lower()
+    lines = body.splitlines()
+    out: list[str] = []
+    for ln in lines:
+        low = ln.lower()
+        if prov != "railway" and "railway" not in u and re.search(r"\brailway\b", low):
+            continue
+        if prov != "vercel" and "vercel" not in u and ".vercel.app" not in u and re.search(r"\bvercel\b", low):
+            continue
+        if prov != "github" and "github" not in u and re.search(r"\bgithub\b", low):
+            continue
+        if prov != "aws" and not re.search(r"\baws\b", u) and re.search(r"\baws\b", low):
+            continue
+        out.append(ln)
+    return re.sub(r"\n{3,}", "\n\n", "\n".join(out)).strip()
 
 
 __all__ = [
     "apply_focus_discipline_to_operator_execution_text",
     "extract_focused_intent",
+    "strip_unrelated_providers_from_reply",
 ]

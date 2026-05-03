@@ -40,6 +40,11 @@ def detect_provider_hints(text: str) -> dict[str, bool]:
         ),
         "railway": bool(re.search(r"\brailway\b", t) or "railway.app" in t or "railway.com" in t),
         "github": bool(re.search(r"\bgithub\b", t) or "github.com" in t or re.search(r"\bgh\s+", t)),
+        "aws": bool(
+            re.search(r"\baws\b", t)
+            or "amazonaws.com" in t
+            or "aws.amazon.com" in t
+        ),
         "local_git": bool(re.search(r"\bgit\b", t) or "workspace:" in t or "repo" in t),
     }
 

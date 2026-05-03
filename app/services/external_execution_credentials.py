@@ -39,6 +39,7 @@ def format_secure_external_credential_setup(service: str, *, repo_root: str | No
     cd = f"cd {root}" if root else "cd /path/to/nexa-next"
 
     return (
+        "**Key received** — I won’t echo or store it in chat.\n\n"
         "I detected a Railway token in chat. For safety, I won’t echo or store it here.\n\n"
         "**Chat text does not automatically become this worker’s environment.** "
         "Connected access means the token is on the machine that runs Nexa (for example in `.env`) "

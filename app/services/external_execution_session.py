@@ -203,14 +203,21 @@ def _finalize_fragment_after_ack(db: Session, cctx: ConversationContext, collect
     db.commit()
 
 
-def format_probe_readonly_intro() -> str:
-    """Product copy — bounded read-only diagnostics only."""
+def format_probe_readonly_intro(*, detected_provider: str | None = None) -> str:
+    """Product copy — bounded read-only diagnostics (neutral; no Railway-first framing)."""
+    dp = (detected_provider or "").strip().lower()
+    if dp == "vercel":
+        head = (
+            "Got it — running **read-only checks** this worker can execute (git always; "
+            "Railway/Vercel CLIs only if installed and permitted).\n\n"
+        )
+    else:
+        head = "Got it — running **read-only CLI checks** this worker is configured for.\n\n"
     return (
-        "Got it — I'll check your local Railway session now.\n\n"
-        "I'll run read-only checks only:\n"
-        "- `railway whoami`\n"
-        "- `railway status`\n"
-        "- `railway logs`\n"
+        f"{head}"
+        "Typical commands:\n"
+        "- `railway whoami` / `railway status` / `railway logs` (when Railway CLI/token exists)\n"
+        "- `vercel whoami` (when Vercel CLI exists)\n"
         "- `git status`\n\n"
         "I will not deploy, push, or change anything without approval."
     )
@@ -228,7 +235,10 @@ def format_followup_acknowledgment(
 
     probe_intro = ""
     if collected.get("permission_to_probe"):
-        probe_intro = format_probe_readonly_intro() + "\n\n---\n\n"
+        probe_intro = (
+            format_probe_readonly_intro(detected_provider=str(collected.get("detected_provider") or ""))
+            + "\n\n---\n\n"
+        )
 
     auth_line = (
         "use your **local Railway CLI** session (logged in on this machine)"
@@ -344,9 +354,27 @@ def try_resume_external_execution_turn(
     has_deploy = bool(collected.get("deploy_mode"))
 
     if not has_auth and not has_deploy:
+        from app.services.provider_router import detect_primary_provider, extract_urls_from_text
+
+        urls = extract_urls_from_text(raw)
+        prov_hint, _ = detect_primary_provider(raw, urls)
+        if prov_hint == "vercel":
+            lead = (
+                "I want to align with your setup — please confirm:\n"
+                "- **Vercel / hosted:** CLI on this machine, or token in worker env?\n"
+            )
+        elif prov_hint == "github":
+            lead = (
+                "I want to align with your setup — please confirm:\n"
+                "- **GitHub / git:** PAT in worker env, or local `gh` auth on this machine?\n"
+            )
+        else:
+            lead = (
+                "I want to align with your setup — please confirm:\n"
+                "- **Hosted CLI:** Railway (or other) **logged in locally** on this machine, **or** token env vars?\n"
+            )
         reply = (
-            "I want to align with your setup — please confirm:\n"
-            "- Railway: **CLI logged in locally** on this machine, **or** token env vars?\n"
+            f"{lead}"
             "- Deploy: **report findings first** (no deploy until you approve), or ok to deploy after fixes?\n\n"
             "Short reply is fine (e.g. “CLI locally, report first”)."
         )
@@ -360,6 +388,11 @@ def try_resume_external_execution_turn(
         db.add(cctx)
         db.commit()
         return {"mode": "chat", "text": reply, "intent": "external_execution_continue"}
+
+    from app.services.provider_router import detect_primary_provider, extract_urls_from_text
+
+    urls = extract_urls_from_text(raw)
+    collected["detected_provider"], _ = detect_primary_provider(raw, urls)
 
     reply = format_followup_acknowledgment(collected, db=db, user_id=uid)
     inv_block = ""
@@ -378,6 +411,8 @@ def try_resume_external_execution_turn(
     full_reply = reply
     if (inv_block or "").strip():
         full_reply = f"{reply}\n\n---\n\n{inv_block.strip()}"
+    else:
+        full_reply = f"{reply}\n\n---\n\n_Investigation finished — no CLI output body returned for this run._"
 
     _finalize_fragment_after_ack(db, cctx, collected)
     return {"mode": "chat", "text": full_reply, "intent": "external_execution_continue"}
@@ -518,7 +553,10 @@ def maybe_start_external_probe_from_turn(
         "deploy_mode": "report_then_approve",
         "permission_to_probe": True,
     }
-    intro = format_probe_readonly_intro()
+    from app.services.provider_router import detect_primary_provider, extract_urls_from_text
+
+    _dp, _ = detect_primary_provider(raw, extract_urls_from_text(raw))
+    intro = format_probe_readonly_intro(detected_provider=_dp)
     inv_block = ""
     try:
         from app.services.external_execution_runner import (

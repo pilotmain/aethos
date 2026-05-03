@@ -1,5 +1,5 @@
 """
-Early provider intent routing (Vercel / Railway / GitHub / generic).
+Early provider intent routing (Vercel / Railway / GitHub / AWS / generic).
 
 Used before operator runner selection and before Railway-only external execution
 so Vercel URLs and vercel.com visits do not fall through to Railway defaults.
@@ -9,12 +9,15 @@ from __future__ import annotations
 
 import logging
 import re
+
 logger = logging.getLogger(__name__)
 
 _URL_RE = re.compile(r"https?://[^\s)>`\"']+", re.I)
 
 # Below this, callers may treat intent as ambiguous (no strong default).
 CONFIDENCE_SOFT_GATE = 0.6
+
+_HOST_KEYS = frozenset({"vercel", "railway", "github", "aws"})
 
 
 def extract_urls_from_text(text: str) -> list[str]:
@@ -31,38 +34,46 @@ def extract_urls_from_text(text: str) -> list[str]:
 
 
 def _score_signals(intent_text: str, urls: list[str]) -> dict[str, float]:
+    """Scores are neutral defaults + only what URLs/keywords supply (no Railway-first bias)."""
     text_lower = (intent_text or "").lower()
     url_str = " ".join(urls).lower()
 
     vercel_score = 0.0
     if "vercel.com" in url_str or ".vercel.app" in url_str or "vercel.app" in url_str:
-        vercel_score = max(vercel_score, 0.95)
+        vercel_score = max(vercel_score, 1.0)
     if "vercel.com" in text_lower or "vercel.app" in text_lower:
         vercel_score = max(vercel_score, 0.92)
     if re.search(r"\bvercel\b", text_lower):
-        vercel_score = max(vercel_score, 0.88)
+        vercel_score = max(vercel_score, 0.9)
     if "vercel deploy" in text_lower or "vercel production" in text_lower:
         vercel_score = max(vercel_score, 1.0)
 
     railway_score = 0.0
     if "railway.app" in url_str or "railway.com" in url_str:
-        railway_score = max(railway_score, 0.92)
+        railway_score = max(railway_score, 1.0)
     if re.search(r"\brailway\b", text_lower):
         railway_score = max(railway_score, 0.9)
 
     github_score = 0.0
     if "github.com" in url_str or "git@" in url_str:
-        github_score = max(github_score, 0.9)
+        github_score = max(github_score, 0.95)
     if re.search(r"\bgithub\b", text_lower) or re.search(r"\bgh\s+", text_lower):
         github_score = max(github_score, 0.85)
-    if "push to remote" in text_lower:
-        github_score = max(github_score, 0.82)
+    if "push to remote" in text_lower or "push change" in text_lower:
+        github_score = max(github_score, 0.85)
+
+    aws_score = 0.0
+    if "aws.amazon.com" in url_str or ".amazonaws.com" in url_str:
+        aws_score = max(aws_score, 0.95)
+    if re.search(r"\baws\b", text_lower) or re.search(r"\bamazon\b", text_lower):
+        aws_score = max(aws_score, 0.85)
 
     scores = {
         "vercel": vercel_score,
         "railway": railway_score,
         "github": github_score,
-        "generic": 0.3,
+        "aws": aws_score,
+        "generic": 0.2,
     }
     return scores
 
@@ -78,7 +89,7 @@ def detect_primary_provider(intent_text: str, urls: list[str] | None = None) -> 
     u = urls if urls is not None else extract_urls_from_text(intent_text)
     scores = _score_signals(intent_text, u)
     tie_margin = 0.09
-    hosts = {k: v for k, v in scores.items() if k != "generic"}
+    hosts = {k: v for k, v in scores.items() if k in _HOST_KEYS}
     ranked_hosts = sorted(hosts.items(), key=lambda kv: kv[1], reverse=True)
     if len(ranked_hosts) >= 2:
         (_n1, s1), (_n2, s2) = ranked_hosts[0], ranked_hosts[1]
@@ -86,6 +97,11 @@ def detect_primary_provider(intent_text: str, urls: list[str] | None = None) -> 
             return "generic", min(0.55, max(0.35, s2 - 0.4))
     ranked = sorted(scores.items(), key=lambda kv: kv[1], reverse=True)
     best_name, best = ranked[0]
+    logger.info(
+        "provider_router.dynamic_detected provider=%s confidence=%.2f",
+        best_name,
+        float(best),
+    )
     return best_name, float(best)
 
 
@@ -101,10 +117,11 @@ def apply_router_to_operator_hints(text: str, hints: dict[str, bool]) -> dict[st
     prov, conf = detect_primary_provider(text, urls)
     out = dict(hints)
     logger.info(
-        "provider_router.operator_scores vercel=%.2f railway=%.2f github=%.2f picked=%s conf=%.2f",
+        "provider_router.operator_scores vercel=%.2f railway=%.2f github=%.2f aws=%.2f picked=%s conf=%.2f",
         scores["vercel"],
         scores["railway"],
         scores["github"],
+        scores.get("aws", 0.0),
         prov,
         conf,
     )
@@ -116,6 +133,12 @@ def apply_router_to_operator_hints(text: str, hints: dict[str, bool]) -> dict[st
         out["vercel"] = False
     elif prov == "github" and conf >= CONFIDENCE_SOFT_GATE:
         out["github"] = True
+        if scores["github"] >= scores["railway"] + 0.04:
+            out["railway"] = False
+    elif prov == "aws" and conf >= CONFIDENCE_SOFT_GATE:
+        out["aws"] = True
+        if scores["aws"] >= scores["railway"] + 0.04:
+            out["railway"] = False
     return out
 
 
@@ -141,6 +164,10 @@ def should_skip_railway_bounded_path(user_text: str) -> bool:
     if prov == "generic" and conf < CONFIDENCE_SOFT_GATE and scores["vercel"] < 0.5 and scores["railway"] < 0.5:
         return False
     if prov == "vercel" and scores["vercel"] >= scores["railway"] + 0.04:
+        return True
+    if prov == "github" and scores["github"] >= scores["railway"] + 0.04:
+        return True
+    if prov == "aws" and scores["aws"] >= scores["railway"] + 0.04:
         return True
     if prov == "generic" and scores["vercel"] > 0.5 and scores["vercel"] >= scores["railway"]:
         return True

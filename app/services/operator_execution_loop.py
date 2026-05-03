@@ -302,7 +302,11 @@ def try_operator_execution(
         return OperatorExecutionResult(handled=False, text="")
 
     hints = detect_provider_hints(raw)
-    from app.services.provider_router import apply_router_to_operator_hints
+    from app.services.provider_router import (
+        apply_router_to_operator_hints,
+        detect_primary_provider,
+        extract_urls_from_text,
+    )
 
     hints = apply_router_to_operator_hints(raw, hints)
     from app.services.intent_focus_filter import extract_focused_intent
@@ -311,6 +315,12 @@ def try_operator_execution(
     if focused.get("ignore_railway"):
         hints["railway"] = False
         logger.info("operator_execution.focused_intent ignore_railway=true (Vercel-scoped turn)")
+    _prov_det, _conf_det = detect_primary_provider(raw, extract_urls_from_text(raw))
+    logger.info(
+        "operator_execution.dynamic_provider provider=%s confidence=%.2f",
+        _prov_det,
+        _conf_det,
+    )
     ws_path = _extract_workspace_path(raw)
 
     vercel_cue = hints["vercel"]
