@@ -542,6 +542,19 @@ def build_execution_snapshot(
     )
 
     ev_bus = list_events()
+    ee_progress_tail: list[dict[str, Any]] = []
+    if user_id:
+        for ev in reversed(ev_bus):
+            if not isinstance(ev, dict):
+                continue
+            if ev.get("type") != "external_execution.progress":
+                continue
+            if ev.get("user_id") != user_id:
+                continue
+            ee_progress_tail.append(ev)
+            if len(ee_progress_tail) >= 40:
+                break
+        ee_progress_tail.reverse()
     dev_workspaces_out: list[dict[str, Any]] = []
     dev_runs_out: list[dict[str, Any]] = []
     long_running_out: list[dict[str, Any]] = []
@@ -865,6 +878,7 @@ def build_execution_snapshot(
             missions_out=missions_out,
             tasks_out=tasks_out,
         ),
+        "external_execution_progress": ee_progress_tail,
         "agent_performance": _agent_performance_from_tasks(tasks_out),
         "dev_workspaces": dev_workspaces_out,
         "dev_runs": dev_runs_out,

@@ -49,6 +49,8 @@ export type MissionControlSnapshot = {
     privacy_score?: number;
   };
   metrics?: Record<string, unknown>;
+  /** Live external execution progress steps (Railway probe), user-scoped. */
+  external_execution_progress?: Array<Record<string, unknown>>;
   /** Phase 23 — dev workspace registry (from /mission-control/state). */
   dev_workspaces?: Array<{
     id: string;

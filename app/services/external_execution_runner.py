@@ -11,7 +11,7 @@ import logging
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from sqlalchemy.orm import Session
 
@@ -20,6 +20,7 @@ from app.core.config import get_settings
 _log = logging.getLogger(__name__)
 from app.services.dev_runtime.executor import run_dev_command
 from app.services.dev_runtime.workspace import list_workspaces
+from app.services.events.envelope import emit_runtime_event
 from app.services.integrations.railway.cli import railway_binary_on_path, run_railway_cli
 
 
@@ -44,6 +45,7 @@ class BoundedRailwayInvestigation:
     git_status: dict | None = None
     deploy_blocked_by_policy: bool = True
     policy_note: str = ""
+    progress_lines: list[str] = field(default_factory=list)
 
     def any_command_ok(self) -> bool:
         for r in (self.railway_whoami, self.railway_status, self.railway_logs):
@@ -67,6 +69,29 @@ def _deploy_policy_note(collected: dict[str, object]) -> tuple[bool, str]:
     )
 
 
+def _emit_progress_step(
+    inv: BoundedRailwayInvestigation,
+    label: str,
+    *,
+    on_progress: Callable[[dict[str, Any]], None] | None,
+    progress_user_id: str | None,
+    emit_bus: bool,
+) -> None:
+    inv.progress_lines.append(label)
+    if on_progress is not None:
+        try:
+            on_progress({"type": "progress", "label": label})
+        except Exception:
+            pass
+    uid = (progress_user_id or "").strip()
+    if emit_bus and uid:
+        emit_runtime_event(
+            "external_execution.progress",
+            user_id=uid,
+            payload={"label": label},
+        )
+
+
 def _log_bounded_runner_done(uid: str, inv: BoundedRailwayInvestigation) -> None:
     """Mandatory observability for bounded Railway probes (retry / resume / direct)."""
     executed = inv.skipped_reason is None
@@ -86,32 +111,55 @@ def run_bounded_railway_repo_investigation(
     db: Session,
     user_id: str,
     collected: dict[str, object],
+    *,
+    on_progress: Callable[[dict[str, Any]], None] | None = None,
+    progress_user_id: str | None = None,
+    emit_progress_events: bool = True,
 ) -> BoundedRailwayInvestigation:
     uid = (user_id or "").strip()
+    bus_uid = (progress_user_id or uid).strip() or None
+
+    def _step(label: str) -> None:
+        _emit_progress_step(
+            out,
+            label,
+            on_progress=on_progress,
+            progress_user_id=bus_uid,
+            emit_bus=emit_progress_events,
+        )
+
     out = BoundedRailwayInvestigation()
+    _step("Starting investigation")
     out.railway_env_token_present = bool(
         (os.environ.get("RAILWAY_TOKEN") or "").strip()
         or (os.environ.get("RAILWAY_API_TOKEN") or "").strip()
     )
+    _step("Checking Railway auth (environment token / CLI path)")
     blocked, note = _deploy_policy_note(collected)
     out.deploy_blocked_by_policy = blocked
     out.policy_note = note
 
     s = get_settings()
+    _step("Checking runner configuration")
     if not getattr(s, "nexa_external_execution_runner_enabled", True):
         out.skipped_reason = "runner_disabled"
+        _step("Stopped: external execution runner is disabled on this host")
         _log_bounded_runner_done(uid, out)
         return out
+    _step("Checking host executor configuration")
     if not bool(getattr(s, "nexa_host_executor_enabled", False)):
         out.skipped_reason = "host_executor_disabled"
+        _step("Stopped: host executor disabled (`NEXA_HOST_EXECUTOR_ENABLED`)")
         _log_bounded_runner_done(uid, out)
         return out
 
     if not uid:
         out.skipped_reason = "no_user"
+        _step("Stopped: missing user id for workspace lookup")
         _log_bounded_runner_done(uid, out)
         return out
 
+    _step("Resolving registered dev workspace")
     try:
         rows = list_workspaces(db, uid)
     except Exception:
@@ -122,6 +170,7 @@ def run_bounded_railway_repo_investigation(
 
     if not paths:
         out.skipped_reason = "no_workspace"
+        _step("Stopped: no dev workspace registered for this user")
         _log_bounded_runner_done(uid, out)
         return out
 
@@ -133,13 +182,16 @@ def run_bounded_railway_repo_investigation(
     root_path = Path(repo_root)
     if not root_path.is_dir():
         out.skipped_reason = "workspace_path_missing"
+        _step("Stopped: workspace path is not a directory on this host")
         _log_bounded_runner_done(uid, out)
         return out
 
     cwd = str(root_path.resolve())
+    _step("Checking Railway CLI availability")
     out.railway_cli_present = railway_binary_on_path()
 
     auth = str(collected.get("auth_method") or "").strip()
+    _step("Running `railway whoami` (read-only)")
     if auth == "local_cli" and not out.railway_cli_present:
         out.railway_whoami = {
             "ok": False,
@@ -153,14 +205,18 @@ def run_bounded_railway_repo_investigation(
         out.railway_whoami = run_railway_cli("whoami", [], cwd=cwd, timeout=30.0)
 
     if out.railway_cli_present:
+        _step("Fetching Railway service status")
         out.railway_status = run_railway_cli("status", [], cwd=cwd, timeout=40.0)
+        _step("Fetching Railway logs (tail)")
         logs = run_railway_cli("logs", ["--tail", "100"], cwd=cwd, timeout=55.0)
         if isinstance(logs, dict) and not logs.get("ok") and logs.get("error") != "railway_cli_missing":
             logs = run_railway_cli("logs", [], cwd=cwd, timeout=55.0)
         out.railway_logs = logs
 
+    _step("Inspecting repository (`git status`)")
     out.git_status = run_dev_command(cwd, "git status")
 
+    _step("Preparing findings")
     _log_bounded_runner_done(uid, out)
     return out
 
@@ -172,8 +228,101 @@ def investigation_to_public_payload(inv: BoundedRailwayInvestigation) -> dict[st
     return {"ran": True, "reason": None}
 
 
+def _format_progress_preamble(inv: BoundedRailwayInvestigation) -> str:
+    if not inv.progress_lines:
+        return ""
+    body = "\n".join(f"- {x}" for x in inv.progress_lines)
+    return f"### Progress\n\n{body}\n\n---\n\n"
+
+
+def analyze_investigation_for_contract(inv: BoundedRailwayInvestigation) -> dict[str, Any]:
+    """Structured facts from captured CLI output — no LLM (honest checkmarks)."""
+
+    def _ok(block: dict | None) -> bool:
+        return isinstance(block, dict) and bool(block.get("ok"))
+
+    if inv.skipped_reason:
+        return {
+            "blocked": True,
+            "blocker": inv.skipped_reason,
+            "whoami_ok": False,
+            "status_ok": False,
+            "logs_ok": False,
+            "git_ok": False,
+        }
+    return {
+        "blocked": False,
+        "blocker": None,
+        "whoami_ok": _ok(inv.railway_whoami),
+        "status_ok": _ok(inv.railway_status),
+        "logs_ok": _ok(inv.railway_logs),
+        "git_ok": _ok(inv.git_status),
+        "cli_present": inv.railway_cli_present,
+        "token_env_present": inv.railway_env_token_present,
+    }
+
+
+def format_execution_summary_contract(inv: BoundedRailwayInvestigation) -> str:
+    """Terminal summary — ✔/✖ tied to real command outcomes only."""
+    analysis = analyze_investigation_for_contract(inv)
+    lines: list[str] = ["### Summary", ""]
+    if analysis["blocked"]:
+        lines.append(f"- ✖ **Run blocked:** `{analysis['blocker']}`")
+        lines.append("")
+        lines.append(
+            "**Root cause:** execution stopped before all CLI probes finished — see **Progress** above."
+        )
+        lines.append("")
+        lines.append("**Fix plan:**")
+        lines.append("1. Resolve the blocker (workspace registration, host executor, or runner toggle).")
+        lines.append("2. Run **retry external execution** for another read-only pass.")
+        lines.append("")
+        lines.append("_No deploy or push was attempted._")
+        return "\n".join(lines).strip()
+
+    def _tick(ok: bool) -> str:
+        return "✔" if ok else "✖"
+
+    lines.append(
+        f"- {_tick(analysis['whoami_ok'])} Railway whoami: "
+        f"{'OK' if analysis['whoami_ok'] else 'failed or unavailable'}"
+    )
+    lines.append(
+        f"- {_tick(analysis['status_ok'])} Railway status: "
+        f"{'OK' if analysis['status_ok'] else 'failed or empty'}"
+    )
+    lines.append(
+        f"- {_tick(analysis['logs_ok'])} Railway logs (tail): "
+        f"{'OK' if analysis['logs_ok'] else 'failed or empty'}"
+    )
+    lines.append(
+        f"- {_tick(analysis['git_ok'])} Git status: {'OK' if analysis['git_ok'] else 'failed'}"
+    )
+    lines.append("")
+    issues: list[str] = []
+    if not analysis["cli_present"] and not analysis["token_env_present"]:
+        issues.append("No Railway CLI on PATH and no `RAILWAY_TOKEN` / `RAILWAY_API_TOKEN` in env.")
+    elif not analysis["cli_present"]:
+        issues.append("Railway CLI not found on PATH — API token env may still apply for some flows.")
+    if not analysis["logs_ok"] and analysis["cli_present"]:
+        issues.append("`railway logs` did not complete OK — see stderr under Verified checks.")
+    if issues:
+        lines.append("**Signals:**")
+        for it in issues:
+            lines.append(f"- {it}")
+        lines.append("")
+    lines.append("**Next steps:**")
+    lines.append("1. Use the evidence above to adjust config or service settings.")
+    lines.append("2. Say **retry external execution** after fixes for a fresh diagnostic pass.")
+    lines.append("")
+    lines.append("_Deploy / push remains blocked until you explicitly approve._")
+    return "\n".join(lines).strip()
+
+
 def format_investigation_for_chat(result: BoundedRailwayInvestigation) -> str:
     """User-facing block with verified snippets only."""
+    preamble = _format_progress_preamble(result)
+
     lines: list[str] = [
         "### Verified checks (this host)",
         "",
@@ -192,7 +341,9 @@ def format_investigation_for_chat(result: BoundedRailwayInvestigation) -> str:
         lines.append(reasons.get(result.skipped_reason, f"Skipped ({result.skipped_reason})."))
         lines.append("")
         lines.append(result.policy_note)
-        return "\n".join(lines).strip()
+        core = "\n".join(lines).strip()
+        summary = format_execution_summary_contract(result)
+        return f"{preamble}{core}\n\n---\n\n{summary}".strip()
 
     if not result.railway_cli_present:
         lines.append(
@@ -257,11 +408,15 @@ def format_investigation_for_chat(result: BoundedRailwayInvestigation) -> str:
     lines.append(
         "_No deploy or redeploy was run. Railway output above is exactly what the CLI returned on this worker._"
     )
-    return "\n".join(lines).strip()
+    verified = "\n".join(lines).strip()
+    summary = format_execution_summary_contract(result)
+    return f"{preamble}{verified}\n\n---\n\n{summary}".strip()
 
 
 __all__ = [
     "BoundedRailwayInvestigation",
+    "analyze_investigation_for_contract",
+    "format_execution_summary_contract",
     "format_investigation_for_chat",
     "investigation_to_public_payload",
     "run_bounded_railway_repo_investigation",

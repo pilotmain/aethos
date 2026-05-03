@@ -568,8 +568,9 @@ def collected_for_external_execution_retry(
 
 
 def format_retry_investigation_intro() -> str:
+    stamp = _utc_now_iso()
     return (
-        "Retrying Railway investigation...\n\n"
+        f"Retrying Railway investigation _(run at {stamp})_...\n\n"
         "Read-only checks only:\n"
         "- `railway whoami`\n"
         "- `railway status`\n"
