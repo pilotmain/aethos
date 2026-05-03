@@ -16,6 +16,7 @@ Classify the user's message into exactly one intent.
 
 Valid intents:
 - orchestrate_system: user wants a Nexa-wide status report — Mission Control, missions, dev runs, what succeeded/failed, act as orchestrator (not asking for a disk path)
+- external_execution: user wants an end-to-end pipeline on hosted infra — check logs/service, fix code in repo, push, redeploy, verify production (not “explain Railway” alone)
 - external_investigation: user is asking about a hosted provider/service (Railway, Render, deploy health, production outage) without necessarily naming local files
 - brain_dump: user is listing tasks, responsibilities, errands, or things they need to organize
 - create_custom_agent: user wants to create a new Nexa custom agent (message starts with "create" and mentions "agent")
@@ -56,6 +57,7 @@ INTENT_CLASSIFIER_SYSTEM = INTENT_CLASSIFIER_PROMPT.rsplit("User message:", 1)[0
 
 VALID_INTENTS = {
     "orchestrate_system",
+    "external_execution",
     "external_investigation",
     "brain_dump",
     "create_custom_agent",
@@ -191,9 +193,75 @@ def looks_like_orchestrate_system(message: str) -> bool:
     return any(c in t for c in cues)
 
 
+def looks_like_external_execution(message: str) -> bool:
+    """
+    User wants Nexa to coordinate real steps: hosted provider + repo + push/deploy.
+
+    Narrower than external_investigation (diagnose/triage). Must stay after orchestrate_system.
+    """
+    if looks_like_orchestrate_system(message):
+        return False
+    t = (message or "").lower()
+    if len(t) < 10:
+        return False
+    hosted = (
+        "railway",
+        "render.com",
+        "fly.io",
+        "flyctl",
+        "heroku",
+        "vercel",
+        "netlify",
+        "production",
+        "deploy",
+        "hosted",
+        "github",
+        "git ",
+        "repo",
+        "service",
+    )
+    pipeline_markers = (
+        "redeploy",
+        "push changes",
+        "push to git",
+        "push to github",
+        "fix repo",
+        "fix the repo",
+        "commit and push",
+        "commit & push",
+        "run tests and",
+        "deploy and verify",
+        "rollback",
+        "trigger deploy",
+        "open a pr",
+        "merge and deploy",
+    )
+    if any(p in t for p in pipeline_markers):
+        if any(h in t for h in hosted):
+            return True
+        if "redeploy" in t or "push changes" in t:
+            return True
+    if ("fix issue" in t or "fix the issue" in t) and any(h in t for h in hosted):
+        return True
+    if "service failing" in t and any(x in t for x in ("railway", "production", "deploy", "hosted")):
+        return True
+    check_svc = (
+        "check railway" in t
+        or "check render" in t
+        or "check production" in t
+        or "check the service" in t
+        or "check service" in t
+    )
+    if check_svc and any(v in t for v in ("fix", "push", "redeploy", "deploy", "commit", "patch", "repo")):
+        return True
+    return False
+
+
 def looks_like_external_investigation(message: str) -> bool:
     """Hosted infra / deploy context — not a request to read a local folder by default."""
     if looks_like_orchestrate_system(message):
+        return False
+    if looks_like_external_execution(message):
         return False
     t = (message or "").lower()
     if len(t) < 6:
@@ -269,6 +337,9 @@ def classify_intent_fallback(message: str) -> dict:
 
     if looks_like_orchestrate_system(message):
         return {"intent": "orchestrate_system", "confidence": 0.92, "reason": "mission control / orchestration cues"}
+
+    if looks_like_external_execution(message):
+        return {"intent": "external_execution", "confidence": 0.91, "reason": "hosted execution pipeline (fix/push/deploy)"}
 
     if looks_like_external_investigation(message):
         return {"intent": "external_investigation", "confidence": 0.9, "reason": "hosted infra / deploy cues"}
@@ -441,6 +512,9 @@ def get_intent(
 
     if looks_like_orchestrate_system(t0):
         return "orchestrate_system"
+
+    if looks_like_external_execution(t0):
+        return "external_execution"
 
     if looks_like_external_investigation(t0):
         return "external_investigation"

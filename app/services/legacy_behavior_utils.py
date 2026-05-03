@@ -128,7 +128,7 @@ def build_context(
 def map_intent_to_behavior(intent: str, _context: Context) -> str:
     if intent == "create_custom_agent":
         return "clarify"
-    if intent in ("orchestrate_system", "external_investigation"):
+    if intent in ("orchestrate_system", "external_investigation", "external_execution"):
         return "assist"
     if intent == "brain_dump":
         return "reduce"
@@ -373,6 +373,26 @@ def build_response(
             "Open **Mission Control** in the web app for live mission, task, and dev-run status. "
             "When you’re signed in through chat, I can pull the same snapshot for your user id."
         )
+    if intent == "external_execution":
+        from app.services.external_execution_access import (
+            assess_external_execution_access,
+            format_external_execution_access_reply,
+            should_gate_external_execution,
+        )
+
+        access = assess_external_execution_access(db, app_user_id)
+        if should_gate_external_execution(text, access):
+            return _out(format_external_execution_access_reply(access, user_text=text))
+        ready = (
+            "Access signals look sufficient on this worker for coordinated repo work and scripted deploy checks. "
+            "I will only report deploy or health outcomes **after** real commands succeed — nothing is finished "
+            "until verification runs.\n\n"
+        )
+        if db is not None and (app_user_id or "").strip():
+            from app.services.orchestrator_status_reply import format_orchestrator_mc_snapshot
+
+            return _out(ready + format_orchestrator_mc_snapshot(db, str(app_user_id).strip()))
+        return _out(ready.strip())
     if intent == "external_investigation" and db is not None and (app_user_id or "").strip():
         from app.services.orchestrator_status_reply import format_orchestrator_mc_snapshot
 

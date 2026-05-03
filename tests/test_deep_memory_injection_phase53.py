@@ -13,6 +13,7 @@ from app.services.skills.manifest_registry import SkillPackageRegistry
 
 def test_valid_intents_includes_analysis() -> None:
     assert "analysis" in VALID_INTENTS
+    assert "external_execution" in VALID_INTENTS
 
 
 def test_build_memory_includes_tags_and_purpose() -> None:

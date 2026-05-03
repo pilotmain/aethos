@@ -4,9 +4,11 @@ from __future__ import annotations
 
 from app.services.intent_classifier import (
     get_intent,
+    looks_like_external_execution,
     looks_like_external_investigation,
     looks_like_orchestrate_system,
 )
+from app.services.legacy_behavior_utils import Context, build_response
 from app.services.local_file_intent import infer_local_file_request
 
 
@@ -20,9 +22,28 @@ def test_external_investigation_intent_triggers() -> None:
     assert get_intent("Why is my Railway service unhealthy") == "external_investigation"
 
 
+def test_external_execution_pipeline_overrides_investigation() -> None:
+    msg = "Can you check Railway, fix repo, push, redeploy, and report?"
+    assert looks_like_external_execution(msg)
+    assert not looks_like_external_investigation(msg)
+    assert get_intent(msg) == "external_execution"
+
+
+def test_external_investigation_diagnosis_not_external_execution() -> None:
+    assert not looks_like_external_execution("Why is my Railway service unhealthy")
+
+
 def test_infer_local_file_skips_when_orchestrating() -> None:
     lf = infer_local_file_request(
         "Please check Mission Control and tell me what failed on Railway",
+        default_relative_base=".",
+    )
+    assert lf.matched is False
+
+
+def test_infer_local_file_skips_external_execution_pipeline() -> None:
+    lf = infer_local_file_request(
+        "Check Railway, fix repo, push, redeploy",
         default_relative_base=".",
     )
     assert lf.matched is False
@@ -32,3 +53,16 @@ def test_orchestrate_wins_over_external_when_both_cues() -> None:
     assert (
         get_intent("Mission Control says Railway failed — what happened?") == "orchestrate_system"
     )
+
+
+def test_build_response_external_execution_gates_without_access() -> None:
+    ctx = Context(user_id="u", tasks=[], last_plan=[], memory={})
+    r = build_response(
+        "Check Railway, fix repo, push, redeploy",
+        "external_execution",
+        ctx,
+        db=None,
+        app_user_id=None,
+    )
+    assert "coordinate" in r.lower() or "access" in r.lower()
+    assert "Nexa" in r
