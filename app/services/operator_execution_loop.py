@@ -10,6 +10,9 @@ access/setup boilerplate from operator and execution-loop replies.
 Bounded Railway CLI probes may inject a session-cached ``RAILWAY_TOKEN`` from
 :mod:`app.services.credential_session_store` when the worker env lacks one (never echoed).
 
+Vercel/GitHub CLI subprocesses use :func:`app.services.operator_cli_path.cli_environ_for_operator`
+so nvm/Volta/``~/.local/bin`` tools resolve like your interactive shell.
+
 Railway-only turns remain in :mod:`app.services.execution_loop` to avoid duplicate
 bounded runs unless combined with other providers in the same message.
 """

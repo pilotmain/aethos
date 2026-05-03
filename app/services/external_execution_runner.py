@@ -3,6 +3,9 @@ Phase 58 — bounded Railway + workspace investigation after prefs are captured.
 
 Runs only allowlisted local checks. Never deploys, never narrates success without
 real command output attached to this turn.
+
+Railway CLI discovery uses the same enriched PATH as operator runs (nvm, ``~/.local/bin``,
+Homebrew) via :mod:`app.services.integrations.railway.cli`.
 """
 
 from __future__ import annotations
