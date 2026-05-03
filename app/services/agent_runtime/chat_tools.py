@@ -17,6 +17,7 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from app.services.custom_agents import display_agent_handle, normalize_agent_key
+from app.services.hosted_service_mission_gate import hosted_service_mission_blocked
 from app.services.swarm.mission_parser import parse_mission
 
 logger = logging.getLogger(__name__)
@@ -94,6 +95,8 @@ def _handles_after_with_clause(text: str) -> list[str]:
     for h in found:
         hk = normalize_agent_key(h)
         if hk == "boss":
+            continue
+        if hk in ("http", "https"):
             continue
         if hk and hk not in out:
             out.append(hk)
@@ -177,6 +180,8 @@ def dedupe_session_specs(specs: list[dict[str, Any]]) -> list[dict[str, Any]]:
         h = normalize_agent_key(str(spec.get("agent_handle") or ""))
         if not h or h == "boss":
             continue
+        if h in ("http", "https"):
+            continue
         task = clean_task_for_spawn(str(spec.get("task") or ""))
         if len(task) < 5:
             continue
@@ -202,6 +207,8 @@ def _extract_agent_tasks(text: str) -> list[dict[str, str]]:
     for m in _RE_AGENT_TASK_LINE.finditer(text or ""):
         hk = normalize_agent_key(m.group(1))
         if hk == "boss":
+            continue
+        if hk in ("http", "https"):
             continue
         task = clean_task_for_spawn((m.group(2) or "").strip())
         if len(task) >= 5:
@@ -242,6 +249,8 @@ def detect_bounded_mission_structure(text: str) -> dict[str, Any] | None:
     Raw bounded-mission parse (no Mission Control dashboard-mode filter).
     """
     raw = _strip_visual_dashboard_noise((text or "").strip())
+    if hosted_service_mission_blocked(raw):
+        return None
     short_bounded = bool(_RE_EXECUTE_BOUNDED_SHORT.search(raw))
 
     # Strict mission document: quoted title + per-agent task lines (see swarm/mission_parser.py).

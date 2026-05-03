@@ -70,6 +70,9 @@ def parse_mission(text: str) -> dict[str, Any] | None:
         task_body = (m.group(2) or "").strip()
         if hk == "boss":
             continue
+        # URL paste artifacts (``@https: //railway.app/...``) must never become graph nodes.
+        if hk in ("http", "https"):
+            continue
         if len(task_body) < 5:
             continue
         deps = _norm_dep_tokens(task_body, self_handle=hk)

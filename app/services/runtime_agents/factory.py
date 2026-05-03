@@ -23,6 +23,8 @@ def create_runtime_agents(
         else:
             role = str(step.get("role") or "agent")
         handle = normalize_handle(role)
+        if handle in ("http", "https"):
+            continue
         agents.append(
             {
                 "handle": handle,

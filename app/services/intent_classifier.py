@@ -549,6 +549,11 @@ def get_intent(
         return "external_execution_continue"
 
     if looks_like_external_investigation(t0, conversation_snapshot):
+        from app.services.hosted_service_mission_gate import hosted_deploy_provider_match
+
+        # Railway / deploy dashboard URLs → external_execution access gate + runner path, not generic investigation UX.
+        if hosted_deploy_provider_match(t0):
+            return "external_execution"
         return "external_investigation"
 
     result = classify_intent_llm(

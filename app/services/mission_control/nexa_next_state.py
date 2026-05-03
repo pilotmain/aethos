@@ -413,6 +413,10 @@ def build_execution_snapshot(
     hours: int = 24,
 ) -> dict[str, Any]:
     """Mission Control unified view: execution snapshot plus orchestration/trust dashboard (when ``user_id`` set)."""
+    from app.services.cleanup.url_scheme_impostors import purge_scheme_impostor_tasks
+
+    purge_scheme_impostor_tasks(db)
+
     q = select(NexaMission).order_by(NexaMission.created_at.desc())
     if user_id:
         q = q.where(NexaMission.user_id == user_id)
