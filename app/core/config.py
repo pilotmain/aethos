@@ -388,6 +388,11 @@ class Settings(BaseSettings):
     nexa_decisive_dev_chat: bool = True
     # Phase 56 — when execution confidence is “medium”, ask before auto-running a dev mission.
     nexa_execution_confirm_medium: bool = True
+    # Structured workspace intelligence (file-based context under data/nexa_workspace/).
+    nexa_workspace_intelligence_enabled: bool = False
+    nexa_workspace_intel_root: str = ""
+    nexa_workspace_intel_default_token_budget: int = 1500
+    nexa_workspace_intel_hard_token_budget: int = 3000
     nexa_local_first: bool = False
     nexa_ollama_base_url: str | None = None
     # Phase 39 — local Ollama when NEXA_LOCAL_FIRST routes tools away from remote APIs

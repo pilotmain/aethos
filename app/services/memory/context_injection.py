@@ -114,7 +114,8 @@ def build_memory_context_for_turn(
         for token in re.findall(r"[a-z][a-z0-9]{2,}", tl):
             if token not in tags and len(tags) < 24:
                 tags.append(token)
-    return {
+
+    out: dict[str, Any] = {
         "items": items[:max_items],
         "summary": summary,
         "used": used,
@@ -122,6 +123,29 @@ def build_memory_context_for_turn(
         "tags": tags[:24],
         "purpose": purpose,
     }
+
+    # Optional structured workspace files (markdown/json under data/nexa_workspace/).
+    from app.core.config import get_settings as _gs_workspace
+
+    _s = _gs_workspace()
+    if getattr(_s, "nexa_workspace_intelligence_enabled", False):
+        from app.services.workspace_intelligence.bundle import select_workspace_context_pack as _wi_pack
+
+        _pack = _wi_pack(raw)
+        if _pack is not None and (_pack.summary or "").strip():
+            _addon = (_pack.summary or "")[:3800]
+            _mc = ((out.get("memory_context") or "").strip() + "\n\n[Workspace intelligence]\n" + _addon).strip()
+            out["memory_context"] = _mc[:4500]
+            out["workspace_intel"] = {
+                "used": True,
+                "files": list(_pack.files),
+                "skills": list(_pack.skills),
+                "token_estimate": int(_pack.token_estimate),
+            }
+        else:
+            out["workspace_intel"] = {"used": False}
+
+    return out
 
 
 __all__ = ["build_memory_context_for_turn"]

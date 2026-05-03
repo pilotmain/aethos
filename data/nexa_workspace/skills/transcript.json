@@ -1,0 +1,9 @@
+{
+  "id": "transcript",
+  "name": "Transcript intake",
+  "description": "Normalize and chunk transcripts or call notes.",
+  "inputs": ["raw_text", "language"],
+  "outputs": ["chunks", "summary"],
+  "risk_level": "low",
+  "requires_llm": false
+}

@@ -1,0 +1,9 @@
+{
+  "id": "hook_finder",
+  "name": "Hook Finder",
+  "description": "Finds strong hooks from transcripts or notes.",
+  "inputs": ["transcript", "audience", "platform"],
+  "outputs": ["hooks"],
+  "risk_level": "low",
+  "requires_llm": true
+}
