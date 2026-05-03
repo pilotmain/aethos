@@ -66,3 +66,52 @@ def test_build_response_external_execution_gates_without_access() -> None:
     )
     assert "coordinate" in r.lower() or "access" in r.lower()
     assert "Nexa" in r
+
+
+def test_build_response_external_execution_runs_read_only_probe_when_not_gated(
+    db_session, monkeypatch
+) -> None:
+    from app.services.external_execution_access import ExternalExecutionAccess
+    from app.services.external_execution_runner import BoundedRailwayInvestigation
+
+    monkeypatch.setattr(
+        "app.services.external_execution_access.should_gate_external_execution",
+        lambda text, access: False,
+    )
+    monkeypatch.setattr(
+        "app.services.external_execution_access.assess_external_execution_access",
+        lambda db, uid: ExternalExecutionAccess(
+            dev_workspace_registered=True,
+            host_executor_enabled=True,
+            railway_token_present=True,
+            railway_cli_on_path=True,
+            github_token_configured=False,
+        ),
+    )
+    monkeypatch.setattr(
+        "app.services.external_execution_runner.run_bounded_railway_repo_investigation",
+        lambda *_a, **_k: BoundedRailwayInvestigation(skipped_reason="host_executor_disabled"),
+    )
+    monkeypatch.setattr(
+        "app.services.external_execution_runner.format_investigation_for_chat",
+        lambda inv: "PROBE_VERIFY_BLOCK",
+    )
+    monkeypatch.setattr(
+        "app.services.orchestrator_status_reply.format_orchestrator_mc_snapshot",
+        lambda db, uid: "",
+    )
+    monkeypatch.setattr(
+        "app.services.external_execution_session.mark_external_execution_awaiting_followup",
+        lambda *a, **k: None,
+    )
+
+    ctx = Context(user_id="u-probe", tasks=[], last_plan=[], memory={})
+    r = build_response(
+        "Check Railway, fix repo, push, redeploy",
+        "external_execution",
+        ctx,
+        db=db_session,
+        app_user_id="u-probe",
+    )
+    assert "read-only probe" in r.lower()
+    assert "PROBE_VERIFY_BLOCK" in r

@@ -129,7 +129,10 @@ def format_external_execution_access_reply(
             "- **Git push (optional)** — configure `GITHUB_TOKEN` / repo remotes if pushes should run from Nexa."
         )
     if not miss:
-        miss.append("- (No blocking items detected — if something still fails, paste the provider error.)")
+        miss.append(
+            "- **Next:** say **retry external execution** after connecting access — you’ll see **progress** "
+            "and **real CLI output** here (nothing counts as done without that evidence)."
+        )
     lines.extend(miss)
     lines.extend(
         [

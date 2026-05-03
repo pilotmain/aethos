@@ -134,7 +134,7 @@ def run_bounded_railway_repo_investigation(
         (os.environ.get("RAILWAY_TOKEN") or "").strip()
         or (os.environ.get("RAILWAY_API_TOKEN") or "").strip()
     )
-    _step("Checking Railway auth (environment token / CLI path)")
+    _step("Checking Railway auth")
     blocked, note = _deploy_policy_note(collected)
     out.deploy_blocked_by_policy = blocked
     out.policy_note = note
@@ -191,7 +191,7 @@ def run_bounded_railway_repo_investigation(
     out.railway_cli_present = railway_binary_on_path()
 
     auth = str(collected.get("auth_method") or "").strip()
-    _step("Running `railway whoami` (read-only)")
+    _step("Running railway whoami")
     if auth == "local_cli" and not out.railway_cli_present:
         out.railway_whoami = {
             "ok": False,
@@ -205,15 +205,15 @@ def run_bounded_railway_repo_investigation(
         out.railway_whoami = run_railway_cli("whoami", [], cwd=cwd, timeout=30.0)
 
     if out.railway_cli_present:
-        _step("Fetching Railway service status")
+        _step("Running railway status")
         out.railway_status = run_railway_cli("status", [], cwd=cwd, timeout=40.0)
-        _step("Fetching Railway logs (tail)")
+        _step("Fetching logs")
         logs = run_railway_cli("logs", ["--tail", "100"], cwd=cwd, timeout=55.0)
         if isinstance(logs, dict) and not logs.get("ok") and logs.get("error") != "railway_cli_missing":
             logs = run_railway_cli("logs", [], cwd=cwd, timeout=55.0)
         out.railway_logs = logs
 
-    _step("Inspecting repository (`git status`)")
+    _step("Inspecting repo")
     out.git_status = run_dev_command(cwd, "git status")
 
     _step("Preparing findings")

@@ -346,8 +346,9 @@ class NexaGateway:
             rt_text = str(_resume.get("text") or "").strip()
             if not rt_text:
                 rt_text = (
-                    "Got it — I’ve recorded your Railway/deploy preferences. "
-                    "Paste the next error line or say what to check."
+                    "Got it — I’ve recorded your Railway/deploy preferences.\n\n"
+                    "Send **retry external execution** to run read-only checks on this worker with fresh progress "
+                    "and output—or describe the next error in one line."
                 )
             return {
                 "mode": "chat",

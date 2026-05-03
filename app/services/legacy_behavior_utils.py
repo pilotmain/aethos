@@ -375,8 +375,9 @@ def build_response(
         )
     if intent == "external_execution_continue":
         return _out(
-            "Paste Railway logs or describe what changed — I’ll continue the investigation from there. "
-            "If access is ready on this worker, use **retry external execution** to run read-only checks again."
+            "**Next step:** send **retry external execution** — I’ll re-run the read-only probe on this worker "
+            "with a fresh timestamp, **progress lines**, and **verified CLI output** (no repeated empty replies).\n\n"
+            "If the last run showed a blocker, describe what changed or paste **one** error line after that."
         )
     if intent == "external_execution":
         from app.services.external_execution_access import (
@@ -396,12 +397,38 @@ def build_response(
                 "I will only report deploy or health outcomes **after** real commands succeed — nothing is finished "
                 "until verification runs.\n\n"
             )
-            if db is not None and (app_user_id or "").strip():
+            uid_e = str(app_user_id or "").strip()
+            probe_md = ""
+            if db is not None and uid_e:
+                try:
+                    from app.services.external_execution_runner import (
+                        format_investigation_for_chat,
+                        run_bounded_railway_repo_investigation,
+                    )
+
+                    collected_probe: dict[str, object] = {
+                        "deploy_mode": "report_then_approve",
+                        "permission_to_probe": True,
+                        "auth_method": "token_env" if access.railway_token_present else "local_cli",
+                    }
+                    inv0 = run_bounded_railway_repo_investigation(db, uid_e, collected_probe)
+                    probe_md = format_investigation_for_chat(inv0)
+                except Exception as exc:
+                    logger.warning("external_execution.initial_probe_failed uid=%s err=%s", uid_e, exc)
+                    probe_md = f"_Read-only probe did not complete: {exc}_"
+
+            mc_part = ""
+            if db is not None and uid_e:
                 from app.services.orchestrator_status_reply import format_orchestrator_mc_snapshot
 
-                body = ready + format_orchestrator_mc_snapshot(db, str(app_user_id).strip())
-            else:
-                body = ready.strip()
+                mc_part = format_orchestrator_mc_snapshot(db, uid_e)
+
+            parts: list[str] = [ready.strip()]
+            if probe_md.strip():
+                parts.append("### Read-only probe (this worker)\n\n" + probe_md.strip())
+            if mc_part.strip():
+                parts.append("### Nexa-side activity snapshot\n\n" + mc_part.strip())
+            body = "\n\n---\n\n".join(parts) if len(parts) > 1 else parts[0]
         out = _out(body)
         mark_external_execution_awaiting_followup(db, app_user_id, None, gated=gated)
         return out
@@ -409,16 +436,19 @@ def build_response(
         from app.services.orchestrator_status_reply import format_orchestrator_mc_snapshot
 
         intro = (
-            "I can’t log into your cloud provider (e.g. Railway) from this session unless you’ve "
-            "connected API/CLI access. Below is **Nexa-side** activity (missions/dev runs) — it may not "
-            "reflect the host dashboard if nothing was recorded.\n\n"
+            "Hosted dashboards aren’t available from chat alone — **read-only CLI checks** run on the worker "
+            "after you connect `RAILWAY_TOKEN` / CLI on that host (see access reply if gated).\n\n"
+            "Below is **Nexa-side** activity (missions/dev runs) — it may not reflect the provider UI.\n\n"
+            "**Try:** **retry external execution** once access is configured — you’ll get progress plus real command output, "
+            "or an exact blocker.\n\n"
         )
         return _out(intro + format_orchestrator_mc_snapshot(db, str(app_user_id).strip()))
     if intent == "external_investigation":
         return _out(
-            "I don’t have your hosted service credentials here. Share the error text, deploy id, or "
-            "what the provider UI shows, and I’ll help you triage—or connect access safely if you want "
-            "hands-on runs."
+            "I can’t drive the hosted dashboard from chat by itself. Connect Railway access on the **worker** "
+            "(`.env` / CLI), then send **retry external execution** for read-only `railway` + `git status` output "
+            "with progress lines—or fix the **exact blocker** shown if access isn’t ready yet.\n\n"
+            "_Show real work, or show why we can’t — no pretend completion._"
         )
     if is_multi_agent_capability_question((text or "").strip()):
         return _out(reply_multi_agent_capability_clarification())
