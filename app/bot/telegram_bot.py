@@ -1869,10 +1869,19 @@ async def _handle_incoming_text_impl(update: Update, context: ContextTypes.DEFAU
 
                 # Phase 35 — missions/dev first (structured gateway only); chat brain lives in gateway too.
                 if not tstrip.startswith("/") and tstrip:
+                    from app.services.telegram_dev_progress import make_telegram_dev_progress_hook
                     from app.services.channels.telegram_gateway_reply import (
                         format_telegram_gateway_reply,
                     )
-                    gw_struct = NexaGateway().try_structured_turn(_gateway_ctx, tstrip, db=db)
+
+                    _gateway_ctx.extras["on_dev_progress"] = make_telegram_dev_progress_hook(
+                        update,
+                        loop=asyncio.get_running_loop(),
+                    )
+                    try:
+                        gw_struct = NexaGateway().try_structured_turn(_gateway_ctx, tstrip, db=db)
+                    finally:
+                        _gateway_ctx.extras.pop("on_dev_progress", None)
                     if gw_struct is not None:
                         reply_gw = format_telegram_gateway_reply(gw_struct)
                         cctx_gw = get_or_create_context(db, app_user_id)
@@ -3127,8 +3136,17 @@ async def _handle_incoming_text_impl(update: Update, context: ContextTypes.DEFAU
                             return f"{a.rstrip()}\n\n{m}"
                         return m
 
+                    from app.services.telegram_dev_progress import make_telegram_dev_progress_hook
+
                     _gateway_ctx.extras["routing_agent_key"] = routed_key
-                    gw_chat = NexaGateway().continue_after_structured(_gateway_ctx, text, db=db)
+                    _gateway_ctx.extras["on_dev_progress"] = make_telegram_dev_progress_hook(
+                        update,
+                        loop=asyncio.get_running_loop(),
+                    )
+                    try:
+                        gw_chat = NexaGateway().continue_after_structured(_gateway_ctx, text, db=db)
+                    finally:
+                        _gateway_ctx.extras.pop("on_dev_progress", None)
                     for se in gw_chat.get("side_effects") or []:
                         if se.get("kind") == "telegram_send_approval_card":
                             from app.services.aider_autonomous_loop import (

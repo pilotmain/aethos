@@ -7,6 +7,9 @@ type DevRun = {
   goal?: string;
   status?: string;
   workspace_id?: string;
+  summary?: string | null;
+  progress_messages?: string[] | null;
+  error?: string | null;
 };
 
 type McTask = {
@@ -46,7 +49,30 @@ export function ActiveWorkPanel(props: {
   const lines: string[] = [];
   for (const r of activeDev.slice(0, 6)) {
     const g = (r.goal || "Dev investigation").trim();
-    lines.push(g.length > 120 ? `${g.slice(0, 117)}…` : g);
+    const head = g.length > 100 ? `${g.slice(0, 97)}…` : g;
+    const msgs = Array.isArray(r.progress_messages)
+      ? r.progress_messages.filter((m): m is string => typeof m === "string" && m.trim().length > 0)
+      : [];
+    const latest = msgs.length ? msgs[msgs.length - 1]!.trim() : "";
+    const summ = typeof r.summary === "string" ? r.summary.trim() : "";
+    const err = typeof r.error === "string" ? r.error.trim() : "";
+    let tail = "";
+    if (err) {
+      tail = err.length > 140 ? `${err.slice(0, 137)}…` : err;
+      lines.push(`${head} — blocked: ${tail}`);
+      continue;
+    }
+    if (latest) {
+      tail = latest.length > 160 ? `${latest.slice(0, 157)}…` : latest;
+      lines.push(`${head} — ${tail}`);
+      continue;
+    }
+    if (summ) {
+      tail = summ.length > 140 ? `${summ.slice(0, 137)}…` : summ;
+      lines.push(`${head} — ${tail}`);
+      continue;
+    }
+    lines.push(head);
   }
   for (const t of activeMission.slice(0, 4)) {
     const h = (t.agent_handle || "agent").trim();

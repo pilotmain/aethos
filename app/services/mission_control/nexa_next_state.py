@@ -566,6 +566,12 @@ def build_execution_snapshot(
                 "fix_strategy_hint": (r.result_json or {}).get("fix_strategy_hint")
                 if isinstance(r.result_json, dict)
                 else None,
+                "summary": (r.result_json or {}).get("summary")
+                if isinstance(r.result_json, dict)
+                else None,
+                "progress_messages": (r.result_json or {}).get("progress_messages")
+                if isinstance(r.result_json, dict)
+                else None,
                 "privacy_note": "Outbound adapter context is gated; stored output is redacted.",
                 "privacy_warnings": None,
             }

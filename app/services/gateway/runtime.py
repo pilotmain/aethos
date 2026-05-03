@@ -84,7 +84,7 @@ class NexaGateway:
             assess_interaction_risk,
             should_prompt_for_dev_workspace_help,
         )
-        from app.services.execution_trigger import should_auto_execute_dev
+        from app.services.execution_trigger import compute_execution_confidence, should_auto_execute_dev
         from app.services.intent_classifier import get_intent
 
         uid = (gctx.user_id or "").strip()
@@ -126,11 +126,40 @@ class NexaGateway:
 
         if len(rows) != 1:
             return None
+
+        conf = compute_execution_confidence(
+            intent,
+            raw,
+            memory_summary=mem_sum,
+            workspace_count=len(rows),
+        )
+        if conf == "low":
+            return None
+
+        settings = get_settings()
+        if conf == "medium" and bool(getattr(settings, "nexa_execution_confirm_medium", True)):
+            return {
+                "mode": "chat",
+                "text": (
+                    "I'm not fully confident this should auto-run against your workspace yet. "
+                    'Say "yes, investigate" to proceed, or paste the exact error output or traceback.'
+                ),
+                "intent": "execution_confirm",
+            }
+
         if not should_auto_execute_dev(raw, intent, workspace_count=len(rows)):
             return None
         goal = raw[:8000]
         mem_notes = mem_sum[:4000] if mem_sum else None
-        res = run_dev_mission(db, uid, rows[0].id, goal, memory_notes=mem_notes)
+        on_prog = gctx.extras.get("on_dev_progress")
+        res = run_dev_mission(
+            db,
+            uid,
+            rows[0].id,
+            goal,
+            memory_notes=mem_notes,
+            on_progress=on_prog if callable(on_prog) else None,
+        )
         body = format_dev_run_summary(res)
         intro = "I'll investigate this against your workspace now.\n\n"
         return {

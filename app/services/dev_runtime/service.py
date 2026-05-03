@@ -6,7 +6,7 @@ import json
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from sqlalchemy.orm import Session
 
@@ -133,6 +133,7 @@ def run_dev_mission(
     max_iterations: int | None = None,
     schedule: dict[str, Any] | None = None,
     from_scheduler: bool = False,
+    on_progress: Callable[[str], None] | None = None,
 ) -> dict[str, Any]:
     _ = schedule
     if from_scheduler:
@@ -182,6 +183,18 @@ def run_dev_mission(
         context_accum = {"run_branch": None, "branch_checkout": {"ok": True, "skipped": True}}
     steps_out: list[dict[str, Any]] = []
     progress_messages: list[str] = []
+
+    def _notify_progress(msg: str) -> None:
+        m = (msg or "").strip()
+        if not m:
+            return
+        progress_messages.append(m)
+        if on_progress is not None:
+            try:
+                on_progress(m)
+            except Exception:
+                pass
+
     adapter_used_name = "local_stub"
     mission_goal = (goal or "").strip()
     current_goal = mission_goal
@@ -203,7 +216,7 @@ def run_dev_mission(
         run.plan_json = plan
         db.commit()
 
-        progress_messages.append("Starting dev mission on your workspace…")
+        _notify_progress("Starting dev mission on your workspace…")
 
         for step in plan:
             stype = str(step.get("type") or "")
@@ -252,10 +265,21 @@ def run_dev_mission(
             steps_out.append(step_blob)
             context_accum[stype] = artifact
 
+            step_label = (
+                "Analyzing repository (git status)…"
+                if stype in ("inspect", "analyze")
+                else f"Step {stype}…"
+            )
+            _notify_progress(step_label)
             emit_runtime_event(
                 "dev.step.completed",
                 user_id=user_id,
-                payload={"run_id": rid, "step_type": stype, "step_id": row.id},
+                payload={
+                    "run_id": rid,
+                    "step_type": stype,
+                    "step_id": row.id,
+                    "progress_label": step_label,
+                },
             )
 
         # Phase 42 — bounded retry: coding step → tests → failure-driven goal pivot until pass,
@@ -265,7 +289,7 @@ def run_dev_mission(
             iteration += 1
             loop_iterations_executed = iteration
 
-            progress_messages.append(f"Running tests / fix iteration {iteration} of {max_loop_iters}…")
+            _notify_progress(f"Running tests / fix iteration {iteration} of {max_loop_iters}…")
 
             adapter_impl = choose_adapter(
                 preferred_agent,
@@ -381,7 +405,7 @@ def run_dev_mission(
                 if tests_ok
                 else "Tests still failing — applying another fix pass…"
             )
-            progress_messages.append(loop_label)
+            _notify_progress(loop_label)
             emit_runtime_event(
                 "dev.loop.iteration",
                 user_id=user_id,
@@ -600,6 +624,13 @@ def run_dev_mission(
         result_payload["failure_classification"] = _fc
         result_payload["fix_strategy_hint"] = select_fix_strategy(_fc)
 
+        if tests_passed:
+            _notify_progress("Done — tests are green for this pass.")
+        elif has_runtime_errors or stagnation_stop:
+            _notify_progress("Stopped — see summary for errors or stagnation.")
+
+        result_payload["progress_messages"] = list(progress_messages)
+
         run.result_json = result_payload
         run.status = "completed"
         run.completed_at = _utc_now()
@@ -617,11 +648,6 @@ def run_dev_mission(
             },
         )
         update_state([])
-
-        if tests_passed:
-            progress_messages.append("Done — tests are green for this pass.")
-        elif has_runtime_errors or stagnation_stop:
-            progress_messages.append("Stopped — see summary for errors or stagnation.")
 
         return {
             "ok": True,

@@ -386,6 +386,8 @@ class Settings(BaseSettings):
     nexa_memory_layer_enabled: bool = True
     # Phase 55 — reduce generic “next steps” / appendix tone for dev-analysis chat.
     nexa_decisive_dev_chat: bool = True
+    # Phase 56 — when execution confidence is “medium”, ask before auto-running a dev mission.
+    nexa_execution_confirm_medium: bool = True
     nexa_local_first: bool = False
     nexa_ollama_base_url: str | None = None
     # Phase 39 — local Ollama when NEXA_LOCAL_FIRST routes tools away from remote APIs
