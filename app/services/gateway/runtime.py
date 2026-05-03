@@ -321,7 +321,10 @@ class NexaGateway:
         cctx = get_or_create_context(db, uid)
         snap = build_context_snapshot(cctx, db)
 
-        from app.services.external_execution_session import try_resume_external_execution_turn
+        from app.services.external_execution_session import (
+            maybe_start_external_probe_from_turn,
+            try_resume_external_execution_turn,
+        )
 
         _resume = try_resume_external_execution_turn(db, uid, raw, cctx)
         if _resume is not None:
@@ -335,6 +338,17 @@ class NexaGateway:
                 "mode": "chat",
                 "text": gateway_finalize_chat_reply(rt_text, source="external_execution_resume"),
                 "intent": str(_resume.get("intent") or "external_execution_continue"),
+            }
+
+        _probe = maybe_start_external_probe_from_turn(
+            db, uid, raw, cctx, conversation_snapshot=snap
+        )
+        if _probe is not None:
+            pt = str(_probe.get("text") or "").strip()
+            return {
+                "mode": "chat",
+                "text": gateway_finalize_chat_reply(pt, source="external_execution_probe"),
+                "intent": str(_probe.get("intent") or "external_execution_continue"),
             }
 
         rt = route_agent(raw, context_snapshot=snap)
@@ -419,6 +433,8 @@ class NexaGateway:
             )
             return {"mode": "chat", "text": gateway_finalize_chat_reply(gq, source="general_answer"), "intent": "general_answer"}
 
+        from app.services.external_execution_session import scrub_generic_login_refusal_when_local_auth_claimed
+
         reply = self.compose_llm_reply(
             raw,
             intent,
@@ -429,6 +445,7 @@ class NexaGateway:
             conversation_snapshot=snap,
             routing_agent_key=routing_agent_key,
         )
+        reply = scrub_generic_login_refusal_when_local_auth_claimed(reply, raw)
         reply = _merge_phase50_assist(reply, raw, intent)
         return {"mode": "chat", "text": gateway_finalize_chat_reply(reply, source="full_chat_reply"), "intent": intent}
 

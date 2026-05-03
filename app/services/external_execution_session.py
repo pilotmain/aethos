@@ -107,13 +107,33 @@ def parse_followup_preferences(text: str, collected: dict[str, Any]) -> dict[str
     out = dict(collected)
     t = (text or "").strip().lower()
 
-    if re.search(r"\blog(?:ged)?\s+in\s+locally\b", t) or (
-        "logged in" in t and "local" in t
-    ):
+    probe_markers = (
+        "try for yourself",
+        "try it yourself",
+        "just try",
+        "try yourself",
+        "verify locally",
+        "run the checks",
+        "run checks",
+        "run read-only",
+        "run diagnostics",
+        "check for yourself",
+        "go ahead and check",
+    )
+    if any(m in t for m in probe_markers):
+        out["permission_to_probe"] = True
+
+    if re.search(r"\balready\s+authenticated\b", t) or "already logged in" in t:
         out["auth_method"] = "local_cli"
-    elif "railway login" in t or ("cli" in t and "railway" in t):
+    if re.search(r"\blog(?:ged)?\s+in\s+locally\b", t) or ("logged in" in t and "local" in t):
         out["auth_method"] = "local_cli"
-    elif any(x in t for x in ("token set", "token is set", "have a token", "set railway token", "r railway_token")):
+    if re.search(r"\bi\s*['']?m\s+logged\s+in\b", t) or re.search(r"\bi\s+am\s+logged\s+in\b", t):
+        out["auth_method"] = "local_cli"
+    if "railway is logged in" in t or "railway cli is logged in" in t or "logged into railway locally" in t:
+        out["auth_method"] = "local_cli"
+    if "railway login" in t or "use local cli" in t or "use railway cli" in t or ("cli" in t and "railway" in t):
+        out["auth_method"] = "local_cli"
+    if any(x in t for x in ("token set", "token is set", "have a token", "set railway token", "r railway_token")):
         out["auth_method"] = "token_env"
 
     if any(
@@ -139,6 +159,9 @@ def parse_followup_preferences(text: str, collected: dict[str, Any]) -> dict[str
         out["deploy_mode"] = "report_then_approve"
     if any(x in t for x in ("go ahead and deploy", "deploy when ready", "ship it", "you can deploy")):
         out["deploy_mode"] = "deploy_when_ready"
+
+    if out.get("permission_to_probe") and out.get("auth_method") and not out.get("deploy_mode"):
+        out["deploy_mode"] = "report_then_approve"
 
     return out
 
@@ -168,6 +191,19 @@ def _finalize_fragment_after_ack(db: Session, cctx: ConversationContext, collect
     db.commit()
 
 
+def format_probe_readonly_intro() -> str:
+    """Product copy — bounded read-only diagnostics only."""
+    return (
+        "Got it — I'll check your local Railway session now.\n\n"
+        "I'll run read-only checks only:\n"
+        "- `railway whoami`\n"
+        "- `railway status`\n"
+        "- `railway logs`\n"
+        "- `git status`\n\n"
+        "I will not deploy, push, or change anything without approval."
+    )
+
+
 def format_followup_acknowledgment(
     collected: dict[str, Any],
     *,
@@ -177,6 +213,10 @@ def format_followup_acknowledgment(
     auth = (collected.get("auth_method") or "").strip()
     deploy = (collected.get("deploy_mode") or "").strip()
     uid = (user_id or "").strip()
+
+    probe_intro = ""
+    if collected.get("permission_to_probe"):
+        probe_intro = format_probe_readonly_intro() + "\n\n---\n\n"
 
     auth_line = (
         "use your **local Railway CLI** session (logged in on this machine)"
@@ -218,7 +258,7 @@ def format_followup_acknowledgment(
         "when runs occur._\n\n"
         "**Starting investigation now** — one moment while I align with your workspace and executor settings."
     )
-    return body.strip()
+    return (probe_intro + body).strip()
 
 
 def _user_aborts_flow(text: str) -> bool:
@@ -311,10 +351,181 @@ def try_resume_external_execution_turn(
     return {"mode": "chat", "text": full_reply, "intent": "external_execution_continue"}
 
 
+def _user_claims_local_cli_auth(text: str) -> bool:
+    t = (text or "").strip().lower()
+    if re.search(r"\balready\s+authenticated\b", t):
+        return True
+    if "already logged in" in t:
+        return True
+    if re.search(r"\blog(?:ged)?\s+in\s+locally\b", t) or ("logged in" in t and "local" in t):
+        return True
+    if re.search(r"\bi\s*['']?m\s+logged\s+in\b", t) or re.search(r"\bi\s+am\s+logged\s+in\b", t):
+        return True
+    if "railway is logged in" in t or "railway cli is logged in" in t:
+        return True
+    if "logged into railway locally" in t or "logged in to railway locally" in t:
+        return True
+    if "railway login" in t or "use local cli" in t or "use railway cli" in t:
+        return True
+    if "cli" in t and "railway" in t:
+        return True
+    return False
+
+
+def _user_requests_diagnostic_probe(text: str) -> bool:
+    t = (text or "").strip().lower()
+    markers = (
+        "try for yourself",
+        "try it yourself",
+        "just try",
+        "try yourself",
+        "verify locally",
+        "run the checks",
+        "run checks",
+        "run read-only",
+        "run diagnostics",
+        "check for yourself",
+        "go ahead and check",
+    )
+    if any(m in t for m in markers):
+        return True
+    if "already authenticated" in t and "railway" in t:
+        return True
+    return False
+
+
+def _snapshot_hints_railway_or_deploy(snap: dict[str, Any] | None) -> bool:
+    if not snap:
+        return False
+    try:
+        raw = json.dumps(snap, default=str).lower()
+    except (TypeError, ValueError):
+        return False
+    keys = (
+        "railway",
+        "deploy",
+        "render.com",
+        "fly.io",
+        "vercel",
+        "external_execution",
+        "hosted",
+        "production",
+        "nexa_missions",
+    )
+    return any(k in raw for k in keys)
+
+
+def text_has_railway_execution_context(text: str, conversation_snapshot: dict[str, Any] | None) -> bool:
+    """True when the turn or snapshot signals Railway / hosted execution context."""
+    raw = (text or "").strip()
+    tl = raw.lower()
+    if "railway" in tl:
+        return True
+    if re.search(r"https?://", tl):
+        return True
+    from app.services.intent_classifier import looks_like_external_execution, looks_like_external_investigation
+
+    if looks_like_external_execution(raw) or looks_like_external_investigation(raw, conversation_snapshot):
+        return True
+    return _snapshot_hints_railway_or_deploy(conversation_snapshot)
+
+
+def maybe_start_external_probe_from_turn(
+    db: Session,
+    user_id: str,
+    user_text: str,
+    cctx: ConversationContext,
+    *,
+    conversation_snapshot: dict[str, Any] | None = None,
+) -> dict[str, Any] | None:
+    """
+    Direct read-only probe when the user grants permission without an awaiting-followup session.
+
+    Runs the same bounded Railway + git checks as the follow-up resume path.
+    """
+    uid = (user_id or "").strip()
+    raw = (user_text or "").strip()
+    if not uid or not raw:
+        return None
+
+    frag = get_external_execution_fragment(cctx)
+    if frag and frag.get("status") == "awaiting_followup":
+        return None
+
+    if not _user_claims_local_cli_auth(raw):
+        return None
+    if not _user_requests_diagnostic_probe(raw):
+        return None
+    if not text_has_railway_execution_context(raw, conversation_snapshot):
+        return None
+
+    collected: dict[str, Any] = {
+        "auth_method": "local_cli",
+        "deploy_mode": "report_then_approve",
+        "permission_to_probe": True,
+    }
+    intro = format_probe_readonly_intro()
+    inv_block = ""
+    try:
+        from app.services.external_execution_runner import (
+            format_investigation_for_chat,
+            run_bounded_railway_repo_investigation,
+        )
+
+        inv = run_bounded_railway_repo_investigation(db, uid, collected)
+        inv_block = format_investigation_for_chat(inv)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("external_execution.probe_runner_failed uid=%s err=%s", uid, exc)
+        inv_block = f"_Could not run bounded investigation on this host: {exc}_"
+
+    full_reply = intro
+    if (inv_block or "").strip():
+        full_reply = f"{intro}\n\n---\n\n{inv_block.strip()}"
+    return {"mode": "chat", "text": full_reply, "intent": "external_execution_continue"}
+
+
+def scrub_generic_login_refusal_when_local_auth_claimed(reply: str, user_text: str) -> str:
+    """
+    Safety net: never show generic “cannot log in / paste output” coaching when the user
+    explicitly claims local CLI auth and asks Nexa to verify on-host.
+    """
+    ut = (user_text or "").lower()
+    claimed = (
+        "already authenticated" in ut
+        or "logged in locally" in ut
+        or "try for yourself" in ut
+        or "railway cli is logged in" in ut
+        or "logged into railway locally" in ut
+        or "use local cli" in ut
+        or "use railway cli" in ut
+    )
+    if not claimed:
+        return reply
+    rl = (reply or "").lower()
+    generic_refusal = (
+        "cannot log in" in rl
+        or "can't log in" in rl
+        or "i can guide you" in rl
+        or "paste the output" in rl
+        or "i cannot log into your cloud" in rl
+        or "can't log into your cloud" in rl
+    )
+    if not generic_refusal:
+        return reply
+    return (
+        "I should try bounded read-only checks on this host first (`railway whoami`, `railway status`, "
+        "`railway logs`, `git status`). If something prevents that, I'll report the exact blocker "
+        "(missing CLI, host executor off, or no workspace path registered)."
+    )
+
+
 __all__ = [
     "mark_external_execution_awaiting_followup",
+    "maybe_start_external_probe_from_turn",
     "try_resume_external_execution_turn",
     "get_external_execution_fragment",
     "clear_external_execution_fragment",
     "parse_followup_preferences",
+    "scrub_generic_login_refusal_when_local_auth_claimed",
+    "format_probe_readonly_intro",
 ]

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 from sqlalchemy.orm import Session
 
@@ -134,6 +135,13 @@ def run_bounded_railway_repo_investigation(
     return out
 
 
+def investigation_to_public_payload(inv: BoundedRailwayInvestigation) -> dict[str, Any]:
+    """Structured blocker for APIs — ``ran`` is False when no workspace/executor/cli path ran."""
+    if inv.skipped_reason:
+        return {"ran": False, "reason": inv.skipped_reason}
+    return {"ran": True, "reason": None}
+
+
 def format_investigation_for_chat(result: BoundedRailwayInvestigation) -> str:
     """User-facing block with verified snippets only."""
     lines: list[str] = [
@@ -144,7 +152,9 @@ def format_investigation_for_chat(result: BoundedRailwayInvestigation) -> str:
     if result.skipped_reason:
         reasons = {
             "runner_disabled": "External execution runner is disabled (`NEXA_EXTERNAL_EXECUTION_RUNNER_ENABLED`).",
-            "host_executor_disabled": "Host executor is off (`NEXA_HOST_EXECUTOR_ENABLED`) — no local workspace commands ran.",
+            "host_executor_disabled": (
+                "I tried to start read-only checks, but host execution is disabled (`NEXA_HOST_EXECUTOR_ENABLED`)."
+            ),
             "no_workspace": "No dev workspace is registered — register a repo path under Mission Control → Dev.",
             "no_user": "Missing user id for workspace lookup.",
             "workspace_path_missing": "Registered workspace path is not a directory on this host.",
@@ -153,6 +163,12 @@ def format_investigation_for_chat(result: BoundedRailwayInvestigation) -> str:
         lines.append("")
         lines.append(result.policy_note)
         return "\n".join(lines).strip()
+
+    if not result.railway_cli_present:
+        lines.append(
+            "**Railway CLI is not installed or not available in this environment.**"
+        )
+        lines.append("")
 
     if len(result.workspace_paths) > 1:
         lines.append(
@@ -211,5 +227,6 @@ def format_investigation_for_chat(result: BoundedRailwayInvestigation) -> str:
 __all__ = [
     "BoundedRailwayInvestigation",
     "format_investigation_for_chat",
+    "investigation_to_public_payload",
     "run_bounded_railway_repo_investigation",
 ]
