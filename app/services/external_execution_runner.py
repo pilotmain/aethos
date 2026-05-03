@@ -7,6 +7,8 @@ real command output attached to this turn.
 
 from __future__ import annotations
 
+import logging
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -14,6 +16,8 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
+
+_log = logging.getLogger(__name__)
 from app.services.dev_runtime.executor import run_dev_command
 from app.services.dev_runtime.workspace import list_workspaces
 from app.services.integrations.railway.cli import railway_binary_on_path, run_railway_cli
@@ -32,6 +36,7 @@ class BoundedRailwayInvestigation:
 
     skipped_reason: str | None = None
     workspace_paths: list[str] = field(default_factory=list)
+    railway_env_token_present: bool = False
     railway_cli_present: bool = False
     railway_whoami: dict | None = None
     railway_status: dict | None = None
@@ -62,12 +67,32 @@ def _deploy_policy_note(collected: dict[str, object]) -> tuple[bool, str]:
     )
 
 
+def _log_bounded_runner_done(uid: str, inv: BoundedRailwayInvestigation) -> None:
+    """Mandatory observability for bounded Railway probes (retry / resume / direct)."""
+    executed = inv.skipped_reason is None
+    _log.info(
+        "RUNNER_BOUNDED user_id=%s executed=%s skipped_reason=%s railway_cli=%s railway_token_env=%s "
+        "workspace_count=%s",
+        uid or None,
+        executed,
+        inv.skipped_reason,
+        inv.railway_cli_present,
+        inv.railway_env_token_present,
+        len(inv.workspace_paths),
+    )
+
+
 def run_bounded_railway_repo_investigation(
     db: Session,
     user_id: str,
     collected: dict[str, object],
 ) -> BoundedRailwayInvestigation:
+    uid = (user_id or "").strip()
     out = BoundedRailwayInvestigation()
+    out.railway_env_token_present = bool(
+        (os.environ.get("RAILWAY_TOKEN") or "").strip()
+        or (os.environ.get("RAILWAY_API_TOKEN") or "").strip()
+    )
     blocked, note = _deploy_policy_note(collected)
     out.deploy_blocked_by_policy = blocked
     out.policy_note = note
@@ -75,14 +100,16 @@ def run_bounded_railway_repo_investigation(
     s = get_settings()
     if not getattr(s, "nexa_external_execution_runner_enabled", True):
         out.skipped_reason = "runner_disabled"
+        _log_bounded_runner_done(uid, out)
         return out
     if not bool(getattr(s, "nexa_host_executor_enabled", False)):
         out.skipped_reason = "host_executor_disabled"
+        _log_bounded_runner_done(uid, out)
         return out
 
-    uid = (user_id or "").strip()
     if not uid:
         out.skipped_reason = "no_user"
+        _log_bounded_runner_done(uid, out)
         return out
 
     try:
@@ -95,6 +122,7 @@ def run_bounded_railway_repo_investigation(
 
     if not paths:
         out.skipped_reason = "no_workspace"
+        _log_bounded_runner_done(uid, out)
         return out
 
     repo_root = paths[0]
@@ -105,6 +133,7 @@ def run_bounded_railway_repo_investigation(
     root_path = Path(repo_root)
     if not root_path.is_dir():
         out.skipped_reason = "workspace_path_missing"
+        _log_bounded_runner_done(uid, out)
         return out
 
     cwd = str(root_path.resolve())
@@ -132,6 +161,7 @@ def run_bounded_railway_repo_investigation(
 
     out.git_status = run_dev_command(cwd, "git status")
 
+    _log_bounded_runner_done(uid, out)
     return out
 
 
@@ -168,6 +198,12 @@ def format_investigation_for_chat(result: BoundedRailwayInvestigation) -> str:
         lines.append(
             "**Railway CLI is not installed or not available in this environment.**"
         )
+        if not getattr(result, "railway_env_token_present", False):
+            lines.append("")
+            lines.append(
+                "**No credentials available:** set `RAILWAY_TOKEN` or `RAILWAY_API_TOKEN` on this worker, "
+                "or install the Railway CLI (`railway`) and authenticate."
+            )
         lines.append("")
 
     if len(result.workspace_paths) > 1:

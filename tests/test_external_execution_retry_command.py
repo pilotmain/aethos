@@ -50,7 +50,7 @@ def test_retry_runs_runner_when_completed_flow_exists(db_session, monkeypatch) -
     out = try_retry_external_execution_turn(db_session, uid, "retry external execution", cctx)
     assert out is not None
     text = out["text"] or ""
-    assert "retrying the railway" in text.lower()
+    assert "retrying railway investigation" in text.lower()
     assert "railway whoami" in text.lower()
     assert "railway status" in text.lower()
     assert "recorded — say retry" not in text.lower()
@@ -94,5 +94,5 @@ def test_gateway_retry_invokes_runner(monkeypatch, db_session) -> None:
     payload = gw.handle_full_chat(gctx, "retry external execution", db=db_session)
     assert payload.get("intent") == "external_execution_continue"
     body = (payload.get("text") or "").lower()
-    assert "retrying the railway" in body
+    assert "retrying railway investigation" in body
     assert "recorded — say retry" not in body

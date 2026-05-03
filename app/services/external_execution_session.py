@@ -569,7 +569,7 @@ def collected_for_external_execution_retry(
 
 def format_retry_investigation_intro() -> str:
     return (
-        "Retrying the Railway/repo investigation now.\n\n"
+        "Retrying Railway investigation...\n\n"
         "Read-only checks only:\n"
         "- `railway whoami`\n"
         "- `railway status`\n"
@@ -598,6 +598,10 @@ def try_retry_external_execution_turn(
 
     frag = get_external_execution_fragment(cctx)
     if not fragment_usable_for_retry(frag):
+        logger.info(
+            "RETRY_TRIGGERED user_id=%s fragment_present=False fragment_status=None — no usable saved flow",
+            uid,
+        )
         return {
             "mode": "chat",
             "text": (
@@ -607,24 +611,68 @@ def try_retry_external_execution_turn(
             "intent": "external_execution_continue",
         }
 
+    logger.info(
+        "RETRY_TRIGGERED user_id=%s fragment_status=%s fragment_keys=%s",
+        uid,
+        (frag or {}).get("status"),
+        sorted((frag or {}).keys()),
+    )
+
     collected = collected_for_external_execution_retry(db, uid, frag)
+    logger.info(
+        "RETRY_RUNNER_START user_id=%s auth_method=%s deploy_mode=%s permission_to_probe=%s",
+        uid,
+        collected.get("auth_method"),
+        collected.get("deploy_mode"),
+        collected.get("permission_to_probe"),
+    )
+
     intro = format_retry_investigation_intro()
     inv_block = ""
     try:
         from app.services.external_execution_runner import (
             format_investigation_for_chat,
+            investigation_to_public_payload,
             run_bounded_railway_repo_investigation,
         )
 
         inv = run_bounded_railway_repo_investigation(db, uid, collected)
+        payload = investigation_to_public_payload(inv)
+        logger.info(
+            "RETRY_RUNNER_RESULT user_id=%s ran=%s reason=%s skipped_reason=%s",
+            uid,
+            payload.get("ran"),
+            payload.get("reason"),
+            inv.skipped_reason,
+        )
         inv_block = format_investigation_for_chat(inv)
     except Exception as exc:  # noqa: BLE001
-        logger.warning("external_execution.retry_runner_failed uid=%s err=%s", uid, exc)
-        inv_block = f"_Could not run bounded investigation on this host: {exc}_"
+        logger.warning(
+            "RETRY_RUNNER_EXCEPTION user_id=%s err=%s",
+            uid,
+            exc,
+            exc_info=True,
+        )
+        inv_block = (
+            "### Retry could not complete\n\n"
+            f"I attempted the read-only investigation but hit an error: `{exc}`\n\n"
+            "**What to check:** host executor (`NEXA_HOST_EXECUTOR_ENABLED`), a registered dev workspace path, "
+            "and Railway CLI or `RAILWAY_TOKEN` on this worker."
+        )
 
     full_reply = intro
     if (inv_block or "").strip():
         full_reply = f"{intro}\n\n---\n\n{inv_block.strip()}"
+    else:
+        logger.warning(
+            "RETRY_EMPTY_OUTPUT user_id=%s — forcing blocker message",
+            uid,
+        )
+        full_reply = (
+            f"{intro}\n\n---\n\n"
+            "### No output produced\n\n"
+            "The runner returned no diagnostic block; check logs for `RETRY_RUNNER_RESULT` / host executor / workspace."
+        )
     return {"mode": "chat", "text": full_reply, "intent": "external_execution_continue"}
 
 

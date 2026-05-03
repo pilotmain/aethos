@@ -6,6 +6,7 @@ Conservative: prefer asking for credentials over implying completed cloud work.
 
 from __future__ import annotations
 
+import logging
 import os
 import shutil
 from dataclasses import dataclass
@@ -14,6 +15,8 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.services.dev_runtime.workspace import list_workspaces
+
+_log = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -48,13 +51,24 @@ def assess_external_execution_access(db: Session | None, user_id: str | None) ->
         or (os.environ.get("RAILWAY_API_TOKEN") or "").strip()
     )
     rcli = shutil.which("railway") is not None
-    return ExternalExecutionAccess(
+    acc = ExternalExecutionAccess(
         dev_workspace_registered=ws_ok,
         host_executor_enabled=host,
         railway_token_present=rtok,
         railway_cli_on_path=rcli,
         github_token_configured=bool(gh),
     )
+    _log.info(
+        "ACCESS_DETECT user_id=%s workspace_registered=%s host_executor=%s "
+        "railway_token_env=%s railway_cli_on_path=%s railway_access_available=%s",
+        uid or None,
+        acc.dev_workspace_registered,
+        acc.host_executor_enabled,
+        acc.railway_token_present,
+        acc.railway_cli_on_path,
+        acc.railway_access_available,
+    )
+    return acc
 
 
 def user_message_mentions_railway(user_text: str) -> bool:

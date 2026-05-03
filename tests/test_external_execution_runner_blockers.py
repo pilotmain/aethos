@@ -34,9 +34,20 @@ def test_format_host_executor_disabled_copy() -> None:
 def test_format_railway_cli_missing_banner_when_no_binary() -> None:
     inv = BoundedRailwayInvestigation(workspace_paths=["/tmp/w"])
     inv.railway_cli_present = False
+    inv.railway_env_token_present = False
     inv.railway_whoami = {"ok": False, "error": "railway_cli_missing", "stdout": "", "stderr": ""}
     txt = format_investigation_for_chat(inv)
     assert "railway cli is not installed or not available" in txt.lower()
+    assert "no credentials available" in txt.lower()
+
+
+def test_format_no_extra_credentials_line_when_token_env_set() -> None:
+    inv = BoundedRailwayInvestigation(workspace_paths=["/tmp/w"])
+    inv.railway_cli_present = False
+    inv.railway_env_token_present = True
+    inv.railway_whoami = {"ok": False, "error": "railway_cli_missing", "stdout": "", "stderr": ""}
+    txt = format_investigation_for_chat(inv)
+    assert "no credentials available" not in txt.lower()
 
 
 @patch("app.services.external_execution_runner.run_railway_cli")
