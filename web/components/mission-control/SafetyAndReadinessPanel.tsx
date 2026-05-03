@@ -51,8 +51,9 @@ export function SafetyAndReadinessPanel({
   }
   if (!data) return null;
 
-  const egressOk = (data.network_egress_recent_blocked ?? 0) === 0;
-  const dockerOk = data.sandbox_docker_available !== false;
+  const d = data as SafetyReadiness;
+  const egressOk = (d.network_egress_recent_blocked ?? 0) === 0;
+  const dockerOk = d.sandbox_docker_available !== false;
 
   return (
     <section
