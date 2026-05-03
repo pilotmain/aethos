@@ -181,6 +181,7 @@ def run_dev_mission(
     else:
         context_accum = {"run_branch": None, "branch_checkout": {"ok": True, "skipped": True}}
     steps_out: list[dict[str, Any]] = []
+    progress_messages: list[str] = []
     adapter_used_name = "local_stub"
     mission_goal = (goal or "").strip()
     current_goal = mission_goal
@@ -201,6 +202,8 @@ def run_dev_mission(
         plan = build_dev_plan(goal, ws, memory_notes=mem_trim)
         run.plan_json = plan
         db.commit()
+
+        progress_messages.append("Starting dev mission on your workspace…")
 
         for step in plan:
             stype = str(step.get("type") or "")
@@ -261,6 +264,8 @@ def run_dev_mission(
         while iteration < max_loop_iters:
             iteration += 1
             loop_iterations_executed = iteration
+
+            progress_messages.append(f"Running tests / fix iteration {iteration} of {max_loop_iters}…")
 
             adapter_impl = choose_adapter(
                 preferred_agent,
@@ -371,6 +376,12 @@ def run_dev_mission(
             steps_out.append(step_blob)
             context_accum[f"loop_iteration_{iteration}"] = {"agent": out_dict, "tests": test_bundle}
 
+            loop_label = (
+                "Tests passed."
+                if tests_ok
+                else "Tests still failing — applying another fix pass…"
+            )
+            progress_messages.append(loop_label)
             emit_runtime_event(
                 "dev.loop.iteration",
                 user_id=user_id,
@@ -380,12 +391,18 @@ def run_dev_mission(
                     "adapter": ca.provider,
                     "tests_ok": test_bundle.get("ok"),
                     "step_id": row_loop.id,
+                    "progress_label": loop_label,
                 },
             )
             emit_runtime_event(
                 "dev.step.completed",
                 user_id=user_id,
-                payload={"run_id": rid, "step_type": "loop_iteration", "step_id": row_loop.id},
+                payload={
+                    "run_id": rid,
+                    "step_type": "loop_iteration",
+                    "step_id": row_loop.id,
+                    "progress_label": loop_label,
+                },
             )
 
             if not ca.ok:
@@ -409,7 +426,13 @@ def run_dev_mission(
                 break
             detail = refine_dev_failure_detail(test_bundle.get("summary"), None)
             context_accum["last_fix_strategy"] = select_fix_strategy_detail(detail)
-            current_goal = adaptive_next_goal(mission_goal, current_goal, detail, sig)
+            current_goal = adaptive_next_goal(
+                mission_goal,
+                current_goal,
+                detail,
+                sig,
+                memory_notes=mem_trim,
+            )
 
         if not tests_passed and not has_runtime_errors and loop_iterations_executed >= max_loop_iters:
             pass  # exhausted without pass
@@ -595,11 +618,17 @@ def run_dev_mission(
         )
         update_state([])
 
+        if tests_passed:
+            progress_messages.append("Done — tests are green for this pass.")
+        elif has_runtime_errors or stagnation_stop:
+            progress_messages.append("Stopped — see summary for errors or stagnation.")
+
         return {
             "ok": True,
             "run_id": rid,
             "status": run.status,
             "steps": steps_out,
+            "progress_messages": progress_messages,
             "adapter_used": adapter_used_name,
             "iterations": loop_iterations_executed,
             "tests_passed": tests_passed,
@@ -669,6 +698,7 @@ def run_dev_mission(
             "status": "failed",
             "error": str(exc),
             "steps": steps_out,
+            "progress_messages": progress_messages,
             "iterations": loop_iterations_executed,
             "tests_passed": False,
             "pr_ready": False,

@@ -29,9 +29,34 @@ def adaptive_next_goal(
     _current_goal: str,
     detail: str,
     test_summary: str,
+    *,
+    memory_notes: str | None = None,
 ) -> str:
-    """Pivot instruction text when tests fail (Phase 45C)."""
+    """Pivot instruction text when tests fail (Phase 45C). Memory steers fix focus (Phase 55)."""
     ts = (test_summary or "").strip()
+    mem = (memory_notes or "").lower()
+    mg = (mission_goal or "").lower()
+    authish = any(
+        k in mem or k in mg
+        for k in (
+            "oidc",
+            "oauth",
+            "irsa",
+            "iam",
+            "auth",
+            "token",
+            "401",
+            "403",
+            "unauthorized",
+        )
+    )
+    dataish = any(k in mem or k in mg for k in ("mongo", "mongodb", "spring", "datasource"))
+    k8s = any(k in mem or k in mg for k in ("eks", "kubernetes", "k8s", "pod", "serviceaccount"))
+
+    if detail != "build_error" and (authish or (k8s and dataish)):
+        return (
+            f"Focus on identity + data path (IRSA/OIDC, service account, Mongo/Spring config) using this signal: {ts[:1200]}"
+        )
     if detail == "build_error":
         return f"Fix build/compile errors before re-running tests: {ts[:1400]}"
     return f"Fix failing tests: {ts[:1200]}"

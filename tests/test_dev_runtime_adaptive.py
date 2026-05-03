@@ -26,6 +26,18 @@ def test_adaptive_next_goal() -> None:
     assert "build" in g.lower() or "compile" in g.lower()
 
 
+def test_adaptive_next_goal_memory_steers_auth_path() -> None:
+    mem = "Stack: EKS IRSA + Mongo + Spring; OIDC issuer pilot"
+    g = adaptive_next_goal(
+        "mongo auth fails in pod",
+        "old",
+        "test_error",
+        "connection reset",
+        memory_notes=mem,
+    )
+    assert "identity" in g.lower() or "oidc" in g.lower() or "mongo" in g.lower()
+
+
 def test_stagnation_abort() -> None:
     abort, c1, p1 = detect_stagnation_signal("same", None, 0)
     assert abort is False and c1 == 0 and p1 == "same"

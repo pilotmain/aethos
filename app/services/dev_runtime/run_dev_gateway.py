@@ -37,6 +37,10 @@ def parse_run_dev_goal(text: str) -> str | None:
 
 def format_dev_run_summary(res: dict[str, Any]) -> str:
     rid = str(res.get("run_id") or "")
+    prog = res.get("progress_messages") or []
+    head = ""
+    if isinstance(prog, list) and prog:
+        head = "\n".join(f"→ {p}" for p in prog if str(p).strip()) + "\n\n"
     if res.get("ok"):
         parts = [
             f"Dev run completed (`{rid}`).",
@@ -44,10 +48,10 @@ def format_dev_run_summary(res: dict[str, Any]) -> str:
         ]
         if res.get("pr_ready"):
             parts.append("PR-ready signal is true — review Mission Control for details.")
-        return " ".join(parts)
+        return head + " ".join(parts)
     err = res.get("error") or res.get("status") or "failed"
     tail = json.dumps(res.get("steps") or [], default=str)[:1200]
-    return f"Dev run did not complete cleanly (`{rid}`): {err}. Steps (truncated): {tail}"
+    return head + f"Dev run did not complete cleanly (`{rid}`): {err}. Steps (truncated): {tail}"
 
 
 def try_scheduled_dev_mission(

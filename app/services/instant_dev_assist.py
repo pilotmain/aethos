@@ -54,6 +54,10 @@ def format_assist_appendix(*, user_text: str, intent: str) -> str | None:
 
     Returns None when this layer has nothing to add.
     """
+    from app.services.execution_trigger import should_merge_phase50_assist
+
+    if not should_merge_phase50_assist(intent):
+        return None
     if intent not in ("stuck_dev", "analysis"):
         return None
     bundle = instant_dev_assist(user_text)
@@ -71,17 +75,15 @@ def format_assist_appendix(*, user_text: str, intent: str) -> str | None:
         parts.append("**Scope:** medium-impact change — worth a quick review before applying.")
 
     if tags:
-        parts.append("**Detected:** " + " · ".join(tags))
+        parts.append("**Context:** " + " · ".join(tags))
 
     if outline:
-        parts.append("**Lean fix path:**\n" + "\n".join(f"• {o}" for o in outline))
+        parts.append("**Likely checks:**\n" + "\n".join(f"• {o}" for o in outline))
 
     if auto:
-        parts.append(
-            "_If your workspace is connected, I can run this for you on your repo — say the word in chat._"
-        )
+        parts.append("_If your workspace is connected in Mission Control, Nexa can run this investigation on the repo._")
     else:
-        parts.append("_Add any missing error lines if you want a sharper next step._")
+        parts.append("_Add the exact error snippet if you want a sharper read._")
 
     return "\n\n".join(parts) if parts else None
 

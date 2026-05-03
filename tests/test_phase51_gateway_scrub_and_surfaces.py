@@ -93,7 +93,7 @@ def test_gateway_web_stuck_dev_includes_phase50_appendix(monkeypatch: pytest.Mon
     )
     text = out.get("text") or ""
     assert "Concrete troubleshooting" in text
-    assert "Detected" in text or "Lean fix" in text
+    assert "Context:" in text or "Likely checks:" in text
 
 
 @pytest.mark.usefixtures("nexa_runtime_clean")

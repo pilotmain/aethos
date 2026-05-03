@@ -404,14 +404,25 @@ If is_stuck_loop is true:
 NUDGE_PROMPT_FULL = NUDGE_PROMPT + NUDGE_PROMPT_EXTRA
 UNSTICK_PROMPT_FULL = UNSTICK_PROMPT + UNSTICK_PROMPT_EXTRA
 
-# Appended for intent stuck_dev (tooling / build / deploy / config snags)
+# Appended for intent stuck_dev (tooling / build / deploy / config snags) — Phase 55 decisive
 STUCK_DEV_COMPOSER_EXTRA = """
 
-This turn is **stuck_dev**: the user is blocked on a technical problem (build, test, error output, deploy, config, K8s/EKS, Docker, CI, DB/OIDC, etc.).
-- Give a **short** diagnosis-style outline: reproduce → isolate → fix → verify (adapt to what they said).
-- If the stack is hinted (e.g. Mongo, OIDC, Kubernetes), name likely failure modes in plain language — no dashboard tone.
-- Offer execution plainly: they can have Nexa run a **development task** on their workspace after approval — one sentence, not a manual.
-- Keep **next_steps** to 2–4 concrete lines when useful (commands or checks); otherwise null.
+This turn is **stuck_dev**: the user is blocked on a technical problem (build, test, error, deploy, K8s/EKS, Docker, CI, DB/OIDC, etc.).
+
+**Decisive mode (required):**
+- Set **next_steps** to **null**. Do not output homework-style command lists, “Try running…”, “Next steps:”, “Lean fix”, or imperative tutorials.
+- Do not hedge with “Would you like me to…?” for safe diagnostic wording — lead with what you see and what would be verified in-repo.
+- Give a compact diagnosis (likely failure modes). Fold any commands into prose as “what we’d run in the workspace,” not bullet homework.
+- One short line may reference that Nexa can run a dev mission when the workspace is connected — not five alternate ideas.
+"""
+
+DECISIVE_ANALYSIS_ASSIST_EXTRA = """
+
+This turn is **analysis** (technical): treat like execution-oriented debugging, not generic advice.
+
+**Decisive mode (required):**
+- Set **next_steps** to **null**. Avoid “Try this”, “You could”, and detached suggestion lists.
+- Answer with a tight read first; mention investigation/run paths in product language, not a checklist of CLI errands.
 """
 
 
@@ -632,6 +643,23 @@ def _apply_single_agent_output_guard(text: str | None) -> str | None:
         "multi-agent system",
         text,
     )
+
+
+def _apply_decisive_dev_composer_guard(
+    comp: ComposedResponse, ctx: ResponseContext
+) -> ComposedResponse:
+    """Strip suggestion-shaped JSON when decisive dev tone applies (Phase 55)."""
+    from app.services.execution_trigger import should_use_decisive_dev_tone
+
+    if not should_use_decisive_dev_tone((ctx.intent or "").strip()):
+        return comp
+    return {
+        "message": comp["message"],
+        "should_ask_followup": False,
+        "followup_question": None,
+        "suggested_microstep": None,
+        "next_steps": None,
+    }
 
 
 def _apply_composed_identity_guards(
@@ -989,7 +1017,12 @@ def compose_reduce_response(ctx: ResponseContext) -> ComposedResponse:
 
 
 def compose_assist_response(ctx: ResponseContext) -> ComposedResponse:
-    return _run_strategy(ctx, ASSIST_PROMPT)
+    from app.services.execution_trigger import should_use_decisive_dev_tone
+
+    body = ASSIST_PROMPT
+    if (ctx.intent or "").strip() == "analysis" and should_use_decisive_dev_tone("analysis"):
+        body = ASSIST_PROMPT + DECISIVE_ANALYSIS_ASSIST_EXTRA
+    return _run_strategy(ctx, body)
 
 
 def compose_nudge_response(ctx: ResponseContext) -> ComposedResponse:
@@ -1033,11 +1066,14 @@ def compose_response(ctx: ResponseContext) -> ComposedResponse:
         ur,
     )
     if not ur:
-        return _apply_composed_identity_guards(
-            fallback_compose_response(
-                ctx, reason="llm_disabled_or_missing_api_key"
+        return _apply_decisive_dev_composer_guard(
+            _apply_composed_identity_guards(
+                fallback_compose_response(
+                    ctx, reason="llm_disabled_or_missing_api_key"
+                ),
+                user_message=ctx.user_message,
             ),
-            user_message=ctx.user_message,
+            ctx,
         )
     try:
         if ctx.behavior == "reduce":
@@ -1052,12 +1088,18 @@ def compose_response(ctx: ResponseContext) -> ComposedResponse:
             res = compose_unstick_response(ctx)
         else:
             res = compose_clarify_response(ctx)
-        return _apply_composed_identity_guards(res, user_message=ctx.user_message)
+        return _apply_decisive_dev_composer_guard(
+            _apply_composed_identity_guards(res, user_message=ctx.user_message),
+            ctx,
+        )
     except Exception as exc:
         logger.exception("compose_response: %s", exc)
-        return _apply_composed_identity_guards(
-            fallback_compose_response(ctx, reason="compose_response_exception"),
-            user_message=ctx.user_message,
+        return _apply_decisive_dev_composer_guard(
+            _apply_composed_identity_guards(
+                fallback_compose_response(ctx, reason="compose_response_exception"),
+                user_message=ctx.user_message,
+            ),
+            ctx,
         )
 
 

@@ -56,4 +56,4 @@ def test_compose_unstick_appends_stuck_dev_extra_to_prompt(monkeypatch) -> None:
 
     compose_unstick_response(_minimal_ctx(intent="stuck_dev", msg="pytest fails"))
     assert "stuck_dev" in captured["body"].lower()
-    assert "reproduce" in captured["body"].lower()
+    assert "next_steps" in captured["body"].lower() and "null" in captured["body"].lower()
