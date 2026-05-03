@@ -611,6 +611,18 @@ def try_retry_external_execution_turn(
             "intent": "external_execution_continue",
         }
 
+    from app.services.external_execution_access import assess_external_execution_access
+    from app.services.external_execution_credentials import format_railway_token_not_loaded_retry_reply
+
+    acc = assess_external_execution_access(db, uid)
+    if not acc.railway_access_available:
+        logger.info("RETRY_BLOCKED user_id=%s railway_access_available=False", uid)
+        return {
+            "mode": "chat",
+            "text": format_railway_token_not_loaded_retry_reply(),
+            "intent": "external_execution_continue",
+        }
+
     logger.info(
         "RETRY_TRIGGERED user_id=%s fragment_status=%s fragment_keys=%s",
         uid,

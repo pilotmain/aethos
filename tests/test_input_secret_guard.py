@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
-from app.services.input_secret_guard import user_message_contains_inline_secret
+from app.services.input_secret_guard import (
+    user_message_contains_inline_secret,
+    user_message_contains_railway_credential_paste,
+)
 
 
 def test_detects_openai_assignment() -> None:
@@ -20,3 +23,14 @@ def test_clean_general_chat_negative() -> None:
 def test_anthropic_sk_ant() -> None:
     t = "sk-ant-api03-12345678901234567890123456789012"
     assert user_message_contains_inline_secret(f"key {t}")
+
+
+def test_detects_railway_env_assignment() -> None:
+    assert user_message_contains_inline_secret("RAILWAY_TOKEN=rw-secret-placeholder")
+    assert user_message_contains_railway_credential_paste("RAILWAY_TOKEN=rw-secret-placeholder")
+
+
+def test_detects_railway_api_key_line() -> None:
+    assert user_message_contains_railway_credential_paste(
+        "here is railway api key = abc123 and i approve"
+    )

@@ -283,7 +283,12 @@ class NexaGateway:
         uid = gctx.user_id
         channel = gctx.channel
         raw = (text or "").strip()
+        from app.services.external_execution_credentials import maybe_handle_external_credential_chat_turn
         from app.services.memory.context_injection import build_memory_context_for_turn
+
+        cred_full = maybe_handle_external_credential_chat_turn(db, user_id=(uid or "").strip(), user_text=raw)
+        if cred_full is not None:
+            return cred_full
 
         if not gctx.extras.get("gateway_structured_ran"):
             auto_early = self._maybe_auto_dev_investigation(gctx, text, db)
@@ -479,6 +484,18 @@ class NexaGateway:
         load_plugins()
 
         def _route(db_inner: Session) -> dict[str, Any]:
+            from app.services.external_execution_credentials import maybe_handle_external_credential_chat_turn
+
+            raw_gate = (text or "").strip()
+            uid_gate = (gctx.user_id or "").strip()
+            cred_gate = maybe_handle_external_credential_chat_turn(
+                db_inner,
+                user_id=uid_gate,
+                user_text=raw_gate,
+            )
+            if cred_gate is not None:
+                return cred_gate
+
             structured = self._try_structured_route(gctx, text, db_inner)
             if structured is not None:
                 return structured

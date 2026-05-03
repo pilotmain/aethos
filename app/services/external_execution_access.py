@@ -116,8 +116,9 @@ def format_external_execution_access_reply(
     if user_message_mentions_railway(user_text):
         if not access.railway_token_present and not access.railway_cli_on_path:
             miss.append(
-                "- **Railway** — provide `RAILWAY_TOKEN` (or API token) for the worker **or** install "
-                "`railway` CLI and run `railway login` on the executor host."
+                "- **Railway** — `RAILWAY_TOKEN` / `RAILWAY_API_TOKEN` is **not loaded in this worker**. "
+                "Add it to `.env` on the host that runs Nexa (not in chat), **`docker compose restart api bot`**, "
+                "or install/authenticate the `railway` CLI on that host."
             )
         elif access.railway_cli_on_path and not access.railway_token_present:
             miss.append(

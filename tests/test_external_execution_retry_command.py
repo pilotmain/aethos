@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import json
 
+import pytest
+
 from app.services.conversation_context_service import get_or_create_context
+from app.services.external_execution_access import ExternalExecutionAccess
 from app.services.external_execution_runner import BoundedRailwayInvestigation
 from app.services.external_execution_session import (
     is_retry_external_execution,
@@ -14,6 +17,22 @@ from app.services.gateway.context import GatewayContext
 from app.services.gateway.runtime import NexaGateway
 
 
+@pytest.fixture
+def railway_worker_access_ok(monkeypatch):
+    """Retry tests assume CLI or env token exists unless explicitly testing the blocker."""
+    fake = ExternalExecutionAccess(
+        dev_workspace_registered=True,
+        host_executor_enabled=True,
+        railway_token_present=True,
+        railway_cli_on_path=True,
+        github_token_configured=False,
+    )
+    monkeypatch.setattr(
+        "app.services.external_execution_access.assess_external_execution_access",
+        lambda db, uid: fake,
+    )
+
+
 def test_is_retry_external_execution_phrases() -> None:
     assert is_retry_external_execution("retry external execution")
     assert is_retry_external_execution("Retry External Execution.")
@@ -21,7 +40,7 @@ def test_is_retry_external_execution_phrases() -> None:
     assert not is_retry_external_execution("fix my railway deploy")
 
 
-def test_retry_runs_runner_when_completed_flow_exists(db_session, monkeypatch) -> None:
+def test_retry_runs_runner_when_completed_flow_exists(db_session, monkeypatch, railway_worker_access_ok) -> None:
     captured: list[dict] = []
 
     def fake_run(_db, uid, collected):
@@ -69,7 +88,7 @@ def test_retry_no_saved_flow(db_session) -> None:
     assert "don't have a saved railway investigation" in (out.get("text") or "").lower()
 
 
-def test_gateway_retry_invokes_runner(monkeypatch, db_session) -> None:
+def test_gateway_retry_invokes_runner(monkeypatch, db_session, railway_worker_access_ok) -> None:
     monkeypatch.setattr(
         "app.services.external_execution_runner.run_bounded_railway_repo_investigation",
         lambda *_a, **_k: BoundedRailwayInvestigation(skipped_reason="host_executor_disabled"),
