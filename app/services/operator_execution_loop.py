@@ -45,6 +45,106 @@ def _extract_workspace_path(text: str) -> str | None:
     return p or None
 
 
+def _workspace_for_phases(db: Session, uid: str, path_from_message: str | None) -> str | None:
+    if path_from_message and str(path_from_message).strip():
+        return str(path_from_message).strip()
+    from app.services.dev_runtime.workspace import list_workspaces
+
+    rows = list_workspaces(db, uid)
+    if len(rows) != 1:
+        return None
+    p = str(getattr(rows[0], "repo_path", "") or "").strip()
+    return p or None
+
+
+def _wants_phase_keywords(raw: str) -> bool:
+    return bool(
+        re.search(
+            r"(?i)\b(test|tests|pytest|npm test|commit|push|deploy|verify|patch)\b",
+            raw or "",
+        )
+    )
+
+
+def _phase_result_markdown(title: str, r: dict[str, Any]) -> str:
+    lines = [f"### {title}", ""]
+    if r.get("ok"):
+        lines.append("**Result:** ok")
+    else:
+        err = r.get("error") or r.get("stderr") or "unknown"
+        lines.append(f"**Result:** failed — `{str(err)[:500]}`")
+    if r.get("stdout"):
+        lines.extend(["", "```", str(r["stdout"])[:6000], "```"])
+    if r.get("commit_sha"):
+        lines.append(f"**Commit SHA:** `{r['commit_sha']}`")
+    if r.get("status_code") is not None:
+        lines.append(f"**HTTP:** `{r['status_code']}` for `{r.get('url', '')}`")
+    return "\n".join(lines)
+
+
+def _append_operator_phases(
+    *,
+    raw: str,
+    db: Session,
+    uid: str,
+    ws_hint: str | None,
+    vercel_cue: bool,
+    railway_cue: bool,
+) -> tuple[list[str], dict[str, Any], list[str]]:
+    """Run gated test / commit / push / deploy / verify phases. Returns (sections, evidence, progress)."""
+    ws = _workspace_for_phases(db, uid, ws_hint)
+    if not ws or not _wants_phase_keywords(raw):
+        return [], [], []
+
+    from app.services.operator_execution_actions import (
+        commit_and_push,
+        deploy_railway,
+        deploy_vercel,
+        extract_production_url,
+        run_tests,
+        verify_http_head,
+    )
+
+    sections: list[str] = []
+    ev: dict[str, Any] = {}
+    prog: list[str] = []
+
+    if re.search(r"(?i)\b(test|tests|pytest|npm test)\b", raw):
+        prog.append("Running tests")
+        tr = run_tests(ws)
+        ev["tests"] = tr
+        sections.append(_phase_result_markdown("Phase: test", tr))
+
+    if (re.search(r"(?i)\bcommit\b", raw) and re.search(r"(?i)\bpush\b", raw)) or re.search(
+        r"(?i)push\s+changes", raw
+    ):
+        prog.append("Committing and pushing")
+        cp = commit_and_push(ws, "operator: automated checkpoint")
+        ev["commit_push"] = cp
+        sections.append(_phase_result_markdown("Phase: commit + push", cp))
+
+    if vercel_cue and re.search(r"\bdeploy\b", raw, re.I):
+        prog.append("Deploying to Vercel (production)")
+        dv = deploy_vercel(ws)
+        ev["deploy_vercel"] = dv
+        sections.append(_phase_result_markdown("Phase: deploy (Vercel)", dv))
+
+    if railway_cue and re.search(r"\b(deploy|railway up)\b", raw, re.I):
+        prog.append("Deploying via Railway")
+        dr = deploy_railway(ws)
+        ev["deploy_railway"] = dr
+        sections.append(_phase_result_markdown("Phase: deploy (Railway)", dr))
+
+    url = extract_production_url(raw)
+    if url and re.search(r"\bverify\b", raw, re.I):
+        prog.append("Verifying production URL")
+        vh = verify_http_head(url)
+        ev["verify"] = vh
+        sections.append(_phase_result_markdown("Phase: verify", vh))
+
+    return sections, ev, prog
+
+
 def try_operator_execution(
     *,
     user_text: str,
@@ -85,12 +185,14 @@ def try_operator_execution(
     gh_cue = hints["github"]
     railway_cue = hints["railway"]
 
-    # Railway-only: defer to execution_loop (single bounded runner path).
-    if railway_cue and not vercel_cue and not gh_cue and not ws_path:
+    ws_resolved = ws_path or _workspace_for_phases(db, uid, None)
+    phase_only = bool(ws_resolved and _wants_phase_keywords(raw) and not (vercel_cue or gh_cue or ws_path))
+
+    # Railway-only diagnostics stay on execution_loop unless phase keywords need this path.
+    if railway_cue and not vercel_cue and not gh_cue and not ws_path and not phase_only:
         return OperatorExecutionResult(handled=False, text="")
 
-    # Need Vercel/GitHub cue or an explicit workspace path from the message.
-    if not (vercel_cue or gh_cue or ws_path):
+    if not (vercel_cue or gh_cue or ws_path or phase_only):
         return OperatorExecutionResult(handled=False, text="")
 
     sections: list[str] = []
@@ -131,6 +233,38 @@ def try_operator_execution(
         evidence["local_dev"] = ev_l
         progress.extend(prog_l)
         verified_any = verified_any or l_ok
+
+    if phase_only and not sections:
+        primary_provider = primary_provider or "local_dev"
+        body_l, ev_l, prog_l, l_ok = run_local_git_status(db, uid)
+        sections.append(body_l)
+        evidence["local_dev"] = ev_l
+        progress.extend(prog_l)
+        verified_any = verified_any or l_ok
+
+    ws_patch = ws_path or ws_resolved
+    if ws_patch and "```diff" in raw.lower():
+        from app.services.operator_execution_actions import apply_code_fix
+
+        m = re.search(r"```diff\s*\n(.*?)```", raw, re.S | re.I)
+        if m:
+            progress.append("Applying embedded unified diff")
+            ap = apply_code_fix(ws_patch, m.group(1).strip())
+            evidence["patch"] = ap
+            sections.append(_phase_result_markdown("Phase: fix (patch)", ap))
+            verified_any = verified_any or bool(ap.get("ok"))
+
+    phase_secs, phase_ev, phase_prog = _append_operator_phases(
+        raw=raw, db=db, uid=uid, ws_hint=ws_path, vercel_cue=vercel_cue, railway_cue=railway_cue
+    )
+    if phase_secs:
+        sections.extend(phase_secs)
+        evidence["phases"] = phase_ev
+        progress.extend(phase_prog)
+        for v in phase_ev.values():
+            if isinstance(v, dict) and v.get("ok"):
+                verified_any = True
+                break
 
     if not sections:
         return OperatorExecutionResult(handled=False, text="")
