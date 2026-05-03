@@ -151,11 +151,11 @@ def format_investigation_for_chat(result: BoundedRailwayInvestigation) -> str:
 
     if result.skipped_reason:
         reasons = {
-            "runner_disabled": "External execution runner is disabled (`NEXA_EXTERNAL_EXECUTION_RUNNER_ENABLED`).",
+            "runner_disabled": "External execution runner is disabled.",
             "host_executor_disabled": (
                 "I tried to start read-only checks, but host execution is disabled (`NEXA_HOST_EXECUTOR_ENABLED`)."
             ),
-            "no_workspace": "No dev workspace is registered — register a repo path under Mission Control → Dev.",
+            "no_workspace": "I don't have a registered/local repo workspace to inspect.",
             "no_user": "Missing user id for workspace lookup.",
             "workspace_path_missing": "Registered workspace path is not a directory on this host.",
         }

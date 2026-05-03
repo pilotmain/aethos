@@ -519,10 +519,124 @@ def scrub_generic_login_refusal_when_local_auth_claimed(reply: str, user_text: s
     )
 
 
+_RETRY_COMMAND_NORMALIZED = frozenset(
+    {
+        "retry external execution",
+        "retry railway",
+        "try again",
+        "run the railway check again",
+        "continue railway investigation",
+    }
+)
+
+
+def is_retry_external_execution(text: str) -> bool:
+    """Explicit retry phrases — must run bounded checks, not loop on placeholder copy."""
+    raw = (text or "").strip().lower()
+    raw = re.sub(r"[\s.!,;:]+$", "", raw)
+    compact = " ".join(raw.split())
+    return compact in _RETRY_COMMAND_NORMALIZED
+
+
+def fragment_usable_for_retry(frag: dict[str, Any] | None) -> bool:
+    """Saved external-exec flow exists (ignore TTL when user explicitly retries)."""
+    if not isinstance(frag, dict):
+        return False
+    return frag.get("status") in ("completed", "awaiting_followup")
+
+
+def collected_for_external_execution_retry(
+    db: Session,
+    user_id: str,
+    frag: dict[str, Any],
+) -> dict[str, Any]:
+    """Merge saved prefs with safe defaults for a retry run."""
+    from app.services.external_execution_access import assess_external_execution_access
+
+    prior_raw = frag.get("collected")
+    prior: dict[str, Any] = dict(prior_raw) if isinstance(prior_raw, dict) else {}
+    acc = assess_external_execution_access(db, user_id)
+
+    auth = (prior.get("auth_method") or "").strip()
+    if not auth:
+        auth = "token_env" if acc.railway_token_present else "local_cli"
+
+    deploy = (prior.get("deploy_mode") or "").strip() or "report_then_approve"
+    out = {**prior, "auth_method": auth, "deploy_mode": deploy}
+    out["permission_to_probe"] = True
+    return out
+
+
+def format_retry_investigation_intro() -> str:
+    return (
+        "Retrying the Railway/repo investigation now.\n\n"
+        "Read-only checks only:\n"
+        "- `railway whoami`\n"
+        "- `railway status`\n"
+        "- `railway logs`\n"
+        "- `git status`\n\n"
+        "No deploy, push, or file changes will run."
+    )
+
+
+def try_retry_external_execution_turn(
+    db: Session,
+    user_id: str,
+    user_text: str,
+    cctx: ConversationContext,
+) -> dict[str, Any] | None:
+    """
+    Handle explicit **retry external execution** — runs bounded Railway/repo investigation.
+
+    Must run before :func:`try_resume_external_execution_turn` so retry is not misparsed as prefs text.
+    """
+    if not is_retry_external_execution(user_text):
+        return None
+    uid = (user_id or "").strip()
+    if not uid:
+        return None
+
+    frag = get_external_execution_fragment(cctx)
+    if not fragment_usable_for_retry(frag):
+        return {
+            "mode": "chat",
+            "text": (
+                "I don't have a saved Railway investigation to retry.\n\n"
+                "Send the Railway project URL and repo path again, and I'll start a fresh read-only investigation."
+            ),
+            "intent": "external_execution_continue",
+        }
+
+    collected = collected_for_external_execution_retry(db, uid, frag)
+    intro = format_retry_investigation_intro()
+    inv_block = ""
+    try:
+        from app.services.external_execution_runner import (
+            format_investigation_for_chat,
+            run_bounded_railway_repo_investigation,
+        )
+
+        inv = run_bounded_railway_repo_investigation(db, uid, collected)
+        inv_block = format_investigation_for_chat(inv)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("external_execution.retry_runner_failed uid=%s err=%s", uid, exc)
+        inv_block = f"_Could not run bounded investigation on this host: {exc}_"
+
+    full_reply = intro
+    if (inv_block or "").strip():
+        full_reply = f"{intro}\n\n---\n\n{inv_block.strip()}"
+    return {"mode": "chat", "text": full_reply, "intent": "external_execution_continue"}
+
+
 __all__ = [
+    "collected_for_external_execution_retry",
+    "format_retry_investigation_intro",
+    "fragment_usable_for_retry",
+    "is_retry_external_execution",
     "mark_external_execution_awaiting_followup",
     "maybe_start_external_probe_from_turn",
     "try_resume_external_execution_turn",
+    "try_retry_external_execution_turn",
     "get_external_execution_fragment",
     "clear_external_execution_fragment",
     "parse_followup_preferences",

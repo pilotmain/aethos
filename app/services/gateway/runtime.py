@@ -324,7 +324,17 @@ class NexaGateway:
         from app.services.external_execution_session import (
             maybe_start_external_probe_from_turn,
             try_resume_external_execution_turn,
+            try_retry_external_execution_turn,
         )
+
+        _retry = try_retry_external_execution_turn(db, uid, raw, cctx)
+        if _retry is not None:
+            rt_text = str(_retry.get("text") or "").strip()
+            return {
+                "mode": "chat",
+                "text": gateway_finalize_chat_reply(rt_text, source="external_execution_retry"),
+                "intent": str(_retry.get("intent") or "external_execution_continue"),
+            }
 
         _resume = try_resume_external_execution_turn(db, uid, raw, cctx)
         if _resume is not None:

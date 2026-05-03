@@ -26,6 +26,11 @@ class ExternalExecutionAccess:
     railway_cli_on_path: bool
     github_token_configured: bool
 
+    @property
+    def railway_access_available(self) -> bool:
+        """Env/API token or Railway CLI binary present on the worker host."""
+        return self.railway_token_present or self.railway_cli_on_path
+
 
 def assess_external_execution_access(db: Session | None, user_id: str | None) -> ExternalExecutionAccess:
     uid = (user_id or "").strip()

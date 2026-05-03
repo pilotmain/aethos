@@ -375,8 +375,8 @@ def build_response(
         )
     if intent == "external_execution_continue":
         return _out(
-            "Recorded — say **retry external execution** or paste logs/output when you want me to pick up "
-            "the Railway/repo investigation again."
+            "Paste Railway logs or describe what changed — I’ll continue the investigation from there. "
+            "If access is ready on this worker, use **retry external execution** to run read-only checks again."
         )
     if intent == "external_execution":
         from app.services.external_execution_access import (
