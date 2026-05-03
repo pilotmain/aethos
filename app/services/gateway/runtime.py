@@ -316,6 +316,22 @@ class NexaGateway:
         cctx = get_or_create_context(db, uid)
         snap = build_context_snapshot(cctx, db)
 
+        from app.services.external_execution_session import try_resume_external_execution_turn
+
+        _resume = try_resume_external_execution_turn(db, uid, raw, cctx)
+        if _resume is not None:
+            rt_text = str(_resume.get("text") or "").strip()
+            if not rt_text:
+                rt_text = (
+                    "Got it — I’ve recorded your Railway/deploy preferences. "
+                    "Paste the next error line or say what to check."
+                )
+            return {
+                "mode": "chat",
+                "text": gateway_finalize_chat_reply(rt_text, source="external_execution_resume"),
+                "intent": str(_resume.get("intent") or "external_execution_continue"),
+            }
+
         rt = route_agent(raw, context_snapshot=snap)
         rt = apply_memory_aware_route_adjustment(rt, raw, snap, db)
         routing_agent_key = str(gctx.extras.get("routing_agent_key") or rt.get("agent_key") or "nexa")

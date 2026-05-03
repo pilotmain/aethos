@@ -473,6 +473,14 @@ def build_context_snapshot(ctx: ConversationContext, db: Session | None = None) 
         "last_topic_update_at": (ctx.last_topic_update_at.isoformat() if ctx.last_topic_update_at else None),
         "pending_project": get_pending_project_dict(ctx),
     }
+    try:
+        from app.services.external_execution_session import get_external_execution_fragment
+
+        exf = get_external_execution_fragment(ctx)
+        if exf:
+            snap["external_execution_flow"] = exf
+    except Exception:
+        pass
     apid = getattr(ctx, "active_project_id", None)
     if db is not None and apid:
         from app.models.project_context import NexaWorkspaceProject

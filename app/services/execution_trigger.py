@@ -106,7 +106,7 @@ def should_use_decisive_dev_tone(intent: str) -> bool:
     s = get_settings()
     if not getattr(s, "nexa_decisive_dev_chat", True):
         return False
-    return intent in ("stuck_dev", "analysis", "external_execution")
+    return intent in ("stuck_dev", "analysis", "external_execution", "external_execution_continue")
 
 
 def should_merge_phase50_assist(intent: str) -> bool:

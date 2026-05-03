@@ -17,6 +17,7 @@ Classify the user's message into exactly one intent.
 Valid intents:
 - orchestrate_system: user wants a Nexa-wide status report — Mission Control, missions, dev runs, what succeeded/failed, act as orchestrator (not asking for a disk path)
 - external_execution: user wants an end-to-end pipeline on hosted infra — check logs/service, fix code in repo, push, redeploy, verify production (not “explain Railway” alone)
+- external_execution_continue: user is replying to Nexa’s Railway/deploy access or preferences questions (short confirmation, not a new unrelated topic)
 - external_investigation: user is asking about a hosted provider/service (Railway, Render, deploy health, production outage) without necessarily naming local files
 - brain_dump: user is listing tasks, responsibilities, errands, or things they need to organize
 - create_custom_agent: user wants to create a new Nexa custom agent (message starts with "create" and mentions "agent")
@@ -40,7 +41,9 @@ Important rules:
 - If the message is about errors, failing builds/tests, deployment, CI, K8s/EKS, Docker, databases, or auth config AND the user is blocked or asking for a fix, classify as stuck_dev (not generic stuck).
 - If the user asks for root cause, postmortem, or to analyze a specific error/trace, classify as analysis.
 - If the user asks to check Mission Control, report what succeeded/failed, act as orchestrator, wants an update on missions/runs — classify as orchestrate_system (not general_chat).
-- If the user focuses on Railway/hosted deploy/service health/production outage — classify as external_investigation unless they only want local repo debugging paths.
+- If the user asks you to run a full pipeline (check/fix/push/redeploy/verify) against Railway or production — classify as external_execution (not external_investigation).
+- If the user is answering a prior prompt about Railway/CLI auth or deploy preferences — classify as external_execution_continue.
+- If the user focuses on Railway/hosted deploy/service health/production outage without that full execution pipeline or follow-up context — classify as external_investigation unless they only want local repo debugging paths.
 - If the user message (after trimming) starts with "create" and contains the word "agent", classify as create_custom_agent — except vague multi-agent capability questions (e.g. "can you create multi agents that communicate"); those are capability_question.
 - If uncertain, choose general_chat, not brain_dump.
 
@@ -58,6 +61,7 @@ INTENT_CLASSIFIER_SYSTEM = INTENT_CLASSIFIER_PROMPT.rsplit("User message:", 1)[0
 VALID_INTENTS = {
     "orchestrate_system",
     "external_execution",
+    "external_execution_continue",
     "external_investigation",
     "brain_dump",
     "create_custom_agent",
@@ -257,11 +261,30 @@ def looks_like_external_execution(message: str) -> bool:
     return False
 
 
-def looks_like_external_investigation(message: str) -> bool:
+def looks_like_external_execution_continue(
+    message: str,
+    conversation_snapshot: dict | None = None,
+) -> bool:
+    """Short confirmation while external_execution_flow awaits input — requires snapshot hint."""
+    if looks_like_orchestrate_system(message):
+        return False
+    if looks_like_external_execution(message):
+        return False
+    snap = conversation_snapshot or {}
+    ex = snap.get("external_execution_flow")
+    if not isinstance(ex, dict) or ex.get("status") != "awaiting_followup":
+        return False
+    t = (message or "").strip()
+    return len(t) >= 2
+
+
+def looks_like_external_investigation(message: str, conversation_snapshot: dict | None = None) -> bool:
     """Hosted infra / deploy context — not a request to read a local folder by default."""
     if looks_like_orchestrate_system(message):
         return False
     if looks_like_external_execution(message):
+        return False
+    if looks_like_external_execution_continue(message, conversation_snapshot):
         return False
     t = (message or "").lower()
     if len(t) < 6:
@@ -332,7 +355,10 @@ def looks_like_brain_dump(text: str) -> bool:
     return False
 
 
-def classify_intent_fallback(message: str) -> dict:
+def classify_intent_fallback(
+    message: str,
+    conversation_snapshot: dict | None = None,
+) -> dict:
     t = message.lower().strip()
 
     if looks_like_orchestrate_system(message):
@@ -341,7 +367,10 @@ def classify_intent_fallback(message: str) -> dict:
     if looks_like_external_execution(message):
         return {"intent": "external_execution", "confidence": 0.91, "reason": "hosted execution pipeline (fix/push/deploy)"}
 
-    if looks_like_external_investigation(message):
+    if looks_like_external_execution_continue(message, conversation_snapshot):
+        return {"intent": "external_execution_continue", "confidence": 0.9, "reason": "Railway/deploy prefs reply"}
+
+    if looks_like_external_investigation(message, conversation_snapshot):
         return {"intent": "external_investigation", "confidence": 0.9, "reason": "hosted infra / deploy cues"}
 
     if is_multi_agent_capability_question(message):
@@ -496,7 +525,7 @@ def classify_intent_llm(
         return {"intent": intent, "confidence": confidence, "reason": reason}
     except Exception as e:  # noqa: BLE001
         logger.exception("LLM intent classification failed: %s", e)
-        return classify_intent_fallback(message)
+        return classify_intent_fallback(message, conversation_snapshot)
 
 
 def get_intent(
@@ -516,7 +545,10 @@ def get_intent(
     if looks_like_external_execution(t0):
         return "external_execution"
 
-    if looks_like_external_investigation(t0):
+    if looks_like_external_execution_continue(t0, conversation_snapshot):
+        return "external_execution_continue"
+
+    if looks_like_external_investigation(t0, conversation_snapshot):
         return "external_investigation"
 
     result = classify_intent_llm(
