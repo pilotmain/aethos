@@ -101,11 +101,28 @@ def should_auto_execute_dev_turn(
     return should_auto_run_dev_task(intent, risk, workspace_count, text)
 
 
+def should_prompt_for_dev_workspace_help(intent: str, risk: str, text: str) -> bool:
+    """
+    When auto-run is impossible (0 or multiple workspaces), still offer UX guidance for
+    low-risk stuck-dev-style turns — without executing anything.
+    """
+    if intent not in ("stuck_dev", "analysis"):
+        return False
+    if risk != "low":
+        return False
+    if contains_destructive_language(text):
+        return False
+    if user_said_do_not_run(text):
+        return False
+    return True
+
+
 __all__ = [
     "assess_interaction_risk",
     "contains_destructive_language",
     "should_auto_execute",
     "should_auto_run_dev_task",
     "should_auto_execute_dev_turn",
+    "should_prompt_for_dev_workspace_help",
     "user_said_do_not_run",
 ]

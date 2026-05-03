@@ -77,7 +77,11 @@ class NexaGateway:
         from app.services.dev_runtime.run_dev_gateway import format_dev_run_summary
         from app.services.dev_runtime.service import run_dev_mission
         from app.services.dev_runtime.workspace import list_workspaces
-        from app.services.execution_policy import assess_interaction_risk, should_auto_execute_dev_turn
+        from app.services.execution_policy import (
+            assess_interaction_risk,
+            should_auto_execute_dev_turn,
+            should_prompt_for_dev_workspace_help,
+        )
         from app.services.intent_classifier import get_intent
 
         uid = (gctx.user_id or "").strip()
@@ -85,8 +89,6 @@ class NexaGateway:
         if not uid or not raw:
             return None
         rows = list_workspaces(db, uid)
-        if len(rows) != 1:
-            return None
         cctx = get_or_create_context(db, uid)
         snap = build_context_snapshot(cctx, db)
         mem_sum = None
@@ -94,12 +96,38 @@ class NexaGateway:
             mem_sum = str(gctx.memory.get("summary") or "").strip() or None
         intent = get_intent(raw, conversation_snapshot=snap, memory_summary=mem_sum)
         risk = assess_interaction_risk(raw)
+
+        if should_prompt_for_dev_workspace_help(intent, risk, raw):
+            if len(rows) == 0:
+                return {
+                    "mode": "chat",
+                    "text": (
+                        "I can investigate this once a workspace is connected in Mission Control "
+                        "(register a repo path under Dev / workspace)."
+                    ),
+                    "intent": "dev_workspace_hint",
+                }
+            if len(rows) > 1:
+                lines = "\n".join(
+                    f"- {(getattr(r, 'name', None) or r.id or '?')}" for r in rows[:16]
+                )
+                return {
+                    "mode": "chat",
+                    "text": (
+                        "Which workspace should I use?\n"
+                        f"{lines}\n\n"
+                        "Reply with the workspace name, or narrow to one workspace in Mission Control."
+                    ),
+                    "intent": "dev_workspace_pick",
+                }
+
+        if len(rows) != 1:
+            return None
         if not should_auto_execute_dev_turn(intent, risk, len(rows), raw):
             return None
         goal = raw[:8000]
-        if mem_sum:
-            goal = f"[Context from your saved notes]\n{mem_sum[:2000]}\n\n[Your message]\n{goal}"
-        res = run_dev_mission(db, uid, rows[0].id, goal)
+        mem_notes = mem_sum[:4000] if mem_sum else None
+        res = run_dev_mission(db, uid, rows[0].id, goal, memory_notes=mem_notes)
         body = format_dev_run_summary(res)
         intro = "I'll investigate this against your workspace now.\n\n"
         return {
@@ -399,13 +427,24 @@ class NexaGateway:
 
         title = str(mission.get("title") or "Untitled Mission")[:2000]
         raw_in = (source_text or "").strip()
+        mem_input = ""
+        if user_id and raw_in:
+            from app.services.memory.context_injection import build_memory_context_for_turn
+
+            turn = build_memory_context_for_turn(user_id, raw_in, purpose="mission_plan")
+            if turn.get("used"):
+                mem_input = str(turn.get("summary") or turn.get("memory_context") or "").strip()[:12000]
+        input_text = raw_in[:50000] if raw_in else None
+        if mem_input and raw_in:
+            input_text = (f"[Memory context for planning]\n{mem_input}\n\n[Mission source]\n{raw_in}")[:50000]
+
         db.add(
             NexaMission(
                 id=mission_id,
                 user_id=user_id,
                 title=title,
                 status="running",
-                input_text=raw_in[:50000] if raw_in else None,
+                input_text=input_text,
             )
         )
         for agent in agents:

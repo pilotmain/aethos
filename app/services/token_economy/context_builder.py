@@ -14,6 +14,7 @@ def build_minimal_provider_context(
     memory: list[str] | None = None,
     artifacts: list[str] | None = None,
     user_message: str | None = None,
+    turn_memory_summary: str | None = None,
     max_tokens: int | None = None,
     max_memory_snippets: int = 5,
 ) -> tuple[dict[str, Any], int, dict[str, Any]]:
@@ -33,6 +34,8 @@ def build_minimal_provider_context(
     }
     if user_message:
         ctx["user_message"] = str(user_message)[:8000]
+    if turn_memory_summary:
+        ctx["turn_memory_summary"] = str(turn_memory_summary)[:2000]
 
     est = estimate_payload_tokens(ctx)
     if max_tokens is not None and est > max_tokens:
@@ -46,5 +49,6 @@ def build_minimal_provider_context(
         "memory_snippets": len(ctx.get("memory_snippets") or []),
         "artifact_count": len(ctx.get("artifact_refs") or []),
         "user_message_chars": len(ctx.get("user_message") or ""),
+        "turn_memory_summary_chars": len(ctx.get("turn_memory_summary") or ""),
     }
     return ctx, est, summary

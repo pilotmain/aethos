@@ -59,6 +59,11 @@ def test_scrub_legacy_rest_hint() -> None:
 def test_gateway_web_stuck_dev_includes_phase50_appendix(monkeypatch: pytest.MonkeyPatch, db_session) -> None:
     monkeypatch.setattr(
         NexaGateway,
+        "_maybe_auto_dev_investigation",
+        lambda self, gctx, text, db: None,
+    )
+    monkeypatch.setattr(
+        NexaGateway,
         "compose_llm_reply",
         lambda self, *a, **k: "Concrete troubleshooting steps here.",
     )
@@ -116,6 +121,11 @@ def test_phase51j_oidc_acceptance_avoids_legacy_personas(monkeypatch: pytest.Mon
     monkeypatch.setattr(
         "app.services.general_response.looks_like_general_question",
         lambda *a, **k: False,
+    )
+    monkeypatch.setattr(
+        NexaGateway,
+        "_maybe_auto_dev_investigation",
+        lambda self, gctx, text, db: None,
     )
     ctx = GatewayContext(
         user_id=f"p51j_{uuid.uuid4().hex[:10]}",

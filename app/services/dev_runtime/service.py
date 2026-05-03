@@ -95,6 +95,7 @@ def run_dev_mission(
     workspace_id: str,
     goal: str,
     *,
+    memory_notes: str | None = None,
     auto_pr: bool = False,
     preferred_agent: str | None = None,
     allow_write: bool = False,
@@ -168,7 +169,8 @@ def run_dev_mission(
         san = repo_sanity_check(repo)
         if not san.get("ok"):
             raise RuntimeError(f"repo_sanity_failed:{san.get('error')}")
-        plan = build_dev_plan(goal, ws)
+        mem_trim = (memory_notes or "").strip()[:4000] or None
+        plan = build_dev_plan(goal, ws, memory_notes=mem_trim)
         run.plan_json = plan
         db.commit()
 
@@ -247,6 +249,8 @@ def run_dev_mission(
                 "failures": context_accum.get("failures"),
                 "last_test_failures": context_accum.get("last_test_failures"),
             }
+            if mem_trim:
+                ctx_clean["user_memory_notes"] = mem_trim
             ctx_clean = dict(
                 gate_agent_context_before_external(
                     adapter_impl.name,

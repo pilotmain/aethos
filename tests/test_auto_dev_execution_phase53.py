@@ -40,7 +40,7 @@ def test_maybe_auto_dev_prepends_intro(monkeypatch: pytest.MonkeyPatch, nexa_run
     calls: list[tuple] = []
 
     def _fake_run(db, uid, wid, goal, **kw):
-        calls.append((goal,))
+        calls.append((goal, kw.get("memory_notes")))
         return {"ok": True, "run_id": "r1", "iterations": 1, "tests_passed": True, "adapter_used": "stub"}
 
     monkeypatch.setattr(
@@ -72,4 +72,5 @@ def test_maybe_auto_dev_prepends_intro(monkeypatch: pytest.MonkeyPatch, nexa_run
     out = NexaGateway()._maybe_auto_dev_investigation(gctx, "auth fails", db=nexa_runtime_clean)
     assert out is not None
     assert out["text"].startswith("I'll investigate this against your workspace")
-    assert calls and "EKS" in calls[0][0]
+    assert calls
+    assert "EKS" in (calls[0][1] or "") or "EKS" in (calls[0][0] or "")

@@ -17,6 +17,11 @@ def test_web_main_path_matches_gateway_for_stuck_dev(monkeypatch: pytest.MonkeyP
     """Gateway-first web flow receives Phase 50 assist appendix like direct gateway calls."""
     monkeypatch.setattr(
         NexaGateway,
+        "_maybe_auto_dev_investigation",
+        lambda self, gctx, text, db: None,
+    )
+    monkeypatch.setattr(
+        NexaGateway,
         "compose_llm_reply",
         lambda self, *a, **k: "Concrete troubleshooting steps.",
     )

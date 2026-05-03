@@ -7,7 +7,12 @@ from typing import Any
 from app.models.dev_runtime import NexaDevWorkspace
 
 
-def build_dev_plan(goal: str, workspace: NexaDevWorkspace) -> list[dict[str, Any]]:
+def build_dev_plan(
+    goal: str,
+    workspace: NexaDevWorkspace,
+    *,
+    memory_notes: str | None = None,
+) -> list[dict[str, Any]]:
     """
     Build a fixed pipeline: analyze → (bounded loop in service) → summary.
 
@@ -16,8 +21,14 @@ def build_dev_plan(goal: str, workspace: NexaDevWorkspace) -> list[dict[str, Any
     """
     _ = workspace
     _ = (goal or "").strip()[:2000]
+    mem = (memory_notes or "").strip()[:2000]
+    analyze_desc = "Analyze repository state and goal (git status, scope)"
+    if mem:
+        analyze_desc = (
+            f"{analyze_desc}. Consider saved user/project notes where relevant (bounded excerpt in run metadata)."
+        )
     return [
-        {"type": "analyze", "description": "Analyze repository state and goal (git status, scope)"},
+        {"type": "analyze", "description": analyze_desc, "memory_notes_excerpt": bool(mem)},
         {"type": "summary", "description": "Summarize run and PR-ready notes"},
     ]
 

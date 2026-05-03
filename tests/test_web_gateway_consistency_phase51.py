@@ -14,6 +14,11 @@ from app.services.gateway.runtime import NexaGateway
 def test_stuck_dev_same_core_tone_web_and_telegram(monkeypatch: pytest.MonkeyPatch, db_session) -> None:
     monkeypatch.setattr(
         NexaGateway,
+        "_maybe_auto_dev_investigation",
+        lambda self, gctx, text, db: None,
+    )
+    monkeypatch.setattr(
+        NexaGateway,
         "compose_llm_reply",
         lambda self, *a, **k: "Focused technical guidance.",
     )
