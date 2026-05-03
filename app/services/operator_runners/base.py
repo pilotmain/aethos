@@ -45,6 +45,16 @@ def detect_provider_hints(text: str) -> dict[str, bool]:
             or "amazonaws.com" in t
             or "aws.amazon.com" in t
         ),
+        "fly": bool(re.search(r"\bfly\.io\b", t) or ".fly.dev" in t),
+        "render": bool("render.com" in t),
+        "netlify": bool("netlify.app" in t or "netlify.com" in t),
+        "gcp": bool("googleapis.com" in t or "cloud.google.com" in t or re.search(r"\bgcp\b", t)),
+        "azure": bool("azure.com" in t or ".azurewebsites.net" in t or re.search(r"\bazure\b", t)),
+        "digitalocean": bool(
+            "digitalocean.com" in t
+            or "ondigitalocean.app" in t
+            or re.search(r"\bdigitalocean\b", t)
+        ),
         "local_git": bool(re.search(r"\bgit\b", t) or "workspace:" in t or "repo" in t),
     }
 

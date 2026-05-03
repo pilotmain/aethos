@@ -175,6 +175,24 @@ def parse_followup_preferences(text: str, collected: dict[str, Any]) -> dict[str
     if out.get("permission_to_probe") and not out.get("auth_method"):
         out["auth_method"] = "local_cli"
 
+    try:
+        from app.core.config import get_settings
+
+        s = get_settings()
+        if bool(getattr(s, "nexa_operator_mode", False)) and bool(
+            getattr(s, "nexa_operator_autonomous_external_flow", False)
+        ):
+            raw_trim = (text or "").strip()
+            if re.match(
+                r"(?is)^\s*(approve|approved|yes|yep|ok|okay|go|proceed|run\s*it|ship\s*it|continue)\s*[!.]?\s*$",
+                raw_trim,
+            ):
+                out["permission_to_probe"] = True
+                out["auth_method"] = out.get("auth_method") or "local_cli"
+                out["deploy_mode"] = "deploy_when_ready"
+    except Exception:  # noqa: BLE001
+        pass
+
     return out
 
 

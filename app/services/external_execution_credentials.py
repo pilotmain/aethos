@@ -122,11 +122,29 @@ def maybe_handle_external_credential_chat_turn(
     uid = (user_id or "").strip()
     logger.info("external_credential.setup_reply user_id=%s (redacted)", uid or None)
 
+    from app.services.credential_session_store import mark_credential_guidance_shown, was_credential_guidance_recent
+
+    _tag = "railway_token_paste"
+    if uid and was_credential_guidance_recent(uid, _tag):
+        return {
+            "mode": "chat",
+            "text": (
+                "**Key received** (same session) — still won’t echo it. "
+                "If that was a real token, rotate it in Railway and keep the new value only in the worker `.env`, "
+                "then restart the API/bot. Send **retry external execution** when ready."
+            ),
+            "intent": "external_execution_continue",
+            "credential_setup": True,
+        }
+
     if db is not None and uid:
         from app.services.conversation_context_service import get_or_create_context
 
         cctx = get_or_create_context(db, uid)
         record_credential_setup_hint(db, cctx, service="railway")
+
+    if uid:
+        mark_credential_guidance_shown(uid, _tag)
 
     return {
         "mode": "chat",
