@@ -25,6 +25,7 @@ from urllib.parse import urlparse
 import httpx
 
 from app.core.config import get_settings
+from app.services.network_policy.policy import is_egress_allowed, record_egress_attempt
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +57,10 @@ def provider_get(url: str, *, params: dict[str, Any] | None = None, headers: dic
 
 def provider_post(url: str, *, json: dict[str, Any] | None = None, headers: dict[str, str] | None = None, timeout: float = 25.0) -> httpx.Response:
     hn = _hostname(url)
+    ok = is_egress_allowed(url, purpose="provider_post", user_id=None)
+    record_egress_attempt(url=url, purpose="provider_post", user_id=None, allowed=ok)
+    if not ok:
+        raise ValueError(f"egress policy blocked host {hn!r}")
     if hn not in _PROVIDER_HOSTS:
         raise ValueError(f"provider POST host not allowlisted: {hn!r}")
     logger.info("safe_http_client provider_post host=%s", hn)

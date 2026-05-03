@@ -21,6 +21,7 @@ from app.services.llm_usage_recorder import (
     record_anthropic_message_usage,
     record_openai_message_usage,
 )
+from app.services.network_policy.policy import assert_provider_egress_allowed
 from app.services.providers.sdk import build_anthropic_client, build_openai_client
 
 logger = logging.getLogger(__name__)
@@ -159,7 +160,7 @@ def call_primary_llm_json(user_prompt: str) -> dict:
             return _parse_json_object_from_llm(body)
         except (json.JSONDecodeError, TypeError) as e:
             logger.error("INTENT_LLM JSON_PARSE_FAILED raw=%s", body[:200])
-            if m.openai_api_key:
+            if can_openai:
                 logger.warning("INTENT_LLM anthropic body not JSON, trying openai: %s", e)
                 try:
                     return _intent_classify_with_openai(user_prompt, m.openai_api_key, m=m)
@@ -168,7 +169,7 @@ def call_primary_llm_json(user_prompt: str) -> dict:
                     raise
             raise
         except Exception as e:
-            if m.openai_api_key:
+            if can_openai:
                 logger.warning("INTENT_LLM anthropic failed, openai fallback: %s", e)
                 try:
                     return _intent_classify_with_openai(user_prompt, m.openai_api_key, m=m)
@@ -178,7 +179,7 @@ def call_primary_llm_json(user_prompt: str) -> dict:
             logger.exception("LLM_FAILURE call_primary_llm_json")
             raise
 
-    if m.openai_api_key:
+    if can_openai:
         try:
             return _intent_classify_with_openai(user_prompt, m.openai_api_key, m=m)
         except Exception:
@@ -206,7 +207,12 @@ def call_primary_llm_text(user_prompt: str) -> str:
     if not (m.anthropic_api_key or m.openai_api_key):
         raise RuntimeError("No LLM client configured for text call")
 
-    if m.anthropic_api_key:
+    can_anthropic = bool(m.anthropic_api_key) and assert_provider_egress_allowed("anthropic", None) is None
+    can_openai = bool(m.openai_api_key) and assert_provider_egress_allowed("openai", None) is None
+    if not can_anthropic and not can_openai:
+        raise RuntimeError("LLM outbound blocked by network egress policy (or no provider keys)")
+
+    if can_anthropic:
         try:
             logger.warning("LLM_TEXT_CALL_TRIGGERED provider=anthropic")
             client = build_anthropic_client(api_key=m.anthropic_api_key)
@@ -226,12 +232,12 @@ def call_primary_llm_text(user_prompt: str) -> str:
                 pass
             return _text_from_anthropic_message(msg)
         except Exception as e:
-            if not m.openai_api_key:
+            if not can_openai:
                 logger.exception("LLM_FAILURE call_primary_llm_text (anthropic)")
                 raise
             logger.warning("LLM_TEXT anthropic failed, openai fallback: %s", e)
 
-    if m.openai_api_key:
+    if can_openai:
         oai = build_openai_client(api_key=m.openai_api_key)
         logger.warning("LLM_TEXT_CALL_TRIGGERED provider=openai")
         response = oai.chat.completions.create(

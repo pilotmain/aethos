@@ -174,6 +174,22 @@ class Settings(BaseSettings):
     nexa_memory_dir: str | None = None
     # Telegram voice notes — transcription pipeline (Phase 53 stub until wired).
     nexa_voice_enabled: bool = False
+    nexa_voice_transcribe_provider: str = "local"
+
+    # Phase 54 — sandbox / vault / egress / resource caps (MVP policy gates).
+    nexa_sandbox_mode: str = "process"
+    nexa_require_sandbox_for_skills: bool = False
+    nexa_credential_vault_provider: str = "local"
+    nexa_network_egress_mode: str = "allowlist"
+    nexa_network_allowed_hosts: str = (
+        "api.openai.com,api.anthropic.com,localhost,127.0.0.1,"
+        "api.telegram.org,api.search.brave.com,api.tavily.com,serpapi.com,"
+        "www.googleapis.com"
+    )
+    nexa_resource_max_cpu_percent: float = 0.0
+    nexa_resource_max_memory_mb: int = 0
+    nexa_resource_max_gpu_memory_mb: int = 0
+    nexa_resource_max_parallel_tasks: int = 0
     nexa_default_dev_tool: str = "aider"
     nexa_default_dev_mode: str = "autonomous_cli"
 

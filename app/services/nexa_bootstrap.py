@@ -30,6 +30,12 @@ DEFAULTS_LINES = (
     "POSTGRES_HOST_PORT=5434\n"
     "DEV_EXECUTOR_ON_HOST=1\n"
     "OPERATOR_AUTO_RUN_DEV_EXECUTOR=false\n"
+    "# Phase 54 — privacy-first defaults (override intentionally)\n"
+    "NEXA_LOCAL_FIRST=true\n"
+    "NEXA_STRICT_PRIVACY_MODE=true\n"
+    "NEXA_BLOCK_OVER_TOKEN_BUDGET=true\n"
+    "NEXA_TOKEN_BUDGET_PER_REQUEST=8000\n"
+    "NEXA_NETWORK_EGRESS_MODE=allowlist\n"
 )
 PACKAGE_IMPORT = {
     "cryptography": "cryptography",

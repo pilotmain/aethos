@@ -32,6 +32,7 @@ from app.services.providers.local_stub_provider import call_local_stub
 from app.services.providers.ollama_provider import call_ollama
 from app.services.providers.openai_provider import call_openai
 from app.services.providers.rate_limit import allow_provider_request
+from app.services.network_policy.policy import assert_provider_egress_allowed
 from app.services.providers.types import ProviderRequest, ProviderResponse
 from app.services.token_economy.audit import record_token_audit
 from app.services.token_economy.budget import check_budget, record_usage
@@ -122,6 +123,24 @@ def call_provider(request: ProviderRequest) -> ProviderResponse:
         add_provider_event(_tag_ev(ev, request.user_id))
         audit(True, err)
         _log.warning("provider blocked: %s", err)
+        return ProviderResponse(
+            ok=False,
+            provider=request.provider,
+            model=request.model,
+            output=None,
+            redactions=redactions,
+            blocked=True,
+            error=err,
+        )
+
+    egress_err = assert_provider_egress_allowed(request.provider, request.user_id)
+    if egress_err:
+        err = egress_err
+        ev = {"provider": request.provider, "agent": request.agent_handle or "", "status": err}
+        log_event({"type": "provider_blocked", **ev})
+        add_provider_event(_tag_ev(ev, request.user_id))
+        audit(True, err)
+        _log.warning("provider blocked (egress policy): %s", err)
         return ProviderResponse(
             ok=False,
             provider=request.provider,

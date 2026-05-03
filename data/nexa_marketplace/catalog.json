@@ -1,0 +1,14 @@
+{
+  "skills": [
+    {
+      "id": "github-pr-reviewer",
+      "name": "GitHub PR Reviewer",
+      "version": "0.1.0",
+      "permissions": ["github.read"],
+      "risk_level": "low",
+      "signature": null,
+      "trust_score": 0.5,
+      "description": "Example marketplace entry — not installed by default."
+    }
+  ]
+}

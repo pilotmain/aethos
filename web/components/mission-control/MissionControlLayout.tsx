@@ -25,6 +25,7 @@ import {
 import { Phase22Overview } from "@/components/mission-control/Phase22Overview";
 import { ProductionIntelPanel } from "@/components/mission-control/ProductionIntelPanel";
 import { ProviderTransparencyPanel } from "@/components/mission-control/ProviderTransparencyPanel";
+import { SafetyAndReadinessPanel } from "@/components/mission-control/SafetyAndReadinessPanel";
 import { TokenEconomyPanel } from "@/components/mission-control/TokenEconomyPanel";
 import type { UiTheme } from "@/components/settings/UserSettingsPanel";
 import { UserSettingsPanel } from "@/components/settings/UserSettingsPanel";
@@ -276,6 +277,14 @@ export function MissionControlLayout() {
           {configured ? (
             <TokenEconomyPanel
               tokenEconomy={snap?.token_economy as Record<string, unknown> | undefined}
+              loading={snapLoading && configured}
+            />
+          ) : null}
+
+          {configured ? (
+            <SafetyAndReadinessPanel
+              shellLight={shellLight}
+              data={snap?.safety_readiness as Record<string, unknown> | undefined}
               loading={snapLoading && configured}
             />
           ) : null}

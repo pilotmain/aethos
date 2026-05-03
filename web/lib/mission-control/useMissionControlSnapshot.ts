@@ -70,6 +70,8 @@ export type MissionControlSnapshot = {
   };
   /** Phase 46–47 — goals, agent intel, autonomy stability (Mission Control vNext). */
   phase46?: Record<string, unknown>;
+  /** Phase 54 — sandbox, vault, egress, token budget snapshot. */
+  safety_readiness?: Record<string, unknown>;
 };
 
 function snapshotFromStore(): MissionControlSnapshot | null {
