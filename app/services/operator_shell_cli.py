@@ -56,10 +56,12 @@ def run_allowlisted_argv_via_login_shell(
     quoted_cwd = shlex.quote(workdir)
     inner = shlex.join(argv)
 
-    # bash -lc: load login profile; then explicit nvm + rc sources for zsh-centric installs.
+    # bash -lc: login bash reads /etc/profile + ~/.bash_profile etc.; then we explicitly load nvm
+    # and user rc files (non-interactive workers skip Terminal.app's interactive PATH).
     script = f"""set +e
 export NVM_DIR="${{NVM_DIR:-$HOME/.nvm}}"
 [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+[ -s "$NVM_DIR/bash_completion" ] && . "$NVM_DIR/bash_completion"
 [ -f "$HOME/.zprofile" ] && . "$HOME/.zprofile" 2>/dev/null || true
 [ -f "$HOME/.zshrc" ] && . "$HOME/.zshrc" 2>/dev/null || true
 [ -f "$HOME/.bash_profile" ] && . "$HOME/.bash_profile" 2>/dev/null || true
@@ -75,6 +77,7 @@ exit $?
         run_env["HOME"] = str(Path.home())
 
     try:
+        # ``-l``: login shell (profile); ``-c``: run script body (same idea as ``bash -l -c``).
         proc = subprocess.run(
             ["/bin/bash", "-lc", script],
             capture_output=True,

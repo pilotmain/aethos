@@ -4,6 +4,9 @@ Approval-gated host execution for local_tool jobs.
 No arbitrary shell: only fixed tool names and argv lists. Execution happens only after
 the user approves the job and local_tool_worker runs it — never directly from LLM output.
 
+``git`` subprocesses optionally use :mod:`app.services.operator_shell_cli` (same nvm/rc loader as
+operator ``vercel`` / ``gh``) when ``NEXA_OPERATOR_CLI_PROFILE_SHELL`` is enabled.
+
 When ``db`` and ``job`` with ``user_id`` are provided, permission registry + grants are enforced.
 """
 from __future__ import annotations

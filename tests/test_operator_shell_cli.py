@@ -44,6 +44,7 @@ def test_invokes_bash_with_nvm_script_in_payload(monkeypatch: pytest.MonkeyPatch
     assert argv0[:2] == ["/bin/bash", "-lc"]
     script = argv0[2]
     assert "nvm.sh" in script
+    assert "bash_completion" in script
     assert "vercel" in script and "whoami" in script
     assert kw.get("env") is not None
 
