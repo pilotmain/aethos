@@ -124,6 +124,10 @@ def reason_for_host_payload(payload: dict[str, Any]) -> str:
         return "Create a git commit"
     if ha == "git_push":
         return "Push commits to the remote"
+    if ha == "vercel_projects_list":
+        return "List Vercel projects (CLI)"
+    if ha == "vercel_remove":
+        return "Remove a Vercel project (destructive)"
     if ha == "run_command":
         rn = (payload.get("run_name") or "").strip().lower()
         if rn == "pytest":

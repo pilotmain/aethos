@@ -46,6 +46,8 @@ _PRIVILEGED_HOST_ACTIONS: frozenset[str] = frozenset(
         "list_directory",
         "find_files",
         "read_multiple_files",
+        "vercel_projects_list",
+        "vercel_remove",
     }
 )
 

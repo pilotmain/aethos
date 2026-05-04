@@ -67,6 +67,11 @@ def title_for_payload(payload: dict[str, Any]) -> str:
         return "Git commit"
     if act == "git_push":
         return "Git push"
+    if act == "vercel_projects_list":
+        return "Vercel projects list"
+    if act == "vercel_remove":
+        pn = (payload.get("vercel_project_name") or payload.get("project_name") or "").strip()
+        return f"Vercel remove {pn}" if pn else "Vercel remove project"
     if act == "read_multiple_files":
         if payload.get("relative_paths"):
             return "Read multiple files (compare/explicit)"
@@ -123,5 +128,11 @@ def infer_host_executor_action(user_text: str) -> dict[str, Any] | None:
 
     if re.search(r"(?i)(?:^|[\s,])\bgit\s+push\b", line):
         return {"host_action": "git_push"}
+
+    if re.search(
+        r"(?i)\b(list|show)\s+(my\s+)?vercel\s+projects\b|\bvercel\s+projects\s+list\b",
+        line,
+    ):
+        return {"host_action": "vercel_projects_list"}
 
     return None

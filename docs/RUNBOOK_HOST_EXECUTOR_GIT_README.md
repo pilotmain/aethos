@@ -74,6 +74,36 @@ Explicit remote and branch (optional):
 }
 ```
 
+## Vercel (host executor)
+
+These run the **Vercel CLI** with a **fixed argv** (no shell). You must be logged in (`vercel login` or `VERCEL_TOKEN` in the worker environment).
+
+### List projects (read-only)
+
+```json
+{
+  "host_action": "vercel_projects_list"
+}
+```
+
+Natural language: *“list my Vercel projects”* / *“vercel projects list”* may infer this action (see `host_executor_intent`).
+
+### Remove a project (destructive)
+
+Requires an explicit boolean confirmation and a **slug** (not a URL path):
+
+```json
+{
+  "host_action": "vercel_remove",
+  "vercel_project_name": "pilot-command-center",
+  "vercel_yes": true
+}
+```
+
+`project_name` is accepted as an alias for `vercel_project_name`. **`vercel_yes` must be JSON `true`** so the implementation can run `vercel remove <slug> --yes` without a TTY. There is **no** free-text “stop service” → remove mapping in this repo; queue the structured payload (or use the LLM/UI to build it) and approve the job.
+
+**Not implemented here:** chained workflows (remove → file_write → commit → push in one run), rate limits, and a generic `shell_exec` action. Run those steps as **separate** approved host-executor jobs in order.
+
 ## How to run it (correct testing path)
 
 1. Open **Telegram** or **Web UI** and ask for the workflow in plain language, for example:  

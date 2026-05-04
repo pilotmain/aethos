@@ -415,6 +415,10 @@ def host_action_scope_and_risk(
         if any(h in low for h in _SENSITIVE_PATH_HINTS):
             return SCOPE_FILE_READ, RISK_HIGH
         return SCOPE_FILE_READ, RISK_MEDIUM
+    if a == "vercel_projects_list":
+        return SCOPE_CLOUD_CLI, RISK_MEDIUM
+    if a == "vercel_remove":
+        return SCOPE_CLOUD_CLI, RISK_HIGH
     return SCOPE_COMMAND_RUN, RISK_MEDIUM
 
 
@@ -642,6 +646,8 @@ def finalize_permission_use(
         label = "command_run"
     elif ha in ("git_status", "git_commit", "git_push"):
         label = "git_operations"
+    elif ha in ("vercel_projects_list", "vercel_remove"):
+        label = "cloud_cli"
     else:
         label = grants[0].scope if grants else ""
 

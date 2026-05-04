@@ -34,6 +34,8 @@ ALLOWED_RUN_COMMANDS: dict[str, list[str]] = {
 # Optional git_push remote/ref — argv only (no shell).
 _PUSH_REMOTE_RE = re.compile(r"^[a-zA-Z][a-zA-Z0-9_.-]{0,63}$")
 _PUSH_REF_RE = re.compile(r"^[a-zA-Z0-9/_.-]{1,200}$")
+# Vercel project name (slug) — no path separators.
+_VERCEL_PROJECT_RE = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,99}$")
 
 _PATH_BLOCKED_SUBSTRINGS = (
     ".env",
@@ -112,6 +114,21 @@ def _safe_join_under_root(root: Path, relative: str) -> Path:
     except ValueError as e:
         raise ValueError("path escapes work root") from e
     return out
+
+
+def argv_for_vercel_remove(payload: dict[str, Any]) -> list[str]:
+    """Build fixed argv for ``vercel remove <project> --yes`` (non-interactive only)."""
+    name = (payload.get("vercel_project_name") or payload.get("project_name") or "").strip()
+    if not name or not _VERCEL_PROJECT_RE.fullmatch(name):
+        raise ValueError(
+            "vercel_project_name or project_name is required and must be a single Vercel project slug "
+            "(alphanumeric, dot, underscore, hyphen; no path characters)"
+        )
+    if payload.get("vercel_yes") is not True:
+        raise ValueError(
+            "vercel_yes must be JSON true to confirm non-interactive removal (runs vercel remove … --yes)"
+        )
+    return ["vercel", "remove", name, "--yes"]
 
 
 def argv_for_git_push(payload: dict[str, Any]) -> list[str]:
@@ -582,9 +599,30 @@ def execute_payload(
             return _finalize_output(f"git push failed (exit {code})\n{msg}"[:8000])
         return _finalize_output((msg or "Pushed.")[:8000])
 
+    if action == "vercel_projects_list":
+        code, out, err = _run_argv(
+            ["vercel", "projects", "list"],
+            cwd=exec_root,
+            timeout=min(timeout, 120),
+        )
+        msg = "\n".join(x for x in [out, f"STDERR:\n{err}" if err.strip() else ""] if x.strip())
+        if code != 0:
+            return _finalize_output(f"vercel projects list failed (exit {code})\n{msg}"[:8000])
+        return _finalize_output(msg[:8000] or "(empty)")
+
+    if action == "vercel_remove":
+        argv = argv_for_vercel_remove(payload)
+        code, out, err = _run_argv(argv, cwd=exec_root, timeout=min(timeout, 180))
+        msg = "\n".join(x for x in [out, f"STDERR:\n{err}" if err.strip() else ""] if x.strip())
+        logger.info("host_executor vercel_remove ok exit=%s", code)
+        if code != 0:
+            return _finalize_output(f"vercel remove failed (exit {code})\n{msg}"[:8000])
+        return _finalize_output((msg or "Removed.")[:8000])
+
     raise ValueError(
         f"unknown host_action {action!r}; try: git_status, run_command, file_read, file_write, "
-        "git_commit, git_push, list_directory, find_files, read_multiple_files"
+        "git_commit, git_push, vercel_projects_list, vercel_remove, list_directory, find_files, "
+        "read_multiple_files"
     )
 
 
@@ -608,8 +646,10 @@ def execute_host_executor_job(job: Any) -> str:
 def proposed_risk_level(payload: dict[str, Any]) -> str:
     """Suggest risk for UI / policy (all host-executor jobs still require approval in AgentJobService)."""
     action = (payload.get("host_action") or "").strip().lower()
-    if action in ("file_write", "git_commit", "git_push"):
+    if action in ("file_write", "git_commit", "git_push", "vercel_remove"):
         return "high"
+    if action == "vercel_projects_list":
+        return "normal"
     if action == "run_command":
         return "normal"
     if action in ("list_directory", "find_files"):

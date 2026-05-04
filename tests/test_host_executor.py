@@ -74,6 +74,35 @@ def test_pytest_allowlist(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> No
         assert "no tests collected" in out.lower() or "exit" in out.lower() or out.strip() != ""
 
 
+def test_vercel_projects_list_runs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    with patch.object(host_executor, "get_settings", return_value=_Settings(tmp_path)):
+
+        def fake_run(
+            argv: list[str], *, cwd: object, timeout: int
+        ) -> tuple[int, str, str]:
+            assert argv[:3] == ["vercel", "projects", "list"]
+            return 0, "  my-proj  ", ""
+
+        with patch.object(host_executor, "_run_argv", side_effect=fake_run):
+            out = host_executor.execute_payload({"host_action": "vercel_projects_list"})
+            assert "my-proj" in out
+
+
+def test_vercel_remove_argv_requires_confirm() -> None:
+    assert host_executor.argv_for_vercel_remove(
+        {"vercel_project_name": "foo-bar", "vercel_yes": True}
+    ) == ["vercel", "remove", "foo-bar", "--yes"]
+    with pytest.raises(ValueError, match="vercel_yes"):
+        host_executor.argv_for_vercel_remove({"vercel_project_name": "foo-bar"})
+    with pytest.raises(ValueError, match="slug"):
+        host_executor.argv_for_vercel_remove(
+            {"vercel_project_name": "../evil", "vercel_yes": True}
+        )
+
+
 def test_git_push_argv_and_validation() -> None:
     assert host_executor.argv_for_git_push({}) == ["git", "push"]
     assert host_executor.argv_for_git_push({"push_remote": "origin"}) == [
@@ -153,6 +182,8 @@ def test_host_executor_job_dispatches(tmp_path: Path, monkeypatch: pytest.Monkey
 def test_proposed_risk_level() -> None:
     assert host_executor.proposed_risk_level({"host_action": "git_commit"}) == "high"
     assert host_executor.proposed_risk_level({"host_action": "git_push"}) == "high"
+    assert host_executor.proposed_risk_level({"host_action": "vercel_remove"}) == "high"
+    assert host_executor.proposed_risk_level({"host_action": "vercel_projects_list"}) == "normal"
     assert host_executor.proposed_risk_level({"host_action": "file_write"}) == "high"
     assert host_executor.proposed_risk_level({"host_action": "git_status"}) == "low"
     assert host_executor.proposed_risk_level({"host_action": "read_multiple_files"}) == "normal"

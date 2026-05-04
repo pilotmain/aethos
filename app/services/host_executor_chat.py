@@ -241,6 +241,20 @@ def _validate_enqueue_payload(payload: dict[str, Any]) -> dict[str, Any] | None:
             out_gp["push_ref"] = pf[:200]
         return _attach_cwd(out_gp)
 
+    if act == "vercel_projects_list":
+        return _attach_cwd({"host_action": "vercel_projects_list"})
+
+    if act == "vercel_remove":
+        pn = str(payload.get("vercel_project_name") or payload.get("project_name") or "").strip()
+        if not pn or payload.get("vercel_yes") is not True:
+            return None
+        out_rm: dict[str, Any] = {
+            "host_action": "vercel_remove",
+            "vercel_project_name": pn[:100],
+            "vercel_yes": True,
+        }
+        return _attach_cwd(out_rm)
+
     if act == "read_multiple_files":
         raw_list = payload.get("relative_paths")
         if isinstance(raw_list, list) and raw_list:

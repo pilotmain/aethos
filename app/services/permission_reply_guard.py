@@ -102,7 +102,7 @@ def user_message_suggests_privileged_host_action(text: str) -> bool:
         return False
     if re.search(
         r"(?i)(/users/|/home/|~/|\blist\s+files?\b|\bls\b|\bread\s+file\b|\bcat\b|\bwrite\b|"
-        r"\bopen\b|\brun\s+tests?\b|\bpytest\b|\bgit\s+status\b|\bgit\s+push\b|\brun\s+pytest\b)",
+        r"\bopen\b|\brun\s+tests?\b|\bpytest\b|\bgit\s+status\b|\bgit\s+push\b|\bvercel\b|\brun\s+pytest\b)",
         t,
     ):
         return True

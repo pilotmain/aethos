@@ -47,6 +47,11 @@ def allowed_tool_human(payload: dict[str, Any]) -> str:
         if pr:
             return f"git push {pr}"
         return "git push"
+    if act == "vercel_projects_list":
+        return "vercel projects list"
+    if act == "vercel_remove":
+        pn = (payload.get("vercel_project_name") or payload.get("project_name") or "").strip()
+        return f"vercel remove {pn} --yes" if pn else "vercel remove (needs project + vercel_yes)"
     if act == "read_multiple_files":
         return "read multiple text files under an allowed folder (no indexing)"
     return act or "—"
@@ -138,6 +143,8 @@ def allowed_actions_catalog() -> list[str]:
         "find_files — glob match files under a relative directory",
         "git_commit — stage all and commit with a fixed message",
         "git_push — push commits to remote (optional push_remote / push_ref)",
+        "vercel_projects_list — vercel projects list (read-only)",
+        "vercel_remove — vercel remove <slug> --yes (requires vercel_yes: true)",
         "read_multiple_files — batch-read text files under a folder (optional LLM summary)",
     ]
 
@@ -159,6 +166,8 @@ def host_executor_panel_public() -> dict[str, Any]:
             "file_write",
             "git_commit",
             "git_push",
+            "vercel_projects_list",
+            "vercel_remove",
             "list_directory",
             "find_files",
             "read_multiple_files",
