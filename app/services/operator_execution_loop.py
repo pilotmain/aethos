@@ -141,9 +141,8 @@ def _compute_strict_operator_verified(evidence: dict[str, Any], runner_ok: bool)
 
 def _append_verified_mission_footer(text: str, *, strict_verified: bool, evidence: dict[str, Any]) -> str:
     if _precise_short_enabled():
-        if not strict_verified or not (text or "").strip():
-            return text
-        return text.rstrip() + "\n\n**Verified.**"
+        # Avoid a standalone "Verified." line — progress + phases carry proof.
+        return text
     if not strict_verified or not (text or "").strip():
         return text
     phases = evidence.get("phases")
@@ -172,6 +171,59 @@ def _append_verified_mission_footer(text: str, *, strict_verified: bool, evidenc
         + "\n\n---\n\n**Mission complete.** Verified: "
         + proof
         + ". Full evidence is in the logs and phase blocks above."
+    )
+
+
+def _try_enqueue_readme_push_chain_after_github(
+    db: Session,
+    uid: str,
+    user_text: str,
+    gctx: "GatewayContext",
+) -> str | None:
+    """
+    After successful ``gh`` verification, if the user asked for a README+push style mutation,
+    enqueue the same NL chain the host-executor chat path would use.
+    """
+    if not (user_text or "").strip() or not (uid or "").strip():
+        return None
+    s = get_settings()
+    if not bool(getattr(s, "nexa_host_executor_enabled", False)):
+        return None
+    if not bool(getattr(s, "nexa_host_executor_chain_enabled", False)):
+        return None
+
+    from app.services.host_executor_chat import _validate_enqueue_payload, enqueue_host_job_from_validated_payload
+    from app.services.host_executor_intent import title_for_payload
+    from app.services.host_executor_nl_chain import try_infer_readme_push_chain_nl
+
+    pl = try_infer_readme_push_chain_nl(user_text)
+    if not pl:
+        return None
+    safe = _validate_enqueue_payload(pl)
+    if not safe:
+        return None
+    wid = (
+        str(gctx.extras.get("web_session_id") or gctx.extras.get("conversation_id") or "default").strip()[:64]
+        or "default"
+    )
+    title = title_for_payload(safe)
+    try:
+        job = enqueue_host_job_from_validated_payload(
+            db,
+            uid.strip(),
+            safe_pl=safe,
+            title=title,
+            web_session_id=wid,
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("operator NL readme chain enqueue failed: %s", exc, exc_info=False)
+        return None
+    actions = safe.get("actions") if (safe.get("host_action") or "").strip().lower() == "chain" else None
+    n = len(actions) if isinstance(actions, list) else 1
+    return (
+        "### Queued for you\n\n"
+        f"README, commit, and push are **queued** as one job (**#{job.id}**, {n} steps). "
+        "Open **Jobs** and approve to run on the worker."
     )
 
 
@@ -394,6 +446,10 @@ def try_operator_execution(
         primary_provider = primary_provider or "github"
         body_g, ev_g, prog_g, g_ok = run_github_operator_readonly(cwd=cwd)
         sections.append(body_g)
+        if g_ok:
+            q_readme = _try_enqueue_readme_push_chain_after_github(db, uid, raw, gctx)
+            if q_readme:
+                sections.append(q_readme)
         evidence["github"] = ev_g
         progress.extend(prog_g)
         runner_ok = runner_ok or g_ok

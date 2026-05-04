@@ -17,7 +17,7 @@ def test_github_runner_reports_missing_gh(monkeypatch: pytest.MonkeyPatch) -> No
     assert "What this step did" not in body
 
 
-def test_github_runner_success_includes_verify_vs_mutate_hint(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_github_runner_success_has_no_lecture_block(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("app.services.operator_runners.github.profile_shell_enabled", lambda: False)
 
     def _fake_run(argv, *, cwd):
@@ -29,6 +29,6 @@ def test_github_runner_success_includes_verify_vs_mutate_hint(monkeypatch: pytes
 
     body, _ev, _p, verified = run_github_operator_readonly(cwd=None)
     assert verified is True
-    assert "What this step did" in body
-    assert "host executor" in body.lower()
-    assert "RUNBOOK" in body or "runbook" in body.lower()
+    assert "logged in" in body.lower()
+    assert "What this step did" not in body
+    assert "RUNBOOK" not in body and "runbook" not in body.lower()
