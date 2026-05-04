@@ -14,7 +14,7 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
-from app.services.operator_cli_absolute import apply_operator_cli_absolute_fallback
+from app.services.cli_backends import get_cli_command, operator_abs_debug_enabled
 
 logger = logging.getLogger(__name__)
 
@@ -120,9 +120,16 @@ def run_allowlisted_argv_via_login_shell(
     """
     Execute ``argv`` under ``$SHELL -l -c`` (or fallback) after sourcing nvm and rc files.
 
+    **Important:** ``argv`` is passed through :func:`~app.services.cli_backends.get_cli_command`
+    *before* building the shell script body. The resolved executable (absolute path when
+    configured, or PATH-resolved / bare name) is embedded with :func:`shlex.join` — there is no
+    separate code path that skips CLI backend resolution for login-shell execution.
+
     Returns a dict shaped like other operator CLI helpers: ok, stdout, stderr, exit_code, error.
     """
-    argv = apply_operator_cli_absolute_fallback(list(argv))
+    argv = list(argv)
+    if argv:
+        argv = get_cli_command(Path((argv[0] or "").strip()).name, list(argv[1:]))
     argv0_name = Path((argv[0] or "").strip()).name
     if not argv or argv0_name not in _ALLOWLIST_ARGV0:
         return {
@@ -136,6 +143,11 @@ def run_allowlisted_argv_via_login_shell(
     workdir = cwd or os.getcwd()
     quoted_cwd = shlex.quote(workdir)
     inner = shlex.join(argv)
+    if operator_abs_debug_enabled():
+        logger.info(
+            "[operator_shell_cli] embedded inner command after CLI backend resolution: %s",
+            inner[:800] + ("…" if len(inner) > 800 else ""),
+        )
 
     run_env = dict(env) if env is not None else os.environ.copy()
     if not (run_env.get("HOME") or "").strip():

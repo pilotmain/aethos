@@ -48,6 +48,11 @@ def _abs_debug_enabled() -> bool:
     )
 
 
+def operator_abs_debug_enabled() -> bool:
+    """True when ``NEXA_OPERATOR_CLI_ABS_DEBUG`` requests verbose CLI / shell embedding logs."""
+    return _abs_debug_enabled()
+
+
 def configured_absolute_raw(short: str) -> str:
     """Non-empty absolute-path string from env (preferred) or Pydantic Settings."""
     env_key = _CLI_ENV_KEYS.get(short)
@@ -232,6 +237,7 @@ __all__ = [
     "configured_absolute_raw",
     "get_cli_backend",
     "get_cli_command",
+    "operator_abs_debug_enabled",
     "register_cli_backend",
     "reset_cli_backend_registry",
 ]
