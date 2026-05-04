@@ -24,6 +24,7 @@ Nexa is **not** just a chatbot. It is an **execution layer** that uses **LLMs** 
 - **Frozen public HTTP API** → [docs/API_CONTRACT.md](docs/API_CONTRACT.md) — paths and change rule for contributors
 - **Platform handoff (agents / planning)** → [docs/HANDOFF_PLATFORM_OVERVIEW.md](docs/HANDOFF_PLATFORM_OVERVIEW.md) — full-picture map and where to go deeper
 - **Architecture** → [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — how Nexa is built (Arcturus)
+- **Phase 11 (multi-provider LLM)** → [docs/PHASE_11_LLM_PROVIDERS.md](docs/PHASE_11_LLM_PROVIDERS.md) — planned DeepSeek/Ollama/OpenRouter layer, diagram, env vars
 - **Roadmap** → [docs/ROADMAP.md](docs/ROADMAP.md) — where Nexa is going (phases)
 - **Channel Gateway (design)** → [docs/CHANNEL_GATEWAY.md](docs/CHANNEL_GATEWAY.md) — Slack, email, WhatsApp, etc. on a shared adapter layer
 - **Channel Gateway (execution plan)** → [docs/CHANNEL_GATEWAY_EXECUTION.md](docs/CHANNEL_GATEWAY_EXECUTION.md) — phases, ground rules, effort
@@ -89,6 +90,7 @@ Then: open Telegram, `/start`, and (to use your own model keys) `/key set openai
 | Doc | What |
 | --- | ---- |
 | [docs/HANDOFF_PLATFORM_OVERVIEW.md](docs/HANDOFF_PLATFORM_OVERVIEW.md) | **Start here for agents:** whole-product map, stack, modules, roadmap hooks, doc index |
+| [docs/PHASE_11_LLM_PROVIDERS.md](docs/PHASE_11_LLM_PROVIDERS.md) | **Phase 11 plan:** multi-provider LLM, architecture diagram, env checklist (DeepSeek, Ollama, fallbacks) |
 | [docs/CHANNEL_GATEWAY.md](docs/CHANNEL_GATEWAY.md) | **Design:** multi-channel gateway (Slack, WhatsApp, email…) without weakening governance |
 | [docs/CHANNEL_GATEWAY_EXECUTION.md](docs/CHANNEL_GATEWAY_EXECUTION.md) | **Execution plan:** phased adapter extract, router, identity, Slack/email, tests |
 | [docs/HANDOFF_RECENT_WORK.md](docs/HANDOFF_RECENT_WORK.md) | Narrow slice: recent install path, web session delete, pilotmain.com redirect notes |
