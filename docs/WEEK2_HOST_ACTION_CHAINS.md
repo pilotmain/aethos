@@ -85,6 +85,34 @@ Unless overridden by `NEXA_HOST_EXECUTOR_CHAIN_ALLOWED_ACTIONS`:
 - When access permissions are enforced, **each** inner step is checked against grants before any step runs.
 - Provenance rules still apply; `chain` is treated as a privileged action (same family as other mutating host tools).
 
+## Observability
+
+Structured logs (searchable message text plus `extra` fields for JSON / aggregation):
+
+- **Per step:** `Chain step N/M (…) done` or `… validation error` — includes `duration_ms`, `host_action`, `success`, and a short `error` snippet when the step output looks failed.
+- **Summary:** `Chain completed (…):` — `chain_total_duration_ms`, `chain_success_count`, `chain_exit_reason` (`complete`, `stop_on_failure_step`, or `stop_on_failure_validation`).
+- **NL inference:** when the narrow readme+push phrase matches — `NL chain inferred (readme + commit + push)` with `nl_repo_hint` and `nl_content_preview`.
+- **Queue:** `Chain job queued for approval` — `job_id`, `chain_length`, `inner_actions`, `telegram_chat_id`.
+- **Approval:** `Chain job approved` — `approval_time_ms` from job creation to approval (host-executor chain jobs only).
+
+Optional JSON lines (one object per line), set in `.env`:
+
+```bash
+LOG_JSON_FORMAT=true
+```
+
+Human-readable default:
+
+```bash
+LOG_JSON_FORMAT=false
+```
+
+View recent lines (examples):
+
+```bash
+docker logs nexa-api 2>&1 | grep -E 'Chain step|Chain completed|NL chain inferred|Chain job queued|Chain job approved'
+```
+
 ## Rollback
 
 ```bash

@@ -17,14 +17,26 @@ def get_logger(name: str | None = None) -> logging.Logger:
 
 def configure_logging(level: int = logging.INFO) -> None:
     """Idempotent basic config if no handlers (API/bot startup)."""
+    from app.core.config import get_settings
+
     root = logging.getLogger()
     if root.handlers:
         _LOG.setLevel(level)
         return
-    logging.basicConfig(
-        level=level,
-        format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
-    )
+    use_json = bool(getattr(get_settings(), "log_json_format", False))
+    if use_json:
+        h = logging.StreamHandler()
+        from app.services.logging.json_formatter import NexaJsonFormatter
+
+        h.setFormatter(NexaJsonFormatter())
+        h.setLevel(level)
+        root.setLevel(level)
+        root.addHandler(h)
+    else:
+        logging.basicConfig(
+            level=level,
+            format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+        )
     _LOG.setLevel(level)
 
 

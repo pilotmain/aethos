@@ -76,6 +76,8 @@ class Settings(BaseSettings):
     app_name: str = "Nexa"
     app_env: str = "development"
     debug: bool = True
+    # When true, API boot uses JSON log lines (one object per line) for aggregation; see app.services.logging
+    log_json_format: bool = False
     api_v1_prefix: str = "/api/v1"
     database_url: str = "sqlite:///./overwhelm_reset.db"
 

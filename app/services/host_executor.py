@@ -14,6 +14,7 @@ from __future__ import annotations
 import logging
 import re
 import subprocess
+import time
 from pathlib import Path
 from typing import Any
 
@@ -346,23 +347,86 @@ def execute_payload(
         if not isinstance(stop_on, bool):
             stop_on = True
         parts_out: list[str] = []
+        n_actions = len(actions_in)
+        total_start = time.perf_counter()
+        success_count = 0
+
+        def _log_chain_summary(*, exit_reason: str) -> None:
+            total_ms = (time.perf_counter() - total_start) * 1000.0
+            logger.info(
+                "Chain completed (%s): %s/%s steps successful in %.2fms (stop_on_failure=%s)",
+                exit_reason,
+                success_count,
+                n_actions,
+                total_ms,
+                stop_on,
+                extra={
+                    "nexa_event": "chain_summary",
+                    "chain_exit_reason": exit_reason,
+                    "chain_total_steps": n_actions,
+                    "chain_success_count": success_count,
+                    "chain_total_duration_ms": round(total_ms, 2),
+                    "chain_stop_on_failure": stop_on,
+                },
+            )
+
         for i, step in enumerate(actions_in):
             merged = merge_chain_step(payload, step)
             iha = (merged.get("host_action") or "").strip().lower()
             merged_inner = dict(merged)
             merged_inner["_nexa_chain_inner_step"] = True
+            step_start = time.perf_counter()
             try:
                 out = execute_payload(merged_inner, db=db, job=job)
             except ValueError as e:
+                step_ms = (time.perf_counter() - step_start) * 1000.0
+                logger.info(
+                    "Chain step %s/%s (%s) validation error",
+                    i + 1,
+                    n_actions,
+                    iha,
+                    extra={
+                        "nexa_event": "chain_step",
+                        "chain_step": i + 1,
+                        "chain_total_steps": n_actions,
+                        "host_action": iha,
+                        "duration_ms": round(step_ms, 2),
+                        "success": False,
+                        "error": str(e)[:2000],
+                    },
+                )
                 parts_out.append(f"### Step {i + 1} ({iha}) — error\n\n{e}")
                 if stop_on:
                     parts_out.append("_Stopped (stop_on_failure=True)._")
+                    _log_chain_summary(exit_reason="stop_on_failure_validation")
                     return _finalize_output("\n\n".join(parts_out))
                 continue
+            step_ms = (time.perf_counter() - step_start) * 1000.0
+            step_ok = not chain_step_output_failed(out)
+            if step_ok:
+                success_count += 1
+            err_snippet = (out or "")[:500] if not step_ok else None
+            logger.info(
+                "Chain step %s/%s (%s) done",
+                i + 1,
+                n_actions,
+                iha,
+                extra={
+                    "nexa_event": "chain_step",
+                    "chain_step": i + 1,
+                    "chain_total_steps": n_actions,
+                    "host_action": iha,
+                    "duration_ms": round(step_ms, 2),
+                    "success": step_ok,
+                    "error": err_snippet,
+                },
+            )
             parts_out.append(f"### Step {i + 1} ({iha})\n\n{out}")
             if stop_on and chain_step_output_failed(out):
                 parts_out.append("_Stopped (stop_on_failure=True) after a failed step._")
+                _log_chain_summary(exit_reason="stop_on_failure_step")
                 return _finalize_output("\n\n".join(parts_out))
+        _log_chain_summary(exit_reason="complete")
         return _finalize_output("\n\n".join(parts_out))
 
     if action == "git_status":

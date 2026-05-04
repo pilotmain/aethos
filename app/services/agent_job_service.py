@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from datetime import datetime
 
 from fastapi import HTTPException, status
@@ -12,6 +13,7 @@ HIGH_RISK_LOCAL_COMMANDS = frozenset(
     {"prepare-fix", "create-idea-repo", "dev-workspace-scaffold"}
 )
 TERMINAL_JOB_STATUSES = frozenset({"completed", "failed", "cancelled", "rejected", "blocked"})
+_LOG = logging.getLogger(__name__)
 NOTIFIABLE_JOB_STATUSES = frozenset(
     {
         "waiting_for_cursor",
@@ -34,6 +36,38 @@ NOTIFIABLE_JOB_STATUSES = frozenset(
 class AgentJobService:
     def __init__(self) -> None:
         self.repo = AgentJobRepository()
+
+    def _log_chain_job_approved_if_applicable(self, job) -> None:
+        """Observability: time from job creation to approval for chain host-executor jobs."""
+        if (job.status or "") != "needs_approval":
+            return
+        if (job.worker_type or "") != "local_tool":
+            return
+        if (job.command_type or "").lower() != "host-executor":
+            return
+        pl = dict(job.payload_json or {})
+        if (pl.get("host_action") or "").strip().lower() != "chain":
+            return
+        actions_in = pl.get("actions")
+        n = len(actions_in) if isinstance(actions_in, list) else 0
+        created = job.created_at
+        if created:
+            now = datetime.utcnow()
+            approval_ms = (now - created).total_seconds() * 1000.0
+        else:
+            approval_ms = None
+        _LOG.info(
+            "Chain job approved id=%s steps=%s approval_time_ms=%s",
+            job.id,
+            n,
+            f"{approval_ms:.2f}" if approval_ms is not None else "n/a",
+            extra={
+                "nexa_event": "chain_job_approved",
+                "job_id": job.id,
+                "chain_length": n,
+                "approval_time_ms": round(approval_ms, 2) if approval_ms is not None else None,
+            },
+        )
 
     def create_dev_task_with_policy(
         self, db: Session, user_id: str, payload: AgentJobCreate, policy_text: str
@@ -275,6 +309,7 @@ class AgentJobService:
         if (job.status or "") == "needs_risk_approval" and decision == "approve":
             return job
         if decision == "approve":
+            self._log_chain_job_approved_if_applicable(job)
             return self.repo.update(
                 db,
                 job,

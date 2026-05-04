@@ -409,12 +409,35 @@ def enqueue_host_job_from_validated_payload(
     )
     risk = proposed_risk_level(safe_pl)
     jobs.repo.update(db, job, risk_level=risk)
-    logger.info(
-        "host_executor queued job id=%s user=%s action=%s",
-        job.id,
-        app_user_id,
-        safe_pl.get("host_action"),
-    )
+    act = (safe_pl.get("host_action") or "").strip().lower()
+    if act == "chain":
+        actions_in = safe_pl.get("actions")
+        inner = (
+            [
+                (a.get("host_action") if isinstance(a, dict) else None)
+                for a in (actions_in if isinstance(actions_in, list) else [])
+            ]
+        )
+        logger.info(
+            "Chain job queued for approval id=%s steps=%s user=%s",
+            job.id,
+            len(inner),
+            app_user_id,
+            extra={
+                "nexa_event": "chain_job_queued",
+                "job_id": job.id,
+                "chain_length": len(inner),
+                "telegram_chat_id": job.telegram_chat_id,
+                "inner_actions": inner,
+            },
+        )
+    else:
+        logger.info(
+            "host_executor queued job id=%s user=%s action=%s",
+            job.id,
+            app_user_id,
+            safe_pl.get("host_action"),
+        )
     return job
 
 

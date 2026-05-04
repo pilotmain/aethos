@@ -10,12 +10,15 @@ explicit ``<slug>/README.md``, etc. Slugs are validated with :func:`~app.service
 
 from __future__ import annotations
 
+import logging
 import re
 from pathlib import Path
 from typing import Any
 
 from app.core.config import get_settings
 from app.services.host_executor_intent import safe_relative_path
+
+logger = logging.getLogger(__name__)
 
 _MAX_USER_TEXT = 4_000
 _MAX_README_BYTES = 1_000_000
@@ -210,6 +213,17 @@ def try_infer_readme_push_chain_nl(user_text: str) -> dict[str, Any] | None:
         gc["cwd_relative"] = cwd_rel
         gp["cwd_relative"] = cwd_rel
     actions.extend([gc, gp])
+
+    preview = body[:50] if body else None
+    logger.info(
+        "NL chain inferred (readme + commit + push)",
+        extra={
+            "nexa_event": "nl_chain_inferred",
+            "nl_chain_pattern": "readme_push_nl",
+            "nl_repo_hint": cwd_rel,
+            "nl_content_preview": preview,
+        },
+    )
 
     return {
         "host_action": "chain",
