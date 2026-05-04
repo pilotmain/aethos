@@ -1,10 +1,10 @@
-# Week 2 v1: Host action chains
+# Week 2: Host action chains (v1 + v2)
 
 ## Overview
 
 `host_action: chain` runs multiple **allowlisted** inner host actions **in sequence** inside **one** host-executor job (one approval), when enabled on the worker.
 
-Nested chains and NL→chain auto-mapping are **out of scope** for v1 (see below).
+Nested chains are not supported. **Week 2 v2** adds optional, narrow **NL → chain** mapping (see below).
 
 ## Enabling chains
 
@@ -78,11 +78,36 @@ Unless overridden by `NEXA_HOST_EXECUTOR_CHAIN_ALLOWED_ACTIONS`:
 NEXA_HOST_EXECUTOR_CHAIN_ENABLED=false
 ```
 
-## Not in Week 2 v1
+## Week 2 v2: NL → README / commit / push chain (optional)
 
-- Natural-language mapping to chain payloads in the gateway (planned follow-up).
+When **`NEXA_NL_TO_CHAIN_ENABLED=true`** and **`NEXA_HOST_EXECUTOR_CHAIN_ENABLED=true`**, a short user line that both **asks to add/create/write a README** and **mentions push** can be turned into the same **file_write + git_commit + git_push** chain as JSON (still **confirm → queue → approve**; no new HTTP API).
+
+Phrases (examples):
+
+- `add a README and push`
+- `create readme saying "Service stopped" and push`
+
+Optional quoted titles:
+
+- `saying '…'` / `saying "…"`
+- `with content '…'`
+- `title '…'` / `titled "…"`
+
+If no title is parsed, the README body uses a small default title line.
+
+**Disabled by default** — set on any process that runs host inference (API):
+
+```bash
+NEXA_NL_TO_CHAIN_ENABLED=true
+```
+
+Active workspace project base (when set) still **prefixes paths** and **sets `cwd_relative`** for git steps via `merge_payload_with_project_base` (same as other host tools).
+
+## Not in scope
+
 - Async chains or nested `chain` inside `chain`.
 - Automatic retry or rollback after failure.
+- Broad NL (multi-sentence planning, arbitrary commands); v2 is intentionally narrow.
 
 ## Related docs
 

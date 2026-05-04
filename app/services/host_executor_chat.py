@@ -468,6 +468,10 @@ def evaluate_deterministic_host_permission_turn(
     base = active_project_relative_base(db, (cctx.user_id or "").strip(), cctx)
     inferred = infer_host_executor_action(t0)
     if not inferred:
+        from app.services.host_executor_nl_chain import try_infer_readme_push_chain_nl
+
+        inferred = try_infer_readme_push_chain_nl(t0)
+    if not inferred:
         lf = infer_local_file_request(t0, default_relative_base=base)
         if lf.matched and lf.error_message:
             return NextActionApplicationResult(

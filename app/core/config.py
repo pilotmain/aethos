@@ -311,6 +311,8 @@ class Settings(BaseSettings):
     nexa_host_executor_chain_max_steps: int = 10
     # Comma-separated inner host_action names; empty → default set in host_executor_chain.DEFAULT_CHAIN_INNER_ALLOWED
     nexa_host_executor_chain_allowed_actions: str = ""
+    # NL → readme+commit+push chain (narrow phrases); requires chain + host executor enabled.
+    nexa_nl_to_chain_enabled: bool = False
     # Phase 58 — after external-exec prefs, run bounded `railway` + `git status` on registered workspace (never deploy).
     nexa_external_execution_runner_enabled: bool = True
     # Default cwd and path base for file_read / file_write / git_* (repo root by default).

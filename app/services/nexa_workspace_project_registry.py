@@ -69,6 +69,16 @@ def merge_payload_with_project_base(payload: dict[str, Any], relative_base: str)
     b = relative_base.strip()
     out = dict(payload)
     ha = (out.get("host_action") or "").strip().lower()
+    if ha == "chain":
+        actions = out.get("actions")
+        if isinstance(actions, list):
+            out["actions"] = [
+                merge_payload_with_project_base(dict(step), relative_base)
+                if isinstance(step, dict)
+                else step
+                for step in actions
+            ]
+        return out
     if ha in ("git_status", "run_command", "git_commit", "git_push"):
         out["cwd_relative"] = b
     if ha == "read_multiple_files":
