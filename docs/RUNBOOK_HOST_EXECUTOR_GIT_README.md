@@ -1,0 +1,96 @@
+# Runbook: README + commit + push via host executor
+
+This runbook describes **only** what exists in this repository: allowlisted `host_action` values, the **chat → approval → local tool worker** path, and Docker auth persistence. It does **not** include generic shell execution or a REST “execute host” API.
+
+## What does *not* exist (do not document or use)
+
+| Claim | Reality |
+|--------|--------|
+| `host_action: "shell_exec"` | **Not implemented.** There is no arbitrary shell. |
+| `POST /api/v1/host/execute` (or similar) | **Not in this app.** Host work runs as `command_type: "host-executor"` jobs after you confirm in **Telegram/Web UI**; a worker runs `host_executor.execute_payload`. |
+| `$(date)` inside `file_write` `content` | **Not expanded** — you get the literal characters. Use a fixed date string. |
+
+## What *does* exist
+
+- **Host actions** (see `app/services/host_executor.py` and `app/services/host_executor_visibility.py`), including: `file_write`, `file_read`, `git_status`, `git_commit`, `git_push`, `list_directory`, `find_files`, `read_multiple_files`, and `run_command` with **fixed** `run_name` keys only (e.g. `pytest`, `git_status_short` — see `ALLOWED_RUN_COMMANDS` in `host_executor.py`).
+- **Execution path**: natural language or UI → permission / confirmation → **queued job** → **local tool worker** → `execute_payload` / `execute_host_executor_job`.
+- **GitHub / Vercel CLI auth in Docker**: persist `/root/.config/gh` and `/root/.vercel` via Compose named volumes (see `docker-compose.yml` and `docs/GUIDED_CLI_LOGIN_FOR_OPERATORS.md`).
+
+## Prerequisites (one-time)
+
+1. **`gh` authenticated** inside the API container: `docker exec -it nexa-api gh auth status`.
+2. **Repository exists** on GitHub (404 → create with `gh repo create` or the UI).
+3. **Repo cloned** under the **host executor work root** (`get_settings().host_executor_work_root`, often project root unless overridden). Example layout:
+
+   `/<work_root>/pilot-command-center/.git/`
+
+4. **Push credentials** for `git push` (HTTPS token / SSH) available **inside the environment where the worker runs**, same as manual `git push` from that host.
+
+## Payload shapes (`payload_json` for host-executor jobs)
+
+Paths are **relative to the work root**. There is **no** nested `"params"` wrapper — fields are top-level on the job payload.
+
+### 1. Write README (static date)
+
+```json
+{
+  "host_action": "file_write",
+  "relative_path": "pilot-command-center/README.md",
+  "content": "# Pilot Command Center\n\n## Service Status\n\nThis service has been stopped as requested on 2026-05-03.\n\nThe Vercel deployment has been removed.\n\nFor questions, contact the administrator.\n"
+}
+```
+
+`cwd_relative` is **not** required for `file_write` if `relative_path` already includes the repo folder.
+
+### 2. Commit (run git inside the repo)
+
+```json
+{
+  "host_action": "git_commit",
+  "commit_message": "docs: add service stop notification",
+  "cwd_relative": "pilot-command-center"
+}
+```
+
+### 3. Push
+
+Default upstream:
+
+```json
+{
+  "host_action": "git_push",
+  "cwd_relative": "pilot-command-center"
+}
+```
+
+Explicit remote and branch (optional):
+
+```json
+{
+  "host_action": "git_push",
+  "push_remote": "origin",
+  "push_ref": "main",
+  "cwd_relative": "pilot-command-center"
+}
+```
+
+## How to run it (correct testing path)
+
+1. Open **Telegram** or **Web UI** and ask for the workflow in plain language, for example:  
+   *“Add README.md under pilot-command-center with … then commit and push.”*
+2. Approve **host-executor** jobs when prompted (and grant workspace permission if your deployment enforces it).
+3. Do **not** use curl against a fictional execute endpoint; do **not** rely on `shell_exec`.
+
+## Manual checks (optional)
+
+```bash
+docker exec -it nexa-api python -c "from app.core.config import get_settings; print(get_settings().host_executor_work_root)"
+docker exec -it nexa-api ls -la <work_root>/pilot-command-center
+docker exec -it nexa-api bash -c "cd <work_root>/pilot-command-center && git status && git remote -v"
+```
+
+## Related commits / docs
+
+- `git_push` host action: commit `4c35bf0` on `main`.
+- CLI auth volumes in Compose: commit `7ee90ea` and `docs/GUIDED_CLI_LOGIN_FOR_OPERATORS.md`.
+- Operator vs host executor: `docs/HANDOFF_OPERATOR_EXECUTION_AND_ORCHESTRATION.md`.
