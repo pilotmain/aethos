@@ -84,34 +84,29 @@ def apply_operator_cli_absolute_fallback(argv: list[str]) -> list[str]:
     try:
         exists = p.is_file()
         executable = bool(exists and os.access(p, os.X_OK))
-        if exists and not executable and _abs_debug_enabled():
-            logger.info(
-                "operator_cli_absolute: %s path exists but is not executable: %s",
-                base,
-                p,
-            )
-        if executable:
-            out = list(argv)
-            out[0] = str(p.resolve())
-            if _abs_debug_enabled():
-                logger.info(
-                    "operator_cli_absolute: using argv0=%s for %s",
-                    out[0],
-                    base,
-                )
-            return out
         if _abs_debug_enabled():
             logger.info(
-                "operator_cli_absolute: %s configured=%s exists=%s executable=%s (not rewriting argv)",
+                "[operator_cli_absolute] %s: path=%s exists=%s executable=%s",
                 base,
                 raw,
                 exists,
                 executable,
             )
+        if executable:
+            before = list(argv)
+            out = list(argv)
+            out[0] = str(p.resolve())
+            if _abs_debug_enabled():
+                logger.info(
+                    "[operator_cli_absolute] Rewriting argv: %r -> %r",
+                    before,
+                    out,
+                )
+            return out
     except OSError as exc:
         if _abs_debug_enabled():
             logger.info(
-                "operator_cli_absolute: %s configured=%s error=%s",
+                "[operator_cli_absolute] %s: path=%s error=%s",
                 base,
                 raw,
                 exc,
