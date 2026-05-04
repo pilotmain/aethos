@@ -31,7 +31,9 @@ import { SafetyAndReadinessPanel } from "@/components/mission-control/SafetyAndR
 import { TokenEconomyPanel } from "@/components/mission-control/TokenEconomyPanel";
 import type { UiTheme } from "@/components/settings/UserSettingsPanel";
 import { UserSettingsPanel } from "@/components/settings/UserSettingsPanel";
+import { ConnectionErrorRecovery } from "@/components/connection/ConnectionErrorRecovery";
 import { formatMissionControlApiError, webFetch } from "@/lib/api";
+import { useConnectionDiagnosis } from "@/lib/connection/useConnectionDiagnosis";
 import { isConfigured, readConfig } from "@/lib/config";
 import { useMissionControlSnapshot } from "@/lib/mission-control/useMissionControlSnapshot";
 import {
@@ -59,6 +61,7 @@ export function MissionControlLayout() {
 
   const { data: snap, loading: snapLoading, error: snapErr, refresh: refreshMc } =
     useMissionControlSnapshot(pollMs);
+  const missionControlConnectionDiagnosis = useConnectionDiagnosis(snapErr);
 
   const onPrefsApplied = useCallback((prefs: { theme: UiTheme; auto_refresh: boolean }) => {
     setMcTheme(prefs.theme);
@@ -222,24 +225,19 @@ export function MissionControlLayout() {
         <main className="min-w-0 flex-1 space-y-6">
           {snapErr && configured ? (
             <div
-              className={`flex flex-wrap items-center gap-3 rounded-lg border px-3 py-2 text-xs ${
+              className={`rounded-lg border px-3 py-2 text-xs ${
                 shellLight
                   ? "border-rose-300 bg-rose-50 text-rose-950"
                   : "border-rose-500/35 bg-rose-950/30 text-rose-100"
               }`}
             >
-              <p className="min-w-0 flex-1">{formatMissionControlApiError(snapErr)}</p>
-              <button
-                type="button"
-                className={`shrink-0 rounded border px-2 py-1 ${
-                  shellLight
-                    ? "border-rose-400/60 bg-white text-rose-900 hover:bg-rose-50"
-                    : "border-rose-400/50 bg-rose-950/50 text-rose-50 hover:bg-rose-900/60"
-                }`}
-                onClick={() => void refreshMc()}
-              >
-                Retry
-              </button>
+              <ConnectionErrorRecovery
+                dataError={snapErr}
+                errorDisplay={formatMissionControlApiError(snapErr)}
+                diagnosis={missionControlConnectionDiagnosis}
+                onRetry={() => void refreshMc()}
+                compact
+              />
             </div>
           ) : null}
           {configured ? (

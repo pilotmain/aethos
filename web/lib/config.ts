@@ -4,7 +4,14 @@ export type NexaWebConfig = {
   token: string;
 };
 
+/** Persisted shape includes schema metadata (v2). */
+export type NexaWebConfigStored = NexaWebConfig & {
+  schemaVersion?: number;
+  savedAt?: string;
+};
+
 const KEY = "nexa_web_v1";
+const CONFIG_SCHEMA_VERSION = 2;
 
 /**
  * Default API origin for the browser. Docker publishes the API on host **8010** → container 8000
@@ -47,7 +54,7 @@ export function readConfig(): NexaWebConfig {
     return { ...defaultConfig };
   }
   try {
-    const j = JSON.parse(raw) as Partial<NexaWebConfig>;
+    const j = JSON.parse(raw) as Partial<NexaWebConfigStored>;
     const apiBase = migrateStoredApiBase(j.apiBase) || DEFAULT_API_BASE;
     return {
       apiBase,
@@ -63,14 +70,27 @@ export function saveConfig(c: NexaWebConfig): void {
   if (typeof window === "undefined") {
     return;
   }
-  window.localStorage.setItem(
-    KEY,
-    JSON.stringify({
-      apiBase: c.apiBase.trim() || DEFAULT_API_BASE,
-      userId: c.userId.trim(),
-      token: c.token.trim(),
-    })
-  );
+  const payload: NexaWebConfigStored = {
+    schemaVersion: CONFIG_SCHEMA_VERSION,
+    savedAt: new Date().toISOString(),
+    apiBase: c.apiBase.trim() || DEFAULT_API_BASE,
+    userId: c.userId.trim(),
+    token: c.token.trim(),
+  };
+  window.localStorage.setItem(KEY, JSON.stringify(payload));
+}
+
+/** Point the browser at a working API origin and reload (e.g. 8120 → 8010). */
+export function applyApiBaseAndReload(nextApiBase: string): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+  const c = readConfig();
+  saveConfig({
+    ...c,
+    apiBase: nextApiBase.trim().replace(/\/$/, "") || DEFAULT_API_BASE,
+  });
+  window.location.reload();
 }
 
 export function isConfigured(): boolean {

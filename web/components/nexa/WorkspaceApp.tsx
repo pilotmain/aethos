@@ -30,7 +30,9 @@ import {
   Sparkles,
   Trash2,
 } from "lucide-react";
+import { ConnectionErrorRecovery } from "@/components/connection/ConnectionErrorRecovery";
 import { webDownloadBlob, webFetch, downloadBlobToFile } from "@/lib/api";
+import { useConnectionDiagnosis } from "@/lib/connection/useConnectionDiagnosis";
 import { DEFAULT_API_BASE, isConfigured, readConfig } from "@/lib/config";
 import type {
   ChannelsStatusResponse,
@@ -534,6 +536,7 @@ function WorkspaceBody() {
   const [keysTried, setKeysTried] = useState(false);
   const [keysErr, setKeysErr] = useState<string | null>(null);
   const [dataError, setDataError] = useState<string | null>(null);
+  const connectionDiagnosis = useConnectionDiagnosis(dataError);
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [systemRefreshing, setSystemRefreshing] = useState(false);
@@ -2105,19 +2108,13 @@ function WorkspaceBody() {
         <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden py-3 md:py-4">
           {err && <p className="mb-2 text-sm text-rose-400">{err}</p>}
 
-          {dataError && (
-            <div className="mb-4 rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-sm text-amber-100/90">
-              <p>Could not load Nexa data. Check API base URL or login settings.</p>
-              <p className="mt-1 break-words text-amber-200/70">{dataError}</p>
-              <button
-                type="button"
-                onClick={retryLoadData}
-                className="mt-2 rounded-md bg-amber-500/20 px-3 py-1.5 text-xs text-amber-100 hover:bg-amber-500/30"
-              >
-                Retry
-              </button>
-            </div>
-          )}
+          {dataError ? (
+            <ConnectionErrorRecovery
+              dataError={dataError}
+              diagnosis={connectionDiagnosis}
+              onRetry={retryLoadData}
+            />
+          ) : null}
 
           {messages.length === 0 && !sending && !dataError && (
             <div className="mx-auto max-w-md py-8 text-center text-sm text-zinc-400">
