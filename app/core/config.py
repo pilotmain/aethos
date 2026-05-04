@@ -82,6 +82,8 @@ class Settings(BaseSettings):
     nexa_agent_orchestration_enabled: bool = False
     nexa_agent_max_per_chat: int = 5
     nexa_agent_idle_timeout_seconds: int = 3600
+    # When true with orchestration, sub-agent host payloads run via execute_payload in-process (audit log).
+    nexa_agent_orchestration_autoqueue: bool = False
     api_v1_prefix: str = "/api/v1"
     database_url: str = "sqlite:///./overwhelm_reset.db"
 

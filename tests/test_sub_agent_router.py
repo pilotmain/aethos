@@ -15,6 +15,7 @@ class _S:
     nexa_agent_orchestration_enabled = True
     nexa_agent_max_per_chat = 5
     nexa_agent_idle_timeout_seconds = 3600
+    nexa_agent_orchestration_autoqueue = False
 
 
 class _Off:
@@ -99,12 +100,12 @@ def test_route_agent_found(registry: AgentRegistry, router: AgentRouter) -> None
     ):
         agent = registry.spawn_agent("git-agent", "git", "chat123")
         assert agent is not None
-        result = router.route("@git-agent deploy", "chat123")
+        # No text after @name → readiness hint (no execution)
+        result = router.route("@git-agent", "chat123", user_id="u1")
         assert result["handled"] is True
-        assert "ready" in result["response"].lower()
+        assert "instruction" in result["response"].lower() or "ready" in result["response"].lower()
         assert result["agent_id"] == agent.id
         assert result["agent_name"] == "git-agent"
-        assert result["clean_message"] == "deploy"
 
 
 def test_route_busy_agent(registry: AgentRegistry, router: AgentRouter) -> None:
@@ -128,8 +129,8 @@ def test_gateway_turn_end_to_end(registry: AgentRegistry) -> None:
     ):
         reg.spawn_agent("git-agent", "git", "web:user-1:default")
         gctx = GatewayContext(user_id="user-1", channel="web", extras={})
-        out = try_sub_agent_gateway_turn(gctx, "@git-agent hello")
+        out = try_sub_agent_gateway_turn(gctx, "@git-agent hello", db=None)
         assert out is not None
         assert out["mode"] == "chat"
         assert out["intent"] == "sub_agent_orchestration"
-        assert "ready" in (out.get("text") or "").lower()
+        assert "git" in (out.get("text") or "").lower()

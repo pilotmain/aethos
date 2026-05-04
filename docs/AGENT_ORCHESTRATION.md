@@ -99,20 +99,22 @@ Sub-agents **do not** replace the gateway; they **narrow or label** intent befor
 | UX (this phase) | **Leading** `@<name> [message]` only. No spawn/list natural language in the router yet. |
 | Execution | Router **does not** run host tools in Phase 2; Phase 3 enqueues / executes. |
 
-### Phase 3 — “Loose approval” (explicit, auditable)
+### Phase 3 — Execution + optional in-process run ✅
 
-**Not** a silent bypass of `needs_approval` in generic code.
+| Deliverable | Detail |
+|-------------|--------|
+| `app/services/sub_agent_executor.py` | Sync `AgentExecutor`: git (NL→chain, `git_status`), vercel (`vercel_projects_list`), test (`run_command` pytest), railway (placeholder string). |
+| `nexa_agent_orchestration_autoqueue` | Default **false**: enqueue `host-executor` jobs via `enqueue_host_job_from_validated_payload`. When **true**, calls `execute_payload` in-process — audit `nexa_event=sub_agent_autoqueue` (**dev / trusted hosts only**). |
+| Gateway | `try_sub_agent_gateway_turn(..., db)` passes DB + `user_id` into routing; non-empty text after `@agent` runs the executor. Empty mention body → readiness hint only. |
+
+### Phase 3b — Policy hardening (later)
+
+**Not** a silent bypass of `needs_approval` in generic host code — only the orchestration autoqueue path.
 
 | Approach | Rationale |
 |----------|-----------|
-| **Do not** add `if loose: return True` inside permission checks without scope | Collapses security for all host actions. |
-| Prefer | Separate, **narrow** path: e.g. auto-queue as `queued` only for **pre-validated** chain templates + audit log line; or a dedicated “dev only” flag with **max** steps and **repo** allowlist. |
-
-If Week 4 ships “loose” behavior, it must be:
-
-- `NEXA_LOOSE_APPROVAL_MODE` (or better: `NEXA_AGENT_ORCHESTRATION_AUTOQUEUE=1`) **default false**
-- Log every auto-queued job with `nexa_event` and **user_id**
-- Documented in this file and in `WEEK2_HOST_ACTION_CHAINS.md` if it touches host jobs
+| Keep autoqueue **default off** | Production should enqueue + approve. |
+| Audit | `nexa_event=sub_agent_autoqueue` and queued `sub_agent_queued` logs include domain / job id. |
 
 ### Phase 4 — Channel commands (optional)
 
@@ -181,7 +183,8 @@ Host executor flags stay as today (`NEXA_HOST_EXECUTOR_ENABLED`, chain, NL→cha
 | Gateway hook in `NexaGateway.handle_message` | ✅ Phase 2 |
 | Settings + `.env.example` | ✅ Phase 1 (router in Phase 2) |
 | Unit tests (`tests/test_agent_registry.py`, `tests/test_sub_agent_router.py`) | ✅ Phase 1–2 |
-| Loose mode (if any) behind flag + audit | Phase 3 |
+| `nexa_agent_orchestration_autoqueue` + executor | ✅ Phase 3 |
+| Policy tightening for autoqueue | Phase 3b+ |
 
 ---
 

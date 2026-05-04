@@ -1,7 +1,7 @@
 """
-Week 4 Phase 2 — sync routing for orchestration sub-agents (@mentions only).
+Week 4 — sub-agent routing (Phase 2) and execution dispatch (Phase 3).
 
-No execution: Phase 3 will enqueue host/operator work. See docs/AGENT_ORCHESTRATION.md.
+@mentions (leading) → registry lookup → optional :class:`AgentExecutor` for non-empty text.
 """
 
 from __future__ import annotations
@@ -9,6 +9,8 @@ from __future__ import annotations
 import logging
 import re
 from typing import Any
+
+from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.services.gateway.context import GatewayContext
@@ -36,6 +38,12 @@ def orchestration_chat_key(gctx: GatewayContext) -> str:
     return f"web:{uid}:{sid}"
 
 
+def orchestration_web_session_id(gctx: GatewayContext) -> str:
+    return str(
+        gctx.extras.get("web_session_id") or gctx.extras.get("conversation_id") or "default"
+    ).strip()[:64] or "default"
+
+
 class AgentRouter:
     """Routes @mentions to registered sub-agents (sync)."""
 
@@ -44,7 +52,15 @@ class AgentRouter:
         """Always use the current singleton (tests may :meth:`AgentRegistry.reset`)."""
         return AgentRegistry()
 
-    def route(self, user_input: str, chat_id: str) -> dict[str, Any]:
+    def route(
+        self,
+        user_input: str,
+        chat_id: str,
+        *,
+        db: Session | None = None,
+        user_id: str | None = None,
+        web_session_id: str = "default",
+    ) -> dict[str, Any]:
         """
         Returns a dict with at least ``handled: bool``.
         When handled and routed, includes ``response``, ``agent_id``, ``agent_name``, ``clean_message``.
@@ -81,10 +97,33 @@ class AgentRouter:
                 "clean_message": clean_message,
             }
 
+        if not (clean_message or "").strip():
+            return {
+                "handled": True,
+                "response": (
+                    f"Agent '@{agent_name}' ({agent.domain}) is ready. "
+                    f"Send `@{agent_name} <instruction>` to run tools."
+                ),
+                "agent_id": agent.id,
+                "agent_name": agent_name,
+                "clean_message": clean_message,
+            }
+
+        from app.services.sub_agent_executor import AgentExecutor
+
+        exec_out = AgentExecutor().execute(
+            agent,
+            clean_message,
+            chat_id,
+            db=db,
+            user_id=(user_id or "").strip(),
+            web_session_id=web_session_id,
+        )
+
         logger.info(
-            "Sub-agent mention routed (no execution in Phase 2)",
+            "Sub-agent executed message",
             extra={
-                "nexa_event": "sub_agent_mention",
+                "nexa_event": "sub_agent_executed",
                 "agent_id": agent.id,
                 "agent_name": agent_name,
                 "domain": agent.domain,
@@ -94,10 +133,7 @@ class AgentRouter:
 
         return {
             "handled": True,
-            "response": (
-                f"Agent '@{agent_name}' (domain: {agent.domain}) is ready.\n\n"
-                "(Phase 3 will attach execution for your message.)"
-            ),
+            "response": exec_out,
             "agent_id": agent.id,
             "agent_name": agent_name,
             "clean_message": clean_message,
@@ -117,6 +153,7 @@ class AgentRouter:
 def try_sub_agent_gateway_turn(
     gctx: GatewayContext,
     user_text: str,
+    db: Session | None = None,
 ) -> dict[str, Any] | None:
     """
     If orchestration handles this turn, return a gateway payload fragment (``mode`` / ``text`` / ``intent``).
@@ -126,7 +163,14 @@ def try_sub_agent_gateway_turn(
         return None
     router = AgentRouter()
     chat_key = orchestration_chat_key(gctx)
-    out = router.route(user_text, chat_key)
+    wid = orchestration_web_session_id(gctx)
+    out = router.route(
+        user_text,
+        chat_key,
+        db=db,
+        user_id=(gctx.user_id or "").strip() or None,
+        web_session_id=wid,
+    )
     if not out.get("handled"):
         return None
     text_out = out.get("response")
@@ -144,5 +188,6 @@ def try_sub_agent_gateway_turn(
 __all__ = [
     "AgentRouter",
     "orchestration_chat_key",
+    "orchestration_web_session_id",
     "try_sub_agent_gateway_turn",
 ]

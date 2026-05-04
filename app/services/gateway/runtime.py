@@ -721,7 +721,7 @@ class NexaGateway:
 
             from app.services.sub_agent_router import try_sub_agent_gateway_turn
 
-            orch = try_sub_agent_gateway_turn(gctx, raw_gate)
+            orch = try_sub_agent_gateway_turn(gctx, raw_gate, db_inner)
             if orch is not None:
                 return orch
 
