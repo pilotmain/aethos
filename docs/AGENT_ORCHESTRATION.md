@@ -63,7 +63,7 @@ Sub-agents **do not** replace the gateway; they **narrow or label** intent befor
 
 ## 4. Integration point (gateway)
 
-**File:** `app/services/gateway/runtime.py`, inner `_route` in `handle_message`, **after** credential handling and **before** `try_operator_execution`.
+**File:** `app/services/gateway/runtime.py`, inner `_route` in `handle_message`, **after** credential handling and **before** context snapshot / `try_operator_execution`. Implemented via **`try_sub_agent_gateway_turn`** in `app/services/sub_agent_router.py` (Phase 2).
 
 **Contract:** Orchestration must return the same shape as other early exits:
 
@@ -90,13 +90,14 @@ Sub-agents **do not** replace the gateway; they **narrow or label** intent befor
 
 **Singleton:** A process-wide singleton is fine for dev; for production, prefer **stateless service + DB table** or explicit “orchestration only on one worker” (documented).
 
-### Phase 2 — Router (2–3 days)
+### Phase 2 — Router + gateway hook (2–3 days) ✅
 
 | Deliverable | Detail |
 |-------------|--------|
-| `app/services/agent_router.py` | **Sync** `try_route(gctx, text, db) -> dict \| None`. |
-| UX | Phrases: “create a git agent”, “list agents”, “terminate agent …”, `@<name> <message>`. |
-| Execution | Router **does not** call `execute_payload` and treat the return as a dict. Today `execute_payload` returns a **string** (user-facing text). Host mutations that need approval should go through **`host_executor_chat` / `AgentJobService`** like the rest of the product. |
+| `app/services/sub_agent_router.py` | **Sync** `AgentRouter.route(text, chat_id)`; `orchestration_chat_key(gctx)`; `try_sub_agent_gateway_turn(gctx, text) -> dict \| None`. |
+| `NexaGateway.handle_message` | After external-credential handling, before operator execution: call `try_sub_agent_gateway_turn`. Gated by `nexa_agent_orchestration_enabled`. |
+| UX (this phase) | **Leading** `@<name> [message]` only. No spawn/list natural language in the router yet. |
+| Execution | Router **does not** run host tools in Phase 2; Phase 3 enqueues / executes. |
 
 ### Phase 3 — “Loose approval” (explicit, auditable)
 
@@ -176,10 +177,10 @@ Host executor flags stay as today (`NEXA_HOST_EXECUTOR_ENABLED`, chain, NL→cha
 |------|--------|
 | `docs/AGENT_ORCHESTRATION.md` (this file) | ✅ |
 | `app/services/sub_agent_registry.py` | ✅ Phase 1 |
-| `app/services/agent_router.py` | Phase 2 |
-| Gateway hook in `NexaGateway.handle_message` | Phase 2 |
+| `app/services/sub_agent_router.py` | ✅ Phase 2 |
+| Gateway hook in `NexaGateway.handle_message` | ✅ Phase 2 |
 | Settings + `.env.example` | ✅ Phase 1 (router in Phase 2) |
-| Unit tests (`tests/test_agent_registry.py` → `sub_agent_registry`) | ✅ Phase 1 |
+| Unit tests (`tests/test_agent_registry.py`, `tests/test_sub_agent_router.py`) | ✅ Phase 1–2 |
 | Loose mode (if any) behind flag + audit | Phase 3 |
 
 ---

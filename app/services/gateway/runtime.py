@@ -719,6 +719,12 @@ class NexaGateway:
                     payload=cred_gate,
                 )
 
+            from app.services.sub_agent_router import try_sub_agent_gateway_turn
+
+            orch = try_sub_agent_gateway_turn(gctx, raw_gate)
+            if orch is not None:
+                return orch
+
             _cctx_loop = get_or_create_context(db_inner, uid_gate)
             _snap_loop = build_context_snapshot(_cctx_loop, db_inner)
             from app.services.operator_execution_loop import try_operator_execution
