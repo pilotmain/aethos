@@ -9,7 +9,7 @@ Technical reference for **scoped host access**, **workspace roots**, and **envir
 | **Unset / `false`** (default) | **Recommended for most setups.** If you have **no** roots registered via `/workspace add`, paths are allowed when they fall under **`HOST_EXECUTOR_WORK_ROOT`** (defaults to the Nexa repo root). Explicit **chat approvals** for paths outside that tree can still resolve after grant (combined with grants and permission checks). |
 | **`true`** | Stricter mode: when **no** workspace roots are registered, policy can **reject** paths until you register roots — **even if** you already have scoped **AccessPermission** grants. Use this only when you intentionally require **registered roots** for every meaningful path. |
 
-**Do not** enable strict mode thinking it “fixes” Docker or arbitrary folders. For **Docker**, the API often sees **`HOST_EXECUTOR_WORK_ROOT=/app`** (the container tree). Listing host paths like `/Users/...` depends on **approvals**, **grant resolution**, and often **volume mounts** so those paths exist inside the container where `local_tool_worker` runs — strict mode does not substitute for that.
+**Do not** enable strict mode thinking it “fixes” Docker or arbitrary folders. For **Docker**, the API only sees paths that exist **inside** the container (often **`/app`** for the Nexa project tree). To use macOS repos under e.g. **`/Users/raya`**, **bind-mount** that directory (e.g. **`/Users/raya:/Users/raya`**) and set **`HOST_EXECUTOR_WORK_ROOT=/Users/raya`** so `relative_path` values resolve correctly. Listing host paths still depends on **approvals**, **grant resolution**, and those mounts where `local_tool_worker` runs — strict mode does not substitute for that.
 
 ## Related flags (host permission cards and enforcement)
 

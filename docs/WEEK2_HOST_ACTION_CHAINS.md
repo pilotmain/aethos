@@ -6,6 +6,27 @@
 
 Nested chains are not supported. **Week 2 v2** adds optional, narrow **NL → chain** mapping (see below).
 
+## macOS + Docker: repos under `/Users/raya`
+
+If your git repos live on the Mac under **`/Users/raya`**, the API container cannot see them until you **bind-mount** that directory and point **`HOST_EXECUTOR_WORK_ROOT`** at the **same path inside the container**.
+
+Example `docker-compose.override.yml`:
+
+```yaml
+services:
+  api:
+    volumes:
+      - /Users/raya:/Users/raya
+```
+
+Example `.env` (inside-container path matches the mount target):
+
+```bash
+HOST_EXECUTOR_WORK_ROOT=/Users/raya
+```
+
+Then payload paths such as `pilot-command-center/README.md` are relative to `/Users/raya` (i.e. `/Users/raya/pilot-command-center/README.md` inside the container). Use a **narrower** mount (single repo) if you do not want the whole home tree visible in the container.
+
 ## Enabling chains
 
 In `.env` on the **worker** (and anywhere that evaluates permissions if enforcement is on):
