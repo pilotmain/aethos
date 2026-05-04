@@ -11,6 +11,7 @@ import os
 import subprocess
 from typing import Any
 
+from app.services.operator_cli_absolute import apply_operator_cli_absolute_fallback, operator_cli_argv_resolves
 from app.services.operator_cli_path import cli_environ_for_operator, which_operator_cli
 from app.services.operator_shell_cli import profile_shell_enabled, run_allowlisted_argv_via_login_shell
 
@@ -67,13 +68,13 @@ def run_railway_cli(
                     "stderr": "",
                 }
 
-    argv = ["railway", sub, *extras]
+    argv = apply_operator_cli_absolute_fallback(["railway", sub, *extras])
     env = cli_environ_for_operator()
     if extra_env:
         env.update(extra_env)
 
     use_shell = profile_shell_enabled()
-    if not use_shell and not railway_binary_on_path():
+    if not use_shell and not railway_binary_on_path() and not operator_cli_argv_resolves(argv):
         return {
             "ok": False,
             "error": "railway_cli_missing",

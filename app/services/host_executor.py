@@ -19,6 +19,7 @@ from typing import Any
 
 from app.core.config import REPO_ROOT, get_settings
 from app.services.host_executor_intent import safe_relative_path
+from app.services.operator_cli_absolute import apply_operator_cli_absolute_fallback
 from app.services.operator_cli_path import cli_environ_for_operator
 from app.services.operator_shell_cli import profile_shell_enabled, run_allowlisted_argv_via_login_shell
 
@@ -122,11 +123,8 @@ def _run_argv(
     cwd: Path,
     timeout: int,
 ) -> tuple[int, str, str]:
-    if (
-        profile_shell_enabled()
-        and argv
-        and (argv[0] or "") == "git"
-    ):
+    argv = apply_operator_cli_absolute_fallback(list(argv))
+    if profile_shell_enabled() and argv and Path(argv[0]).name == "git":
         out = run_allowlisted_argv_via_login_shell(
             argv,
             cwd=str(cwd),

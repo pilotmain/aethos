@@ -14,6 +14,8 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
+from app.services.operator_cli_absolute import apply_operator_cli_absolute_fallback
+
 logger = logging.getLogger(__name__)
 
 # Binaries permitted to run via profile shell (fixed argv[0] only).
@@ -120,7 +122,9 @@ def run_allowlisted_argv_via_login_shell(
 
     Returns a dict shaped like other operator CLI helpers: ok, stdout, stderr, exit_code, error.
     """
-    if not argv or (argv[0] or "").strip() not in _ALLOWLIST_ARGV0:
+    argv = apply_operator_cli_absolute_fallback(list(argv))
+    argv0_name = Path((argv[0] or "").strip()).name
+    if not argv or argv0_name not in _ALLOWLIST_ARGV0:
         return {
             "ok": False,
             "error": "argv_not_allowlisted",
@@ -170,9 +174,9 @@ def run_allowlisted_argv_via_login_shell(
     code = int(proc.returncode)
 
     if code != 0 and argv:
-        hint = _command_v_hint(shell, argv[0], env=run_env, timeout=timeout)
+        hint = _command_v_hint(shell, argv0_name, env=run_env, timeout=timeout)
         if hint:
-            err = (err + f"\n\n_After profile load, `command -v {argv[0]}` → `{hint}`_").strip()
+            err = (err + f"\n\n_After profile load, `command -v {argv0_name}` → `{hint}`_").strip()
 
     return {
         "ok": code == 0,

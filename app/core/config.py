@@ -410,6 +410,11 @@ class Settings(BaseSettings):
     nexa_operator_precise_short_responses: bool = True
     # Run allowlisted CLIs (vercel, gh, railway, git in host executor) via bash -lc after sourcing nvm.sh + rc files.
     nexa_operator_cli_profile_shell: bool = True
+    # Optional absolute binaries when PATH/nvm is invisible to the worker (set from `which vercel` etc.).
+    nexa_operator_cli_vercel_abs: str = ""
+    nexa_operator_cli_gh_abs: str = ""
+    nexa_operator_cli_git_abs: str = ""
+    nexa_operator_cli_railway_abs: str = ""
     # Structured workspace intelligence (file-based context under data/nexa_workspace/).
     nexa_workspace_intelligence_enabled: bool = False
     nexa_workspace_intel_root: str = ""

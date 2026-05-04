@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import os
 import subprocess
+from pathlib import Path
 from typing import Any
 
-from app.services.operator_cli_path import cli_environ_for_operator, which_operator_cli
+from app.services.operator_cli_absolute import apply_operator_cli_absolute_fallback, operator_cli_argv_resolves
+from app.services.operator_cli_path import cli_environ_for_operator
 from app.services.operator_runners.base import evidence_shell, format_operator_progress
 from app.services.operator_shell_cli import profile_shell_enabled, run_allowlisted_argv_via_login_shell
 
@@ -17,12 +19,9 @@ _CLI_MISSING = (
 )
 
 
-def _vercel_bin() -> str | None:
-    return which_operator_cli("vercel")
-
-
 def _run_vercel_allowlisted(argv: list[str], *, cwd: str | None) -> dict[str, Any]:
-    if not argv or argv[0] != "vercel":
+    argv = apply_operator_cli_absolute_fallback(list(argv))
+    if not argv or Path(argv[0]).name != "vercel":
         return {"ok": False, "error": "bad_argv", "stdout": "", "stderr": ""}
     if len(argv) < 2:
         return {"ok": False, "error": "missing_subcommand", "stdout": "", "stderr": ""}
@@ -56,7 +55,7 @@ def _run_vercel_allowlisted(argv: list[str], *, cwd: str | None) -> dict[str, An
             "stdout": (r.get("stdout") or "").strip(),
             "stderr": (r.get("stderr") or "").strip(),
         }
-    if not _vercel_bin():
+    if not operator_cli_argv_resolves(argv):
         return {"ok": False, "error": "vercel_cli_missing", "stdout": "", "stderr": ""}
     try:
         proc = subprocess.run(

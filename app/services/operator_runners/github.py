@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import os
 import subprocess
+from pathlib import Path
 from typing import Any
 
-from app.services.operator_cli_path import cli_environ_for_operator, which_operator_cli
+from app.services.operator_cli_absolute import apply_operator_cli_absolute_fallback, operator_cli_argv_resolves
+from app.services.operator_cli_path import cli_environ_for_operator
 from app.services.operator_runners.base import evidence_shell, format_operator_progress
 from app.services.operator_shell_cli import profile_shell_enabled, run_allowlisted_argv_via_login_shell
 
@@ -15,14 +17,11 @@ _TIMEOUT = 45.0
 _GH_MISSING = "`gh` not found in PATH. Run `which gh` in your terminal on this host and retry."
 
 
-def _gh_bin() -> str | None:
-    return which_operator_cli("gh")
-
-
 def _run_allowlisted(argv: list[str], *, cwd: str | None) -> dict[str, Any]:
+    argv = apply_operator_cli_absolute_fallback(list(argv))
     if not argv:
         return {"ok": False, "error": "bad_argv", "stdout": "", "stderr": ""}
-    if argv[0] != "gh":
+    if Path(argv[0]).name != "gh":
         return {"ok": False, "error": "not_gh", "stdout": "", "stderr": ""}
     if len(argv) < 2 or argv[1].lower() != "auth" or (len(argv) >= 3 and argv[2].lower() != "status"):
         return {"ok": False, "error": "gh_subcommand_not_allowed", "stdout": "", "stderr": ""}
@@ -49,7 +48,7 @@ def _run_allowlisted(argv: list[str], *, cwd: str | None) -> dict[str, Any]:
             "stdout": (r.get("stdout") or "").strip(),
             "stderr": (r.get("stderr") or "").strip(),
         }
-    if not _gh_bin():
+    if not operator_cli_argv_resolves(argv):
         return {"ok": False, "error": "gh_cli_missing", "stdout": "", "stderr": ""}
     try:
         proc = subprocess.run(

@@ -44,7 +44,7 @@ def test_gateway_finalize_operator_strips_rules(monkeypatch: pytest.MonkeyPatch)
 @patch("app.services.operator_runners.vercel.subprocess.run")
 def test_vercel_subprocess_receives_enriched_env(mock_run, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("app.services.operator_runners.vercel.profile_shell_enabled", lambda: False)
-    monkeypatch.setattr("app.services.operator_runners.vercel._vercel_bin", lambda: "/opt/homebrew/bin/vercel")
+    monkeypatch.setattr("app.services.operator_runners.vercel.operator_cli_argv_resolves", lambda _: True)
 
     class Proc:
         returncode = 0
