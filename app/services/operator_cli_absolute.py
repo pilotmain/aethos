@@ -2,55 +2,121 @@
 Optional absolute paths for operator CLIs when PATH / login-shell resolution fails.
 
 Configure ``NEXA_OPERATOR_CLI_*_ABS`` to full binaries from ``which vercel`` / ``which gh``
-on the worker host. argv is still built only from Nexa allowlists; only argv[0] is rewritten.
+on the **worker** filesystem. Reads ``os.environ`` first (Docker ``-e``, systemd), then
+:class:`~app.core.config.Settings`, so injected vars apply even if ``.env`` is missing.
+
+Set ``NEXA_OPERATOR_CLI_ABS_DEBUG=1`` to log whether each configured path exists and is executable.
 """
 
 from __future__ import annotations
 
+import logging
 import os
 from pathlib import Path
 
 from app.services.operator_cli_path import which_operator_cli
 
-_NAME_TO_SETTING_ATTR: tuple[tuple[str, str], ...] = (
-    ("vercel", "nexa_operator_cli_vercel_abs"),
-    ("gh", "nexa_operator_cli_gh_abs"),
-    ("git", "nexa_operator_cli_git_abs"),
-    ("railway", "nexa_operator_cli_railway_abs"),
+logger = logging.getLogger(__name__)
+
+_SHORT_TO_ATTR: dict[str, str] = dict(
+    (
+        ("vercel", "nexa_operator_cli_vercel_abs"),
+        ("gh", "nexa_operator_cli_gh_abs"),
+        ("git", "nexa_operator_cli_git_abs"),
+        ("railway", "nexa_operator_cli_railway_abs"),
+    )
 )
+
+# Explicit env keys (must match Pydantic Settings env names).
+_CLI_ENV_KEYS: dict[str, str] = {
+    "vercel": "NEXA_OPERATOR_CLI_VERCEL_ABS",
+    "gh": "NEXA_OPERATOR_CLI_GH_ABS",
+    "git": "NEXA_OPERATOR_CLI_GIT_ABS",
+    "railway": "NEXA_OPERATOR_CLI_RAILWAY_ABS",
+}
+
+
+def _abs_debug_enabled() -> bool:
+    return (os.environ.get("NEXA_OPERATOR_CLI_ABS_DEBUG") or "").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+    )
+
+
+def _configured_absolute_raw(short: str) -> str:
+    """
+    Non-empty path string from ``os.environ`` (preferred) or Settings.
+
+    Workers often receive CLI paths only via the process environment (Docker, supervisor),
+    not from a repo-root ``.env`` file loaded by Pydantic.
+    """
+    env_key = _CLI_ENV_KEYS.get(short)
+    if env_key:
+        v = (os.environ.get(env_key) or "").strip()
+        if v:
+            return v
+    attr = _SHORT_TO_ATTR.get(short)
+    if not attr:
+        return ""
+    try:
+        from app.core.config import get_settings
+
+        return (getattr(get_settings(), attr, None) or "").strip()
+    except Exception:  # noqa: BLE001
+        return ""
 
 
 def apply_operator_cli_absolute_fallback(argv: list[str]) -> list[str]:
     """
-    If settings provide an absolute path for ``argv[0]``'s basename and the file is executable,
-    replace argv[0] with that path. Otherwise return the same list (possibly copied only when needed).
+    If a configured absolute path exists for ``argv[0]``'s basename and the file is executable,
+    replace argv[0] with that path. Otherwise return the same list object when unchanged.
     """
     if not argv:
         return argv
     base = Path(argv[0]).name
+    raw = _configured_absolute_raw(base)
+    if not raw:
+        return argv
+    p = Path(raw).expanduser()
+    exists = False
+    executable = False
     try:
-        from app.core.config import get_settings
-
-        s = get_settings()
-    except Exception:  # noqa: BLE001
+        exists = p.is_file()
+        executable = bool(exists and os.access(p, os.X_OK))
+        if exists and not executable and _abs_debug_enabled():
+            logger.info(
+                "operator_cli_absolute: %s path exists but is not executable: %s",
+                base,
+                p,
+            )
+        if executable:
+            out = list(argv)
+            out[0] = str(p.resolve())
+            if _abs_debug_enabled():
+                logger.info(
+                    "operator_cli_absolute: using argv0=%s for %s",
+                    out[0],
+                    base,
+                )
+            return out
+        if _abs_debug_enabled():
+            logger.info(
+                "operator_cli_absolute: %s configured=%s exists=%s executable=%s (not rewriting argv)",
+                base,
+                raw,
+                exists,
+                executable,
+            )
+    except OSError as exc:
+        if _abs_debug_enabled():
+            logger.info(
+                "operator_cli_absolute: %s configured=%s error=%s",
+                base,
+                raw,
+                exc,
+            )
         return argv
-
-    for short, attr in _NAME_TO_SETTING_ATTR:
-        if base != short:
-            continue
-        raw = (getattr(s, attr, None) or "").strip()
-        if not raw:
-            return argv
-        p = Path(raw).expanduser()
-        try:
-            if p.is_file() and os.access(p, os.X_OK):
-                out = list(argv)
-                out[0] = str(p.resolve())
-                return out
-        except OSError:
-            return argv
-        return argv
-
     return argv
 
 

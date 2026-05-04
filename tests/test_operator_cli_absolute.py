@@ -12,6 +12,13 @@ def test_apply_fallback_rewrites_when_setting_points_to_executable(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
+    for key in (
+        "NEXA_OPERATOR_CLI_VERCEL_ABS",
+        "NEXA_OPERATOR_CLI_GH_ABS",
+        "NEXA_OPERATOR_CLI_GIT_ABS",
+        "NEXA_OPERATOR_CLI_RAILWAY_ABS",
+    ):
+        monkeypatch.delenv(key, raising=False)
     fake = tmp_path / "vercel"
     fake.write_text("#!/bin/sh\necho ok\n")
     fake.chmod(0o755)
@@ -26,6 +33,13 @@ def test_apply_fallback_rewrites_when_setting_points_to_executable(
 
 
 def test_apply_fallback_noop_when_setting_empty(monkeypatch: pytest.MonkeyPatch) -> None:
+    for key in (
+        "NEXA_OPERATOR_CLI_VERCEL_ABS",
+        "NEXA_OPERATOR_CLI_GH_ABS",
+        "NEXA_OPERATOR_CLI_GIT_ABS",
+        "NEXA_OPERATOR_CLI_RAILWAY_ABS",
+    ):
+        monkeypatch.delenv(key, raising=False)
     s = SimpleNamespace(
         nexa_operator_cli_vercel_abs="",
         nexa_operator_cli_gh_abs="",
@@ -37,6 +51,28 @@ def test_apply_fallback_noop_when_setting_empty(monkeypatch: pytest.MonkeyPatch)
     from app.services.operator_cli_absolute import apply_operator_cli_absolute_fallback
 
     assert apply_operator_cli_absolute_fallback(["vercel", "whoami"]) == ["vercel", "whoami"]
+
+
+def test_apply_fallback_prefers_os_environ_when_settings_empty(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    fake = tmp_path / "vercel"
+    fake.write_text("#!/bin/sh\necho ok\n")
+    fake.chmod(0o755)
+    monkeypatch.setenv("NEXA_OPERATOR_CLI_VERCEL_ABS", str(fake))
+    s = SimpleNamespace(
+        nexa_operator_cli_vercel_abs="",
+        nexa_operator_cli_gh_abs="",
+        nexa_operator_cli_git_abs="",
+        nexa_operator_cli_railway_abs="",
+    )
+    monkeypatch.setattr("app.core.config.get_settings", lambda: s)
+
+    from app.services.operator_cli_absolute import apply_operator_cli_absolute_fallback
+
+    out = apply_operator_cli_absolute_fallback(["vercel", "whoami"])
+    assert out[0] == str(fake.resolve())
 
 
 def test_operator_cli_argv_resolves_absolute_executable(tmp_path: Path) -> None:
