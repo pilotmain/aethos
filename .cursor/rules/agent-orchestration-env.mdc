@@ -1,0 +1,10 @@
+---
+description: Keep agent orchestration and auto-approve env vars in .env whenever Settings change
+alwaysApply: true
+---
+
+# Agent orchestration environment variables
+
+Fields on `Settings` in `app/core/config.py` whose env names start with **`NEXA_AGENT_`** or **`NEXA_AUTO_APPROVE_`** (sub-agent registry, rate limits, autoqueue allowlists, idle cleanup, auto-approve) **must** be reflected in **both** `.env.example` and the repo-root **`.env`** in the same task—see `.cursor/rules/env-vars-sync-dotenv.mdc`.
+
+When adding or renaming these flags, grep both files for `NEXA_AGENT_` and `NEXA_AUTO_APPROVE_` after editing.
