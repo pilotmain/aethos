@@ -39,6 +39,7 @@ _PRIVILEGED_HOST_ACTIONS: frozenset[str] = frozenset(
     {
         "git_status",
         "git_commit",
+        "git_push",
         "run_command",
         "file_read",
         "file_write",

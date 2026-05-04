@@ -74,6 +74,48 @@ def test_pytest_allowlist(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> No
         assert "no tests collected" in out.lower() or "exit" in out.lower() or out.strip() != ""
 
 
+def test_git_push_argv_and_validation() -> None:
+    assert host_executor.argv_for_git_push({}) == ["git", "push"]
+    assert host_executor.argv_for_git_push({"push_remote": "origin"}) == [
+        "git",
+        "push",
+        "origin",
+    ]
+    assert host_executor.argv_for_git_push(
+        {"push_remote": "origin", "push_ref": "main"}
+    ) == ["git", "push", "origin", "main"]
+    with pytest.raises(ValueError, match="push_ref requires"):
+        host_executor.argv_for_git_push({"push_ref": "main"})
+    with pytest.raises(ValueError, match="push_remote"):
+        host_executor.argv_for_git_push({"push_remote": "bad;rm"})
+
+
+def test_git_push_fails_without_remote_in_bare_repo(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """git push with no upstream produces non-zero exit; surface stderr."""
+    monkeypatch.chdir(tmp_path)
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
+    (tmp_path / "a.txt").write_text("x", encoding="utf-8")
+    subprocess.run(["git", "add", "a.txt"], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "commit", "-m", "init"],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+        env={
+            **dict(__import__("os").environ),
+            "GIT_AUTHOR_NAME": "t",
+            "GIT_AUTHOR_EMAIL": "t@t",
+            "GIT_COMMITTER_NAME": "t",
+            "GIT_COMMITTER_EMAIL": "t@t",
+        },
+    )
+    with patch.object(host_executor, "get_settings", return_value=_Settings(tmp_path)):
+        out = host_executor.execute_payload({"host_action": "git_push"})
+        assert "git push failed" in out.lower() or "exit" in out.lower()
+
+
 def test_timeout_returns_nonzero_message(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.chdir(tmp_path)
     subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
@@ -110,6 +152,7 @@ def test_host_executor_job_dispatches(tmp_path: Path, monkeypatch: pytest.Monkey
 
 def test_proposed_risk_level() -> None:
     assert host_executor.proposed_risk_level({"host_action": "git_commit"}) == "high"
+    assert host_executor.proposed_risk_level({"host_action": "git_push"}) == "high"
     assert host_executor.proposed_risk_level({"host_action": "file_write"}) == "high"
     assert host_executor.proposed_risk_level({"host_action": "git_status"}) == "low"
     assert host_executor.proposed_risk_level({"host_action": "read_multiple_files"}) == "normal"

@@ -39,6 +39,14 @@ def allowed_tool_human(payload: dict[str, Any]) -> str:
         return f"find files glob={gg!r} under {(payload.get('relative_path') or '.')[:80]}"
     if act == "git_commit":
         return "git add -A && git commit (fixed message)"
+    if act == "git_push":
+        pr = (payload.get("push_remote") or "").strip()
+        pf = (payload.get("push_ref") or "").strip()
+        if pr and pf:
+            return f"git push {pr} {pf}"
+        if pr:
+            return f"git push {pr}"
+        return "git push"
     if act == "read_multiple_files":
         return "read multiple text files under an allowed folder (no indexing)"
     return act or "—"
@@ -129,6 +137,7 @@ def allowed_actions_catalog() -> list[str]:
         "list_directory — list entries under a relative directory",
         "find_files — glob match files under a relative directory",
         "git_commit — stage all and commit with a fixed message",
+        "git_push — push commits to remote (optional push_remote / push_ref)",
         "read_multiple_files — batch-read text files under a folder (optional LLM summary)",
     ]
 
@@ -149,6 +158,7 @@ def host_executor_panel_public() -> dict[str, Any]:
             "file_read",
             "file_write",
             "git_commit",
+            "git_push",
             "list_directory",
             "find_files",
             "read_multiple_files",

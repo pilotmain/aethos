@@ -14,6 +14,11 @@ def test_git_status_variants() -> None:
         assert out == {"host_action": "git_status"}
 
 
+def test_git_push_phrase() -> None:
+    assert infer_host_executor_action("git push") == {"host_action": "git_push"}
+    assert infer_host_executor_action("please git push")["host_action"] == "git_push"
+
+
 def test_run_tests_pytest() -> None:
     assert infer_host_executor_action("run tests") == {
         "host_action": "run_command",

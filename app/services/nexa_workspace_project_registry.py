@@ -69,7 +69,7 @@ def merge_payload_with_project_base(payload: dict[str, Any], relative_base: str)
     b = relative_base.strip()
     out = dict(payload)
     ha = (out.get("host_action") or "").strip().lower()
-    if ha in ("git_status", "run_command", "git_commit"):
+    if ha in ("git_status", "run_command", "git_commit", "git_push"):
         out["cwd_relative"] = b
     if ha == "read_multiple_files":
         raw_list = out.get("relative_paths")

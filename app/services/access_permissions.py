@@ -385,6 +385,8 @@ def host_action_scope_and_risk(
         return SCOPE_GIT_OPERATIONS, RISK_LOW
     if a == "git_commit":
         return SCOPE_GIT_OPERATIONS, RISK_HIGH
+    if a == "git_push":
+        return SCOPE_GIT_OPERATIONS, RISK_HIGH
     if a == "run_command":
         return SCOPE_COMMAND_RUN, RISK_MEDIUM
     if a == "file_read":
@@ -638,7 +640,7 @@ def finalize_permission_use(
         rn = (payload.get("run_name") or "").strip()
         detail = f" ({rn})" if rn else ""
         label = "command_run"
-    elif ha in ("git_status", "git_commit"):
+    elif ha in ("git_status", "git_commit", "git_push"):
         label = "git_operations"
     else:
         label = grants[0].scope if grants else ""
@@ -699,7 +701,7 @@ def resolve_host_executor_permission_paths(work_root: Path, payload: dict[str, A
     else:
         cwd_extra = str(payload.get("cwd_relative") or "").strip()
         sr_cwd = safe_relative_path(cwd_extra.replace("\\", "/")) if cwd_extra else None
-        if sr_cwd and ha in ("git_status", "run_command", "git_commit"):
+        if sr_cwd and ha in ("git_status", "run_command", "git_commit", "git_push"):
             try:
                 paths.append((work_root / sr_cwd).resolve())
             except OSError:

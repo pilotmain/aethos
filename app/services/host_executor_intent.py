@@ -65,6 +65,8 @@ def title_for_payload(payload: dict[str, Any]) -> str:
         return f"Find files ({g}) in {p}"
     if act == "git_commit":
         return "Git commit"
+    if act == "git_push":
+        return "Git push"
     if act == "read_multiple_files":
         if payload.get("relative_paths"):
             return "Read multiple files (compare/explicit)"
@@ -118,5 +120,8 @@ def infer_host_executor_action(user_text: str) -> dict[str, Any] | None:
 
     if re.search(r"(?i)\brun\s+tests?\b|\brun\s+pytest\b|^pytest\b", low):
         return {"host_action": "run_command", "run_name": "pytest"}
+
+    if re.search(r"(?i)(?:^|[\s,])\bgit\s+push\b", line):
+        return {"host_action": "git_push"}
 
     return None

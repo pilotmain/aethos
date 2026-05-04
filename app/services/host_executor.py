@@ -31,6 +31,10 @@ ALLOWED_RUN_COMMANDS: dict[str, list[str]] = {
     "git_status_short": ["git", "status", "--short", "--branch"],
 }
 
+# Optional git_push remote/ref — argv only (no shell).
+_PUSH_REMOTE_RE = re.compile(r"^[a-zA-Z][a-zA-Z0-9_.-]{0,63}$")
+_PUSH_REF_RE = re.compile(r"^[a-zA-Z0-9/_.-]{1,200}$")
+
 _PATH_BLOCKED_SUBSTRINGS = (
     ".env",
     ".ssh",
@@ -108,6 +112,23 @@ def _safe_join_under_root(root: Path, relative: str) -> Path:
     except ValueError as e:
         raise ValueError("path escapes work root") from e
     return out
+
+
+def argv_for_git_push(payload: dict[str, Any]) -> list[str]:
+    """Build fixed argv for ``git push`` (optional remote + ref)."""
+    remote = (payload.get("push_remote") or "").strip()
+    ref = (payload.get("push_ref") or "").strip()
+    if remote and not _PUSH_REMOTE_RE.fullmatch(remote):
+        raise ValueError("push_remote must match [a-zA-Z][a-zA-Z0-9_.-]{0,63}")
+    if ref and not _PUSH_REF_RE.fullmatch(ref):
+        raise ValueError("push_ref must be a branch/ref name (allowed charset only)")
+    if ref and not remote:
+        raise ValueError("push_ref requires push_remote")
+    if remote and ref:
+        return ["git", "push", remote, ref]
+    if remote:
+        return ["git", "push", remote]
+    return ["git", "push"]
 
 
 def _path_allowed_for_io(p: Path) -> None:
@@ -552,9 +573,18 @@ def execute_payload(
             return _finalize_output(f"git commit failed (exit {code2})\n{tail[:6000]}")
         return _finalize_output((tail or "Committed.")[:8000])
 
+    if action == "git_push":
+        argv = argv_for_git_push(payload)
+        code, out, err = _run_argv(argv, cwd=exec_root, timeout=min(timeout, 300))
+        msg = "\n".join(x for x in [out, f"STDERR:\n{err}" if err.strip() else ""] if x.strip())
+        logger.info("host_executor git_push ok exit=%s", code)
+        if code != 0:
+            return _finalize_output(f"git push failed (exit {code})\n{msg}"[:8000])
+        return _finalize_output((msg or "Pushed.")[:8000])
+
     raise ValueError(
         f"unknown host_action {action!r}; try: git_status, run_command, file_read, file_write, "
-        "git_commit, list_directory, find_files, read_multiple_files"
+        "git_commit, git_push, list_directory, find_files, read_multiple_files"
     )
 
 
@@ -578,7 +608,7 @@ def execute_host_executor_job(job: Any) -> str:
 def proposed_risk_level(payload: dict[str, Any]) -> str:
     """Suggest risk for UI / policy (all host-executor jobs still require approval in AgentJobService)."""
     action = (payload.get("host_action") or "").strip().lower()
-    if action in ("file_write", "git_commit"):
+    if action in ("file_write", "git_commit", "git_push"):
         return "high"
     if action == "run_command":
         return "normal"

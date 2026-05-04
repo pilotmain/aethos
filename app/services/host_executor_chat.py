@@ -231,6 +231,16 @@ def _validate_enqueue_payload(payload: dict[str, Any]) -> dict[str, Any] | None:
             return None
         return _attach_cwd({"host_action": "git_commit", "commit_message": msg})
 
+    if act == "git_push":
+        pr = str(payload.get("push_remote") or "").strip()
+        pf = str(payload.get("push_ref") or "").strip()
+        out_gp: dict[str, Any] = {"host_action": "git_push"}
+        if pr:
+            out_gp["push_remote"] = pr[:64]
+        if pf:
+            out_gp["push_ref"] = pf[:200]
+        return _attach_cwd(out_gp)
+
     if act == "read_multiple_files":
         raw_list = payload.get("relative_paths")
         if isinstance(raw_list, list) and raw_list:
