@@ -17,6 +17,7 @@ from enum import Enum
 from typing import Any
 
 from app.core.config import get_settings
+from app.services.sub_agent_audit import log_agent_event
 
 logger = logging.getLogger(__name__)
 
@@ -129,6 +130,14 @@ class AgentRegistry:
                 "capabilities": caps,
             },
         )
+        log_agent_event(
+            "spawn",
+            agent_id=agent_id,
+            agent_name=name,
+            domain=domain,
+            chat_id=chat_id,
+            success=True,
+        )
         return agent
 
     def get_agent(self, agent_id: str) -> SubAgent | None:
@@ -169,6 +178,14 @@ class AgentRegistry:
             return False
         agent.status = AgentStatus.TERMINATED
         logger.info("Terminated agent %s (%s)", agent_id, agent.name)
+        log_agent_event(
+            "terminate",
+            agent_id=agent_id,
+            agent_name=agent.name,
+            domain=agent.domain,
+            chat_id=agent.parent_chat_id,
+            success=True,
+        )
         return True
 
     def cleanup_idle_agents(self) -> int:

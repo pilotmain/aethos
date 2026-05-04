@@ -120,11 +120,17 @@ Sub-agents **do not** replace the gateway; they **narrow or label** intent befor
 
 Telegram slash commands should live in **`app/bot/telegram_bot.py`** (or the command table there), not in `external_execution_session.py` unless that file is already the command router (verify before editing).
 
-### Phase 5 — Hardening (Week 5+)
+### Phase 5 — Hardening (Week 5) ✅
 
-- Max agents per user/chat, rate limits, idle TTL
-- Durable registry
-- Remove or tighten loose mode; policy / allowlist per repo
+| Area | Implementation |
+|------|----------------|
+| **Audit** | `app/services/sub_agent_audit.py` — `log_agent_event(...)` with `nexa_event=agent_audit`, `agent_audit_event`, stable fields. Spawn/terminate also emit audit lines from `sub_agent_registry`. Auto-queue path logs `autoqueue_execute`, `autoqueue_redirect_queue`. |
+| **Rate limits** | `app/services/sub_agent_rate_limit.py` — in-memory rolling window per **agent**, **chat**, **domain** (single worker). Check **before** work; **record** only after a successful dispatch. Settings: `nexa_agent_rate_limit_*`, `nexa_agent_rate_limit_window_seconds`. |
+| **Auto-queue policy** | `app/services/sub_agent_autoqueue_guard.py` — when `nexa_agent_orchestration_autoqueue` is on: optional chat allowlist (empty = all chats), domain allowlist (default `git` in config — set explicitly for other domains), and optional cap on successful in-process runs per agent (`nexa_agent_autoqueue_require_approval_after`). On deny, executor falls back to the normal approval **queue** when `db` + `user_id` exist. |
+| **Idle timeout** | `AgentRegistry.cleanup_idle_agents()` uses `nexa_agent_idle_timeout_seconds`. `try_sub_agent_gateway_turn` calls throttled cleanup (`nexa_agent_cleanup_interval_seconds`) so stale IDLE agents are removed without a separate cron. |
+| **Max agents per chat** | Enforced in `AgentRegistry.spawn_agent` via `nexa_agent_max_per_chat` (duplicate name in chat also blocked). |
+
+**Not in scope for Week 5:** full RBAC, persistent audit DB, distributed (Redis) rate limiting.
 
 ---
 
@@ -184,7 +190,7 @@ Host executor flags stay as today (`NEXA_HOST_EXECUTOR_ENABLED`, chain, NL→cha
 | Settings + `.env.example` | ✅ Phase 1 (router in Phase 2) |
 | Unit tests (`tests/test_agent_registry.py`, `tests/test_sub_agent_router.py`) | ✅ Phase 1–2 |
 | `nexa_agent_orchestration_autoqueue` + executor | ✅ Phase 3 |
-| Policy tightening for autoqueue | Phase 3b+ |
+| Policy tightening for autoqueue | ✅ Week 5 (`sub_agent_autoqueue_guard` + rate limits + audit) |
 
 ---
 

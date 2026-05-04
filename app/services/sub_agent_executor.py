@@ -1,14 +1,15 @@
 """
-Week 4 Phase 3 — sync execution for orchestration sub-agents (domain dispatch).
+Week 4 Phase 3 + Week 5 hardening — sync sub-agent execution (domain dispatch).
 
-``nexa_agent_orchestration_autoqueue``: when true, runs ``execute_payload`` in-process
-(loose approval; audit log). When false, enqueues ``host-executor`` jobs (normal approval).
+``nexa_agent_orchestration_autoqueue``: when true, may run ``execute_payload`` in-process
+subject to :mod:`app.services.sub_agent_autoqueue_guard`. Otherwise enqueues jobs.
 """
 
 from __future__ import annotations
 
 import logging
 import re
+import time
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -18,6 +19,12 @@ from app.services.host_executor import execute_payload
 from app.services.host_executor_chat import _validate_enqueue_payload, enqueue_host_job_from_validated_payload
 from app.services.host_executor_intent import title_for_payload
 from app.services.host_executor_nl_chain import try_infer_readme_push_chain_nl
+from app.services.sub_agent_audit import log_agent_event
+from app.services.sub_agent_autoqueue_guard import (
+    record_autoqueue_success,
+    should_run_autoqueue_payload,
+)
+from app.services.sub_agent_rate_limit import check_rate_limits, record_rate_limited_action
 from app.services.sub_agent_registry import AgentRegistry, AgentStatus, SubAgent
 
 logger = logging.getLogger(__name__)
@@ -44,12 +51,54 @@ class AgentExecutor:
         if not msg:
             return f"Agent '{agent.name}' has no instruction text."
 
+        ok, rate_err = check_rate_limits(agent.id, agent.domain, chat_id)
+        if not ok:
+            log_agent_event(
+                "rate_limited",
+                agent_id=agent.id,
+                agent_name=agent.name,
+                domain=agent.domain,
+                chat_id=chat_id,
+                user_id=user_id,
+                action=msg[:500],
+                success=False,
+                error=rate_err,
+            )
+            return f"⏸️ {rate_err}"
+
+        t0 = time.perf_counter()
         self.registry.update_status(agent.id, AgentStatus.BUSY)
         try:
-            out = self._dispatch(agent, msg, chat_id, db=db, user_id=user_id, web_session_id=web_session_id)
+            out = self._dispatch(
+                agent, msg, chat_id, db=db, user_id=user_id, web_session_id=web_session_id
+            )
+            record_rate_limited_action(agent.id, agent.domain, chat_id)
             self.registry.touch_agent(agent.id)
+            log_agent_event(
+                "execute",
+                agent_id=agent.id,
+                agent_name=agent.name,
+                domain=agent.domain,
+                chat_id=chat_id,
+                user_id=user_id,
+                action=msg[:500],
+                success=True,
+                duration_ms=(time.perf_counter() - t0) * 1000.0,
+            )
             return out
         except Exception as exc:
+            log_agent_event(
+                "execute",
+                agent_id=agent.id,
+                agent_name=agent.name,
+                domain=agent.domain,
+                chat_id=chat_id,
+                user_id=user_id,
+                action=msg[:500],
+                success=False,
+                error=str(exc)[:2000],
+                duration_ms=(time.perf_counter() - t0) * 1000.0,
+            )
             logger.exception("sub_agent execute failed agent=%s", agent.id)
             return f"Execution failed: {exc}"
         finally:
@@ -67,11 +116,11 @@ class AgentExecutor:
     ) -> str:
         domain = (agent.domain or "").strip().lower()
         if domain == "git":
-            return self._git(message, db=db, user_id=user_id, web_session_id=web_session_id)
+            return self._git(agent, message, chat_id, db=db, user_id=user_id, web_session_id=web_session_id)
         if domain == "vercel":
-            return self._vercel(message, db=db, user_id=user_id, web_session_id=web_session_id)
+            return self._vercel(agent, message, chat_id, db=db, user_id=user_id, web_session_id=web_session_id)
         if domain == "test":
-            return self._test(message, db=db, user_id=user_id, web_session_id=web_session_id)
+            return self._test(agent, message, chat_id, db=db, user_id=user_id, web_session_id=web_session_id)
         if domain == "railway":
             return (
                 "Railway sub-agent is not wired to host execution in this release. "
@@ -81,7 +130,9 @@ class AgentExecutor:
 
     def _git(
         self,
+        agent: SubAgent,
         message: str,
+        chat_id: str,
         *,
         db: Session | None,
         user_id: str,
@@ -89,14 +140,30 @@ class AgentExecutor:
     ) -> str:
         pl = try_infer_readme_push_chain_nl(message)
         if pl:
-            return self._run_host_payload(pl, db=db, user_id=user_id, web_session_id=web_session_id, domain="git")
+            return self._run_host_payload(
+                pl,
+                chat_id=chat_id,
+                db=db,
+                user_id=user_id,
+                web_session_id=web_session_id,
+                domain="git",
+                agent=agent,
+            )
 
         low = message.lower()
         if re.search(r"\bgit\s+status\b", low) or low.strip() in {"status", "git status"}:
             safe = _validate_enqueue_payload({"host_action": "git_status"})
             if not safe:
                 return "Could not build a git status request."
-            return self._run_host_payload(safe, db=db, user_id=user_id, web_session_id=web_session_id, domain="git")
+            return self._run_host_payload(
+                safe,
+                chat_id=chat_id,
+                db=db,
+                user_id=user_id,
+                web_session_id=web_session_id,
+                domain="git",
+                agent=agent,
+            )
 
         return (
             "Git sub-agent: try an NL readme + push line (e.g. add README … and push), "
@@ -105,7 +172,9 @@ class AgentExecutor:
 
     def _vercel(
         self,
+        agent: SubAgent,
         message: str,
+        chat_id: str,
         *,
         db: Session | None,
         user_id: str,
@@ -117,7 +186,13 @@ class AgentExecutor:
             if not safe:
                 return "Could not build Vercel projects list."
             return self._run_host_payload(
-                safe, db=db, user_id=user_id, web_session_id=web_session_id, domain="vercel"
+                safe,
+                chat_id=chat_id,
+                db=db,
+                user_id=user_id,
+                web_session_id=web_session_id,
+                domain="vercel",
+                agent=agent,
             )
         return (
             "Vercel sub-agent: ask to `list projects` / `list my Vercel projects`. "
@@ -126,7 +201,9 @@ class AgentExecutor:
 
     def _test(
         self,
+        agent: SubAgent,
         message: str,
+        chat_id: str,
         *,
         db: Session | None,
         user_id: str,
@@ -137,46 +214,28 @@ class AgentExecutor:
             safe = _validate_enqueue_payload({"host_action": "run_command", "run_name": "pytest"})
             if not safe:
                 return "pytest run_command is not available (validation failed)."
-            return self._run_host_payload(safe, db=db, user_id=user_id, web_session_id=web_session_id, domain="test")
+            return self._run_host_payload(
+                safe,
+                chat_id=chat_id,
+                db=db,
+                user_id=user_id,
+                web_session_id=web_session_id,
+                domain="test",
+                agent=agent,
+            )
         return "Test sub-agent: ask to `run pytest` (allowlisted run_command)."
 
-    def _run_host_payload(
+    def _enqueue(
         self,
-        payload: dict[str, Any],
+        safe: dict[str, Any],
         *,
-        db: Session | None,
+        chat_id: str,
+        db: Session,
         user_id: str,
         web_session_id: str,
         domain: str,
+        suffix: str = "",
     ) -> str:
-        safe = _validate_enqueue_payload(payload)
-        if not safe:
-            return "Host tool payload failed validation (disallowed or incomplete)."
-
-        settings = get_settings()
-        auto = bool(getattr(settings, "nexa_agent_orchestration_autoqueue", False))
-
-        if auto:
-            logger.info(
-                "sub_agent autoqueue execute domain=%s user=%s",
-                domain,
-                (user_id or "")[:64],
-                extra={
-                    "nexa_event": "sub_agent_autoqueue",
-                    "domain": domain,
-                    "host_action": safe.get("host_action"),
-                    "user_id": user_id,
-                },
-            )
-            try:
-                text = execute_payload(safe)
-            except ValueError as e:
-                return str(e)
-            return (text or "").strip() or "(empty host output)"
-
-        if db is None or not (user_id or "").strip():
-            return "Cannot queue a host job without an authenticated user and database session."
-
         title = title_for_payload(safe)
         job = enqueue_host_job_from_validated_payload(
             db,
@@ -191,7 +250,95 @@ class AgentExecutor:
             domain,
             extra={"nexa_event": "sub_agent_queued", "job_id": job.id, "domain": domain},
         )
-        return f"Queued host job #{job.id} — open Jobs to approve and run on the worker."
+        base = f"Queued host job #{job.id} — open Jobs to approve and run on the worker."
+        return f"{base} {suffix}".strip()
+
+    def _run_host_payload(
+        self,
+        payload: dict[str, Any],
+        *,
+        chat_id: str,
+        db: Session | None,
+        user_id: str,
+        web_session_id: str,
+        domain: str,
+        agent: SubAgent,
+    ) -> str:
+        safe = _validate_enqueue_payload(payload)
+        if not safe:
+            return "Host tool payload failed validation (disallowed or incomplete)."
+
+        settings = get_settings()
+        auto = bool(getattr(settings, "nexa_agent_orchestration_autoqueue", False))
+
+        if auto:
+            run_inline, guard_msg, prefer_queue = should_run_autoqueue_payload(chat_id, domain, agent)
+            if not run_inline:
+                log_agent_event(
+                    "autoqueue_redirect_queue",
+                    agent_id=agent.id,
+                    agent_name=agent.name,
+                    domain=domain,
+                    chat_id=chat_id,
+                    user_id=user_id,
+                    success=True,
+                    extra={"reason": guard_msg or "guard"},
+                )
+                if prefer_queue and db is not None and (user_id or "").strip():
+                    return self._enqueue(
+                        safe,
+                        chat_id=chat_id,
+                        db=db,
+                        user_id=user_id,
+                        web_session_id=web_session_id,
+                        domain=domain,
+                        suffix=guard_msg or "",
+                    )
+                return (
+                    guard_msg
+                    or "In-process auto-queue is not allowed. Enable approval queue with a signed-in session."
+                )
+
+            log_agent_event(
+                "autoqueue_execute",
+                agent_id=agent.id,
+                agent_name=agent.name,
+                domain=domain,
+                chat_id=chat_id,
+                user_id=user_id,
+                success=True,
+                autoqueue=True,
+                extra={"host_action": safe.get("host_action")},
+            )
+            try:
+                text = execute_payload(safe)
+            except ValueError as e:
+                log_agent_event(
+                    "autoqueue_execute",
+                    agent_id=agent.id,
+                    agent_name=agent.name,
+                    domain=domain,
+                    chat_id=chat_id,
+                    user_id=user_id,
+                    success=False,
+                    error=str(e),
+                    autoqueue=True,
+                )
+                return str(e)
+            record_autoqueue_success(agent.id)
+            return (text or "").strip() or "(empty host output)"
+
+        if db is None or not (user_id or "").strip():
+            return "Cannot queue a host job without an authenticated user and database session."
+
+        return self._enqueue(
+            safe,
+            chat_id=chat_id,
+            db=db,
+            user_id=user_id,
+            web_session_id=web_session_id,
+            domain=domain,
+        )
 
 
 __all__ = ["AgentExecutor"]

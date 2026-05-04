@@ -28,6 +28,19 @@ _NEXA_EXTRA_KEYS = frozenset(
         "nl_chain_pattern",
         "nl_repo_hint",
         "nl_content_preview",
+        # Week 5 — sub-agent audit / rate limits (extra= on LogRecord)
+        "agent_audit_event",
+        "agent_audit_ts",
+        "agent_id",
+        "agent_name",
+        "chat_id",
+        "user_id",
+        "action",
+        "limit_type",
+        "domain",
+        "autoqueue",
+        "reason",
+        "terminated",
     }
 )
 

@@ -7,8 +7,19 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from app.services.sub_agent_autoqueue_guard import reset_autoqueue_counts_for_tests
 from app.services.sub_agent_executor import AgentExecutor
+from app.services.sub_agent_rate_limit import reset_rate_limiter_for_tests
 from app.services.sub_agent_registry import AgentRegistry, AgentStatus, SubAgent
+
+
+@pytest.fixture(autouse=True)
+def _reset_week5_state() -> None:
+    reset_rate_limiter_for_tests()
+    reset_autoqueue_counts_for_tests()
+    yield
+    reset_rate_limiter_for_tests()
+    reset_autoqueue_counts_for_tests()
 
 
 class _S:
@@ -163,6 +174,31 @@ def test_railway_placeholder(executor: AgentExecutor) -> None:
     )
     out = executor.execute(a, "deploy", "c", db=None, user_id="u1")
     assert "Railway" in out
+
+
+def test_execute_rate_limited_returns_message(executor: AgentExecutor) -> None:
+    a = _git_agent()
+    low = type(
+        "_Low",
+        (),
+        {
+            "nexa_agent_orchestration_enabled": True,
+            "nexa_agent_orchestration_autoqueue": False,
+            "nexa_agent_rate_limit_per_agent": 1,
+            "nexa_agent_rate_limit_per_chat": 100,
+            "nexa_agent_rate_limit_per_domain": 100,
+            "nexa_agent_rate_limit_window_seconds": 60,
+        },
+    )()
+    with (
+        patch("app.services.sub_agent_executor.get_settings", return_value=low),
+        patch("app.services.sub_agent_rate_limit.get_settings", return_value=low),
+    ):
+        out1 = executor.execute(a, "first", "chat123", db=None, user_id="u1")
+        assert "⏸️" not in out1
+        out2 = executor.execute(a, "second", "chat123", db=None, user_id="u1")
+    assert "⏸️" in out2
+    assert "rate" in out2.lower()
 
 
 def test_idle_after_execute(registry: AgentRegistry) -> None:

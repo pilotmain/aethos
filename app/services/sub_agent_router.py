@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 import re
+import time
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -17,6 +18,26 @@ from app.services.gateway.context import GatewayContext
 from app.services.sub_agent_registry import AgentRegistry, AgentStatus
 
 logger = logging.getLogger(__name__)
+
+_last_orch_cleanup_mono: float = 0.0
+
+
+def _maybe_cleanup_idle_agents() -> None:
+    """Run registry idle cleanup at most every ``nexa_agent_cleanup_interval_seconds``."""
+    global _last_orch_cleanup_mono
+    s = get_settings()
+    interval = max(30.0, float(getattr(s, "nexa_agent_cleanup_interval_seconds", 300)))
+    now = time.monotonic()
+    if now - _last_orch_cleanup_mono < interval:
+        return
+    _last_orch_cleanup_mono = now
+    n = AgentRegistry().cleanup_idle_agents()
+    if n:
+        logger.info(
+            "orchestration idle cleanup: terminated %s agent(s)",
+            n,
+            extra={"nexa_event": "sub_agent_idle_cleanup", "terminated": n},
+        )
 
 
 def orchestration_chat_key(gctx: GatewayContext) -> str:
@@ -161,6 +182,7 @@ def try_sub_agent_gateway_turn(
     """
     if not bool(getattr(get_settings(), "nexa_agent_orchestration_enabled", False)):
         return None
+    _maybe_cleanup_idle_agents()
     router = AgentRouter()
     chat_key = orchestration_chat_key(gctx)
     wid = orchestration_web_session_id(gctx)

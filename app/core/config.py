@@ -84,6 +84,18 @@ class Settings(BaseSettings):
     nexa_agent_idle_timeout_seconds: int = 3600
     # When true with orchestration, sub-agent host payloads run via execute_payload in-process (audit log).
     nexa_agent_orchestration_autoqueue: bool = False
+    # Week 5 — in-process rate limits (single-worker; see sub_agent_rate_limit)
+    nexa_agent_rate_limit_per_agent: int = 30
+    nexa_agent_rate_limit_per_chat: int = 80
+    nexa_agent_rate_limit_per_domain: int = 40
+    nexa_agent_rate_limit_window_seconds: int = 60
+    # Week 5 — autoqueue allowlists (empty chats = any chat). Domain list lowercase names.
+    nexa_agent_autoqueue_allowlist_chats: str = ""
+    nexa_agent_autoqueue_allowlist_domains: str = "git"
+    # After N successful in-process autoqueue executions per agent, force approval queue (0 = off).
+    nexa_agent_autoqueue_require_approval_after: int = 0
+    # Run idle-agent cleanup at most this often during orchestration turns (seconds).
+    nexa_agent_cleanup_interval_seconds: int = 300
     api_v1_prefix: str = "/api/v1"
     database_url: str = "sqlite:///./overwhelm_reset.db"
 
