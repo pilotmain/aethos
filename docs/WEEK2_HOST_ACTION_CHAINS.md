@@ -116,6 +116,14 @@ Optional quoted titles:
 
 If no title is parsed, the README body uses a small default title line.
 
+**Repo folder in prose (broader NL):** you can name a single path segment or an explicit `…/README.md` path. Examples:
+
+- *“add readme saying ‘Service stopped’ to pilot-command-center and push”* → `pilot-command-center/README.md` and `cwd_relative` for git steps
+- *“in pilot-command-center, add README with content ‘Updated’ and push”*
+- *“create README for pilot-command-center repo saying ‘Deployed’ and push”*
+
+Phrases such as `in <slug>`, `under <slug>`, `for <slug> repo`, `to <slug>`, and explicit paths like `pilot-command-center/README.md` are recognized; `..` and invalid segments are rejected.
+
 **Disabled by default** — set on any process that runs host inference (API):
 
 ```bash
