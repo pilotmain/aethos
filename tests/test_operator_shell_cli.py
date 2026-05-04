@@ -40,7 +40,11 @@ def test_invokes_configured_login_shell_with_nvm_script(monkeypatch: pytest.Monk
         ["vercel", "whoami"],
         cwd="/tmp",
         timeout=30.0,
-        env={"HOME": os.environ.get("HOME", "/tmp"), **os.environ},
+        env={
+            "HOME": os.environ.get("HOME", "/tmp"),
+            "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
+            **os.environ,
+        },
     )
     assert calls
     argv0, kw = calls[0]
@@ -48,7 +52,9 @@ def test_invokes_configured_login_shell_with_nvm_script(monkeypatch: pytest.Monk
     assert argv0[0] == shell
     assert argv0[1:3] == ["-l", "-c"]
     script = argv0[3]
+    assert script.startswith("export PATH=")
     assert "nvm.sh" in script
+    assert "nvm use default" in script or "nvm use node" in script
     assert "bash_completion" in script
     assert "vercel" in script and "whoami" in script
     assert kw.get("env") is not None

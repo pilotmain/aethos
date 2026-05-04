@@ -22,11 +22,28 @@ _ALLOWLIST_ARGV0: frozenset[str] = frozenset(
 )
 
 
+def _synchronized_path_export(run_env: dict[str, str]) -> str:
+    """
+    Re-apply the same PATH Nexa built in Python as the first line of the -c script.
+
+    Login/profile startup can reset PATH before this body runs; ``vercel`` (npm -g) and
+    Homebrew ``gh`` then disappear unless we restore the enriched PATH and activate nvm's Node.
+    """
+    path = (run_env.get("PATH") or "").strip()
+    if not path:
+        return ""
+    return f"export PATH={shlex.quote(path)}\n"
+
+
 def _profile_environment_script() -> str:
-    """Shell fragment: nvm + completions + common rc files (sourced in login shell)."""
+    """Shell fragment: nvm + default Node (for npm globals) + completions + common rc files."""
     return """set +e
 export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
 [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+# Non-interactive -c scripts do not auto-select a Node version; npm global CLIs (vercel) need it.
+if type nvm >/dev/null 2>&1; then
+  nvm use default --silent 2>/dev/null || nvm use node --silent 2>/dev/null || nvm use --lts --silent 2>/dev/null || true
+fi
 [ -s "$NVM_DIR/bash_completion" ] && . "$NVM_DIR/bash_completion"
 [ -f "$HOME/.zprofile" ] && . "$HOME/.zprofile" 2>/dev/null || true
 [ -f "$HOME/.zshrc" ] && . "$HOME/.zshrc" 2>/dev/null || true
@@ -72,8 +89,12 @@ def _command_v_hint(
     env: dict[str, str],
     timeout: float,
 ) -> str:
-    """After profile sources, run ``command -v`` for diagnostics when the CLI run fails."""
-    script = _profile_environment_script() + f"command -v {shlex.quote(binary)} 2>/dev/null\n"
+    """After the same PATH + profile sources, run ``command -v`` when the CLI run fails."""
+    script = (
+        _synchronized_path_export(env)
+        + _profile_environment_script()
+        + f"command -v {shlex.quote(binary)} 2>/dev/null\n"
+    )
     try:
         proc = subprocess.run(
             [shell, "-l", "-c", script],
@@ -112,11 +133,15 @@ def run_allowlisted_argv_via_login_shell(
     quoted_cwd = shlex.quote(workdir)
     inner = shlex.join(argv)
 
-    script = _profile_environment_script() + f"cd {quoted_cwd} || exit 127\n{inner}\nexit $?\n"
-
     run_env = dict(env) if env is not None else os.environ.copy()
     if not (run_env.get("HOME") or "").strip():
         run_env["HOME"] = str(Path.home())
+
+    script = (
+        _synchronized_path_export(run_env)
+        + _profile_environment_script()
+        + f"cd {quoted_cwd} || exit 127\n{inner}\nexit $?\n"
+    )
 
     shell = resolve_login_shell_executable()
 
