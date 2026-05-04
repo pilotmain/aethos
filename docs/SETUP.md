@@ -111,6 +111,8 @@ chmod +x run_everything.sh
 
 **SQLite in Docker (no Postgres):** `docker compose -f docker-compose.sqlite.yml up --build` (or `USE_SQLITE=1 ./run_everything.sh`).
 
+**Operator / Vercel / GitHub CLI inside Docker:** The `Dockerfile` installs **Node 20**, **`vercel`** (npm global), and **`gh`** (GitHub’s apt repo). `docker-compose.yml` sets `NEXA_OPERATOR_CLI_VERCEL_ABS=/usr/bin/vercel` and `NEXA_OPERATOR_CLI_GH_ABS=/usr/bin/gh` so a Mac-only `.env` does not point at `/Users/...` inside the container. Rebuild after changing the Dockerfile: `docker compose build --no-cache api`. Verify: `docker exec nexa-api command -v vercel` and `docker exec nexa-api command -v gh`.
+
 **Host dev executor:** when `DEV_EXECUTOR_ON_HOST=1` is in `.env`, the stack can start a **host** dev executor in the background (log: `.runtime/host_dev_executor.log`). Use `RUN_EVERYTHING_NO_HOST_DEV=1` to skip. For hands-off operation with **Codex** on macOS from Linux API containers, see [OPERATIONS.md](OPERATIONS.md#maximum-autonomy-and-host-executor). More detail: [DEV_JOB_FLOW.md](DEV_JOB_FLOW.md).
 
 **Workspace strict mode and host permission grants** (`NEXA_WORKSPACE_STRICT`, Docker work roots, approve-after-grant behavior): [WORKSPACE_AND_PERMISSIONS.md](WORKSPACE_AND_PERMISSIONS.md).

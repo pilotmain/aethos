@@ -44,6 +44,9 @@ services:
       DATABASE_URL: postgresql+psycopg2://overwhelm:overwhelm@db:5432/overwhelm
       # Bot / browser links; host machine reaches API on localhost:8010 (container listens on 8000)
       API_BASE_URL: http://localhost:8010
+      # Operator CLI probes: Dockerfile installs these; override Mac paths from .env inside Linux containers.
+      NEXA_OPERATOR_CLI_VERCEL_ABS: /usr/bin/vercel
+      NEXA_OPERATOR_CLI_GH_ABS: /usr/bin/gh
     env_file:
       - .env
     depends_on:
@@ -90,6 +93,8 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg2://overwhelm:overwhelm@db:5432/overwhelm
       API_BASE_URL: http://localhost:8010
+      NEXA_OPERATOR_CLI_VERCEL_ABS: /usr/bin/vercel
+      NEXA_OPERATOR_CLI_GH_ABS: /usr/bin/gh
     env_file:
       - .env
     depends_on:

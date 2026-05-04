@@ -19,6 +19,8 @@ services:
     environment:
       DATABASE_URL: sqlite:////app/data/overwhelm_reset.db
       API_BASE_URL: http://localhost:8010
+      NEXA_OPERATOR_CLI_VERCEL_ABS: /usr/bin/vercel
+      NEXA_OPERATOR_CLI_GH_ABS: /usr/bin/gh
     env_file:
       - .env
     # Bind mount: same `.agent_tasks` on host and in container (dev handoff / Cursor / done files).
@@ -50,6 +52,8 @@ services:
     environment:
       DATABASE_URL: sqlite:////app/data/overwhelm_reset.db
       API_BASE_URL: http://localhost:8010
+      NEXA_OPERATOR_CLI_VERCEL_ABS: /usr/bin/vercel
+      NEXA_OPERATOR_CLI_GH_ABS: /usr/bin/gh
     env_file:
       - .env
     depends_on:
