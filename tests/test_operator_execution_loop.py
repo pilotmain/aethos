@@ -137,6 +137,10 @@ def test_readme_push_enqueued_after_github_auth_ok(
         "app.services.host_executor_chat.enqueue_host_job_from_validated_payload",
         _fake_enqueue,
     )
+    monkeypatch.setattr(
+        "app.services.sub_agent_auto_approve.should_auto_approve",
+        lambda *a, **k: (False, "auto_approve_disabled"),
+    )
 
     out = _try_enqueue_readme_push_chain_after_github(
         db_session,

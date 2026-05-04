@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import logging
 import re
+import time
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
@@ -202,6 +203,50 @@ def _try_enqueue_readme_push_chain_after_github(
     safe = _validate_enqueue_payload(pl)
     if not safe:
         return None
+
+    from app.services.host_executor import execute_payload
+    from app.services.sub_agent_audit import log_agent_event
+    from app.services.sub_agent_auto_approve import get_auto_approve_message, should_auto_approve
+    from app.services.sub_agent_router import orchestration_chat_key
+
+    chat_key = orchestration_chat_key(gctx)
+    aa_ok, aa_reason = should_auto_approve(chat_key, "git", agent=None)
+    actions = safe.get("actions") if (safe.get("host_action") or "").strip().lower() == "chain" else None
+    n = len(actions) if isinstance(actions, list) else 1
+
+    if aa_ok:
+        t0 = time.perf_counter()
+        try:
+            out = execute_payload(safe)
+        except ValueError as exc:
+            log_agent_event(
+                "auto_approved_execute",
+                domain="git",
+                chat_id=chat_key,
+                user_id=uid.strip(),
+                success=False,
+                error=str(exc)[:2000],
+                duration_ms=(time.perf_counter() - t0) * 1000.0,
+                extra={"source": "operator_readme_chain", "reason": aa_reason},
+            )
+            return f"❌ Auto-execution failed: {exc}"
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("operator auto-approved readme chain failed: %s", exc, exc_info=False)
+            return f"❌ Auto-execution error: {exc}"
+        log_agent_event(
+            "auto_approved_execute",
+            domain="git",
+            chat_id=chat_key,
+            user_id=uid.strip(),
+            action="readme_push_chain",
+            success=True,
+            duration_ms=(time.perf_counter() - t0) * 1000.0,
+            extra={"source": "operator_readme_chain", "reason": aa_reason},
+        )
+        head = get_auto_approve_message("git", n)
+        body = (out or "").strip()
+        return f"{head}\n\n{body}" if body else head
+
     wid = (
         str(gctx.extras.get("web_session_id") or gctx.extras.get("conversation_id") or "default").strip()[:64]
         or "default"
@@ -218,8 +263,6 @@ def _try_enqueue_readme_push_chain_after_github(
     except Exception as exc:  # noqa: BLE001
         logger.warning("operator NL readme chain enqueue failed: %s", exc, exc_info=False)
         return None
-    actions = safe.get("actions") if (safe.get("host_action") or "").strip().lower() == "chain" else None
-    n = len(actions) if isinstance(actions, list) else 1
     return (
         "### Queued for you\n\n"
         f"README, commit, and push are **queued** as one job (**#{job.id}**, {n} steps). "

@@ -20,6 +20,7 @@ from app.services.host_executor_chat import _validate_enqueue_payload, enqueue_h
 from app.services.host_executor_intent import title_for_payload
 from app.services.host_executor_nl_chain import try_infer_readme_push_chain_nl
 from app.services.sub_agent_audit import log_agent_event
+from app.services.sub_agent_auto_approve import get_auto_approve_message, should_auto_approve
 from app.services.sub_agent_autoqueue_guard import (
     record_autoqueue_success,
     should_run_autoqueue_payload,
@@ -269,6 +270,47 @@ class AgentExecutor:
             return "Host tool payload failed validation (disallowed or incomplete)."
 
         settings = get_settings()
+        if bool(getattr(settings, "nexa_auto_approve_enabled", False)):
+            aa_ok, _aa_reason = should_auto_approve(chat_id, domain, agent=agent)
+            if aa_ok:
+                steps = (
+                    len(safe.get("actions") or [])
+                    if (safe.get("host_action") or "").strip().lower() == "chain"
+                    else 1
+                )
+                t_exec = time.perf_counter()
+                try:
+                    text = execute_payload(safe)
+                except ValueError as exc:
+                    log_agent_event(
+                        "auto_approved_execute",
+                        agent_id=agent.id,
+                        agent_name=agent.name,
+                        domain=domain,
+                        chat_id=chat_id,
+                        user_id=user_id,
+                        action=str(safe.get("host_action"))[:200],
+                        success=False,
+                        error=str(exc)[:2000],
+                        duration_ms=(time.perf_counter() - t_exec) * 1000.0,
+                    )
+                    return str(exc)
+                log_agent_event(
+                    "auto_approved_execute",
+                    agent_id=agent.id,
+                    agent_name=agent.name,
+                    domain=domain,
+                    chat_id=chat_id,
+                    user_id=user_id,
+                    action=str(safe.get("host_action"))[:200],
+                    success=True,
+                    duration_ms=(time.perf_counter() - t_exec) * 1000.0,
+                    extra={"steps": steps},
+                )
+                head = get_auto_approve_message(domain, steps)
+                body = (text or "").strip()
+                return f"{head}\n\n{body}" if body else head
+
         auto = bool(getattr(settings, "nexa_agent_orchestration_autoqueue", False))
 
         if auto:

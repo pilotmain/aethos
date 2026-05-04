@@ -36,6 +36,10 @@ class _Auto:
     nexa_host_executor_enabled = True
     nexa_host_executor_chain_enabled = True
     nexa_nl_to_chain_enabled = True
+    nexa_auto_approve_enabled = False
+    nexa_agent_autoqueue_allowlist_chats = ""
+    nexa_agent_autoqueue_allowlist_domains = "git"
+    nexa_agent_autoqueue_require_approval_after = 0
 
 
 @pytest.fixture
@@ -121,8 +125,11 @@ def test_queue_chain_with_mock_enqueue(registry: AgentRegistry) -> None:
 
 def test_autoqueue_runs_execute_payload(executor: AgentExecutor) -> None:
     a = _git_agent()
+    auto = _Auto()
     with (
-        patch("app.services.sub_agent_executor.get_settings", return_value=_Auto()),
+        patch("app.services.sub_agent_executor.get_settings", return_value=auto),
+        patch("app.services.sub_agent_autoqueue_guard.get_settings", return_value=auto),
+        patch("app.services.sub_agent_auto_approve.get_settings", return_value=auto),
         patch("app.services.sub_agent_executor.try_infer_readme_push_chain_nl") as inf,
         patch("app.services.sub_agent_executor._validate_enqueue_payload") as val,
         patch("app.services.sub_agent_executor.execute_payload", return_value="ok-out") as ex,

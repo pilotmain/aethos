@@ -40,6 +40,7 @@ class SubAgent:
     domain: str
     capabilities: list[str]
     parent_chat_id: str
+    trusted: bool = False
     status: AgentStatus = AgentStatus.IDLE
     created_at: float = field(default_factory=time.time)
     last_active: float = field(default_factory=time.time)
@@ -84,6 +85,8 @@ class AgentRegistry:
         domain: str,
         chat_id: str,
         capabilities: list[str] | None = None,
+        *,
+        trusted: bool = False,
     ) -> SubAgent | None:
         settings = get_settings()
         if not bool(getattr(settings, "nexa_agent_orchestration_enabled", False)):
@@ -113,6 +116,7 @@ class AgentRegistry:
             domain=domain,
             capabilities=caps,
             parent_chat_id=chat_id,
+            trusted=bool(trusted),
         )
         self._agents[agent_id] = agent
         logger.info(

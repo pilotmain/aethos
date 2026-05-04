@@ -96,6 +96,11 @@ class Settings(BaseSettings):
     nexa_agent_autoqueue_require_approval_after: int = 0
     # Run idle-agent cleanup at most this often during orchestration turns (seconds).
     nexa_agent_cleanup_interval_seconds: int = 300
+    # Week 5.5 — skip Jobs approval for trusted chat/domain/sub-agent (host executor paths)
+    nexa_auto_approve_enabled: bool = False
+    nexa_auto_approve_chats: str = ""
+    nexa_auto_approve_domains: str = "git"
+    nexa_auto_approve_log_only: bool = False
     api_v1_prefix: str = "/api/v1"
     database_url: str = "sqlite:///./overwhelm_reset.db"
 
