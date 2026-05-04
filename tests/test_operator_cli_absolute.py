@@ -8,6 +8,15 @@ from types import SimpleNamespace
 import pytest
 
 
+@pytest.fixture(autouse=True)
+def _reset_cli_registry() -> None:
+    from app.services.cli_backends import reset_cli_backend_registry
+
+    reset_cli_backend_registry()
+    yield
+    reset_cli_backend_registry()
+
+
 def test_apply_fallback_rewrites_when_setting_points_to_executable(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -33,6 +42,8 @@ def test_apply_fallback_rewrites_when_setting_points_to_executable(
 
 
 def test_apply_fallback_noop_when_setting_empty(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("app.services.cli_backends.which_operator_cli", lambda *_a, **_kw: None)
+    monkeypatch.setattr("app.services.cli_backends.shutil.which", lambda *_a, **_kw: None)
     for key in (
         "NEXA_OPERATOR_CLI_VERCEL_ABS",
         "NEXA_OPERATOR_CLI_GH_ABS",
@@ -89,6 +100,14 @@ def test_operator_cli_argv_resolves_false_for_missing(tmp_path: Path, monkeypatc
     monkeypatch.setattr(
         "app.services.operator_cli_absolute.which_operator_cli",
         lambda _name: None,
+    )
+    monkeypatch.setattr(
+        "app.services.cli_backends.which_operator_cli",
+        lambda _name: None,
+    )
+    monkeypatch.setattr(
+        "app.services.cli_backends.shutil.which",
+        lambda *_a, **_kw: None,
     )
 
     from app.services.operator_cli_absolute import operator_cli_argv_resolves
