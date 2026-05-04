@@ -79,9 +79,11 @@ Sub-agents **do not** replace the gateway; they **narrow or label** intent befor
 
 ### Phase 1 — Registry + flag + tests (2–3 days)
 
+**Naming:** `app/services/agent_registry.py` already holds the platform agent catalog (`DEFAULT_AGENTS`, `resolve_mention_key`). Week 4 orchestration lives in **`app/services/sub_agent_registry.py`** (`AgentRegistry`, `SubAgent`, …).
+
 | Deliverable | Detail |
 |-------------|--------|
-| `app/services/agent_registry.py` | CRUD for `SubAgent` records; **no** Telegram sends inside registry (avoid circular imports). |
+| `app/services/sub_agent_registry.py` | CRUD for orchestration `SubAgent` records; **no** Telegram sends inside registry (avoid circular imports). |
 | `nexa_agent_orchestration_enabled` | `Settings` + `.env.example`; default **false**. |
 | Unit tests | Spawn, list by scope, terminate, duplicate-name rules. |
 | Persistence | **v1:** in-process dict is OK for **single-worker dev** only; document that **multi-worker / multiple API replicas** need DB/Redis. |
@@ -173,11 +175,11 @@ Host executor flags stay as today (`NEXA_HOST_EXECUTOR_ENABLED`, chain, NL→cha
 | Item | Status |
 |------|--------|
 | `docs/AGENT_ORCHESTRATION.md` (this file) | ✅ |
-| `app/services/agent_registry.py` | Phase 1 |
+| `app/services/sub_agent_registry.py` | ✅ Phase 1 |
 | `app/services/agent_router.py` | Phase 2 |
 | Gateway hook in `NexaGateway.handle_message` | Phase 2 |
-| Settings + `.env.example` | Phase 1–2 |
-| Unit tests | Phase 1+ |
+| Settings + `.env.example` | ✅ Phase 1 (router in Phase 2) |
+| Unit tests (`tests/test_agent_registry.py` → `sub_agent_registry`) | ✅ Phase 1 |
 | Loose mode (if any) behind flag + audit | Phase 3 |
 
 ---

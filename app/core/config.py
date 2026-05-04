@@ -78,6 +78,10 @@ class Settings(BaseSettings):
     debug: bool = True
     # When true, API boot uses JSON log lines (one object per line) for aggregation; see app.services.logging
     log_json_format: bool = False
+    # Week 4 — sub-agent registry (in-memory, single-worker; see docs/AGENT_ORCHESTRATION.md)
+    nexa_agent_orchestration_enabled: bool = False
+    nexa_agent_max_per_chat: int = 5
+    nexa_agent_idle_timeout_seconds: int = 3600
     api_v1_prefix: str = "/api/v1"
     database_url: str = "sqlite:///./overwhelm_reset.db"
 
