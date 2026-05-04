@@ -47,6 +47,14 @@ def extract_focused_intent(user_message: str) -> dict[str, Any]:
         or "git push" in tl
         or re.search(r"\bpush\s+(changes|commits|to\s+origin)\b", tl)
     )
+    # Local worktree / laptop wording — not a hosted deploy ask; still skip Railway defaults.
+    local_git_workspace = bool(
+        re.search(
+            r"(?i)(check\s+this\s+git\s+in\s+local|this\s+git\s+in\s+local|git\s+in\s+local|"
+            r"\blocal\s+git\b|on\s+my\s+machine|this\s+git\s+locally)",
+            raw,
+        )
+    )
     aws_scope = bool(
         re.search(r"\baws\b", tl)
         or "amazonaws.com" in url_blob
@@ -60,8 +68,9 @@ def extract_focused_intent(user_message: str) -> dict[str, Any]:
         "aws_scope": aws_scope,
         "railway": railway,
         "exact_request": raw,
+        "local_git_workspace": local_git_workspace,
     }
-    if (vercel_deploy or github_push or aws_scope) and not railway:
+    if (vercel_deploy or github_push or aws_scope or local_git_workspace) and not railway:
         intent["ignore_railway"] = True
     if railway and not vercel_deploy:
         intent["ignore_vercel_noise"] = True

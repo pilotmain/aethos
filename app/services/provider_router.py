@@ -202,6 +202,14 @@ def should_skip_railway_bounded_path(user_text: str) -> bool:
     urls = extract_urls_from_text(raw)
     url_joined = " ".join(urls).lower()
     rw_url = "railway.app" in url_joined or "railway.com" in url_joined
+    if not rw_url and not re.search(r"\brailway\b", tl):
+        if re.search(
+            r"(?i)(check\s+this\s+git\s+in\s+local|this\s+git\s+in\s+local|git\s+in\s+local|"
+            r"\blocal\s+git\b|on\s+my\s+machine|this\s+git\s+locally)",
+            raw,
+        ):
+            logger.info("provider_router.skip_railway local_git_workspace preview=%s", raw[:120])
+            return True
     if not rw_url:
         if any(x in url_joined for x in ("vercel.com", ".vercel.app", "vercel.app")):
             return True

@@ -274,6 +274,8 @@ It is easy to expect: **“`gh auth status` succeeded → Nexa should immediatel
 
 After successful **`gh`** / **Vercel** CLI verification, operator replies append a short **“What this step did”** section (`operator_verify_followup.py`) pointing users at **host executor** mutations and **`docs/RUNBOOK_HOST_EXECUTOR_GIT_README.md`**.
 
+**Local-git vs Railway routing:** `docs/WEEK1_LOCAL_GIT_ROUTING.md` — phrases like *check this git in local* bias away from the bounded Railway investigation (no Mac path scanner; worker paths still use `HOST_EXECUTOR_WORK_ROOT`).
+
 ---
 
 ## 12. Tests (extended)

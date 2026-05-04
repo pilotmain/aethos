@@ -52,6 +52,11 @@ def _ensure_progress_prefix(text: str, fallback_progress: list[str]) -> str:
 
 
 def _strong_hosted_or_deploy_cue(text: str) -> bool:
+    from app.services.intent_focus_filter import extract_focused_intent
+
+    fi = extract_focused_intent(text or "")
+    if fi.get("local_git_workspace") and not fi.get("railway"):
+        return False
     tl = (text or "").lower()
     if re.search(
         r"(?i)\b(railway|render\.com|fly\.io|heroku|vercel|netlify)\b",

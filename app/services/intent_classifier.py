@@ -197,6 +197,27 @@ def looks_like_orchestrate_system(message: str) -> bool:
     return any(c in t for c in cues)
 
 
+def _looks_like_local_git_workspace_without_hosted_provider(message: str) -> bool:
+    """True for laptop/local-git checks without naming Railway/Vercel/etc."""
+    t = (message or "").lower()
+    if not re.search(r"(?i)\bgit\b", t):
+        return False
+    local_cue = bool(
+        re.search(
+            r"(?i)(check\s+this\s+git\s+in\s+local|this\s+git\s+in\s+local|git\s+in\s+local|"
+            r"\blocal\s+git\b|on\s+my\s+machine|this\s+git\s+locally)",
+            message or "",
+        )
+    )
+    hosted_named = bool(
+        re.search(
+            r"(?i)\b(railway|vercel|render\.com|fly\.io|heroku|netlify)\b",
+            t,
+        )
+    ) or "railway.app" in t or ".vercel.app" in t
+    return local_cue and not hosted_named
+
+
 def looks_like_external_execution(message: str) -> bool:
     """
     User wants Nexa to coordinate real steps: hosted provider + repo + push/deploy.
@@ -204,6 +225,8 @@ def looks_like_external_execution(message: str) -> bool:
     Narrower than external_investigation (diagnose/triage). Must stay after orchestrate_system.
     """
     if looks_like_orchestrate_system(message):
+        return False
+    if _looks_like_local_git_workspace_without_hosted_provider(message):
         return False
     t = (message or "").lower()
     if len(t) < 10:

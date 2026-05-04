@@ -27,6 +27,13 @@ def test_extract_focused_intent_keeps_railway_when_named() -> None:
     assert fi.get("ignore_railway") is not True
 
 
+def test_extract_focused_intent_local_git_sets_ignore_railway() -> None:
+    msg = "check this git in local and add a README"
+    fi = extract_focused_intent(msg)
+    assert fi.get("local_git_workspace") is True
+    assert fi.get("ignore_railway") is True
+
+
 def test_strip_railway_lines_when_vercel_focused() -> None:
     body = "### Progress\n\n→ Check Vercel\n\n→ Ask for Railway token on worker\n\n### Done"
     user = "fix my Vercel deploy at https://foo.vercel.app"
