@@ -117,6 +117,7 @@ Run:
 - **Sequential host workflows** (e.g. `vercel_remove` → `file_write` → `git_commit` → `git_push` in one run): **not implemented**—run **separate** approved jobs in order.
 - **Natural language → `vercel_remove`**: **not implemented** (destructive); list projects has NL inference only—see **§11.5**.
 - **Auto-retry after user says “done”** (e.g. post-login): not implemented as a dedicated feature.
+- **Operator probe success → automatic host mutations**: **not implemented** by design today—operator loop **does not** enqueue `host_executor` jobs after `verified`; see **§11.8**.
 
 ---
 
@@ -251,6 +252,25 @@ git log --oneline -15 -- app/services/host_executor.py docker-compose.yml \
 - **GitHub repo 404** — create the repo (`gh repo create` / UI); Nexa cannot push to a missing remote.
 - **`git clone` into work root** — no **`git_clone`** `host_action` yet; clone manually or automate outside Nexa.
 - **HTTPS `git push`** — needs credentials in the **worker** environment (`GITHUB_TOKEN`, SSH agent, etc.), same as manual push from that host.
+
+### 11.8 Operator verification vs host mutations (read this before “fixing” the gateway)
+
+It is easy to expect: **“`gh auth status` succeeded → Nexa should immediately run `file_write` / `git commit` / `vercel remove`.”** In **this** codebase, that chain **does not exist** in one turn. That is not a small wiring bug—it reflects **two separate subsystems**:
+
+| Subsystem | Entry | What it does |
+|-----------|--------|----------------|
+| **Operator execution loop** | `try_operator_execution` in `operator_execution_loop.py` | **Read-only** CLI diagnostics (`vercel`/`gh`/local git status), optional phased **operator_execution_actions** when flags + cues match. Returns `OperatorExecutionResult` with **`handled`**, **`verified`**, **`evidence`** (dict), etc.—**not** a `next_action` payload for `host_executor`. |
+| **Host executor** | Chat / UI paths that enqueue **`command_type: host-executor`** jobs | **Allowlisted** `host_action` only; runs on the worker **after** normal **approval / permission** flow (`host_executor_chat`, `AgentJobService`, …). |
+
+**Gateway behavior** (`gateway/runtime.py`): if `try_operator_execution` returns **`handled`**, the structured turn **returns immediately** with the operator reply—it does **not** fall through to enqueue host-executor work for the same user line. So **“verified probe”** and **“mutating job”** are **not** automatically chained.
+
+**What is *not* implemented** (despite external writeups that describe it):
+
+- There is **no** `NEXA_OPERATOR_AUTO_PROCEED` (or similar) flag in `Settings`.
+- There is **no** “after `verified=True`, call `execute_payload` for `file_write` → `git_commit` → `git_push`” in the gateway.
+- **`host_executor_intent`** does **not** map a single sentence like “check git and add README and push” into a **multi-step** host workflow—patterns are **single-action** where implemented.
+
+**Product direction (if you want “verify then act”)**: requires an explicit design: either (a) **orchestrate multiple host-executor jobs** with separate approvals, (b) a **trusted workflow** type with one upfront approval, or (c) extend **operator_execution_actions** / phased loop—**not** a documentation-only change.
 
 ---
 
