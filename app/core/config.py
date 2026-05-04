@@ -415,6 +415,10 @@ class Settings(BaseSettings):
     nexa_operator_cli_gh_abs: str = ""
     nexa_operator_cli_git_abs: str = ""
     nexa_operator_cli_railway_abs: str = ""
+    # When True, append Docker/host login instructions if Vercel/gh fail with "not logged in" patterns.
+    nexa_operator_cli_auth_guidance: bool = True
+    # Shown in guidance text for docker exec examples (override if your compose container name differs).
+    nexa_operator_guidance_docker_container: str = "nexa-api"
     # Structured workspace intelligence (file-based context under data/nexa_workspace/).
     nexa_workspace_intelligence_enabled: bool = False
     nexa_workspace_intel_root: str = ""
