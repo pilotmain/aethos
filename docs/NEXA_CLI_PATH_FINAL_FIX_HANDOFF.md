@@ -50,6 +50,8 @@ Operator Mode uses this path when **`NEXA_OPERATOR_CLI_PROFILE_SHELL`** is **tru
 
 - **`run_allowlisted_argv_via_login_shell`** in **`app/services/operator_shell_cli.py`**
 
+**Shell binary:** Nexa uses **`resolve_login_shell_executable()`** — prefers **`$SHELL`** (same default as Terminal/Cursor when the worker inherits your environment), then **`/bin/zsh`**, **`/bin/bash`**, **`/bin/sh`**. Invocation is **`[shell, "-l", "-c", script]`** (login shell + script). This avoids hard-coding **bash** when your profile is **zsh**-centric.
+
 `host_executor` only **calls** it for **`git`** when profile shell is enabled.
 
 ---
