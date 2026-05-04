@@ -41,9 +41,9 @@ Prefer **short, explicit** requests that match **`host_executor_intent`** patter
 2. **Repository exists** on GitHub (404 → create with `gh repo create` or the UI).
 3. **Repo cloned** under the **host executor work root** (`get_settings().host_executor_work_root`, often project root unless overridden). Example layout on macOS when repos live under your user directory:
 
-   `/Users/raya/pilot-command-center/.git/`
+   `<work_root>/pilot-command-center/.git/` (e.g. `/Users/you/pilot-command-center` on the host when `HOST_EXECUTOR_WORK_ROOT=/Users/you`)
 
-   With Docker, **mount** that host tree into the API container (e.g. `/Users/raya:/Users/raya` in `docker-compose.override.yml`) and set **`HOST_EXECUTOR_WORK_ROOT=/Users/raya`** in `.env` so paths match **inside** the container.
+   With Docker, use **`docker-compose.override.yml`** (copy from **`docker-compose.override.example.yml`**) to bind-mount your repos and set **`HOST_EXECUTOR_WORK_ROOT`** to the **container** path of that mount.
 
 4. **Push credentials** for `git push` (HTTPS token / SSH) available **inside the environment where the worker runs**, same as manual `git push` from that host.
 
@@ -136,8 +136,8 @@ Requires an explicit boolean confirmation and a **slug** (not a URL path):
 
 ```bash
 docker exec -it nexa-api python -c "from app.core.config import get_settings; print(get_settings().host_executor_work_root)"
-docker exec -it nexa-api ls -la /Users/raya/pilot-command-center
-docker exec -it nexa-api bash -c "cd /Users/raya/pilot-command-center && git status && git remote -v"
+docker exec -it nexa-api sh -c 'ROOT=$(python -c "from app.core.config import get_settings; print(get_settings().host_executor_work_root)") && ls -la "$ROOT/pilot-command-center"'
+docker exec -it nexa-api sh -c 'ROOT=$(python -c "from app.core.config import get_settings; print(get_settings().host_executor_work_root)") && cd "$ROOT/pilot-command-center" && git status && git remote -v'
 ```
 
 ## Related commits / docs

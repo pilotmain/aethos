@@ -6,26 +6,18 @@
 
 Nested chains are not supported. **Week 2 v2** adds optional, narrow **NL → chain** mapping (see below).
 
-## macOS + Docker: repos under `/Users/raya`
+## Docker: local git repos (host executor)
 
-If your git repos live on the Mac under **`/Users/raya`**, the API container cannot see them until you **bind-mount** that directory and point **`HOST_EXECUTOR_WORK_ROOT`** at the **same path inside the container**.
+The committed **`docker-compose.yml`** does **not** include machine-specific paths. For host-executor jobs that touch repos on your Mac (or Linux host):
 
-Example `docker-compose.override.yml`:
+1. Copy **`docker-compose.override.example.yml`** → **`docker-compose.override.yml`** (gitignored).
+2. Edit the **host** path (left side of the volume) and uncomment **one** of the patterns in the example file:
+   - **Same path in container** — e.g. `- /Users/you:/Users/you` with `HOST_EXECUTOR_WORK_ROOT=/Users/you`
+   - **Fixed container path** — e.g. `- /Users/you:/app/repos` with `HOST_EXECUTOR_WORK_ROOT=/app/repos`
+3. Set **`HOST_EXECUTOR_WORK_ROOT`** in `.env` to the **container** path (right side of the mount).
+4. Restart: `docker compose up -d api` (add `-f docker-compose.sqlite.yml` if you use the SQLite stack).
 
-```yaml
-services:
-  api:
-    volumes:
-      - /Users/raya:/Users/raya
-```
-
-Example `.env` (inside-container path matches the mount target):
-
-```bash
-HOST_EXECUTOR_WORK_ROOT=/Users/raya
-```
-
-Then payload paths such as `pilot-command-center/README.md` are relative to `/Users/raya` (i.e. `/Users/raya/pilot-command-center/README.md` inside the container). Use a **narrower** mount (single repo) if you do not want the whole home tree visible in the container.
+Then payload paths such as `pilot-command-center/README.md` are relative to that work root. Prefer a **narrow** mount (single repo folder) if you do not want a large tree visible in the container.
 
 ## Enabling chains
 

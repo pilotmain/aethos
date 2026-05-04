@@ -1,0 +1,19 @@
+# Copy to `docker-compose.override.yml` (gitignored) and edit host paths for your machine.
+# Compose merges overrides with `docker-compose.yml` / `docker-compose.sqlite.yml`.
+# See: https://docs.docker.com/compose/how-tos/multiple-compose-files/merge/
+#
+# Host executor: mount the directory that contains your git checkouts, then set
+# HOST_EXECUTOR_WORK_ROOT in .env to the *container* path (right side below).
+
+services:
+  api:
+    volumes:
+      # --- Pick ONE style (uncomment one line, edit host path) ---
+      #
+      # A) Same path on host and in container (common on Docker Desktop for Mac):
+      #    - /Users/YOUR_USERNAME:/Users/YOUR_USERNAME
+      #    with HOST_EXECUTOR_WORK_ROOT=/Users/YOUR_USERNAME
+      #
+      # B) Map your home (or a subfolder) to a fixed path in the container:
+      - /Users/YOUR_USERNAME:/app/repos
+      #    with HOST_EXECUTOR_WORK_ROOT=/app/repos

@@ -28,8 +28,6 @@ services:
       - sqlite_data:/app/data
       - ./.agent_tasks:/app/.agent_tasks
       - runtime_data:/app/.runtime
-      # Host executor: local git repos on this Mac (matches HOST_EXECUTOR_WORK_ROOT=/Users/raya in .env).
-      - /Users/raya:/Users/raya
       - nexa_vercel_cli_auth:/root/.vercel
       - nexa_gh_cli_auth:/root/.config/gh
     develop:
