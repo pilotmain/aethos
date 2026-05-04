@@ -19,7 +19,7 @@ Because **verify** and **mutate** are **different subsystems**. The gateway may 
 
 ### FAQ: What should I say for mutations?
 
-Prefer **short, explicit** requests that match **`host_executor_intent`** patterns where possible (e.g. “git push”), or describe what you want so the UI/LLM builds **`payload_json`**. Long sentences mixing “check git AND add README AND push” are **not** automatically split into three host actions—use separate asks or queue payloads manually.
+Prefer **short, explicit** requests that match **`host_executor_intent`** patterns where possible (e.g. “git push”), or describe what you want so the UI/LLM builds **`payload_json`**. Long sentences mixing “check git AND add README AND push” are **not** automatically split into three host actions—use separate asks or queue payloads manually. **Optional:** enable **`host_action: chain`** so one approved job runs multiple allowlisted steps in order — see **`docs/WEEK2_HOST_ACTION_CHAINS.md`**.
 
 ## What does *not* exist (do not document or use)
 

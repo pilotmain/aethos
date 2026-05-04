@@ -318,6 +318,31 @@ def _validate_enqueue_payload(payload: dict[str, Any]) -> dict[str, Any] | None:
             out2["intel_operation"] = str(payload.get("intel_operation") or "summarize")[:48]
         return _attach_cwd(out2)
 
+    if act == "chain":
+        from app.services.host_executor_chain import parse_chain_inner_allowed
+
+        s = get_settings()
+        if not bool(getattr(s, "nexa_host_executor_chain_enabled", False)):
+            return None
+        allowed = parse_chain_inner_allowed(s)
+        actions_in = payload.get("actions")
+        if not isinstance(actions_in, list) or not actions_in:
+            return None
+        max_s = min(max(int(getattr(s, "nexa_host_executor_chain_max_steps", 10)), 1), 20)
+        if len(actions_in) > max_s:
+            return None
+        for step in actions_in:
+            if not isinstance(step, dict):
+                return None
+            sha = (step.get("host_action") or "").strip().lower()
+            if sha == "chain" or sha not in allowed:
+                return None
+        out_ch: dict[str, Any] = {"host_action": "chain", "actions": list(actions_in)}
+        stp = payload.get("stop_on_failure")
+        if isinstance(stp, bool):
+            out_ch["stop_on_failure"] = stp
+        return _attach_cwd(out_ch)
+
     return None
 
 

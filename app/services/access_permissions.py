@@ -18,6 +18,7 @@ from app.services import workspace_registry as workspace_registry_mod
 from app.services.audit_service import audit
 from app.services.channel_gateway.governance import user_can_approve_high_risk
 from app.services.governance_taxonomy import EVENT_APPROVAL_ROLE_DENIED
+from app.services.host_executor_chain import merge_chain_step, parse_chain_inner_allowed
 from app.services.host_executor_intent import safe_relative_path
 from app.services.sensitivity import NEXA_SENSITIVITY_KEY, detect_sensitivity
 from app.services.trust_audit_constants import (
@@ -419,6 +420,8 @@ def host_action_scope_and_risk(
         return SCOPE_CLOUD_CLI, RISK_MEDIUM
     if a == "vercel_remove":
         return SCOPE_CLOUD_CLI, RISK_HIGH
+    if a == "chain":
+        return SCOPE_GIT_OPERATIONS, RISK_HIGH
     return SCOPE_COMMAND_RUN, RISK_MEDIUM
 
 
@@ -648,6 +651,8 @@ def finalize_permission_use(
         label = "git_operations"
     elif ha in ("vercel_projects_list", "vercel_remove"):
         label = "cloud_cli"
+    elif ha == "chain":
+        label = "host_action_chain"
     else:
         label = grants[0].scope if grants else ""
 
@@ -681,6 +686,17 @@ def resolve_host_executor_permission_paths(work_root: Path, payload: dict[str, A
     ha = (payload.get("host_action") or "").strip().lower()
     rel = (payload.get("relative_path") or payload.get("relative_dir") or "").strip()
     paths: list[Path] = []
+    if ha == "chain":
+        actions_in = payload.get("actions")
+        if not isinstance(actions_in, list) or not actions_in:
+            return [work_root.resolve()]
+        nested: list[Path] = []
+        for step in actions_in[:24]:
+            if not isinstance(step, dict):
+                continue
+            merged = merge_chain_step(payload, step)
+            nested.extend(resolve_host_executor_permission_paths(work_root, merged))
+        return nested if nested else [work_root.resolve()]
     if ha == "read_multiple_files":
         raw_list = payload.get("relative_paths")
         if isinstance(raw_list, list):
@@ -758,6 +774,64 @@ def check_host_executor_job(
         return False, err, []
 
     return True, "", grants
+
+
+def check_host_executor_chain_job(
+    db: Session,
+    *,
+    owner_user_id: str,
+    work_root: Path,
+    payload: dict[str, Any],
+) -> tuple[bool, str, list[AccessPermission]]:
+    """Verify permissions for every inner step before running ``host_action: chain``."""
+    ha_outer = (payload.get("host_action") or "").strip().lower()
+    if ha_outer != "chain":
+        return False, "internal: not a chain payload", []
+
+    s = get_settings()
+    if not bool(getattr(s, "nexa_host_executor_chain_enabled", False)):
+        return (
+            False,
+            "Chain host actions are disabled. Set NEXA_HOST_EXECUTOR_CHAIN_ENABLED=1 on the worker.",
+            [],
+        )
+
+    allowed_inner = parse_chain_inner_allowed(s)
+    actions_in = payload.get("actions")
+    if not isinstance(actions_in, list) or not actions_in:
+        return False, "chain requires a non-empty actions list", []
+    max_s = min(max(int(getattr(s, "nexa_host_executor_chain_max_steps", 10)), 1), 20)
+    if len(actions_in) > max_s:
+        return False, f"chain has {len(actions_in)} steps; max is {max_s}", []
+
+    all_grants: list[AccessPermission] = []
+    for i, step in enumerate(actions_in):
+        if not isinstance(step, dict):
+            return False, f"chain step {i + 1} must be an object", []
+        merged = merge_chain_step(payload, step)
+        iha = (merged.get("host_action") or "").strip().lower()
+        if iha == "chain":
+            return False, "nested chain is not allowed", []
+        if iha not in allowed_inner:
+            return (
+                False,
+                f"chain step {i + 1}: host_action {iha!r} is not allowed; allowed: {sorted(allowed_inner)}",
+                [],
+            )
+        ok, err, grants = check_host_executor_job(
+            db,
+            owner_user_id=owner_user_id,
+            host_action=iha,
+            work_root=work_root,
+            payload=merged,
+        )
+        if not ok:
+            return False, err, []
+        all_grants.extend(grants)
+    by_id: dict[int, AccessPermission] = {}
+    for g in all_grants:
+        by_id[g.id] = g
+    return True, "", list(by_id.values())
 
 
 def format_permission_request_prompt(

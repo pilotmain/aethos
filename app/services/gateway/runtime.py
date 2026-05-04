@@ -15,7 +15,12 @@ from app.services.metrics.runtime import record_mission_completed, record_missio
 _log = get_logger("gateway")
 
 
-def gateway_finalize_chat_reply(text: str, *, source: str = "gateway") -> str:
+def gateway_finalize_chat_reply(
+    text: str,
+    *,
+    source: str = "gateway",
+    user_text: str | None = None,
+) -> str:
     """Normalize user-visible copy: log legacy markers, then scrub when needed (Phase 51)."""
     from app.services.external_execution_session import scrub_operator_idle_loop_phrases
     from app.services.identity.scrub import gateway_identity_needs_scrub, scrub_legacy_identity_text
@@ -28,7 +33,12 @@ def gateway_finalize_chat_reply(text: str, *, source: str = "gateway") -> str:
             source,
             (text or "")[:240],
         )
-        return scrub_legacy_identity_text(text)
+        text = scrub_legacy_identity_text(text)
+    if user_text:
+        from app.services.intent_focus_filter import extract_focused_intent
+        from app.services.operator_chain_clarification import append_chain_clarification_if_needed
+
+        text = append_chain_clarification_if_needed(text, extract_focused_intent(user_text))
     return text
 
 
@@ -64,7 +74,7 @@ def gateway_finalize_operator_or_execution_reply(
         layered = apply_precise_operator_response(layered, user_text=user_text)
     if bool(getattr(settings, "nexa_operator_mode", False)):
         layered = clean_operator_reply_format(layered)
-    return gateway_finalize_chat_reply(layered, source=layer)
+    return gateway_finalize_chat_reply(layered, source=layer, user_text=user_text)
 
 
 def merge_credential_payload_with_chained_execution(
@@ -578,7 +588,11 @@ class NexaGateway:
 
         if user_row.is_new and intent == "general_chat" and is_weak_input(raw):
             sm = onboarding_deterministic_reply(raw) or weak_input_response()
-            return {"mode": "chat", "text": gateway_finalize_chat_reply(sm, source="onboarding_weak_reply"), "intent": intent}
+            return {
+                "mode": "chat",
+                "text": gateway_finalize_chat_reply(sm, source="onboarding_weak_reply", user_text=raw),
+                "intent": intent,
+            }
 
         if intent == "brain_dump":
             _log.warning(
@@ -598,6 +612,7 @@ class NexaGateway:
                     "text": gateway_finalize_chat_reply(
                         apply_tone(no_tasks_response(), beh_ctx.memory),
                         source="no_tasks_response",
+                        user_text=raw,
                     ),
                     "intent": intent,
                 }
@@ -614,7 +629,11 @@ class NexaGateway:
                 conversation_snapshot=snap,
                 routing_agent_key=routing_agent_key,
             )
-            return {"mode": "chat", "text": gateway_finalize_chat_reply(reply, source="brain_dump_reply"), "intent": intent}
+            return {
+                "mode": "chat",
+                "text": gateway_finalize_chat_reply(reply, source="brain_dump_reply", user_text=raw),
+                "intent": intent,
+            }
 
         t_clean = strip_correction_prefix(raw)
         stripped = raw
@@ -628,7 +647,15 @@ class NexaGateway:
                 conversation_snapshot=snap,
                 turn_memory_summary=mem_sum or None,
             )
-            return {"mode": "chat", "text": gateway_finalize_chat_reply(gq, source="general_answer"), "intent": "general_answer"}
+            return {
+                "mode": "chat",
+                "text": gateway_finalize_chat_reply(
+                    gq,
+                    source="general_answer",
+                    user_text=(t_clean or "").strip() or stripped,
+                ),
+                "intent": "general_answer",
+            }
 
         from app.services.external_execution_session import scrub_generic_login_refusal_when_local_auth_claimed
 
@@ -644,7 +671,11 @@ class NexaGateway:
         )
         reply = scrub_generic_login_refusal_when_local_auth_claimed(reply, raw)
         reply = _merge_phase50_assist(reply, raw, intent)
-        return {"mode": "chat", "text": gateway_finalize_chat_reply(reply, source="full_chat_reply"), "intent": intent}
+        return {
+            "mode": "chat",
+            "text": gateway_finalize_chat_reply(reply, source="full_chat_reply", user_text=raw),
+            "intent": intent,
+        }
 
     def handle_message(
         self,

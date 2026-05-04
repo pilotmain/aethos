@@ -18,6 +18,11 @@ from pathlib import Path
 from typing import Any
 
 from app.core.config import REPO_ROOT, get_settings
+from app.services.host_executor_chain import (
+    chain_step_output_failed,
+    merge_chain_step,
+    parse_chain_inner_allowed,
+)
 from app.services.host_executor_intent import safe_relative_path
 from app.services.operator_cli_absolute import apply_operator_cli_absolute_fallback
 from app.services.operator_cli_path import cli_environ_for_operator
@@ -276,18 +281,31 @@ def execute_payload(
     exec_root = _resolve_exec_root(payload, root)
     max_bytes = min(max(int(getattr(s, "host_executor_max_file_bytes", 262_144)), 1024), 2_000_000)
 
+    chain_inner = bool(payload.get("_nexa_chain_inner_step"))
     enforce = enforce_perm
     grants: list[Any] = []
-    if db is not None and uid and enforce:
-        from app.services.access_permissions import check_host_executor_job
-
-        ok, err, grants = check_host_executor_job(
-            db,
-            owner_user_id=str(uid),
-            host_action=action,
-            work_root=root,
-            payload=payload,
+    check_perms = bool(db is not None and uid and enforce and not chain_inner)
+    if check_perms:
+        from app.services.access_permissions import (
+            check_host_executor_chain_job,
+            check_host_executor_job,
         )
+
+        if action == "chain":
+            ok, err, grants = check_host_executor_chain_job(
+                db,
+                owner_user_id=str(uid),
+                work_root=root,
+                payload=payload,
+            )
+        else:
+            ok, err, grants = check_host_executor_job(
+                db,
+                owner_user_id=str(uid),
+                host_action=action,
+                work_root=root,
+                payload=payload,
+            )
         if not ok:
             raise ValueError(err)
 
@@ -300,6 +318,52 @@ def execute_payload(
             db, str(uid), grants, host_action=action, payload=payload
         )
         return f"{prefix}\n\n{text}" if prefix else text
+
+    if action == "chain":
+        if not bool(getattr(s, "nexa_host_executor_chain_enabled", False)):
+            raise ValueError(
+                "Chain host actions are disabled. Set NEXA_HOST_EXECUTOR_CHAIN_ENABLED=1 on the worker."
+            )
+        allowed_inner = parse_chain_inner_allowed(s)
+        actions_in = payload.get("actions")
+        if not isinstance(actions_in, list) or not actions_in:
+            raise ValueError("chain requires a non-empty actions list")
+        max_s = min(max(int(getattr(s, "nexa_host_executor_chain_max_steps", 10)), 1), 20)
+        if len(actions_in) > max_s:
+            raise ValueError(f"chain has {len(actions_in)} steps; max is {max_s}")
+        for i, step in enumerate(actions_in):
+            if not isinstance(step, dict):
+                raise ValueError(f"chain step {i + 1} must be an object")
+            iha = (step.get("host_action") or "").strip().lower()
+            if iha == "chain":
+                raise ValueError("nested chain is not allowed")
+            if iha not in allowed_inner:
+                raise ValueError(
+                    f"chain step {i + 1}: host_action {iha!r} is not allowed in a chain; "
+                    f"allowed: {sorted(allowed_inner)}"
+                )
+        stop_on = payload.get("stop_on_failure", True)
+        if not isinstance(stop_on, bool):
+            stop_on = True
+        parts_out: list[str] = []
+        for i, step in enumerate(actions_in):
+            merged = merge_chain_step(payload, step)
+            iha = (merged.get("host_action") or "").strip().lower()
+            merged_inner = dict(merged)
+            merged_inner["_nexa_chain_inner_step"] = True
+            try:
+                out = execute_payload(merged_inner, db=db, job=job)
+            except ValueError as e:
+                parts_out.append(f"### Step {i + 1} ({iha}) — error\n\n{e}")
+                if stop_on:
+                    parts_out.append("_Stopped (stop_on_failure=True)._")
+                    return _finalize_output("\n\n".join(parts_out))
+                continue
+            parts_out.append(f"### Step {i + 1} ({iha})\n\n{out}")
+            if stop_on and chain_step_output_failed(out):
+                parts_out.append("_Stopped (stop_on_failure=True) after a failed step._")
+                return _finalize_output("\n\n".join(parts_out))
+        return _finalize_output("\n\n".join(parts_out))
 
     if action == "git_status":
         code, out, err = _run_argv(
@@ -620,7 +684,7 @@ def execute_payload(
         return _finalize_output((msg or "Removed.")[:8000])
 
     raise ValueError(
-        f"unknown host_action {action!r}; try: git_status, run_command, file_read, file_write, "
+        f"unknown host_action {action!r}; try: chain, git_status, run_command, file_read, file_write, "
         "git_commit, git_push, vercel_projects_list, vercel_remove, list_directory, find_files, "
         "read_multiple_files"
     )
@@ -646,6 +710,8 @@ def execute_host_executor_job(job: Any) -> str:
 def proposed_risk_level(payload: dict[str, Any]) -> str:
     """Suggest risk for UI / policy (all host-executor jobs still require approval in AgentJobService)."""
     action = (payload.get("host_action") or "").strip().lower()
+    if action == "chain":
+        return "high"
     if action in ("file_write", "git_commit", "git_push", "vercel_remove"):
         return "high"
     if action == "vercel_projects_list":

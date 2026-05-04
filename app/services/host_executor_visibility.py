@@ -54,6 +54,9 @@ def allowed_tool_human(payload: dict[str, Any]) -> str:
         return f"vercel remove {pn} --yes" if pn else "vercel remove (needs project + vercel_yes)"
     if act == "read_multiple_files":
         return "read multiple text files under an allowed folder (no indexing)"
+    if act == "chain":
+        n = len(payload.get("actions") or []) if isinstance(payload.get("actions"), list) else 0
+        return f"chain ({n} allowlisted steps)" if n else "chain"
     return act or "—"
 
 
@@ -146,6 +149,7 @@ def allowed_actions_catalog() -> list[str]:
         "vercel_projects_list — vercel projects list (read-only)",
         "vercel_remove — vercel remove <slug> --yes (requires vercel_yes: true)",
         "read_multiple_files — batch-read text files under a folder (optional LLM summary)",
+        "chain — run multiple allowlisted host_action steps in order (flag-gated; one approval)",
     ]
 
 
@@ -171,6 +175,7 @@ def host_executor_panel_public() -> dict[str, Any]:
             "list_directory",
             "find_files",
             "read_multiple_files",
+            "chain",
         ],
         "allowed_run_names": runs,
         "timeout_seconds": timeout,

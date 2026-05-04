@@ -77,6 +77,9 @@ def title_for_payload(payload: dict[str, Any]) -> str:
             return "Read multiple files (compare/explicit)"
         p = (payload.get("relative_path") or payload.get("relative_dir") or ".").strip() or "."
         return f"Analyze folder {p}"
+    if act == "chain":
+        n = len(payload.get("actions") or []) if isinstance(payload.get("actions"), list) else 0
+        return f"Host action chain ({n} steps)" if n else "Host action chain"
     return "Host action"
 
 

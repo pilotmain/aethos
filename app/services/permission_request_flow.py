@@ -13,6 +13,7 @@ from app.models.access_permission import AccessPermission
 from app.services.access_permissions import (
     STATUS_DENIED,
     STATUS_PENDING,
+    check_host_executor_chain_job,
     check_host_executor_job,
     format_awaiting_permission_duplicate,
     format_permission_request_prompt,
@@ -128,6 +129,8 @@ def reason_for_host_payload(payload: dict[str, Any]) -> str:
         return "List Vercel projects (CLI)"
     if ha == "vercel_remove":
         return "Remove a Vercel project (destructive)"
+    if ha == "chain":
+        return "Run a batched chain of allowlisted host actions"
     if ha == "run_command":
         rn = (payload.get("run_name") or "").strip().lower()
         if rn == "pytest":
@@ -193,6 +196,14 @@ def precheck_host_executor_permissions(
         return True, ""
     ha = (payload.get("host_action") or "").strip().lower()
     wr = default_work_root_path()
+    if ha == "chain":
+        ok, err, _ = check_host_executor_chain_job(
+            db,
+            owner_user_id=str(owner_user_id),
+            work_root=wr,
+            payload=payload,
+        )
+        return ok, err
     ok, err, _ = check_host_executor_job(
         db,
         owner_user_id=str(owner_user_id),
