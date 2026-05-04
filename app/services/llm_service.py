@@ -21,7 +21,6 @@ from app.services.llm_usage_recorder import (
     record_anthropic_message_usage,
     record_openai_message_usage,
 )
-from app.services.network_policy.policy import assert_provider_egress_allowed
 from app.services.providers.sdk import build_anthropic_client, build_openai_client
 
 logger = logging.getLogger(__name__)
@@ -94,98 +93,30 @@ def _parse_json_object_from_llm(text: str) -> dict:
     return json.loads(raw)
 
 
-def _intent_classify_with_openai(
-    user_prompt: str, openai_key: str, *, m: MergedLlmKeyInfo
-) -> dict:
-    s = get_settings()
-    oai = build_openai_client(api_key=openai_key)
-    logger.warning("INTENT_LLM_CALL_TRIGGERED provider=openai")
-    response = oai.chat.completions.create(
-        model=s.openai_model,
-        temperature=0.1,
-        response_format={"type": "json_object"},
-        messages=[{"role": "user", "content": user_prompt}],
-    )
-    try:
-        record_openai_message_usage(
-            response,
-            model=s.openai_model,
-            used_user_key=m.has_user_openai,
-        )
-    except Exception:  # noqa: BLE001
-        pass
-    out = response.choices[0].message.content or "{}"
-    try:
-        return _parse_json_object_from_llm(out)
-    except (json.JSONDecodeError, TypeError) as e:
-        logger.error("INTENT_LLM JSON_PARSE_FAILED raw=%s", out[:200])
-        raise
-
-
 def call_primary_llm_json(user_prompt: str) -> dict:
     """
     Call the primary configured LLM with a full user prompt; return a parsed JSON object.
-    Tries Anthropic first, then OpenAI on Anthropic failure (matches response composer).
-    Merges per-user (BYOK) keys with system env (see :func:`get_merged_api_keys`).
+
+    Uses Phase 11 registry (:mod:`app.services.llm.completion`) — provider order from
+    ``NEXA_LLM_PROVIDER`` / fallbacks / auto chain.
     """
-    settings = get_settings()
-    m = get_merged_api_keys()
-    if not (m.anthropic_api_key or m.openai_api_key):
+    from app.services.llm.completion import primary_complete_raw, providers_available
+
+    if not providers_available():
         raise RuntimeError("No LLM client configured for JSON call")
 
-    if m.anthropic_api_key:
-        try:
-            logger.warning("INTENT_LLM_CALL_TRIGGERED provider=anthropic")
-            client = build_anthropic_client(api_key=m.anthropic_api_key)
-            msg = client.messages.create(
-                model=settings.anthropic_model,
-                max_tokens=1024,
-                temperature=0.1,
-                messages=[{"role": "user", "content": user_prompt}],
-            )
-            try:
-                record_anthropic_message_usage(
-                    msg,
-                    model=settings.anthropic_model,
-                    used_user_key=m.has_user_anthropic,
-                )
-            except Exception:  # noqa: BLE001
-                pass
-            body_parts: list[str] = []
-            for block in msg.content:
-                t = getattr(block, "text", None)
-                if t:
-                    body_parts.append(t)
-            body = "".join(body_parts) if body_parts else "{}"
-            return _parse_json_object_from_llm(body)
-        except (json.JSONDecodeError, TypeError) as e:
-            logger.error("INTENT_LLM JSON_PARSE_FAILED raw=%s", body[:200])
-            if can_openai:
-                logger.warning("INTENT_LLM anthropic body not JSON, trying openai: %s", e)
-                try:
-                    return _intent_classify_with_openai(user_prompt, m.openai_api_key, m=m)
-                except Exception:
-                    logger.exception("LLM_FAILURE call_primary_llm_json (openai after bad JSON)")
-                    raise
-            raise
-        except Exception as e:
-            if can_openai:
-                logger.warning("INTENT_LLM anthropic failed, openai fallback: %s", e)
-                try:
-                    return _intent_classify_with_openai(user_prompt, m.openai_api_key, m=m)
-                except Exception:
-                    logger.exception("LLM_FAILURE call_primary_llm_json (openai fallback)")
-                    raise
-            logger.exception("LLM_FAILURE call_primary_llm_json")
-            raise
-
-    if can_openai:
-        try:
-            return _intent_classify_with_openai(user_prompt, m.openai_api_key, m=m)
-        except Exception:
-            logger.exception("LLM_FAILURE call_primary_llm_json")
-            raise
-    raise RuntimeError("No LLM client configured for JSON call")
+    logger.warning("INTENT_LLM_CALL_TRIGGERED (phase11 registry)")
+    raw = primary_complete_raw(
+        user_prompt,
+        response_format_json=True,
+        max_tokens=1024,
+        temperature=0.1,
+    )
+    try:
+        return _parse_json_object_from_llm(raw)
+    except (json.JSONDecodeError, TypeError) as e:
+        logger.error("INTENT_LLM JSON_PARSE_FAILED raw=%s", raw[:200])
+        raise RuntimeError("LLM returned non-JSON body") from e
 
 
 def _text_from_anthropic_message(msg: object) -> str:
@@ -200,62 +131,21 @@ def _text_from_anthropic_message(msg: object) -> str:
 def call_primary_llm_text(user_prompt: str) -> str:
     """
     Call the primary configured LLM; return raw combined text (no JSON parse).
-    Same provider order as :func:`call_primary_llm_json` (Anthropic, then OpenAI).
+
+    Uses Phase 11 registry — same routing as :func:`call_primary_llm_json`.
     """
-    settings = get_settings()
-    m = get_merged_api_keys()
-    if not (m.anthropic_api_key or m.openai_api_key):
+    from app.services.llm.completion import primary_complete_raw, providers_available
+
+    if not providers_available():
         raise RuntimeError("No LLM client configured for text call")
 
-    can_anthropic = bool(m.anthropic_api_key) and assert_provider_egress_allowed("anthropic", None) is None
-    can_openai = bool(m.openai_api_key) and assert_provider_egress_allowed("openai", None) is None
-    if not can_anthropic and not can_openai:
-        raise RuntimeError("LLM outbound blocked by network egress policy (or no provider keys)")
-
-    if can_anthropic:
-        try:
-            logger.warning("LLM_TEXT_CALL_TRIGGERED provider=anthropic")
-            client = build_anthropic_client(api_key=m.anthropic_api_key)
-            msg = client.messages.create(
-                model=settings.anthropic_model,
-                max_tokens=4096,
-                temperature=0.3,
-                messages=[{"role": "user", "content": user_prompt}],
-            )
-            try:
-                record_anthropic_message_usage(
-                    msg,
-                    model=settings.anthropic_model,
-                    used_user_key=m.has_user_anthropic,
-                )
-            except Exception:  # noqa: BLE001
-                pass
-            return _text_from_anthropic_message(msg)
-        except Exception as e:
-            if not can_openai:
-                logger.exception("LLM_FAILURE call_primary_llm_text (anthropic)")
-                raise
-            logger.warning("LLM_TEXT anthropic failed, openai fallback: %s", e)
-
-    if can_openai:
-        oai = build_openai_client(api_key=m.openai_api_key)
-        logger.warning("LLM_TEXT_CALL_TRIGGERED provider=openai")
-        response = oai.chat.completions.create(
-            model=settings.openai_model,
-            temperature=0.3,
-            messages=[{"role": "user", "content": user_prompt}],
-        )
-        try:
-            record_openai_message_usage(
-                response,
-                model=settings.openai_model,
-                used_user_key=m.has_user_openai,
-            )
-        except Exception:  # noqa: BLE001
-            pass
-        return (response.choices[0].message.content or "").strip()
-
-    raise RuntimeError("No LLM client configured for text call")
+    logger.warning("LLM_TEXT_CALL_TRIGGERED (phase11 registry)")
+    return primary_complete_raw(
+        user_prompt,
+        response_format_json=False,
+        max_tokens=4096,
+        temperature=0.3,
+    )
 
 
 def _infer_category_from_title(title: str) -> str:

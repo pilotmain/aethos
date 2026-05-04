@@ -7,6 +7,7 @@ Same rule as CI guardrails (Phase 10 / 16) — complements import-linter + AST t
 
 from __future__ import annotations
 
+import re
 import sys
 from pathlib import Path
 
@@ -14,13 +15,10 @@ _REPO_ROOT = Path(__file__).resolve().parents[1]
 _APP = _REPO_ROOT / "app"
 _PROVIDERS = _APP / "services" / "providers"
 
-_FORBIDDEN_LINE_MARKERS = (
-    "import openai",
-    "from openai ",
-    "from openai.",
-    "import anthropic",
-    "from anthropic ",
-    "from anthropic.",
+# Match real SDK package imports only (not ``import OpenAIBackend`` / ``anthropic_backend`` paths).
+_VENDOR_IMPORT = re.compile(
+    r"""^\s*(?:import\s+(?:openai|anthropic)(?:\s|$|\.)|from\s+(?:openai|anthropic)(?:\s|$|\.))""",
+    re.IGNORECASE | re.VERBOSE,
 )
 
 
@@ -39,8 +37,7 @@ def scan() -> list[str]:
         for i, line in enumerate(text.splitlines(), start=1):
             if line.strip().startswith("#"):
                 continue
-            low = line.lower()
-            if any(m in low for m in _FORBIDDEN_LINE_MARKERS):
+            if _VENDOR_IMPORT.match(line):
                 bad.append(f"{path.relative_to(_REPO_ROOT)}:{i}:{line.strip()}")
     return bad
 

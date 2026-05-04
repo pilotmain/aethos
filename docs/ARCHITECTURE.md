@@ -8,6 +8,7 @@ This document locks how requests flow through the system after Phase 15–17. Au
 2. **SDK construction** goes through `app/services/providers/sdk.py`: `build_openai_client` / `build_anthropic_client`. Runtime stack inspection restricts callers to:
    - `app.services.providers.*` (provider implementations),
    - `app.services.llm_service` and `app.services.response_composer` (orchestration that predates full gateway-only routing),
+   - `app.services.llm` (Phase 11 multi-provider chat backends; see [PHASE_11_LLM_PROVIDERS.md](PHASE_11_LLM_PROVIDERS.md)),
    - tests (`tests.*`, `pytest`, etc.).
 3. **Business calls** for mission/agent execution should use **`app/services.providers.gateway.call_provider`** (`ProviderRequest`) so privacy, rate limits, and routing stay centralized.
 

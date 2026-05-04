@@ -21,7 +21,11 @@ CRITICAL_BOUNDARY_MSG = (
     "llm_service, response_composer). Use app.services.providers.gateway.call_provider from elsewhere."
 )
 
-_ORCHESTRATION_MODULES = ("app.services.llm_service", "app.services.response_composer")
+_ORCHESTRATION_MODULES = (
+    "app.services.llm_service",
+    "app.services.response_composer",
+    "app.services.llm",
+)
 
 
 def _allowed_runtime_module(name: str) -> bool:

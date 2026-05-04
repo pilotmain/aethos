@@ -112,6 +112,10 @@ def provider_canonical_probe_url(provider: str) -> str | None:
         return "https://api.anthropic.com/"
     if p == "openai":
         return "https://api.openai.com/"
+    if p == "deepseek":
+        return "https://api.deepseek.com/"
+    if p == "openrouter":
+        return "https://openrouter.ai/"
     return None
 
 

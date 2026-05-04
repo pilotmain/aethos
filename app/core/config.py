@@ -115,6 +115,21 @@ class Settings(BaseSettings):
     use_real_llm: bool = False
     # Optional: documented in .env.example; composer still prefers Anthropic if ANTHROPIC_API_KEY is set
     llm_provider: str | None = None
+    # Phase 11 — multi-provider primary LLM (orchestrator / safe_llm path)
+    # auto = prefer anthropic → openai → deepseek → openrouter → ollama when keys allow
+    nexa_llm_provider: str = "auto"
+    nexa_llm_model: str | None = None
+    nexa_llm_api_key: str | None = None
+    nexa_llm_base_url: str | None = None
+    nexa_llm_fallback_providers: str = ""
+    nexa_llm_temperature: float = 0.7
+    nexa_llm_max_tokens: int = 4096
+    deepseek_api_key: str | None = None
+    deepseek_model: str = "deepseek-chat"
+    deepseek_base_url: str | None = None
+    openrouter_api_key: str | None = None
+    openrouter_model: str = "openai/gpt-4o-mini"
+    openrouter_base_url: str | None = None
 
     default_timezone: str = "America/New_York"
     followup_poll_seconds: int = 30
@@ -210,7 +225,7 @@ class Settings(BaseSettings):
     nexa_credential_vault_provider: str = "local"
     nexa_network_egress_mode: str = "allowlist"
     nexa_network_allowed_hosts: str = (
-        "api.openai.com,api.anthropic.com,localhost,127.0.0.1,"
+        "api.openai.com,api.anthropic.com,api.deepseek.com,openrouter.ai,localhost,127.0.0.1,"
         "api.telegram.org,api.search.brave.com,api.tavily.com,serpapi.com,"
         "www.googleapis.com"
     )
@@ -576,11 +591,12 @@ def print_llm_debug_banner() -> None:
     s = get_settings()
     log = logging.getLogger("nexa.settings")
     log.info(
-        "LLM settings use_real_llm=%s anthropic_configured=%s openai_configured=%s llm_provider=%s",
+        "LLM settings use_real_llm=%s anthropic_configured=%s openai_configured=%s llm_provider=%s nexa_llm_provider=%s",
         s.use_real_llm,
         bool(s.anthropic_api_key),
         bool(s.openai_api_key),
         (s.llm_provider or "").strip(),
+        (s.nexa_llm_provider or "").strip(),
     )
     if not s.use_real_llm and (s.anthropic_api_key or s.openai_api_key):
         log.warning(

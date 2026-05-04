@@ -2,19 +2,17 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 _APP = (_REPO_ROOT / "app").resolve()
 _PROVIDERS = (_APP / "services" / "providers").resolve()
 
-_FORBIDDEN_LINE_MARKERS = (
-    "import openai",
-    "from openai ",
-    "from openai.",
-    "import anthropic",
-    "from anthropic ",
-    "from anthropic.",
+# Aligned with scripts/verify_no_direct_providers.py (avoid false positives on ``import OpenAIBackend``).
+_VENDOR_IMPORT = re.compile(
+    r"""^\s*(?:import\s+(?:openai|anthropic)(?:\s|$|\.)|from\s+(?:openai|anthropic)(?:\s|$|\.))""",
+    re.IGNORECASE | re.VERBOSE,
 )
 
 
@@ -41,7 +39,6 @@ def test_no_openai_or_anthropic_imports_outside_providers_package() -> None:
                 continue
             if "app.services.providers.sdk" in line:
                 continue
-            low = line.lower()
-            if any(m in low for m in _FORBIDDEN_LINE_MARKERS):
+            if _VENDOR_IMPORT.match(line):
                 bad.append(f"{path.relative_to(_REPO_ROOT)}:{i}:{line.strip()}")
     assert not bad, "Forbidden provider imports outside app/services/providers:\n" + "\n".join(bad)

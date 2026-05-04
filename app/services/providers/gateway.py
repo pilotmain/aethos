@@ -30,6 +30,7 @@ from app.services.providers.anthropic_provider import call_anthropic
 from app.services.providers.external_audit import persist_external_call
 from app.services.providers.local_stub_provider import call_local_stub
 from app.services.providers.ollama_provider import call_ollama
+from app.services.providers.openai_compatible_vendor import call_openai_compatible_vendor
 from app.services.providers.openai_provider import call_openai
 from app.services.providers.rate_limit import allow_provider_request
 from app.services.network_policy.policy import assert_provider_egress_allowed
@@ -48,7 +49,10 @@ _LOCAL_TRUSTED_PROVIDERS = frozenset({"local_stub", "ollama"})
 def _rough_cost_estimate_usd(provider: str, tokens: int) -> float:
     if provider in ("local_stub", "ollama"):
         return 0.0
-    per_1k = 0.0025 if provider == "anthropic" else 0.0006
+    if provider in ("deepseek", "openrouter"):
+        per_1k = 0.0004
+    else:
+        per_1k = 0.0025 if provider == "anthropic" else 0.0006
     return (max(0, tokens) / 1000.0) * per_1k
 
 _POST_SECRET_MSG = (
@@ -318,7 +322,14 @@ def call_provider(request: ProviderRequest) -> ProviderResponse:
 
     frozen_payload = FrozenPayloadDict(merged)
 
-    if request.provider not in ("local_stub", "openai", "anthropic", "ollama"):
+    if request.provider not in (
+        "local_stub",
+        "openai",
+        "anthropic",
+        "ollama",
+        "deepseek",
+        "openrouter",
+    ):
         err = f"unknown provider: {request.provider}"
         audit(False, err)
         return ProviderResponse(
@@ -352,6 +363,10 @@ def call_provider(request: ProviderRequest) -> ProviderResponse:
                     model=om,
                     timeout_seconds=float(s.nexa_provider_timeout_seconds or 15.0),
                 )
+            elif request.provider == "deepseek":
+                out = call_openai_compatible_vendor(dict(frozen_payload), vendor="deepseek")
+            elif request.provider == "openrouter":
+                out = call_openai_compatible_vendor(dict(frozen_payload), vendor="openrouter")
             else:
                 out = call_anthropic(frozen_payload)
             record_provider_call(latency_ms=(time.perf_counter() - t0) * 1000)
@@ -408,7 +423,13 @@ def call_provider(request: ProviderRequest) -> ProviderResponse:
             _log.warning("ollama local_stub fallback failed: %s", fb_exc)
             out = {"error": "ollama_and_stub_failed", "detail": str(fb_exc)}
 
-    if out is None and request.provider in ("openai", "anthropic", "ollama") and last_err is not None:
+    if out is None and request.provider in (
+        "openai",
+        "anthropic",
+        "ollama",
+        "deepseek",
+        "openrouter",
+    ) and last_err is not None:
         if not s.nexa_strict_privacy_mode and not s.nexa_disable_external_calls:
             try:
                 _log.warning(

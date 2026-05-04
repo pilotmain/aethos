@@ -1,7 +1,20 @@
 # Phase 11 — Multi-provider LLM (spec)
 
-**Status:** Planning / specification (not fully implemented as described below).  
-**Related:** [ARCHITECTURE.md](ARCHITECTURE.md) (current provider gateway and import boundaries), [ROADMAP.md](ROADMAP.md).
+**Status:** Implemented for primary chat paths — registry under `app/services/llm/`, env `NEXA_LLM_*`, gateway vendors `deepseek` / `openrouter`.  
+**Related:** [ARCHITECTURE.md](ARCHITECTURE.md) (provider gateway and import boundaries), [ROADMAP.md](ROADMAP.md).
+
+**Code layout**
+
+| Piece | Role |
+| ----- | ---- |
+| `app/services/llm/base.py` | `Message`, `Tool`, `LLMProvider` ABC |
+| `app/services/llm/registry.py` | Process-local registry + `get_llm_registry()` |
+| `app/services/llm/bootstrap.py` | Register backends from `Settings` + BYOK merge |
+| `app/services/llm/completion.py` | `primary_complete_raw`, `providers_available`, provider chain |
+| `app/services/llm/providers/*_backend.py` | OpenAI-compatible, Anthropic, Ollama |
+| `app/services/llm_service.py` | `call_primary_llm_text` / `call_primary_llm_json` use Phase 11 completion |
+| `app/services/providers/gateway.py` | Mission `ProviderRequest` also supports `deepseek` and `openrouter` |
+| `app/services/providers/openai_compatible_vendor.py` | OpenAI-HTTP calls for DeepSeek / OpenRouter in the gateway |
 
 ---
 
@@ -103,7 +116,9 @@ flowchart TB
 
 ## Relationship to the current codebase
 
-Nexa already centralizes vendor calls under **`app/services/providers/`** and **`call_provider` / `ProviderRequest`** (see [ARCHITECTURE.md](ARCHITECTURE.md)). Phase 11 work should **extend or align** with that layer rather than introduce a parallel, unconstrained `import openai` path. This document’s `app/llm/` layout is a **target shape**; the merge plan may map `LLMProvider` to the existing gateway so import-linter and privacy gates stay intact.
+Nexa keeps **`build_openai_client` / `build_anthropic_client`** in **`app/services/providers/sdk.py`**; Phase 11 backends under **`app/services/llm/`** are allow-listed callers (same as `llm_service`). SDK imports remain forbidden outside **`app/services/providers/`** and the approved orchestration modules — see `scripts/verify_no_direct_providers.py`.
+
+Mission/tool flows continue to use **`call_provider`**. Composer paths that still build Anthropic/OpenAI clients directly can migrate later to share the same registry.
 
 ---
 
