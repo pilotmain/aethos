@@ -272,6 +272,8 @@ It is easy to expect: **“`gh auth status` succeeded → Nexa should immediatel
 
 **Product direction (if you want “verify then act”)**: requires an explicit design: either (a) **orchestrate multiple host-executor jobs** with separate approvals, (b) a **trusted workflow** type with one upfront approval, or (c) extend **operator_execution_actions** / phased loop—**not** a documentation-only change.
 
+After successful **`gh`** / **Vercel** CLI verification, operator replies append a short **“What this step did”** section (`operator_verify_followup.py`) pointing users at **host executor** mutations and **`docs/RUNBOOK_HOST_EXECUTOR_GIT_README.md`**.
+
 ---
 
 ## 12. Tests (extended)

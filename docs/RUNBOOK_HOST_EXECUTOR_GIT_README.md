@@ -2,6 +2,25 @@
 
 This runbook describes **only** what exists in this repository: allowlisted `host_action` values, the **chat → approval → local tool worker** path, and Docker auth persistence. It does **not** include generic shell execution or a REST “execute host” API.
 
+## Verify vs mutate (read this first)
+
+| Step | What runs | Creates README / commit / push? |
+|------|-----------|-----------------------------------|
+| **Operator / CLI verification** (`try_operator_execution`, `gh auth status`, `vercel whoami`) | Read-only checks | **No** — proves login only |
+| **Host executor** (`host_action`: `file_write`, `git_commit`, `git_push`, …) | Allowlisted tools after **approval** | **Yes** — one job per action (typically) |
+
+Successful **verification does not queue** host-executor jobs. After a green `gh auth status`, you still ask separately for mutations (or enqueue payloads), then **approve** each host job when prompted.
+
+Full architecture note: **`docs/HANDOFF_OPERATOR_EXECUTION_AND_ORCHESTRATION.md` §11.8**.
+
+### FAQ: Why didn’t Nexa push after verifying GitHub / Vercel?
+
+Because **verify** and **mutate** are **different subsystems**. The gateway may return after operator diagnostics (`handled=True`) without creating **`command_type: host-executor`** jobs. To push, use **`git_push`** (and usually **`file_write` + `git_commit`** first) as **separate** approved steps—see payload examples below.
+
+### FAQ: What should I say for mutations?
+
+Prefer **short, explicit** requests that match **`host_executor_intent`** patterns where possible (e.g. “git push”), or describe what you want so the UI/LLM builds **`payload_json`**. Long sentences mixing “check git AND add README AND push” are **not** automatically split into three host actions—use separate asks or queue payloads manually.
+
 ## What does *not* exist (do not document or use)
 
 | Claim | Reality |

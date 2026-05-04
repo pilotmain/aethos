@@ -11,6 +11,7 @@ from app.services.operator_cli_absolute import apply_operator_cli_absolute_fallb
 from app.services.operator_cli_path import cli_environ_for_operator
 from app.services.operator_runners.base import evidence_shell, format_operator_progress
 from app.services.operator_auth_guidance import append_guidance_if_needed_github
+from app.services.operator_verify_followup import append_verify_vs_mutate_followup
 from app.services.operator_shell_cli import profile_shell_enabled, run_allowlisted_argv_via_login_shell
 
 _TIMEOUT = 45.0
@@ -94,4 +95,5 @@ def run_github_operator_readonly(*, cwd: str | None = None) -> tuple[str, dict[s
     body = "\n".join(lines).strip()
     body += "\n\n_Read-only — no PR or push performed._"
     body = append_guidance_if_needed_github(body, auth)
+    body = append_verify_vs_mutate_followup(body, verified=verified, provider_label="GitHub CLI (`gh`)")
     return body, ev, progress, verified
