@@ -28,6 +28,8 @@ services:
       - sqlite_data:/app/data
       - ./.agent_tasks:/app/.agent_tasks
       - runtime_data:/app/.runtime
+      - nexa_vercel_cli_auth:/root/.vercel
+      - nexa_gh_cli_auth:/root/.config/gh
     develop:
       watch:
         - action: sync+restart
@@ -63,6 +65,8 @@ services:
       - sqlite_data:/app/data
       - ./.agent_tasks:/app/.agent_tasks
       - runtime_data:/app/.runtime
+      - nexa_vercel_cli_auth:/root/.vercel
+      - nexa_gh_cli_auth:/root/.config/gh
     develop:
       watch:
         - action: sync+restart
@@ -76,3 +80,5 @@ services:
 volumes:
   sqlite_data:
   runtime_data:
+  nexa_vercel_cli_auth:
+  nexa_gh_cli_auth:

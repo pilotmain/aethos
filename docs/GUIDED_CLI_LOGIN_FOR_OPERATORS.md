@@ -23,7 +23,7 @@ CLIs store login state under the container user’s home (default **`root`**):
 | Vercel | `/root/.vercel` |
 | GitHub CLI | `/root/.config/gh` |
 
-Optional Compose volumes (commented in `docker-compose.yml`) can persist these across **restarts**. Rebuilds still need login if volumes are not used.
+Compose (`docker-compose.yml` and `docker-compose.sqlite.yml`) mounts named volumes for `/root/.vercel` and `/root/.config/gh` so login survives **container recreate**. If you remove those volume lines or delete the volumes (`docker volume rm …`), you must log in again.
 
 ## Security
 

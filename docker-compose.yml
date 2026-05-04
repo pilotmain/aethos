@@ -56,9 +56,9 @@ services:
     volumes:
       - ./.agent_tasks:/app/.agent_tasks
       - runtime_data:/app/.runtime
-      # Optional: persist `vercel login` / `gh auth login` across restarts (see docs/GUIDED_CLI_LOGIN_FOR_OPERATORS.md).
-      # - nexa_vercel_cli_auth:/root/.vercel
-      # - nexa_gh_cli_auth:/root/.config/gh
+      # Persist `vercel login` / `gh auth login` across container recreate (see docs/GUIDED_CLI_LOGIN_FOR_OPERATORS.md).
+      - nexa_vercel_cli_auth:/root/.vercel
+      - nexa_gh_cli_auth:/root/.config/gh
     healthcheck:
       test:
         [
@@ -110,9 +110,9 @@ services:
     volumes:
       - ./.agent_tasks:/app/.agent_tasks
       - runtime_data:/app/.runtime
-      # Optional: same CLI auth persistence as api (uncomment together with named volumes below).
-      # - nexa_vercel_cli_auth:/root/.vercel
-      # - nexa_gh_cli_auth:/root/.config/gh
+      # Same CLI auth persistence as api (shared named volumes).
+      - nexa_vercel_cli_auth:/root/.vercel
+      - nexa_gh_cli_auth:/root/.config/gh
     develop:
       watch:
         - action: sync+restart
@@ -126,6 +126,5 @@ services:
 volumes:
   pgdata:
   runtime_data:
-  # Optional named volumes for CLI login persistence (uncomment on api/bot services above).
-  # nexa_vercel_cli_auth:
-  # nexa_gh_cli_auth:
+  nexa_vercel_cli_auth:
+  nexa_gh_cli_auth:
