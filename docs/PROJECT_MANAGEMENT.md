@@ -18,6 +18,10 @@ Phase 27 adds **projects** (missions with goals), **tasks**, **checkout** (claim
 
 **Note:** `/project` is already used for **workspace / dev project keys** (`nexa_workspace_projects`). Mission Control uses **`/goal`** for goal-based projects.
 
+## Local dev (`./scripts/nexa_next_local_all.sh start`)
+
+The script creates `./data` (and `data/screenshots`, `data/skills`) and sets **`NEXA_DATA_DIR`** for native API + bot. **Docker Compose** mounts `./data:/app/data` and sets **`NEXA_DATA_DIR=/app/data`** so Mission Control SQLite persists on the host alongside skills and screenshots.
+
 ## Environment
 
 | Variable | Default | Meaning |

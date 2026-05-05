@@ -44,9 +44,12 @@ services:
       DATABASE_URL: postgresql+psycopg2://overwhelm:overwhelm@db:5432/overwhelm
       # Bot / browser links; host machine reaches API on localhost:8010 (container listens on 8000)
       API_BASE_URL: http://localhost:8010
+      NEXA_BROWSER_SCREENSHOT_DIR: /app/data/screenshots
       # Operator CLI probes: Dockerfile installs these; override Mac paths from .env inside Linux containers.
       NEXA_OPERATOR_CLI_VERCEL_ABS: /usr/bin/vercel
       NEXA_OPERATOR_CLI_GH_ABS: /usr/bin/gh
+      # Phase 27 Mission Control SQLite + repo data (skills, screenshots) — see NEXA_DATA_DIR
+      NEXA_DATA_DIR: /app/data
     env_file:
       - .env
     depends_on:
@@ -56,6 +59,8 @@ services:
     volumes:
       - ./.agent_tasks:/app/.agent_tasks
       - runtime_data:/app/.runtime
+      # Host ./data → Mission Control DB (mission_control.db), ClawHub skills, screenshots, etc.
+      - ./data:/app/data
       # Persist `vercel login` / `gh auth login` across container recreate (see docs/GUIDED_CLI_LOGIN_FOR_OPERATORS.md).
       - nexa_vercel_cli_auth:/root/.vercel
       - nexa_gh_cli_auth:/root/.config/gh
@@ -98,6 +103,7 @@ services:
       API_BASE_URL: http://localhost:8010
       NEXA_OPERATOR_CLI_VERCEL_ABS: /usr/bin/vercel
       NEXA_OPERATOR_CLI_GH_ABS: /usr/bin/gh
+      NEXA_DATA_DIR: /app/data
     env_file:
       - .env
     depends_on:
@@ -110,6 +116,7 @@ services:
     volumes:
       - ./.agent_tasks:/app/.agent_tasks
       - runtime_data:/app/.runtime
+      - ./data:/app/data
       # Same CLI auth persistence as api (shared named volumes).
       - nexa_vercel_cli_auth:/root/.vercel
       - nexa_gh_cli_auth:/root/.config/gh

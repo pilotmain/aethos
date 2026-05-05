@@ -38,6 +38,12 @@
 # API + web — so do not chain ``start`` then ``stop`` unless you mean to shut down immediately.
 #
 # Prerequisites: Python venv at repo .venv (pip install -r requirements.txt); npm install in web/
+#
+# Mission Control (Phase 26–27) — team roster + projects/tasks SQLite:
+#   • Ensures ./data exists (mission_control.db, skills, screenshots).
+#   • Passes NEXA_DATA_DIR into native API/bot so paths match the repo (still overridden by .env if set).
+#   • Docker Compose mounts ./data → /app/data and sets NEXA_DATA_DIR=/app/data for api+bot.
+# Optional in .env for full Telegram flows: NEXA_PROJECTS_ENABLED=true, NEXA_AGENT_ORCHESTRATION_ENABLED=true
 
 set -euo pipefail
 
@@ -221,6 +227,7 @@ cmd_status() {
 
 cmd_start() {
   mkdir -p "$RUNTIME"
+  mkdir -p "${ROOT}/data" "${ROOT}/data/screenshots" "${ROOT}/data/skills"
 
   _use_compose_stack=0
   _try_compose=0
@@ -248,6 +255,8 @@ cmd_start() {
   fi
 
   export NEXA_WEB_ORIGINS="http://localhost:${WEB_PORT},http://127.0.0.1:${WEB_PORT}"
+  # Default Mission Control / repo data dir for native processes (pydantic still loads .env with override)
+  export NEXA_DATA_DIR="${NEXA_DATA_DIR:-${ROOT}/data}"
 
   if [ "$_use_compose_stack" -eq 1 ]; then
     export API_BASE_URL="http://127.0.0.1:${COMPOSE_API_PORT}"
@@ -314,9 +323,11 @@ cmd_start() {
     echo "Starting API (uvicorn) on 0.0.0.0:${API_PORT} …"
     if [ "${NEXA_NEXT_LOCAL_SIDECAR:-1}" = "1" ] || [ "${NEXA_NEXT_LOCAL_SIDECAR:-}" = "true" ]; then
       nohup env NEXA_NEXT_LOCAL_SIDECAR=1 API_BASE_URL="${API_BASE_URL}" NEXA_WEB_ORIGINS="${NEXA_WEB_ORIGINS}" \
+        NEXA_DATA_DIR="${NEXA_DATA_DIR}" \
         "$UVICORN" app.main:app --reload --host 0.0.0.0 --port "${API_PORT}" >>"$API_LOG" 2>&1 &
     else
       nohup env NEXA_NEXT_LOCAL_SIDECAR=0 API_BASE_URL="${API_BASE_URL}" NEXA_WEB_ORIGINS="${NEXA_WEB_ORIGINS}" \
+        NEXA_DATA_DIR="${NEXA_DATA_DIR}" \
         "$UVICORN" app.main:app --reload --host 0.0.0.0 --port "${API_PORT}" >>"$API_LOG" 2>&1 &
     fi
     echo $! >"$API_PIDF"
@@ -347,9 +358,11 @@ raise SystemExit(1)
     if [ "$_skip_bot" -eq 0 ] && [ "$_has_bot_token" -eq 1 ]; then
       echo "Starting Telegram bot (host python -m app.bot.telegram_bot) …"
       if [ "${NEXA_NEXT_LOCAL_SIDECAR:-1}" = "1" ] || [ "${NEXA_NEXT_LOCAL_SIDECAR:-}" = "true" ]; then
-        nohup env NEXA_NEXT_LOCAL_SIDECAR=1 API_BASE_URL="${API_BASE_URL}" "$PYTHON" -m app.bot.telegram_bot >>"$BOT_LOG" 2>&1 &
+        nohup env NEXA_NEXT_LOCAL_SIDECAR=1 API_BASE_URL="${API_BASE_URL}" NEXA_DATA_DIR="${NEXA_DATA_DIR}" \
+          "$PYTHON" -m app.bot.telegram_bot >>"$BOT_LOG" 2>&1 &
       else
-        nohup env NEXA_NEXT_LOCAL_SIDECAR=0 API_BASE_URL="${API_BASE_URL}" "$PYTHON" -m app.bot.telegram_bot >>"$BOT_LOG" 2>&1 &
+        nohup env NEXA_NEXT_LOCAL_SIDECAR=0 API_BASE_URL="${API_BASE_URL}" NEXA_DATA_DIR="${NEXA_DATA_DIR}" \
+          "$PYTHON" -m app.bot.telegram_bot >>"$BOT_LOG" 2>&1 &
       fi
       echo $! >"$BOT_PIDF"
       echo "  Bot log: ${BOT_LOG}"
@@ -379,6 +392,7 @@ raise SystemExit(1)
 
   echo ""
   echo "--- Nexa Next local ---"
+  echo "  Data dir:     ${ROOT}/data  (Mission Control SQLite: mission_control.db when Phase 27 enabled)"
   if [ "$_use_compose_stack" -eq 1 ]; then
     echo "  Compose API: http://127.0.0.1:${COMPOSE_API_PORT}/docs   Health: $(compose_api_health_url)"
     echo "  Telegram bot: container nexa-bot (docker compose logs -f bot)"
