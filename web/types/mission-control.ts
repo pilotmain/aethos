@@ -95,3 +95,37 @@ export interface OrgChartNode {
   children: OrgChartNode[];
   metadata?: Record<string, unknown>;
 }
+
+/** Phase 33 M4 — Workspace / mission / checklist rows shown on the Projects index. */
+export interface Project {
+  /** URL segment under `/mission-control/projects/[id]` (e.g. `checklist`, `mission-12`, `ws-3`). */
+  id: string;
+  name: string;
+  goal: string;
+  status: "active" | "paused" | "completed" | "archived";
+  progress: number;
+  created_at?: string;
+  updated_at?: string;
+  completed_at?: string;
+  team_scope?: string;
+  /** Badge label for row kind */
+  kind_label?: string;
+}
+
+/** Phase 33 M4 — Kanban task card (checklist tasks + mission tasks in read-only mode). */
+export interface Task {
+  id: string;
+  title: string;
+  description?: string;
+  status: "pending" | "in_progress" | "done" | "blocked";
+  assigned_to?: string;
+  assigned_to_name?: string;
+  project_id?: string;
+  mission_id?: string;
+  created_at: string;
+  updated_at: string;
+  completed_at?: string;
+  order_index?: number;
+}
+
+export type KanbanColumnType = "pending" | "in_progress" | "done";
