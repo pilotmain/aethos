@@ -15,7 +15,7 @@ export type OverviewChecklistTask = {
   updated_at: string;
 };
 
-/** Nexa mission tasks embedded in Mission Control state (`tasks` array). */
+/** AethOS mission tasks embedded in Mission Control state (`tasks` array). */
 export type OverviewMissionTask = {
   id: string;
   mission_id?: string | null;

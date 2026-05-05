@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertTriangle, CheckCircle2, ChevronDown, ChevronRight, Shield, XCircle } from "lucide-react";
 import { fetchTrustActivity, fetchTrustSummary } from "@/lib/api";
 import { isConfigured, readConfig } from "@/lib/config";
-import type { TrustEventRow, TrustSummaryResponse, TrustUiStatus } from "@/lib/nexa-types";
+import type { TrustEventRow, TrustSummaryResponse, TrustUiStatus } from "@/lib/aethos-types";
 import {
   channelBadgeLabel,
   matchesChannelFilter,

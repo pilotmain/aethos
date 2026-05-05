@@ -1,7 +1,7 @@
 /** Client-side X-User-Id rules (keep aligned with app/services/web_user_id.py). */
 
 export const WEB_USER_ID_INVALID_MSG =
-  "Invalid user id. Use a Nexa channel id: tg_<digits>, web_<label>, local_<label>, em_<hex>, " +
+  "Invalid user id. Use an AethOS channel id: tg_<digits>, web_<label>, local_<label>, em_<hex>, " +
   "slack_<id>, sms_<digits>, wa_<digits>, or am_<hex>. Do not paste a Telegram bot token.";
 
 export const WEB_USER_ID_FIELD_HELP =
@@ -20,10 +20,10 @@ const _SLACK = /^slack_[A-Za-z0-9]{1,64}$/;
 const MAX = 80;
 
 /**
- * Return true if the value is a valid Nexa web user id (trimmed, no colons,
+ * Return true if the value is a valid AethOS web user id (trimmed, no colons,
  * matches an accepted channel prefix pattern — same rules as the API).
  */
-export function isValidNexaWebUserId(raw: string): boolean {
+export function isValidAethosWebUserId(raw: string): boolean {
   const s = raw;
   if (!s || s !== s.trim() || s.length > MAX) return false;
   if (/\s/.test(s) || s.includes(":")) return false;
@@ -43,11 +43,14 @@ export function isValidNexaWebUserId(raw: string): boolean {
   return true;
 }
 
+/** @deprecated Use ``isValidAethosWebUserId``. */
+export const isValidNexaWebUserId = isValidAethosWebUserId;
+
 /**
  * If the value is invalid, return a short reason; if valid or empty, return null.
  * Leading/trailing whitespace counts as invalid with a specific message.
  */
-export function describeNexaWebUserIdProblem(raw: string): string | null {
+export function describeAethosWebUserIdProblem(raw: string): string | null {
   if (raw !== raw.trim()) return "Remove leading or trailing spaces.";
   const s = raw.trim();
   if (!s) return null;
@@ -55,9 +58,12 @@ export function describeNexaWebUserIdProblem(raw: string): string | null {
   if (/\s/.test(s)) return "User id cannot contain spaces.";
   if (s.includes(":"))
     return "User id cannot contain ':' (for example, do not paste a Telegram bot token).";
-  if (isValidNexaWebUserId(s)) return null;
+  if (isValidAethosWebUserId(s)) return null;
   return WEB_USER_ID_INVALID_MSG;
 }
 
+/** @deprecated Use ``describeAethosWebUserIdProblem``. */
+export const describeNexaWebUserIdProblem = describeAethosWebUserIdProblem;
+
 /** Message for required-but-empty user id after submit. */
-export const USER_ID_REQUIRED_MSG = "Enter your Nexa user id.";
+export const USER_ID_REQUIRED_MSG = "Enter your AethOS user id.";

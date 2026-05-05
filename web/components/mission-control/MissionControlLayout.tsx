@@ -9,7 +9,7 @@ import { MissionBuilderPanel } from "@/components/mission-control/MissionBuilder
 import { MissionControlLiveEvents } from "@/components/mission-control/MissionControlLiveEvents";
 import { MissionControlMaintenanceControls } from "@/components/mission-control/MissionControlMaintenanceControls";
 import { MissionGraph } from "@/components/mission-control/MissionGraph";
-import { NexaForgePanel } from "@/components/mission-control/NexaForgePanel";
+import { AethosForgePanel } from "@/components/mission-control/AethosForgePanel";
 import type { IntegrityAlertRow } from "@/components/mission-control/IntegrityAlertBanner";
 import { IntegrityAlertBanner } from "@/components/mission-control/IntegrityAlertBanner";
 import { PrivacyTrustPanel } from "@/components/mission-control/PrivacyTrustPanel";
@@ -34,7 +34,12 @@ import { UserSettingsPanel } from "@/components/settings/UserSettingsPanel";
 import { ConnectionErrorRecovery } from "@/components/connection/ConnectionErrorRecovery";
 import { formatMissionControlApiError, webFetch } from "@/lib/api";
 import { useConnectionDiagnosis } from "@/lib/connection/useConnectionDiagnosis";
-import { isConfigured, readConfig } from "@/lib/config";
+import {
+  isConfigured,
+  readConfig,
+  WEB_CONFIG_LEGACY_STORAGE_KEY,
+  WEB_CONFIG_STORAGE_KEY,
+} from "@/lib/config";
 import { useMissionControlSnapshot } from "@/lib/mission-control/useMissionControlSnapshot";
 import {
   appendMissionLiveEvent,
@@ -45,8 +50,6 @@ import {
   ensureMissionControlStream,
   subscribeMissionMessages,
 } from "@/lib/ws/missionControlStream";
-
-const CONFIG_KEY = "nexa_web_v1";
 
 /**
  * Phase 12–21 — Mission Control shell + settings sidebar / drawer + theme-aware shell.
@@ -76,7 +79,7 @@ export function MissionControlLayout() {
     const syncUser = () => setSessionUserId(readConfig().userId.trim());
     syncUser();
     const onStorage = (e: StorageEvent) => {
-      if (e.key === CONFIG_KEY) syncUser();
+      if (e.key === WEB_CONFIG_STORAGE_KEY || e.key === WEB_CONFIG_LEGACY_STORAGE_KEY) syncUser();
     };
     window.addEventListener("storage", onStorage);
     window.addEventListener("focus", syncUser);
@@ -356,7 +359,7 @@ export function MissionControlLayout() {
 
           <ArtifactsPanel />
 
-          {configured ? <NexaForgePanel shellLight={shellLight} /> : null}
+          {configured ? <AethosForgePanel shellLight={shellLight} /> : null}
         </main>
 
         <aside className="hidden w-full max-w-sm shrink-0 lg:block lg:w-80 lg:max-w-none">

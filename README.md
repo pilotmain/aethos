@@ -1,19 +1,18 @@
-# Nexa Next
+# AethOS (repository: `nexa-next`)
 
-> **This repository is `nexa-next`** — the privacy-first, OpenClaw-style multi-agent runtime under active rebuild.  
-> **Experimental · developer mode first · privacy-first architecture** (see banner in the web UI).
+> **Pronunciation:** “EE-thos” · **Tagline:** *The Agentic Operating System* · From **Aether** (the classical element) + **OS** — the invisible layer that connects autonomous agents.
 >
-> The sibling codebase **`nexa`** remains the stable chatbot / reference implementation and is **not** replaced by this repo. Major new architecture work targets **`nexa-next`**; patch **`nexa`** only when explicitly maintaining the legacy app.
+> **This GitHub repository remains [`nexa-next`](https://github.com/pilotmain/nexa-next)** until the remote is renamed; clone URLs and CI may still say `nexa-next`. Product branding in the app, CLI, and docs is **AethOS**.
 
-**Docs:** product vision and phased plan → [docs/NEXA_NEXT_PRIVACY_FIRST_GATEWAY_PLAN.md](docs/NEXA_NEXT_PRIVACY_FIRST_GATEWAY_PLAN.md).
+**Docs:** product vision and phased plan → [docs/NEXA_NEXT_PRIVACY_FIRST_GATEWAY_PLAN.md](docs/NEXA_NEXT_PRIVACY_FIRST_GATEWAY_PLAN.md). **Phase 36 rebrand playbook:** [docs/PHASE_36_REBRAND_AETHOS.md](docs/PHASE_36_REBRAND_AETHOS.md).
 
 ---
 
-# Nexa
+# AethOS
 
-**Nexa** is an **AI execution system** that helps you think, plan, research, create documents, manage projects, and **execute** work through chat, a **web** workspace, **Telegram**, and automation. It **creates task-focused agents dynamically** when work needs them. It is a **platform**: custom agents, dedicated Dev and Ops surfaces, public web research and **web search**, **BYOK** multi-tenant key handling, a **usage / cost** dashboard, and durable **memory**—not a single “chat only” app.
+**AethOS** is an **agentic operating system**: it helps you think, plan, research, create documents, manage projects, and **execute** work through chat, a **web** workspace, **Telegram**, and automation. It **creates task-focused agents dynamically** when work needs them. It is a **platform**: custom agents, dedicated Dev and Ops surfaces, public web research and **web search**, **BYOK** multi-tenant key handling, a **usage / cost** dashboard, and durable **memory**—not a single “chat only” app.
 
-Nexa is **not** just a chatbot. It is an **execution layer** that uses **LLMs** when they add the most value, **tools** when a deterministic or external step is better, and **approval gates** when an action is risky (jobs, reviews, rollouts, privileged commands). That keeps the system honest, inspectable, and controllable as scale grows.
+AethOS is **not** just a chatbot. It is an **execution layer** that uses **LLMs** when they add the most value, **tools** when a deterministic or external step is better, and **approval gates** when an action is risky (jobs, reviews, rollouts, privileged commands). That keeps the system honest, inspectable, and controllable as scale grows.
 
 **New here?** Plain-language overview and first workflow story: [docs/USERGUID.md](docs/USERGUID.md) · [docs/WORKFLOW_DEMO.md](docs/WORKFLOW_DEMO.md).
 
@@ -23,9 +22,9 @@ Nexa is **not** just a chatbot. It is an **execution layer** that uses **LLMs** 
 
 - **Frozen public HTTP API** → [docs/API_CONTRACT.md](docs/API_CONTRACT.md) — paths and change rule for contributors
 - **Platform handoff (agents / planning)** → [docs/HANDOFF_PLATFORM_OVERVIEW.md](docs/HANDOFF_PLATFORM_OVERVIEW.md) — full-picture map and where to go deeper
-- **Architecture** → [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — how Nexa is built (Arcturus)
+- **Architecture** → [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — how AethOS is built (Arcturus)
 - **Phase 11 (multi-provider LLM)** → [docs/PHASE_11_LLM_PROVIDERS.md](docs/PHASE_11_LLM_PROVIDERS.md) — planned DeepSeek/Ollama/OpenRouter layer, diagram, env vars
-- **Roadmap** → [docs/ROADMAP.md](docs/ROADMAP.md) — where Nexa is going (phases)
+- **Roadmap** → [docs/ROADMAP.md](docs/ROADMAP.md) — where AethOS is going (phases)
 - **Channel Gateway (design)** → [docs/CHANNEL_GATEWAY.md](docs/CHANNEL_GATEWAY.md) — Slack, email, WhatsApp, etc. on a shared adapter layer
 - **Channel Gateway (execution plan)** → [docs/CHANNEL_GATEWAY_EXECUTION.md](docs/CHANNEL_GATEWAY_EXECUTION.md) — phases, ground rules, effort
 - **User guide** → [docs/USERGUID.md](docs/USERGUID.md) — product story (non-technical)
@@ -78,7 +77,7 @@ Then: open Telegram, `/start`, and (to use your own model keys) `/key set openai
 **Operator, launchd, autonomy:** [docs/OPERATIONS.md](docs/OPERATIONS.md)  
 **Dev job pipeline and phone → machine loop:** [docs/DEV_JOBS.md](docs/DEV_JOBS.md) and [docs/DEV_JOB_FLOW.md](docs/DEV_JOB_FLOW.md)
 
-## Using Nexa
+## Using AethOS
 
 - **Web** — with `run_everything.sh` (or your Node dev command), the UI is usually at [http://localhost:3000](http://localhost:3000) (API at [http://localhost:8010](http://localhost:8010)). [docs/WEB_UI.md](docs/WEB_UI.md)  
 - **Telegram** — `/start`, `/help`, plan commands (`/today`, `/overwhelmed`), dev/Ops and agent invocations; full command list in-app via `/help`.  

@@ -6,11 +6,11 @@
 #
 # SQLite-only (no Postgres): use docker-compose.sqlite.yml (see README Docker section)
 
-name: nexa
+name: aethos
 
 services:
   db:
-    container_name: nexa-db
+    container_name: aethos-db
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
@@ -30,11 +30,11 @@ services:
       - "${POSTGRES_HOST_PORT:-5433}:5432"
 
   api:
-    container_name: nexa-api
+    container_name: aethos-api
     build:
       context: .
       dockerfile: Dockerfile
-    image: nexa:local
+    image: aethos:local
     restart: unless-stopped
     command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
     ports:
@@ -62,8 +62,8 @@ services:
       # Host ./data → Mission Control DB (mission_control.db), ClawHub skills, screenshots, etc.
       - ./data:/app/data
       # Persist `vercel login` / `gh auth login` across container recreate (see docs/GUIDED_CLI_LOGIN_FOR_OPERATORS.md).
-      - nexa_vercel_cli_auth:/root/.vercel
-      - nexa_gh_cli_auth:/root/.config/gh
+      - aethos_vercel_cli_auth:/root/.vercel
+      - aethos_gh_cli_auth:/root/.config/gh
     healthcheck:
       test:
         [
@@ -91,11 +91,11 @@ services:
           path: ./Dockerfile
 
   bot:
-    container_name: nexa-bot
+    container_name: aethos-bot
     build:
       context: .
       dockerfile: Dockerfile
-    image: nexa:local
+    image: aethos:local
     restart: unless-stopped
     command: ["python", "-m", "app.bot.telegram_bot"]
     environment:
@@ -118,8 +118,8 @@ services:
       - runtime_data:/app/.runtime
       - ./data:/app/data
       # Same CLI auth persistence as api (shared named volumes).
-      - nexa_vercel_cli_auth:/root/.vercel
-      - nexa_gh_cli_auth:/root/.config/gh
+      - aethos_vercel_cli_auth:/root/.vercel
+      - aethos_gh_cli_auth:/root/.config/gh
     develop:
       watch:
         - action: sync+restart
@@ -133,5 +133,5 @@ services:
 volumes:
   pgdata:
   runtime_data:
-  nexa_vercel_cli_auth:
-  nexa_gh_cli_auth:
+  aethos_vercel_cli_auth:
+  aethos_gh_cli_auth:

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from nexa_cli.platform import detect, human_os_line
+from aethos_cli.platform import detect, human_os_line
 
 
 def test_detect_returns_core_keys() -> None:

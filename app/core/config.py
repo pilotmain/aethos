@@ -58,6 +58,11 @@ else:
     load_dotenv(_ENV_FILE, override=True)
     _normalize_term_for_subprocesses()
 
+# Phase 36 — AETHOS_* → NEXA_* before Settings() reads os.environ (see app/core/aethos_env.py).
+from app.core.aethos_env import apply_aethos_env_aliases
+
+apply_aethos_env_aliases()
+
 # scripts/nexa_next_local_all.sh sets NEXA_NEXT_LOCAL_SIDECAR=1 so the API can boot when .env
 # points at Postgres that is not running locally (override uses repo-root SQLite).
 if (os.environ.get("NEXA_NEXT_LOCAL_SIDECAR") or "").strip().lower() in ("1", "true", "yes"):
@@ -73,7 +78,7 @@ _EnvFile: str | None = str(_ENV_FILE) if _ENV_FILE.is_file() else None
 
 
 class Settings(BaseSettings):
-    app_name: str = "Nexa"
+    app_name: str = "AethOS"
     app_env: str = "development"
     debug: bool = True
     # When true, API boot uses JSON log lines (one object per line) for aggregation; see app.services.logging
@@ -205,7 +210,7 @@ class Settings(BaseSettings):
 
     # Dev workspace: new project scaffold (ask Nexa to create a project for a key) and /dev workspace
     nexa_workspace_root: str = Field(
-        default_factory=lambda: str(Path.home() / "nexa-projects")
+        default_factory=lambda: str(Path.home() / "aethos-projects")
     )
     # Workspace posture for prompts: developer = orchestrator-forward (no false "read-only" refusals);
     # regulated = stricter default wording. See NEXA_WORKSPACE_MODE in .env.example.

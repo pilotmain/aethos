@@ -10,7 +10,7 @@ from app.core.config import REPO_ROOT
 
 from app.services.skills.draft import validate_skill_manifest
 
-_DEFAULT_CATALOG = REPO_ROOT / "data" / "nexa_marketplace" / "catalog.json"
+_DEFAULT_CATALOG = REPO_ROOT / "data" / "aethos_marketplace" / "catalog.json"
 
 
 def load_catalog(path: Path | None = None) -> list[dict[str, Any]]:

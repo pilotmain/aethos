@@ -1,1 +1,1 @@
-"""Operator / developer CLI helpers (imported by ``nexa_cli``)."""
+"""Operator / developer CLI helpers (imported by ``aethos_cli``)."""

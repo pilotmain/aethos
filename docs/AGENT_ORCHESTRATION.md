@@ -1,6 +1,6 @@
 # Agent orchestration (Week 4) — architecture spec
 
-This document is the **implementation-aligned** architecture for making Nexa act as a **primary agent** that can register and coordinate **domain-scoped sub-agents**, without replacing existing operator, execution-loop, mission, or host-executor flows.
+This document is the **implementation-aligned** architecture for making **AethOS** act as a **primary agent** that can register and coordinate **domain-scoped sub-agents**, without replacing existing operator, execution-loop, mission, or host-executor flows.
 
 **Scope control:** “Loose approval” is **explicitly opt-in** via configuration and must remain **auditable**. It is **not** the default in production.
 
@@ -12,7 +12,7 @@ This document is the **implementation-aligned** architecture for making Nexa act
 
 | Goal | Notes |
 |------|--------|
-| Primary agent | User-facing orchestrator remains **Nexa** (gateway + LLM + existing tools). |
+| Primary agent | User-facing orchestrator remains **AethOS** (gateway + LLM + existing tools). |
 | Sub-agents | Named, domain-tagged **logical agents** that route work and surface status — not separate OS processes by default. |
 | Reuse execution | Git / Vercel / tests must call **existing** allowlisted paths: `host_executor.execute_payload`, NL→chain, `local_tool` jobs, operator runners — not new arbitrary shells. |
 | Safe rollout | Feature **off** by default; in-process registry acceptable only where documented; production needs **durable** state. |

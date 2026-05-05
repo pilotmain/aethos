@@ -137,7 +137,7 @@ export default function MissionControlAdvancedPage() {
 
   const handleDeleteWorkspace = async () => {
     window.alert(
-      "Nexa does not expose a browser API to delete an entire workspace. Remove database files, Docker volumes, or tenant data on the server host.",
+      "AethOS does not expose a browser API to delete an entire workspace. Remove database files, Docker volumes, or tenant data on the server host.",
     );
   };
 

@@ -3,7 +3,7 @@ import { CONNECTION_RESET_KEEP_KEYS, resetConnectionState } from "../resetConnec
 
 describe("resetConnectionState", () => {
   it("clears connection keys but keeps theme keys", () => {
-    localStorage.setItem("nexa_web_v1", "{}");
+    localStorage.setItem("aethos_web_v1", "{}");
     localStorage.setItem("nexa-theme", "dark");
     localStorage.setItem("nexa-appearance", "compact");
     localStorage.setItem("nexaShowUsageDetails", "true");
@@ -11,7 +11,7 @@ describe("resetConnectionState", () => {
 
     resetConnectionState();
 
-    expect(localStorage.getItem("nexa_web_v1")).toBeNull();
+    expect(localStorage.getItem("aethos_web_v1")).toBeNull();
     expect(localStorage.getItem("nexaShowUsageDetails")).toBeNull();
     expect(localStorage.getItem("nexa-theme")).toBe("dark");
     expect(localStorage.getItem("nexa-appearance")).toBe("compact");

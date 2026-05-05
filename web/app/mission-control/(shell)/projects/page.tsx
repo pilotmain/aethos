@@ -44,7 +44,7 @@ export default function MissionControlProjectsPage() {
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-zinc-50">Projects</h2>
           <p className="mt-1 max-w-xl text-sm text-zinc-400">
-            Open your editable checklist board, inspect mission execution tasks (read-only Kanban), or manage Nexa workspace
+            Open your editable checklist board, inspect mission execution tasks (read-only Kanban), or manage AethOS workspace
             folder mappings.
           </p>
         </div>

@@ -1,1 +1,1 @@
-export { JobInlineCard } from "./nexa/JobInlineCard";
+export { JobInlineCard } from "./aethos/JobInlineCard";

@@ -16,5 +16,5 @@ def test_catalog_loads_default() -> None:
 
 def test_catalog_json_exists() -> None:
     root = Path(__file__).resolve().parents[1]
-    p = root / "data" / "nexa_marketplace" / "catalog.json"
+    p = root / "data" / "aethos_marketplace" / "catalog.json"
     assert p.is_file()

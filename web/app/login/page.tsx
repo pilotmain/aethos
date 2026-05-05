@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { defaultConfig, readConfig, saveConfig } from "@/lib/config";
 import {
-  describeNexaWebUserIdProblem,
+  describeAethosWebUserIdProblem,
   USER_ID_REQUIRED_MSG,
   WEB_USER_ID_FIELD_HELP,
 } from "@/lib/webUserId";
@@ -22,7 +22,7 @@ export default function LoginPage() {
     !trimmedUserId && submitAttempted
       ? USER_ID_REQUIRED_MSG
       : trimmedUserId
-        ? describeNexaWebUserIdProblem(userId)
+        ? describeAethosWebUserIdProblem(userId)
         : null;
   const userIdInvalid = Boolean(userIdProblem);
 
@@ -30,7 +30,7 @@ export default function LoginPage() {
     e.preventDefault();
     setSubmitAttempted(true);
     if (!trimmedUserId) return;
-    if (describeNexaWebUserIdProblem(userId)) return;
+    if (describeAethosWebUserIdProblem(userId)) return;
     saveConfig({ apiBase: apiBase.trim(), userId: userId.trim(), token: token.trim() });
     router.push("/");
   }
@@ -42,11 +42,11 @@ export default function LoginPage() {
           ← Back to app
         </a>
         <h1 className="text-xl font-semibold text-white">Connection settings</h1>
-        <p className="mt-2 text-sm text-zinc-400">Configure how this browser connects to your Nexa API.</p>
+        <p className="mt-2 text-sm text-zinc-400">Configure how this browser connects to your AethOS API.</p>
         <p className="mt-2 text-sm text-zinc-400">
           The API may require <code className="text-emerald-400/90">NEXA_WEB_API_TOKEN</code> and this browser must
           send the same value as <code className="font-mono text-zinc-300">Authorization: Bearer</code> when set.
-          Your <code className="text-zinc-300">X-User-Id</code> is your Nexa account id from Telegram (
+          Your <code className="text-zinc-300">X-User-Id</code> is your AethOS account id from Telegram (
           <code className="text-zinc-300">tg_…</code>), email channel (<code className="text-zinc-300">em_…</code>),
           Slack (<code className="text-zinc-300">slack_…</code>), SMS, WhatsApp, Apple Messages, or a{" "}
           <code className="text-zinc-300">web_</code>/<code className="text-zinc-300">local_</code> id.

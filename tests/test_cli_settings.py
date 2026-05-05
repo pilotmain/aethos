@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from nexa_cli.__main__ import merge_settings_payload
+from aethos_cli.__main__ import merge_settings_payload
 
 
 def test_merge_settings_payload_updates_privacy_and_ui() -> None:

@@ -1,4 +1,4 @@
-"""Phase 25 — nexa_cli status/features/helpers."""
+"""Phase 25 — aethos_cli status/features/helpers."""
 
 from __future__ import annotations
 
@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from nexa_cli.cli_features import cmd_features
-from nexa_cli.env_util import upsert_env_file
+from aethos_cli.cli_features import cmd_features
+from aethos_cli.env_util import upsert_env_file
 
 
 def test_features_reads_env_keys(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -21,6 +21,6 @@ def test_features_reads_env_keys(tmp_path: Path, monkeypatch: pytest.MonkeyPatch
             "NEXA_SOCIAL_ENABLED": "false",
         },
     )
-    monkeypatch.setattr("nexa_cli.cli_features._repo_root", lambda: root)
+    monkeypatch.setattr("aethos_cli.cli_features._repo_root", lambda: root)
     assert cmd_features() == 0
 

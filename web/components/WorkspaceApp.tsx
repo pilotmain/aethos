@@ -1,1 +1,1 @@
-export { WorkspaceApp } from "./nexa/WorkspaceApp";
+export { WorkspaceApp } from "./aethos/WorkspaceApp";

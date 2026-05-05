@@ -16,6 +16,7 @@ class _S:
     nexa_agent_max_per_chat = 5
     nexa_agent_idle_timeout_seconds = 3600
     nexa_agent_orchestration_autoqueue = False
+    nexa_sub_agent_auto_execute = False  # bare @mention → “ready” hint (tests expect stable copy)
 
 
 class _Off:

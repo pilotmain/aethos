@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from nexa_cli.env_util import upsert_env_file
+from aethos_cli.env_util import upsert_env_file
 
 
 def test_upsert_env_replace_and_append(tmp_path: Path) -> None:

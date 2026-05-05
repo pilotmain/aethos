@@ -1,4 +1,4 @@
-"""Pluggable skill CLI helpers (Phase 6) — used by ``python -m nexa_cli``."""
+"""Pluggable skill CLI helpers (Phase 6) — used by ``python -m aethos_cli``."""
 
 from __future__ import annotations
 

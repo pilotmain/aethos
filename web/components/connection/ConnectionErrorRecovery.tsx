@@ -90,7 +90,7 @@ export function ConnectionErrorRecovery({
 
   return (
     <div className="mb-4 rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-sm text-amber-100/90">
-      <p className="font-medium text-amber-50">Could not load Nexa data. Check API base URL or login settings.</p>
+      <p className="font-medium text-amber-50">Could not load AethOS data. Check API base URL or login settings.</p>
 
       {sessionStale ? (
         <p className="mt-2 text-amber-100/95">

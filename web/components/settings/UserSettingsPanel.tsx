@@ -35,7 +35,7 @@ function normTheme(t: string | undefined): UiTheme {
   return t === "light" ? "light" : "dark";
 }
 
-/** Phase 21 — Nexa user settings with debounced save (500ms) and sync feedback. */
+/** Phase 21 — AethOS user settings with debounced save (500ms) and sync feedback. */
 export function UserSettingsPanel({
   onPreferencesApplied,
   compact,

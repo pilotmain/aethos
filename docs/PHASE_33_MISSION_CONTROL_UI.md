@@ -96,7 +96,6 @@ Avoid Telegram-parity copy in headings; use **product language** (Mission, Works
 | Mission DAG | `GET /api/v1/mission-control/graph` |
 | Snapshot | `GET /api/v1/mission-control/state?hours=24` |
 | Timeline | `GET /api/v1/mission-control/events/timeline` |
-| Summary | `GET /api/v1/mission-control/summary` |
 | Actions | POST routes under same router (reset, purge, gateway run, assignment cancel, …) |
 
 ### 6.2 Tasks (personal / checklist-style)

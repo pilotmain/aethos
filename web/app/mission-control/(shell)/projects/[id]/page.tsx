@@ -192,7 +192,7 @@ export default function MissionControlProjectDetailPage() {
         <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-6 text-sm text-zinc-400">
           <p className="font-medium text-zinc-200">Workspace project</p>
           <p className="mt-2">
-            This card maps a host path for Nexa workspace workflows. Task Kanban and PATCH updates apply to{" "}
+            This card maps a host path for AethOS workspace workflows. Task Kanban and PATCH updates apply to{" "}
             <Link className="text-violet-400 underline-offset-4 hover:underline" href={`/mission-control/projects/${CHECKLIST_PROJECT_ID}`}>
               My checklist
             </Link>{" "}

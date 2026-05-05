@@ -144,7 +144,7 @@ async def cron_remove_via_api(command_text: str) -> str:
 
 
 def cron_cli_http(method: str, path: str, *, json_body: dict[str, Any] | None = None) -> dict[str, Any]:
-    """Synchronous httpx for CLI (nexa_cli)."""
+    """Synchronous httpx for CLI (aethos_cli)."""
     tok = (get_settings().nexa_cron_api_token or "").strip()
     if not tok:
         raise SystemExit("Set NEXA_CRON_API_TOKEN and ensure the API is running.")

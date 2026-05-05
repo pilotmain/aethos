@@ -1,5 +1,5 @@
 import { DEFAULT_API_BASE, readConfig } from "./config";
-import type { TrustActivityResponse, TrustSummaryResponse, WebReleaseNotes } from "./nexa-types";
+import type { TrustActivityResponse, TrustSummaryResponse, WebReleaseNotes } from "./aethos-types";
 
 const API_PREFIX = "/api/v1";
 
