@@ -3617,7 +3617,17 @@ def _run_telegram_polling_embedded() -> None:
         )
         register_telegram_handlers(application)
         log.info("telegram bot long polling (embedded with API)")
-        application.run_polling(stop_signals=None)
+        # PTB ``run_polling`` uses ``asyncio.get_event_loop()``; worker threads have no loop unless
+        # we create one (see python-telegram-bot Application.__run).
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            application.run_polling(stop_signals=None)
+        finally:
+            try:
+                asyncio.set_event_loop(None)
+            except Exception:
+                pass
     except Exception:
         log.exception("telegram embedded bot failed")
 
