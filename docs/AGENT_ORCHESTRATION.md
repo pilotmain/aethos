@@ -88,6 +88,8 @@ Sub-agents **do not** replace the gateway; they **narrow or label** intent befor
 | Unit tests | Spawn, list by scope, terminate, duplicate-name rules. |
 | Persistence | **v1:** in-process dict is OK for **single-worker dev** only; document that **multi-worker / multiple API replicas** need DB/Redis. |
 
+**Phase 26 — Mission Control (user-facing names):** `app/services/team/` adds `TeamRoster`, `TeamMember`, `roles`, and `skills` — product language (*team members*, *roles*, *skills*) over the same `AgentRegistry` / `SubAgent` records; no change to spawn/execute semantics.
+
 **Singleton:** A process-wide singleton is fine for dev; for production, prefer **stateless service + DB table** or explicit “orchestration only on one worker” (documented).
 
 ### Phase 2 — Router + gateway hook (2–3 days) ✅
