@@ -110,6 +110,8 @@ def register_telegram_handlers(application: Application) -> None:
     Plain text messages hit ``telegram_bot.handle_incoming_text``, which routes non-slash
     lines through :func:`route_telegram_text_through_gateway` / :func:`~app.services.channels.router.route_inbound`.
     """
+    from app.bot import project_commands as mission_ctrl
+    from app.bot import social_commands as social_cmds
     from app.bot import telegram_bot as tb
 
     application.add_handler(CommandHandler("start", tb.start))
@@ -134,6 +136,16 @@ def register_telegram_handlers(application: Application) -> None:
     application.add_handler(CommandHandler("host", tb.host_cmd))
     application.add_handler(CommandHandler("permissions", tb.permissions_cmd))
     application.add_handler(CommandHandler("workspace", tb.workspace_cmd))
+    # Phase 27 — Mission Control (projects/tasks; /goal — /project is workspace + dev keys)
+    application.add_handler(CommandHandler("goal", mission_ctrl.goal_cmd))
+    application.add_handler(CommandHandler("task", mission_ctrl.task_cmd))
+    application.add_handler(CommandHandler("tasks", mission_ctrl.tasks_cmd))
+    application.add_handler(CommandHandler("assign", mission_ctrl.assign_cmd))
+    application.add_handler(CommandHandler("claim", mission_ctrl.claim_cmd))
+    application.add_handler(CommandHandler("unclaim", mission_ctrl.unclaim_cmd))
+    application.add_handler(CommandHandler("done", mission_ctrl.done_cmd))
+    application.add_handler(CommandHandler("mission", mission_ctrl.mission_cmd))
+    application.add_handler(CommandHandler("mcstatus", mission_ctrl.mcstatus_cmd))
     application.add_handler(CommandHandler("projects", tb.nexa_projects_list_cmd))
     application.add_handler(CommandHandler("project", tb.nexa_project_cmd))
     application.add_handler(CommandHandler("projects", tb.projects_cmd))
@@ -146,5 +158,9 @@ def register_telegram_handlers(application: Application) -> None:
     application.add_handler(CommandHandler("deny", tb.deny_cmd))
     application.add_handler(CommandHandler("cancel", tb.cancel_cmd))
     application.add_handler(CommandHandler("why", tb.why_cmd))
+    application.add_handler(CommandHandler("imagine", tb.imagine_cmd))
+    application.add_handler(CommandHandler("tweet", social_cmds.tweet_cmd))
+    application.add_handler(CommandHandler("search_tweets", social_cmds.search_tweets_cmd))
     application.add_handler(MessageHandler(filters.PHOTO, tb.handle_incoming_photo))
+    application.add_handler(MessageHandler(filters.VOICE, tb.handle_incoming_voice))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, tb.handle_incoming_text))

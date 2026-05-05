@@ -518,6 +518,11 @@ class Settings(BaseSettings):
     nexa_mission_max_runtime_seconds: int = 60
     nexa_data_retention_days: int = 7
     nexa_retention_sweep_interval_seconds: int = 3600
+    # Phase 27 — Mission Control projects & tasks (dedicated SQLite under NEXA_DATA_DIR)
+    nexa_projects_enabled: bool = True
+    nexa_data_dir: str = Field(default_factory=lambda: str(REPO_ROOT / "data"))
+    # Task checkout (claim) auto-release when lock age exceeds this (seconds).
+    nexa_task_lock_timeout_seconds: int = 3600
 
     # Phase 13 — strict privacy lockdown (external providers off; local_stub only)
     nexa_strict_privacy_mode: bool = False
