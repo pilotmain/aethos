@@ -94,6 +94,20 @@ class BudgetTracker:
             )
             conn.execute("CREATE INDEX IF NOT EXISTS idx_usage_member ON usage_records(member_id)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_usage_created ON usage_records(created_at)")
+        self._apply_org_columns()
+
+    def _apply_org_columns(self) -> None:
+        """Phase 29 — optional tenant columns on member_budgets."""
+        with sqlite3.connect(self.db_path) as conn:
+
+            def _has(table: str, col: str) -> bool:
+                cur = conn.execute(f"PRAGMA table_info({table})")
+                return any(str(r[1]) == col for r in cur.fetchall())
+
+            if not _has("member_budgets", "organization_id"):
+                conn.execute("ALTER TABLE member_budgets ADD COLUMN organization_id TEXT")
+            if not _has("member_budgets", "team_id"):
+                conn.execute("ALTER TABLE member_budgets ADD COLUMN team_id TEXT")
 
     def get_or_create_budget(
         self, member_id: str, monthly_limit: int | None = None

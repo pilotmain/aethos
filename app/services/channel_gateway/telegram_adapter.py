@@ -111,6 +111,7 @@ def register_telegram_handlers(application: Application) -> None:
     lines through :func:`route_telegram_text_through_gateway` / :func:`~app.services.channels.router.route_inbound`.
     """
     from app.bot import budget_commands as budget_cmds
+    from app.bot import org_commands as org_cmds
     from app.bot import project_commands as mission_ctrl
     from app.bot import social_commands as social_cmds
     from app.bot import telegram_bot as tb
@@ -151,6 +152,8 @@ def register_telegram_handlers(application: Application) -> None:
     application.add_handler(CommandHandler("budget", budget_cmds.budget_cmd))
     application.add_handler(CommandHandler("timesheet", budget_cmds.timesheet_cmd))
     application.add_handler(CommandHandler("workhours", budget_cmds.timesheet_cmd))
+    # Phase 29 — multi-tenant workspaces (organizations / RBAC)
+    application.add_handler(CommandHandler("org", org_cmds.org_cmd))
     application.add_handler(CommandHandler("projects", tb.nexa_projects_list_cmd))
     application.add_handler(CommandHandler("project", tb.nexa_project_cmd))
     application.add_handler(CommandHandler("projects", tb.projects_cmd))

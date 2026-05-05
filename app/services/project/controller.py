@@ -64,8 +64,18 @@ class ProjectController:
         goal: str,
         team_scope: str,
         parent_id: str | None = None,
+        *,
+        organization_id: str | None = None,
+        team_id: str | None = None,
     ) -> Project:
-        project = Project.create(name=name, goal=goal, team_scope=team_scope, parent_id=parent_id)
+        project = Project.create(
+            name=name,
+            goal=goal,
+            team_scope=team_scope,
+            parent_id=parent_id,
+            organization_id=organization_id,
+            team_id=team_id,
+        )
         self.project_store.save(project)
         self.state_store.set_current_project_id(team_scope, project.id)
         logger.info("Created MC project %s (%s)", project.id, project.name)
@@ -74,8 +84,14 @@ class ProjectController:
     def get_project(self, project_id: str) -> Project | None:
         return self.project_store.get(project_id)
 
-    def list_projects(self, team_scope: str, status: ProjectStatus | None = None) -> list[Project]:
-        projects = self.project_store.list_by_scope(team_scope)
+    def list_projects(
+        self,
+        team_scope: str,
+        status: ProjectStatus | None = None,
+        *,
+        organization_id: str | None = None,
+    ) -> list[Project]:
+        projects = self.project_store.list_by_scope(team_scope, organization_id=organization_id)
         if status is not None:
             projects = [p for p in projects if p.status == status]
         return sorted(projects, key=lambda p: p.created_at, reverse=True)
@@ -114,15 +130,21 @@ class ProjectController:
         team_scope: str | None = None,
         description: str | None = None,
     ) -> Task:
+        org_id: str | None = None
+        tm_id: str | None = None
         if project_id:
             proj = self.project_store.get(project_id)
             if proj:
                 team_scope = proj.team_scope
+                org_id = proj.organization_id
+                tm_id = proj.team_id
         task = Task.create(
             title,
             project_id=project_id,
             team_scope=team_scope,
             description=description,
+            organization_id=org_id,
+            team_id=tm_id,
         )
         if project_id:
             existing = self.task_store.list_by_project(project_id)

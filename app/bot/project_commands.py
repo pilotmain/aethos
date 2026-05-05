@@ -32,6 +32,16 @@ def _actor_member_id(update: Update) -> str:
     return f"tg:{uid}"
 
 
+def _active_organization_id(update: Update) -> str | None:
+    """Phase 29 — Mission Control rows tagged with the user's active workspace when RBAC is on."""
+    s = get_settings()
+    if not getattr(s, "nexa_rbac_enabled", False) or not update.effective_user:
+        return None
+    from app.services.rbac.organization_service import OrganizationService
+
+    return OrganizationService().get_active_organization_id(str(update.effective_user.id))
+
+
 async def _gate(update: Update) -> bool:
     if not update.effective_user or not update.message:
         return False
@@ -82,7 +92,8 @@ async def goal_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         return
 
     if rest.lower() in ("list", "ls"):
-        projects = ctrl.list_projects(chat)
+        oid = _active_organization_id(update)
+        projects = ctrl.list_projects(chat, organization_id=oid)
         if not projects:
             await update.message.reply_text("No projects yet. Create: /goal \"Build the thing\"")
             return
@@ -127,7 +138,12 @@ async def goal_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if (rest.startswith('"') and rest.endswith('"')) or (rest.startswith("'") and rest.endswith("'")):
         goal = rest[1:-1].strip()
         name = goal[:80]
-        p = ctrl.create_project(name=name, goal=goal, team_scope=chat)
+        p = ctrl.create_project(
+            name=name,
+            goal=goal,
+            team_scope=chat,
+            organization_id=_active_organization_id(update),
+        )
         await update.message.reply_text(
             f"✅ Project created\n\n🎯 {goal}\n🆔 `{p.id}` (current)\n\n"
             f"Next: /task add \"First task\""

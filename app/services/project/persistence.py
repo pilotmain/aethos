@@ -88,6 +88,23 @@ class MissionControlStoreBase:
                 );
                 """
             )
+            self._apply_rbac_migrations(conn)
+
+    def _apply_rbac_migrations(self, conn: sqlite3.Connection) -> None:
+        """Phase 29 — nullable organization_id / team_id on projects and tasks."""
+
+        def _has(table: str, col: str) -> bool:
+            cur = conn.execute(f"PRAGMA table_info({table})")
+            return any(str(r[1]) == col for r in cur.fetchall())
+
+        if not _has("projects", "organization_id"):
+            conn.execute("ALTER TABLE projects ADD COLUMN organization_id TEXT")
+        if not _has("projects", "team_id"):
+            conn.execute("ALTER TABLE projects ADD COLUMN team_id TEXT")
+        if not _has("tasks", "organization_id"):
+            conn.execute("ALTER TABLE tasks ADD COLUMN organization_id TEXT")
+        if not _has("tasks", "team_id"):
+            conn.execute("ALTER TABLE tasks ADD COLUMN team_id TEXT")
 
 
 class ProjectStore(MissionControlStoreBase):
@@ -97,8 +114,9 @@ class ProjectStore(MissionControlStoreBase):
                 """
                 INSERT OR REPLACE INTO projects
                 (id, name, goal, status, parent_project_id, team_scope,
-                 created_at, updated_at, completed_at, metadata)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 created_at, updated_at, completed_at, metadata,
+                 organization_id, team_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     project.id,
@@ -111,6 +129,8 @@ class ProjectStore(MissionControlStoreBase):
                     project.updated_at.isoformat(),
                     project.completed_at.isoformat() if project.completed_at else None,
                     json.dumps(project.metadata or {}),
+                    project.organization_id,
+                    project.team_id,
                 ),
             )
 
@@ -120,12 +140,24 @@ class ProjectStore(MissionControlStoreBase):
             row = cur.fetchone()
         return self._row_to_project(row) if row else None
 
-    def list_by_scope(self, team_scope: str) -> list[Project]:
+    def list_by_scope(
+        self, team_scope: str, organization_id: str | None = None
+    ) -> list[Project]:
         with self._connect() as conn:
-            cur = conn.execute(
-                "SELECT * FROM projects WHERE team_scope = ? ORDER BY created_at DESC",
-                (team_scope,),
-            )
+            if organization_id:
+                cur = conn.execute(
+                    """
+                    SELECT * FROM projects WHERE team_scope = ?
+                      AND (organization_id IS NULL OR organization_id = ?)
+                    ORDER BY created_at DESC
+                    """,
+                    (team_scope, organization_id),
+                )
+            else:
+                cur = conn.execute(
+                    "SELECT * FROM projects WHERE team_scope = ? ORDER BY created_at DESC",
+                    (team_scope,),
+                )
             return [self._row_to_project(r) for r in cur.fetchall()]
 
     def list_by_parent(self, parent_id: str) -> list[Project]:
@@ -137,6 +169,7 @@ class ProjectStore(MissionControlStoreBase):
             return [self._row_to_project(r) for r in cur.fetchall()]
 
     def _row_to_project(self, row: sqlite3.Row) -> Project:
+        keys = row.keys()
         return Project(
             id=str(row["id"]),
             name=str(row["name"]),
@@ -144,6 +177,8 @@ class ProjectStore(MissionControlStoreBase):
             status=ProjectStatus(str(row["status"])),
             parent_project_id=row["parent_project_id"],
             team_scope=row["team_scope"],
+            organization_id=row["organization_id"] if "organization_id" in keys else None,
+            team_id=row["team_id"] if "team_id" in keys else None,
             created_at=_parse_dt(row["created_at"]) or datetime.now(timezone.utc),
             updated_at=_parse_dt(row["updated_at"]) or datetime.now(timezone.utc),
             completed_at=_parse_dt(row["completed_at"]),
@@ -157,10 +192,11 @@ class TaskStore(MissionControlStoreBase):
             conn.execute(
                 """
                 INSERT OR REPLACE INTO tasks
-                (id, title, description, project_id, team_scope, assigned_to, assigned_by,
+                (id, title, description, project_id, team_scope, organization_id, team_id,
+                 assigned_to, assigned_by,
                  status, locked_by, locked_at, parent_task_id, goal_link,
                  created_at, updated_at, completed_at, order_index)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     task.id,
@@ -168,6 +204,8 @@ class TaskStore(MissionControlStoreBase):
                     task.description,
                     task.project_id,
                     task.team_scope,
+                    task.organization_id,
+                    task.team_id,
                     task.assigned_to,
                     task.assigned_by,
                     task.status.value,
@@ -300,12 +338,15 @@ class TaskStore(MissionControlStoreBase):
         return cleared
 
     def _row_to_task(self, row: sqlite3.Row) -> Task:
+        keys = row.keys()
         return Task(
             id=str(row["id"]),
             title=str(row["title"]),
             description=row["description"],
             project_id=row["project_id"],
             team_scope=row["team_scope"],
+            organization_id=row["organization_id"] if "organization_id" in keys else None,
+            team_id=row["team_id"] if "team_id" in keys else None,
             assigned_to=row["assigned_to"],
             assigned_by=row["assigned_by"],
             status=TaskStatus(str(row["status"])),

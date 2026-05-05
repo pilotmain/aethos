@@ -39,6 +39,8 @@ class Project:
     status: ProjectStatus = ProjectStatus.ACTIVE
     parent_project_id: str | None = None
     team_scope: str | None = None
+    organization_id: str | None = None
+    team_id: str | None = None
     created_at: datetime = field(default_factory=_utcnow)
     updated_at: datetime = field(default_factory=_utcnow)
     completed_at: datetime | None = None
@@ -52,6 +54,8 @@ class Project:
         team_scope: str,
         *,
         parent_id: str | None = None,
+        organization_id: str | None = None,
+        team_id: str | None = None,
     ) -> Project:
         return cls(
             id=str(uuid.uuid4())[:8],
@@ -59,6 +63,8 @@ class Project:
             goal=goal.strip(),
             team_scope=team_scope,
             parent_project_id=parent_id,
+            organization_id=organization_id,
+            team_id=team_id,
         )
 
     def to_user_display(self) -> str:
@@ -80,6 +86,8 @@ class Task:
     description: str | None = None
     project_id: str | None = None
     team_scope: str | None = None
+    organization_id: str | None = None
+    team_id: str | None = None
     assigned_to: str | None = None
     assigned_by: str | None = None
     status: TaskStatus = TaskStatus.PENDING
@@ -100,6 +108,8 @@ class Task:
         project_id: str | None = None,
         team_scope: str | None = None,
         description: str | None = None,
+        organization_id: str | None = None,
+        team_id: str | None = None,
     ) -> Task:
         return cls(
             id=str(uuid.uuid4())[:8],
@@ -107,6 +117,8 @@ class Task:
             description=(description or "").strip() or None,
             project_id=project_id,
             team_scope=team_scope,
+            organization_id=organization_id,
+            team_id=team_id,
         )
 
     def assign(self, member_id: str, assigned_by: str) -> None:

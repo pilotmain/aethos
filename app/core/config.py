@@ -527,6 +527,8 @@ class Settings(BaseSettings):
     nexa_budget_enabled: bool = True
     nexa_budget_default_monthly_limit: int = 1_000_000
     nexa_budget_reset_day: int = 1
+    # Phase 29 — multi-tenant workspaces, roles, teams (SQLite rbac.db under NEXA_DATA_DIR).
+    nexa_rbac_enabled: bool = False
 
     # Phase 13 — strict privacy lockdown (external providers off; local_stub only)
     nexa_strict_privacy_mode: bool = False
