@@ -1,10 +1,13 @@
 # DO NOT MODIFY WITHOUT SECURITY REVIEW — vendor SDK construction guard.
 
 """
-Vendor LLM SDK access — **only** via :func:`build_openai_client` / :func:`build_anthropic_client`.
+Vendor LLM SDK access — **only** via the guarded builders in this module:
+
+- :func:`build_openai_client` / :func:`build_async_openai_client`
+- :func:`build_anthropic_client` / :func:`build_async_anthropic_client`
 
 Instantiation is guarded so arbitrary modules cannot construct SDK clients; allowed call sites
-are the provider implementations plus vetted orchestration modules (see ``_ALLOW_VENDOR_SDK_MODULES``).
+are the provider implementations plus vetted orchestration modules.
 """
 
 from __future__ import annotations
@@ -18,12 +21,11 @@ _log = logging.getLogger(__name__)
 CRITICAL_BOUNDARY_MSG = (
     "CRITICAL: ARCHITECTURE VIOLATION — vendor LLM SDK clients must only be constructed "
     "via app.services.providers.sdk builders inside approved modules (providers bundle, "
-    "llm_service, response_composer). Use app.services.providers.gateway.call_provider from elsewhere."
+    "llm_service). Use app.services.providers.gateway.call_provider from elsewhere."
 )
 
 _ORCHESTRATION_MODULES = (
     "app.services.llm_service",
-    "app.services.response_composer",
     "app.services.llm",
 )
 
@@ -76,4 +78,28 @@ def build_anthropic_client(**kwargs: Any) -> Any:
     return _anthropic.Anthropic(**kwargs)
 
 
-__all__ = ["build_openai_client", "build_anthropic_client", "CRITICAL_BOUNDARY_MSG"]
+def build_async_openai_client(**kwargs: Any) -> Any:
+    """Construct an OpenAI **async** SDK client (guarded) — streaming only."""
+    if not _vendor_sdk_callsite_allowed():
+        raise RuntimeError(CRITICAL_BOUNDARY_MSG)
+    from openai import AsyncOpenAI as _AsyncOpenAI
+
+    return _AsyncOpenAI(**kwargs)
+
+
+def build_async_anthropic_client(**kwargs: Any) -> Any:
+    """Construct an Anthropic **async** SDK client (guarded) — streaming only."""
+    if not _vendor_sdk_callsite_allowed():
+        raise RuntimeError(CRITICAL_BOUNDARY_MSG)
+    import anthropic as _anthropic
+
+    return _anthropic.AsyncAnthropic(**kwargs)
+
+
+__all__ = [
+    "build_openai_client",
+    "build_anthropic_client",
+    "build_async_openai_client",
+    "build_async_anthropic_client",
+    "CRITICAL_BOUNDARY_MSG",
+]
