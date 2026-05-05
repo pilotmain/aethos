@@ -1,3 +1,23 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nexa-next"
+version = "1.0.0"
+description = "Nexa Next — AI agent framework (CLI, API, bots)"
+readme = "README.md"
+requires-python = ">=3.10"
+# Runtime deps are installed via pip install -r requirements.txt (installer + docs).
+
+[project.scripts]
+nexa = "nexa_cli.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+# Include `app` so `pip install -e .` can import the full API/bot tree (clawhub, skills, etc.).
+include = ["nexa_cli*", "app*"]
+
 [tool.ruff]
 target-version = "py311"
 line-length = 120

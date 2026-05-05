@@ -5,15 +5,46 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import subprocess
 import sys
 import urllib.error
 import urllib.parse
 import urllib.request
+from pathlib import Path
 from typing import Any
 
 
 def _base_url() -> str:
-    return (os.environ.get("NEXA_API_BASE") or "http://127.0.0.1:8000").rstrip("/")
+    return (
+        os.environ.get("NEXA_API_BASE")
+        or os.environ.get("API_BASE_URL")
+        or "http://127.0.0.1:8010"
+    ).rstrip("/")
+
+
+def _repo_root() -> Path:
+    return Path(__file__).resolve().parent.parent
+
+
+def cmd_serve(host: str, port: int, reload: bool) -> int:
+    """Run uvicorn from the repo root (native dev)."""
+    root = _repo_root()
+    env = os.environ.copy()
+    env.setdefault("NEXA_API_BASE", f"http://127.0.0.1:{port}")
+    cmd = [
+        sys.executable,
+        "-m",
+        "uvicorn",
+        "app.main:app",
+        "--host",
+        host,
+        "--port",
+        str(port),
+    ]
+    if reload:
+        cmd.append("--reload")
+    print(f"Starting API from {root} — http://{host}:{port}", file=sys.stderr)
+    return subprocess.call(cmd, cwd=str(root), env=env)
 
 
 def _headers(uid: str) -> dict[str, str]:
@@ -163,6 +194,13 @@ def cmd_replay(uid: str, mission_id: str) -> int:
 
 
 def main() -> int:
+    try:
+        from dotenv import load_dotenv
+
+        load_dotenv(_repo_root() / ".env")
+    except Exception:
+        pass
+
     p = argparse.ArgumentParser(prog="nexa", description="Nexa Next CLI (HTTP)")
     p.add_argument(
         "--user-id",
@@ -211,17 +249,86 @@ def main() -> int:
     sp_dsc.add_argument("--interval-seconds", type=int, default=None, dest="interval_seconds")
     sp_dsc.add_argument("--agent", default=None)
 
+    sp_skills = sub.add_parser("skills", help="Plugin skills registry (Phase 6)")
+    sk_sub = sp_skills.add_subparsers(dest="skills_cmd", required=True)
+    sk_sub.add_parser("list", help="List registered plugin skills")
+    sk_ins = sk_sub.add_parser("install", help="Install skill (ClawHub / file / URL)")
+    sk_ins.add_argument("name")
+    sk_ins.add_argument(
+        "source",
+        nargs="?",
+        default="clawhub",
+        help="clawhub | file:///path/to/skill.yaml | https://…",
+    )
+    sk_rem = sk_sub.add_parser("remove", help="Remove skill (stub)")
+    sk_rem.add_argument("name")
+
+    try:
+        from app.cli.clawhub import register_clawhub_parser
+
+        register_clawhub_parser(sub)
+    except ModuleNotFoundError:
+        # `app` not on PYTHONPATH (minimal install / wrong CWD) — skip ClawHub subcommands.
+        pass
+
+    sp_scrape = sub.add_parser(
+        "scrape",
+        help="Phase 21 web scraping (local fetch/extract; subcommands: fetch, extract, paginate)",
+    )
+    sp_scrape.add_argument(
+        "scrape_argv",
+        nargs=argparse.REMAINDER,
+        metavar="ARGS",
+        help='e.g. fetch https://example.com  |  extract https://example.com --css "h1"',
+    )
+
+    sp_cron = sub.add_parser("cron", help="Cron automation API (Phase 13; requires NEXA_CRON_API_TOKEN)")
+    cr_sub = sp_cron.add_subparsers(dest="cron_cmd", required=True)
+    cr_sub.add_parser("list", help="GET /cron/jobs")
+    cr_add = cr_sub.add_parser("add", help="POST channel_message job")
+    cr_add.add_argument("cron_expression")
+    cr_add.add_argument("message", nargs="+", help="Message text")
+    cr_rem = cr_sub.add_parser("remove", help="DELETE job")
+    cr_rem.add_argument("job_id")
+    cr_pau = cr_sub.add_parser("pause")
+    cr_pau.add_argument("job_id")
+    cr_res = cr_sub.add_parser("resume")
+    cr_res.add_argument("job_id")
+
     sub.add_parser("run-dev", help="Deprecated alias; use: nexa dev run …")
 
+    sp_setup = sub.add_parser(
+        "setup",
+        help="Interactive native setup wizard (writes .env keys; see docs/NATIVE_SETUP.md)",
+    )
+
+    sub.add_parser("status", help="HTTP health checks against NEXA_API_BASE (default :8010)")
+    sub.add_parser("features", help="Show enabled capability flags from repo .env")
+
+    sp_conf = sub.add_parser("config", help="Print path to repo .env (optional --edit with $EDITOR)")
+    sp_conf.add_argument("--edit", action="store_true", help="Open in $EDITOR when set")
 
     sp_pr = sub.add_parser(
         "pr",
-        help="Automated GitHub PR review (requires GITHUB_TOKEN + NEXA_PR_REVIEW_ENABLED)",
+        help="Automated GitHub PR review (Phase 23; requires GITHUB_TOKEN + NEXA_PR_REVIEW_ENABLED)",
     )
     pr_sub = sp_pr.add_subparsers(dest="pr_cmd", required=True)
     sp_prev = pr_sub.add_parser("review", help="Analyze PR and post GitHub review")
     sp_prev.add_argument("repo", help="owner/repo")
     sp_prev.add_argument("pr_number", type=int)
+
+    sp_serve = sub.add_parser(
+        "serve",
+        help="Run FastAPI locally via uvicorn (default port 8010; matches docker-compose host mapping)",
+    )
+    sp_serve.add_argument("--host", default="0.0.0.0", help="Bind address")
+    sp_serve.add_argument(
+        "--port",
+        type=int,
+        default=int(os.environ.get("NEXA_SERVE_PORT") or "8010"),
+        help="Listen port (or env NEXA_SERVE_PORT)",
+    )
+    sp_serve.add_argument("--reload", action="store_true", help="Uvicorn --reload")
 
     args = p.parse_args()
     uid = str(args.user_id)
@@ -252,6 +359,44 @@ def main() -> int:
         if args.settings_cmd == "set":
             return cmd_settings_set(uid, list(args.pairs))
 
+    if args.cmd == "skills":
+        from app.cli.skills import cmd_skills_install, cmd_skills_list, cmd_skills_remove
+
+        if args.skills_cmd == "list":
+            return cmd_skills_list()
+        if args.skills_cmd == "install":
+            return cmd_skills_install(str(args.name), str(args.source))
+        if args.skills_cmd == "remove":
+            return cmd_skills_remove(str(args.name))
+
+    if args.cmd == "clawhub":
+        from app.cli.clawhub import clawhub_dispatch
+
+        return clawhub_dispatch(args)
+
+    if args.cmd == "scrape":
+        from app.cli.scraping import scraping_main
+
+        av = list(args.scrape_argv or [])
+        if av and av[0] == "--":
+            av = av[1:]
+        return scraping_main(av)
+
+    if args.cmd == "cron":
+        from app.cli.cron import cron_main
+
+        if args.cron_cmd == "list":
+            return cron_main(["list"])
+        if args.cron_cmd == "add":
+            msg = " ".join(args.message)
+            return cron_main(["add", str(args.cron_expression), msg])
+        if args.cron_cmd == "remove":
+            return cron_main(["remove", str(args.job_id)])
+        if args.cron_cmd == "pause":
+            return cron_main(["pause", str(args.job_id)])
+        if args.cron_cmd == "resume":
+            return cron_main(["resume", str(args.job_id)])
+
     if args.cmd == "dev":
         if args.dev_cmd == "workspace-add":
             return cmd_dev_workspace_add(uid, str(args.name), str(args.repo_path))
@@ -276,6 +421,32 @@ def main() -> int:
                 agent=args.agent,
             )
 
+    if args.cmd == "run-dev":
+        print(
+            "Use: nexa dev run --workspace <workspace_id> --goal \"…\" [--agent aider]",
+            file=sys.stderr,
+        )
+        return 2
+
+    if args.cmd == "setup":
+        from nexa_cli.setup_wizard import run_setup_wizard
+
+        return run_setup_wizard()
+
+    if args.cmd == "status":
+        from nexa_cli.cli_status import cmd_status
+
+        return cmd_status()
+
+    if args.cmd == "features":
+        from nexa_cli.cli_features import cmd_features
+
+        return cmd_features()
+
+    if args.cmd == "config":
+        from nexa_cli.cli_config import cmd_config
+
+        return cmd_config(edit=bool(getattr(args, "edit", False)))
 
     if args.cmd == "pr":
         from nexa_cli.pr_review import cmd_pr_review
@@ -283,12 +454,8 @@ def main() -> int:
         if args.pr_cmd == "review":
             return cmd_pr_review(str(args.repo), int(args.pr_number))
 
-    if args.cmd == "run-dev":
-        print(
-            "Use: nexa dev run --workspace <workspace_id> --goal \"…\" [--agent aider]",
-            file=sys.stderr,
-        )
-        return 2
+    if args.cmd == "serve":
+        return cmd_serve(str(args.host), int(args.port), bool(args.reload))
 
     return 1
 

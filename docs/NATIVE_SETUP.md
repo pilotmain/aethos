@@ -61,11 +61,20 @@ The wizard:
 
 ### CLI helpers after install
 
+Install the **`nexa`** console script once per clone (the Phase 32 installer runs this automatically after `pip install -r requirements.txt`):
+
+```bash
+pip install -e .
+```
+
+Then **`nexa`** matches **`python -m nexa_cli`** (same entrypoint: **`nexa_cli.__main__:main`**).
+
 | Command | Purpose |
 |---------|---------|
-| `python -m nexa_cli status` | GET `/api/v1/health` and `/api/v1/system/health` using **`NEXA_API_BASE`** (default `http://127.0.0.1:8010`). |
-| `python -m nexa_cli features` | Summarize enabled capability flags from repo **`.env`**. |
-| `python -m nexa_cli config` | Print path to **`.env`**; use **`--edit`** with **`$EDITOR`** to open it. |
+| `nexa setup` / `python -m nexa_cli setup` | Interactive wizard |
+| `nexa status` / `python -m nexa_cli status` | GET `/api/v1/health` and `/api/v1/system/health` using **`NEXA_API_BASE`** (default `http://127.0.0.1:8010`). |
+| `nexa features` / `python -m nexa_cli features` | Summarize enabled capability flags from repo **`.env`**. |
+| `nexa config` / `python -m nexa_cli config` | Print path to **`.env`**; use **`--edit`** with **`$EDITOR`** to open it. |
 
 ## Run the API
 

@@ -231,13 +231,24 @@ else
   hr
   exit 1
 fi
+
+echo "│  🔗 Registering \`nexa\` command (\`pip install -e .\`)…"
+if python -m pip install -e . -q; then
+  echo -e "│  ${GREEN}✓${NC} Run \`nexa setup\`, \`nexa serve\`, \`nexa status\` from this venv"
+else
+  echo -e "│  ${YELLOW}!${NC} Editable install failed — wizard will use \`python -m nexa_cli setup\`"
+fi
 step_frame_bottom
 
 echo ""
 echo -e "${BLUE}🔧 Launching configuration wizard (steps 3–5 of 6: LLM, keys, features)…${NC}"
 export NEXA_SETUP_FROM_INSTALLER=1
 export NEXA_SETUP_KIND="${NEXA_SETUP_KIND:-fresh}"
-python -m nexa_cli setup
+if command -v nexa &>/dev/null; then
+  nexa setup
+else
+  python -m nexa_cli setup
+fi
 
 echo ""
 echo -e "${GREEN}Done.${NC} Activate later with: ${CYAN}cd ${NEXA_INSTALL_DIR} && source .venv/bin/activate${NC}"
