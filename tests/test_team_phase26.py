@@ -82,3 +82,18 @@ def test_member_busy_status(roster: TeamRoster) -> None:
     tm = roster.get_member(m.member_id)
     assert tm is not None
     assert tm.status_text == "Busy"
+
+
+def test_roster_get_agent_status(roster: TeamRoster) -> None:
+    with patch("app.services.sub_agent_registry.get_settings", return_value=_S()):
+        m = roster.add_member("Ops", "git", "c2")
+        assert m is not None
+    roster.set_member_task(m.member_id, "Deploy")
+    st = roster.get_agent_status(m.member_id)
+    assert "error" not in st
+    assert st.get("name") == "Ops"
+    assert st.get("domain") == "git"
+    assert st.get("current_task") == "Deploy"
+    assert st.get("status") == "idle"
+
+    assert roster.get_agent_status("bad-id-xyz").get("error") == "Agent not found"

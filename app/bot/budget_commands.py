@@ -21,8 +21,11 @@ _roster = TeamRoster()
 _tracker = BudgetTracker()
 
 
-def _scope(update: Update) -> str:
-    return str(update.effective_chat.id) if update.effective_chat else "unknown"
+def _orch_scope(update: Update) -> str:
+    """Orchestration roster scope (must match gateway ``telegram:<chat_id>``)."""
+    from app.services.sub_agent_router import telegram_agent_registry_chat_id
+
+    return telegram_agent_registry_chat_id(update.effective_chat.id if update.effective_chat else None)
 
 
 def _strip_at(token: str) -> str:
@@ -50,7 +53,7 @@ async def _gate(update: Update) -> bool:
 async def budget_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not await _gate(update) or not update.message:
         return
-    chat_id = _scope(update)
+    chat_id = _orch_scope(update)
     raw = (update.message.text or "").strip()
     parts = raw.split()
     if len(parts) == 1:
@@ -154,7 +157,7 @@ async def timesheet_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     """Recent per-member token usage (Phase 28 “timesheet”)."""
     if not await _gate(update) or not update.message:
         return
-    chat_id = _scope(update)
+    chat_id = _orch_scope(update)
     raw = (update.message.text or "").strip()
     parts = raw.split()
     if len(parts) >= 2:

@@ -96,6 +96,8 @@ class Settings(BaseSettings):
     nexa_agent_autoqueue_require_approval_after: int = 0
     # Run idle-agent cleanup at most this often during orchestration turns (seconds).
     nexa_agent_cleanup_interval_seconds: int = 300
+    # When true (default), bare @mention runs a safe default action ("status") instead of "ready" text.
+    nexa_sub_agent_auto_execute: bool = True
     # Week 5.5 — skip Jobs approval for trusted chat/domain/sub-agent (host executor paths)
     nexa_auto_approve_enabled: bool = False
     nexa_auto_approve_chats: str = ""

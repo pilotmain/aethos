@@ -65,6 +65,16 @@ def orchestration_web_session_id(gctx: GatewayContext) -> str:
     ).strip()[:64] or "default"
 
 
+def telegram_agent_registry_chat_id(telegram_chat_id: int | str | None) -> str:
+    """
+    Canonical ``parent_chat_id`` for Telegram ↔ :class:`~app.services.sub_agent_registry.AgentRegistry`.
+
+    Matches :func:`orchestration_chat_key` when ``telegram_chat_id`` is present in gateway extras.
+    """
+    tid = str(telegram_chat_id or "").strip()
+    return f"telegram:{tid}" if tid else "telegram:unknown"
+
+
 class AgentRouter:
     """Routes @mentions to registered sub-agents (sync)."""
 
@@ -126,6 +136,8 @@ class AgentRouter:
                 effective_message = (
                     "security review: scan the default workspace root for heuristic secrets and unsafe patterns."
                 )
+            elif bool(getattr(get_settings(), "nexa_sub_agent_auto_execute", True)):
+                effective_message = "status"
             else:
                 return {
                     "handled": True,
@@ -219,5 +231,6 @@ __all__ = [
     "AgentRouter",
     "orchestration_chat_key",
     "orchestration_web_session_id",
+    "telegram_agent_registry_chat_id",
     "try_sub_agent_gateway_turn",
 ]

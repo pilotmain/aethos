@@ -6,6 +6,7 @@ Technical ``AgentRegistry`` → **Team Roster** (list, add, remove members per c
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import Any
 
 from app.services.sub_agent_registry import AgentRegistry, AgentStatus, SubAgent
@@ -92,6 +93,32 @@ class TeamRoster:
         agent.metadata = md
         agent.touch()
         return True
+
+    def get_agent_status(self, agent_id: str) -> dict[str, Any]:
+        """Detailed agent status for Mission Control / APIs (includes current task line)."""
+        agent = self._registry.get_agent(agent_id)
+        if not agent:
+            return {"error": "Agent not found"}
+        md = dict(agent.metadata or {})
+        cur = md.get("current_task")
+        la = getattr(agent, "last_active", None)
+        last_active_iso = None
+        if isinstance(la, (int, float)):
+            last_active_iso = datetime.fromtimestamp(float(la), tz=timezone.utc).isoformat()
+        created_iso = None
+        ca = getattr(agent, "created_at", None)
+        if isinstance(ca, (int, float)):
+            created_iso = datetime.fromtimestamp(float(ca), tz=timezone.utc).isoformat()
+        return {
+            "id": agent.id,
+            "name": agent.name,
+            "domain": agent.domain,
+            "status": agent.status.value,
+            "current_task": cur,
+            "last_active": last_active_iso,
+            "created_at": created_iso,
+            "capabilities": list(agent.capabilities or []),
+        }
 
     def stats(self, chat_id: str | None = None) -> dict[str, Any]:
         """Passthrough orchestration stats (technical keys preserved)."""

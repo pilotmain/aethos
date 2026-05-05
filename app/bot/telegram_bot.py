@@ -1436,7 +1436,9 @@ async def agent_count_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     """Report orchestration sub-agents for this chat (AgentRegistry / TeamRoster)."""
     if not update.effective_user or not update.message or not update.effective_chat:
         return
-    chat_id = str(update.effective_chat.id)
+    from app.services.sub_agent_router import telegram_agent_registry_chat_id
+
+    chat_id = telegram_agent_registry_chat_id(update.effective_chat.id)
     db = SessionLocal()
     try:
         link = telegram_service.get_link(db, update.effective_user.id)
@@ -1462,6 +1464,45 @@ async def agent_count_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                 "Note: NEXA_AGENT_ORCHESTRATION_ENABLED is off — the registry will stay empty until enabled.",
             )
         await update.message.reply_text("\n".join(lines))
+    finally:
+        db.close()
+
+
+async def agent_status_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """List orchestration sub-agents with idle/busy status (same scope as @mentions)."""
+    if not update.effective_user or not update.message or not update.effective_chat:
+        return
+    from app.services.sub_agent_router import telegram_agent_registry_chat_id
+    from app.services.sub_agent_registry import AgentRegistry
+
+    db = SessionLocal()
+    try:
+        link = telegram_service.get_link(db, update.effective_user.id)
+        if not link:
+            await update.message.reply_text("Use /start first.")
+            return
+        chat_scope = telegram_agent_registry_chat_id(update.effective_chat.id)
+        agents = AgentRegistry().list_agents(chat_scope)
+        if not agents:
+            await update.message.reply_text(
+                "No orchestration agents in this chat yet. "
+                "Enable NEXA_AGENT_ORCHESTRATION_ENABLED and add members from Mission Control or spawn via API."
+            )
+            return
+        emoji = {"idle": "🟢", "busy": "🟡", "error": "🔴", "terminated": "⚫"}
+        lines = ["Agent status (this chat)", ""]
+        for agent in agents:
+            em = emoji.get(agent.status.value, "⚪")
+            md = dict(agent.metadata or {})
+            task = md.get("current_task")
+            caps = list(agent.capabilities or [])[:5]
+            cap_s = ", ".join(caps) if caps else "—"
+            lines.append(f"{em} @{agent.name} ({agent.domain})")
+            if task:
+                lines.append(f"   Current: {task}")
+            lines.append(f"   Skills: {cap_s}")
+            lines.append("")
+        await update.message.reply_text("\n".join(lines).strip()[:9000])
     finally:
         db.close()
 

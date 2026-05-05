@@ -1,7 +1,8 @@
 """
 Resolve a filesystem root for orchestration / QA scans without repeatedly asking the user.
 
-Prefer an explicit path hint, then DB-registered workspace roots, then :envvar:`NEXA_WORKSPACE_ROOT`,
+Prefer an explicit path hint, then remembered UI preference (Phase 35), then DB-registered
+workspace roots, then :envvar:`NEXA_WORKSPACE_ROOT`,
 then :func:`~app.services.workspace_registry.default_work_root_path`, then cwd.
 """
 
@@ -13,7 +14,11 @@ from pathlib import Path
 from sqlalchemy.orm import Session
 
 from app.core.config import REPO_ROOT, get_settings
+from app.services.user_settings.service import get_settings_document, upsert_settings
 from app.services.workspace_registry import default_work_root_path, list_roots
+
+# Persisted under NexaUserSettings.ui_preferences (Phase 35).
+LAST_WORKSPACE_UI_KEY = "last_workspace_root"
 
 # Absolute paths in user text (Unix-style); strip trailing punctuation after match.
 _PATH_IN_TEXT = re.compile(r"(?P<p>/Users/\S+|/(?:home|var|tmp)/\S+|/[a-zA-Z0-9][^\s:`\"]*)")
@@ -44,6 +49,21 @@ def extract_path_hint_from_message(message: str) -> str | None:
     return None
 
 
+def remember_workspace_root(db: Session | None, owner_user_id: str | None, resolved: Path) -> None:
+    """Persist last successful workspace root for Mission Control / QA scans."""
+    uid = (owner_user_id or "").strip()
+    if db is None or not uid:
+        return
+    try:
+        p = resolved.resolve()
+        if not p.exists():
+            return
+        upsert_settings(db, uid, ui_preferences={LAST_WORKSPACE_UI_KEY: str(p)})
+    except Exception:
+        # Never block scans on preference persistence failures.
+        return
+
+
 def resolve_workspace_path(
     path_hint: str | None,
     *,
@@ -54,40 +74,58 @@ def resolve_workspace_path(
     Resolve directory root for repo scans. Does not require Telegram chat_id — use ``owner_user_id``
     with ``db`` for registered workspace roots (same model as /workspace add).
     """
+    uid = (owner_user_id or "").strip()
+
+    def _finalize(out: Path) -> Path:
+        remember_workspace_root(db, uid, out)
+        return out
+
     if path_hint:
         p = Path(path_hint).expanduser()
         try:
             if p.is_dir():
-                return p.resolve()
+                return _finalize(p.resolve())
             if p.is_file():
-                return p.resolve().parent
+                return _finalize(p.resolve().parent)
         except OSError:
             pass
 
-    uid = (owner_user_id or "").strip()
+    if db is not None and uid:
+        doc = get_settings_document(db, uid)
+        raw = (doc.get("ui_preferences") or {}).get(LAST_WORKSPACE_UI_KEY)
+        if raw:
+            pp = Path(str(raw)).expanduser()
+            try:
+                if pp.is_dir():
+                    return pp.resolve()
+                if pp.is_file():
+                    return pp.resolve().parent
+            except OSError:
+                pass
+
     if db is not None and uid:
         roots = list_roots(db, uid, active_only=True)
         if roots:
-            return Path(roots[0].path_normalized).resolve()
+            return _finalize(Path(roots[0].path_normalized).resolve())
 
     s = get_settings()
     nw = (getattr(s, "nexa_workspace_root", None) or "").strip()
     if nw:
         pp = Path(nw).expanduser()
         if pp.exists():
-            return pp.resolve()
+            return _finalize(pp.resolve())
 
     dw = default_work_root_path()
     if dw.exists():
-        return dw
+        return _finalize(dw.resolve())
 
     repo = Path(REPO_ROOT)
     if repo.exists():
-        return repo.resolve()
+        return _finalize(repo.resolve())
 
     cwd = Path.cwd()
     if cwd.exists():
-        return cwd.resolve()
+        return _finalize(cwd.resolve())
 
     raise ValueError(
         "No workspace root found. Set NEXA_WORKSPACE_ROOT, register a root via /workspace add <path>, "
@@ -95,4 +133,9 @@ def resolve_workspace_path(
     )
 
 
-__all__ = ["extract_path_hint_from_message", "resolve_workspace_path"]
+__all__ = [
+    "LAST_WORKSPACE_UI_KEY",
+    "extract_path_hint_from_message",
+    "remember_workspace_root",
+    "resolve_workspace_path",
+]

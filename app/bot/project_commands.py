@@ -26,6 +26,13 @@ def _scope(update: Update) -> str:
     return str(update.effective_chat.id) if update.effective_chat else "unknown"
 
 
+def _team_orch_scope(update: Update) -> str:
+    """Sub-agent roster scope (matches gateway ``telegram:<chat_id>``)."""
+    from app.services.sub_agent_router import telegram_agent_registry_chat_id
+
+    return telegram_agent_registry_chat_id(update.effective_chat.id if update.effective_chat else None)
+
+
 def _actor_member_id(update: Update) -> str:
     """Synthetic actor id for checkout/done when no roster agent is addressed."""
     uid = update.effective_user.id if update.effective_user else 0
@@ -239,8 +246,9 @@ async def assign_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
         return
     member_name, task_title = m.group(1), m.group(2)
     chat = _scope(update)
+    orch = _team_orch_scope(update)
     ctrl = _CTRL()
-    member = ctrl.team_roster.get_member_by_name(member_name, chat)
+    member = ctrl.team_roster.get_member_by_name(member_name, orch)
     if not member:
         await update.message.reply_text(f"No team member @{member_name} in this chat. (/team)")
         return
@@ -264,6 +272,7 @@ async def claim_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     raw = (update.message.text or "").strip()
     settings = get_settings()
     chat = _scope(update)
+    orch = _team_orch_scope(update)
     ctrl = _CTRL()
     m = re.match(r"/claim\s+(?:@(\S+)\s+)?\"([^\"]+)\"", raw, re.I)
     if not m:
@@ -280,14 +289,14 @@ async def claim_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
                 '/claim @AgentName "Task title"'
             )
             return
-        mem = ctrl.team_roster.get_member_by_name(agent_name, chat)
+        mem = ctrl.team_roster.get_member_by_name(agent_name, orch)
         if not mem:
             await update.message.reply_text(f"No team member @{agent_name} in this chat.")
             return
         actor = mem.member_id
     else:
         if agent_name:
-            mem = ctrl.team_roster.get_member_by_name(agent_name, chat)
+            mem = ctrl.team_roster.get_member_by_name(agent_name, orch)
             actor = mem.member_id if mem else _actor_member_id(update)
         else:
             actor = _actor_member_id(update)
@@ -308,6 +317,7 @@ async def unclaim_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     raw = (update.message.text or "").strip()
     settings = get_settings()
     chat = _scope(update)
+    orch = _team_orch_scope(update)
     ctrl = _CTRL()
     m = re.match(r"/unclaim\s+(?:@(\S+)\s+)?\"([^\"]+)\"", raw, re.I)
     if not m:
@@ -318,7 +328,7 @@ async def unclaim_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         await update.message.reply_text('/unclaim @AgentName "Task title" (orchestration is on).')
         return
     if agent_name:
-        mem = ctrl.team_roster.get_member_by_name(agent_name, chat)
+        mem = ctrl.team_roster.get_member_by_name(agent_name, orch)
         actor = mem.member_id if mem else ""
     else:
         actor = _actor_member_id(update)
@@ -346,12 +356,13 @@ async def done_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     # /done @Member "title" OR /done "title"
     m2 = re.match(r"/done\s+@(\S+)\s+\"([^\"]+)\"", raw, re.I)
     chat = _scope(update)
+    orch = _team_orch_scope(update)
     ctrl = _CTRL()
     actor = _actor_member_id(update)
 
     if m2:
         member_name, task_title = m2.group(1), m2.group(2)
-        mem = ctrl.team_roster.get_member_by_name(member_name, chat)
+        mem = ctrl.team_roster.get_member_by_name(member_name, orch)
         if not mem:
             await update.message.reply_text(f"No member @{member_name}")
             return
@@ -424,9 +435,9 @@ async def mcstatus_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         await update.message.reply_text("Usage: /mcstatus @MemberName")
         return
     name = args[0].lstrip("@")
-    chat = _scope(update)
+    orch = _team_orch_scope(update)
     ctrl = _CTRL()
-    mem = ctrl.team_roster.get_member_by_name(name, chat)
+    mem = ctrl.team_roster.get_member_by_name(name, orch)
     if not mem:
         await update.message.reply_text(f"No member @{name} in this chat.")
         return

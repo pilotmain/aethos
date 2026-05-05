@@ -15,6 +15,7 @@ from starlette.responses import JSONResponse
 from app.api.routes import (
     admin_privacy,
     agent_organization,
+    agent_spawn,
     agent_runtime_api,
     apple_messages,
     audit_export,
@@ -274,6 +275,7 @@ app.include_router(multimodal.router, prefix=settings.api_v1_prefix)
 app.include_router(nexa_scheduler_api.router, prefix=settings.api_v1_prefix)
 app.include_router(nexa_skills_api.router, prefix=settings.api_v1_prefix)
 app.include_router(orchestration.router, prefix=settings.api_v1_prefix)
+app.include_router(agent_spawn.router, prefix=settings.api_v1_prefix)
 app.include_router(jobs.router, prefix=settings.api_v1_prefix)
 app.include_router(web.router, prefix=settings.api_v1_prefix)
 app.include_router(permissions.router, prefix=settings.api_v1_prefix)
