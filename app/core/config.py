@@ -529,6 +529,8 @@ class Settings(BaseSettings):
     nexa_budget_reset_day: int = 1
     # Phase 29 — multi-tenant workspaces, roles, teams (SQLite rbac.db under NEXA_DATA_DIR).
     nexa_rbac_enabled: bool = False
+    # Phase 30 — mobile app JWT lifetime (hours).
+    nexa_mobile_token_ttl_hours: int = 168
 
     # Phase 13 — strict privacy lockdown (external providers off; local_stub only)
     nexa_strict_privacy_mode: bool = False

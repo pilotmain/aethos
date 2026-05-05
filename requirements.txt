@@ -15,6 +15,7 @@ python-telegram-bot==21.6
 discord.py>=2.4.0
 python-dateutil==2.9.0.post0
 cryptography==44.0.0
+PyJWT==2.10.1
 pytest==8.3.3
 ruff>=0.4
 import-linter>=2.0

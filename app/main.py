@@ -35,6 +35,7 @@ from app.api.routes import (
     jobs,
     memory,
     mission_control,
+    mobile,
     multimodal,
     nexa_memory_layer,
     nexa_scheduler_api,
@@ -273,6 +274,7 @@ app.include_router(trust.router, prefix=settings.api_v1_prefix)
 app.include_router(user_settings.router, prefix=settings.api_v1_prefix)
 app.include_router(providers_usage.router, prefix=settings.api_v1_prefix)
 app.include_router(mission_control.router, prefix=settings.api_v1_prefix)
+app.include_router(mobile.router, prefix=settings.api_v1_prefix)
 app.include_router(dev_runtime.router, prefix=settings.api_v1_prefix)
 app.include_router(agent_runtime_api.router, prefix=settings.api_v1_prefix)
 app.include_router(report_watcher.router, prefix=settings.api_v1_prefix)
