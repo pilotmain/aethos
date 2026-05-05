@@ -7,7 +7,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
-from app.api.routes.cron_automation import verify_cron_token
+from app.core.auth import verify_cron_token
 from app.core.config import get_settings
 from app.services.social.orchestrator import SocialOrchestrator, SocialPlatform
 
