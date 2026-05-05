@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import AsyncIterator
 from typing import Any
 
 from app.services.llm.base import LLMProvider, Message, ModelInfo, Tool
 from app.services.llm_usage_context import resolve_db_for_usage
 from app.services.llm_usage_recorder import _tok_from_openai_response, record_llm_usage
-from app.services.providers.sdk import build_openai_client
+from app.services.providers.sdk import build_async_openai_client, build_openai_client
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +46,11 @@ class OpenAIBackend(LLMProvider):
             context_length=ctx,
             supports_tools=True,
             supports_streaming=True,
-            supports_vision="vision" in m or "4o" in m,
+            supports_vision="vision" in m
+            or "4o" in m
+            or "gpt-4-turbo" in m
+            or m.startswith("gpt-4-")
+            or "o4" in m,
         )
 
     def complete_chat(
@@ -99,6 +104,57 @@ class OpenAIBackend(LLMProvider):
         except Exception:  # noqa: BLE001
             pass
         return text
+
+    async def complete_chat_streaming(
+        self,
+        messages: list[Message],
+        *,
+        temperature: float = 0.7,
+        max_tokens: int | None = None,
+        response_format_json: bool = False,
+        tools: list[Tool] | None = None,
+    ) -> AsyncIterator[str]:
+        if tools:
+            logger.warning("openai backend: streaming with tools not wired in Phase 11.5 minimal path")
+        payload_messages = self._to_openai_messages(messages)
+        kwargs: dict[str, Any] = {
+            "model": self._model,
+            "messages": payload_messages,
+            "temperature": temperature,
+            "stream": True,
+        }
+        if max_tokens is not None:
+            kwargs["max_tokens"] = max_tokens
+        if response_format_json:
+            kwargs["response_format"] = {"type": "json_object"}
+        client_kw: dict[str, Any] = {"api_key": self._api_key, "timeout": self._timeout}
+        if self._base_url:
+            client_kw["base_url"] = self._base_url
+        client = build_async_openai_client(**client_kw)
+        stream = await client.chat.completions.create(**kwargs)
+        async for chunk in stream:
+            ch = chunk.choices[0] if chunk.choices else None
+            if ch is None:
+                continue
+            delta = ch.delta
+            if delta and delta.content:
+                yield delta.content
+            try:
+                if getattr(chunk, "usage", None) is not None:
+                    u = chunk.usage
+                    it = int(getattr(u, "prompt_tokens", 0) or 0)
+                    ot = int(getattr(u, "completion_tokens", 0) or 0)
+                    if it or ot:
+                        record_llm_usage(
+                            resolve_db_for_usage(),
+                            provider=self._usage_provider,
+                            model=self._model,
+                            input_tokens=it,
+                            output_tokens=ot,
+                            used_user_key=self._used_user_key,
+                        )
+            except Exception:  # noqa: BLE001
+                pass
 
     @staticmethod
     def _to_openai_messages(messages: list[Message]) -> list[dict[str, Any]]:

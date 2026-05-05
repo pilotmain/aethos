@@ -7,16 +7,21 @@ Vendor SDK construction uses :mod:`app.services.providers.sdk` only.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from typing import Any
 
 
 @dataclass
 class Message:
-    """Normalized chat message."""
+    """Normalized chat message.
+
+    ``content`` is usually a string. For vision / multimodal user turns, use an
+    OpenAI-style list of blocks: ``text`` and ``image_url`` parts (see :mod:`app.services.llm.content_parts`).
+    """
 
     role: str  # system | user | assistant | tool
-    content: str
+    content: str | list[dict[str, Any]]
     name: str | None = None
     tool_calls: list[dict[str, Any]] | None = None
     tool_call_id: str | None = None
@@ -62,6 +67,18 @@ class LLMProvider(ABC):
     @abstractmethod
     def get_model_info(self) -> ModelInfo:
         """Describe the configured model."""
+
+    @abstractmethod
+    async def complete_chat_streaming(
+        self,
+        messages: list[Message],
+        *,
+        temperature: float = 0.7,
+        max_tokens: int | None = None,
+        response_format_json: bool = False,
+        tools: list[Tool] | None = None,
+    ) -> AsyncIterator[str]:
+        """Stream assistant text (and JSON text when ``response_format_json``)."""
 
     def validate_api_key(self) -> bool:
         return True

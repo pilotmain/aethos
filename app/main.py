@@ -21,6 +21,9 @@ from app.api.routes import (
     auth,
     channels,
     checkins,
+    browser_automation,
+    clawhub,
+    cron_automation,
     custom_agents_api,
     dashboard,
     dev_runtime,
@@ -32,9 +35,11 @@ from app.api.routes import (
     jobs,
     memory,
     mission_control,
+    multimodal,
     nexa_memory_layer,
     nexa_scheduler_api,
     nexa_skills_api,
+    orchestration,
     permissions,
     plans,
     providers_usage,
@@ -103,6 +108,12 @@ async def lifespan(app: FastAPI):
     from app.services.plugins.registry import load_plugins
 
     load_plugins()
+    try:
+        from app.services.skills.builtin_register import register_builtin_plugin_skills
+
+        register_builtin_plugin_skills()
+    except Exception as exc:
+        logging.getLogger("nexa").warning("builtin plugin skills register failed: %s", exc)
     s = get_settings()
     log_sanitized_nexa_config("api")
     print_env_validation_at_startup("api")
@@ -155,6 +166,12 @@ async def lifespan(app: FastAPI):
             logging.getLogger("nexa").info("nexa.scheduler.restored count=%s", n)
     except Exception as exc:
         logging.getLogger("nexa").warning("nexa.scheduler.restore_failed %s", exc)
+    try:
+        from app.services.cron.scheduler import get_nexa_cron_scheduler
+
+        get_nexa_cron_scheduler().start()
+    except Exception as exc:
+        logging.getLogger("nexa").warning("nexa.cron.start_failed %s", exc)
     discord_bg: asyncio.Task[None] | None = None
     if getattr(_boot, "nexa_discord_enabled", False) and (getattr(_boot, "nexa_discord_bot_token", None) or "").strip():
         try:
@@ -163,7 +180,35 @@ async def lifespan(app: FastAPI):
             discord_bg = asyncio.create_task(run_discord_bot_forever())
         except Exception as exc:
             logging.getLogger("nexa").warning("discord bot start failed: %s", exc)
+    slack_bg: asyncio.Task[None] | None = None
+    if getattr(_boot, "nexa_slack_enabled", False) and (getattr(_boot, "slack_app_token", None) or "").strip():
+        try:
+            from app.channels.slack.bot import run_slack_socket_bot_forever
+
+            slack_bg = asyncio.create_task(run_slack_socket_bot_forever())
+        except Exception as exc:
+            logging.getLogger("nexa").warning("slack socket bot start failed: %s", exc)
     yield
+    try:
+        from app.services.browser.session import shutdown_browser_session
+
+        await shutdown_browser_session()
+    except Exception as exc:
+        logging.getLogger("nexa").warning("browser session shutdown failed: %s", exc)
+    try:
+        from app.services.cron.scheduler import get_nexa_cron_scheduler
+
+        get_nexa_cron_scheduler().shutdown()
+    except Exception as exc:
+        logging.getLogger("nexa").warning("nexa.cron.shutdown_failed %s", exc)
+    if slack_bg is not None:
+        slack_bg.cancel()
+        try:
+            await slack_bg
+        except asyncio.CancelledError:
+            pass
+        except Exception as exc:
+            logging.getLogger("nexa").warning("slack socket bot shutdown: %s", exc)
     if discord_bg is not None:
         discord_bg.cancel()
         try:
@@ -208,10 +253,15 @@ app.include_router(tasks.router, prefix=settings.api_v1_prefix)
 app.include_router(dumps.router, prefix=settings.api_v1_prefix)
 app.include_router(plans.router, prefix=settings.api_v1_prefix)
 app.include_router(checkins.router, prefix=settings.api_v1_prefix)
+app.include_router(cron_automation.router, prefix=settings.api_v1_prefix)
+app.include_router(clawhub.router, prefix=settings.api_v1_prefix)
+app.include_router(browser_automation.router, prefix=settings.api_v1_prefix)
 app.include_router(memory.router, prefix=settings.api_v1_prefix)
 app.include_router(nexa_memory_layer.router, prefix=settings.api_v1_prefix)
+app.include_router(multimodal.router, prefix=settings.api_v1_prefix)
 app.include_router(nexa_scheduler_api.router, prefix=settings.api_v1_prefix)
 app.include_router(nexa_skills_api.router, prefix=settings.api_v1_prefix)
+app.include_router(orchestration.router, prefix=settings.api_v1_prefix)
 app.include_router(jobs.router, prefix=settings.api_v1_prefix)
 app.include_router(web.router, prefix=settings.api_v1_prefix)
 app.include_router(permissions.router, prefix=settings.api_v1_prefix)

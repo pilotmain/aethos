@@ -146,4 +146,5 @@ def register_telegram_handlers(application: Application) -> None:
     application.add_handler(CommandHandler("deny", tb.deny_cmd))
     application.add_handler(CommandHandler("cancel", tb.cancel_cmd))
     application.add_handler(CommandHandler("why", tb.why_cmd))
+    application.add_handler(MessageHandler(filters.PHOTO, tb.handle_incoming_photo))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, tb.handle_incoming_text))

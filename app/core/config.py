@@ -139,8 +139,9 @@ class Settings(BaseSettings):
 
     telegram_bot_token: str | None = None
     telegram_webhook_secret: str | None = None
-    # Slack (Events API + Interactions) — optional second channel (Channel Gateway)
+    # Slack (Events API + Interactions + optional Socket Mode) — Channel Gateway / Phase 12.1
     slack_bot_token: str | None = None
+    slack_app_token: str | None = None  # xapp- — Socket Mode (Bolt); omit if using HTTP Events only
     slack_signing_secret: str | None = None
 
     # Email (inbound webhook + SMTP outbound) — optional channel (Channel Gateway)
@@ -222,12 +223,43 @@ class Settings(BaseSettings):
     # Phase 54 — sandbox / vault / egress / resource caps (MVP policy gates).
     nexa_sandbox_mode: str = "process"
     nexa_require_sandbox_for_skills: bool = False
+    # Phase 6 — pluggable skills (ClawHub-style); see docs/SKILLS_SYSTEM.md
+    nexa_clawhub_api_base: str = "https://clawhub.com/api/v1"
+    # Phase 17 — marketplace installs (ZIP/yaml under this directory)
+    nexa_clawhub_enabled: bool = True
+    nexa_clawhub_skill_root: str = Field(default_factory=lambda: str(REPO_ROOT / "data" / "skills"))
+    nexa_clawhub_trusted_publishers: str = ""
+    nexa_clawhub_require_signature: bool = False
+    nexa_clawhub_auto_update: bool = False
+    nexa_clawhub_require_install_approval: bool = False
+
+    # Phase 18a — multi-modal (vision / audio / image gen); provider wiring in later sub-phases.
+    nexa_multimodal_enabled: bool = False
+    nexa_multimodal_vision_enabled: bool = False
+    nexa_multimodal_vision_provider: str = "auto"
+    nexa_multimodal_vision_model: str | None = None
+    nexa_audio_input_enabled: bool = False
+    nexa_audio_transcription_provider: str = "openai"
+    nexa_audio_output_enabled: bool = False
+    nexa_image_gen_enabled: bool = False
+    nexa_image_gen_provider: str = "openai"
+    nexa_multimodal_max_image_mb: int = 10
+    nexa_multimodal_max_audio_seconds: int = 300
+    nexa_multimodal_max_image_side_px: int = 8192
+    nexa_multimodal_temp_ttl_seconds: int = 3600
+    nexa_multimodal_strip_image_metadata: bool = False
+    # Google Gemini (REST :generateContent) — optional; used when `nexa_multimodal_vision_provider=gemini`.
+    nexa_gemini_api_key: str | None = None
+
+    nexa_plugin_skills_root: str = Field(
+        default_factory=lambda: str(REPO_ROOT / "data" / "nexa_plugin_skills")
+    )
     nexa_credential_vault_provider: str = "local"
     nexa_network_egress_mode: str = "allowlist"
     nexa_network_allowed_hosts: str = (
         "api.openai.com,api.anthropic.com,api.deepseek.com,openrouter.ai,localhost,127.0.0.1,"
         "api.telegram.org,api.search.brave.com,api.tavily.com,serpapi.com,"
-        "www.googleapis.com"
+        "www.googleapis.com,generativelanguage.googleapis.com"
     )
     nexa_resource_max_cpu_percent: float = 0.0
     nexa_resource_max_memory_mb: int = 0
@@ -269,6 +301,21 @@ class Settings(BaseSettings):
     nexa_browser_preview_timeout_ms: int = 35_000
     # Playwright click / form fill on allowlisted public URLs (still no logins; off by default)
     nexa_browser_automation_enabled: bool = False
+    # Phase 14 — async Playwright (CDP/Chromium) for skills, REST API, NL (Docker: install browsers in image).
+    nexa_browser_enabled: bool = True
+    nexa_browser_headless: bool = True
+    nexa_browser_timeout: int = 30000  # milliseconds (env: NEXA_BROWSER_TIMEOUT)
+    nexa_browser_screenshot_dir: str = Field(
+        default_factory=lambda: str(REPO_ROOT / "data" / "screenshots"),
+    )
+
+    @field_validator("nexa_browser_screenshot_dir", mode="before")
+    @classmethod
+    def _browser_screenshot_dir_fallback(cls, v: object) -> str:
+        s = (str(v) if v is not None else "").strip()
+        if not s:
+            return str(REPO_ROOT / "data" / "screenshots")
+        return s
 
     @field_validator("nexa_approvals_enabled", mode="before")
     @classmethod
@@ -486,10 +533,41 @@ class Settings(BaseSettings):
     nexa_heartbeat_interval_seconds: int = 300
     # Phase 42 — Ollama HTTP embeddings (requires ``nexa_ollama_enabled`` + reachable Ollama).
     nexa_ollama_embeddings_enabled: bool = False
+    # Phase 15 — active memory (chunked cosine recall; uses ``embed_text_primary`` — optional Ollama).
+    nexa_active_memory_enabled: bool = False
+    nexa_active_memory_always: bool = False
+    nexa_active_memory_top_k: int = 8
+    nexa_active_memory_min_score: float = 0.12
+    nexa_active_memory_max_chars: int = 4000
+    nexa_active_memory_chunk_chars: int = 800
+    nexa_active_memory_chunk_overlap: int = 100
+    nexa_active_memory_max_entries_scan: int = 200
+    nexa_active_memory_ingest_enabled: bool = True
+
+    # Phase 16a — gateway `/delegate` + REST `/orchestration/delegate` (agent_team spawn groups).
+    nexa_orchestration_enabled: bool = False
+    nexa_orchestration_max_delegates: int = 5
+    nexa_orch_max_parallel_agents: int = 3
+    nexa_orch_delegation_timeout_ms: int = 30000
+    nexa_orch_require_approval: bool = False
+
     # Discord bot (optional ``discord.py`` package).
     nexa_discord_enabled: bool = False
     nexa_discord_bot_token: str = ""
     nexa_discord_app_user_id: str = ""
+    # Phase 13 — cron scheduling + proactive automation (AsyncIOScheduler + SQLite job store).
+    nexa_cron_enabled: bool = True
+    nexa_cron_default_timezone: str = "UTC"
+    nexa_cron_job_store: str = Field(
+        default_factory=lambda: f"sqlite:///{REPO_ROOT}/data/nexa_cron_jobs.sqlite",
+    )
+    # Bearer token for Telegram/Slack/CLI → POST /api/v1/cron/* (set in production).
+    nexa_cron_api_token: str | None = None
+
+    # Phase 12.1 — Slack Bolt Socket Mode (background task in API lifespan when enabled).
+    nexa_slack_enabled: bool = False
+    # When True, reaction_added events are turned into gateway prompts (can be noisy).
+    nexa_slack_reactions_enabled: bool = False
     # Slack: use NexaGateway route_inbound instead of legacy channel gateway pipeline.
     nexa_slack_route_inbound: bool = False
     # Autonomy — tighten scheduler + heartbeat expectations (documentary; gates optional hooks).

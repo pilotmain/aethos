@@ -116,6 +116,8 @@ def provider_canonical_probe_url(provider: str) -> str | None:
         return "https://api.deepseek.com/"
     if p == "openrouter":
         return "https://openrouter.ai/"
+    if p in ("google", "gemini"):
+        return "https://generativelanguage.googleapis.com/"
     return None
 
 

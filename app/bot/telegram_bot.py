@@ -1790,6 +1790,71 @@ async def cancel_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
         db.close()
 
 
+async def handle_incoming_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Phase 18b — photos: run vision (when enabled) and reply in-thread."""
+    if not update.effective_user or not update.message or not update.message.photo:
+        return
+    s = get_settings()
+    if not (s.nexa_multimodal_enabled and s.nexa_multimodal_vision_enabled):
+        if update.message:
+            await update.message.reply_text(
+                "Image understanding is off (enable NEXA_MULTIMODAL_ENABLED and NEXA_MULTIMODAL_VISION_ENABLED)."
+            )
+        return
+    db = SessionLocal()
+    try:
+        _tg_ad = get_telegram_adapter()
+        app_user_id = _tg_ad.resolve_app_user_id(db, update)
+        effu = update.effective_user
+        if not effu or not update.message:
+            return
+        tg_role = get_telegram_role(effu.id, db)
+        if tg_role == "blocked":
+            await update.message.reply_text(BLOCKED_MSG)
+            return
+    finally:
+        db.close()
+
+    photo = update.message.photo[-1]
+    f = await context.bot.get_file(photo.file_id)
+    try:
+        buf = await f.download_as_bytearray()
+    except Exception as exc:  # noqa: BLE001
+        if update.message:
+            await update.message.reply_text(f"Could not download the image: {exc!s}"[:2000])
+        return
+    cap = (s.nexa_multimodal_max_image_mb or 10) * 1024 * 1024
+    if len(buf) > cap:
+        if update.message:
+            await update.message.reply_text("That image is too large for the configured cap.")
+        return
+    caption = (update.message.caption or "").strip() or None
+    from app.services.multimodal.orchestrator import analyze_image_bytes
+
+    async with typing_indicator(update, context, interval_seconds=3.0, min_visible_seconds=0.8):
+        try:
+            out = await asyncio.to_thread(
+                analyze_image_bytes,
+                image_bytes=bytes(buf),
+                mime="image/jpeg",
+                prompt=caption,
+                session_id=str(update.message.message_id),
+            )
+        except Exception as exc:  # noqa: BLE001
+            if update.message:
+                await update.message.reply_text(f"Vision failed: {exc!s}"[:3500])
+            return
+    if not out.get("ok"):
+        err = str(out.get("error") or out.get("code") or "failed")
+        if update.message:
+            await update.message.reply_text(err[:3500])
+        return
+    text = (out.get("text") or "").strip() or "(no description)"
+    if update.message:
+        for piece in _split_telegram_text(text, max_len=4000):
+            await update.message.reply_text(piece)
+
+
 async def handle_incoming_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not update.effective_user or not update.message or not update.message.text:
         return
