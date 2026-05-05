@@ -10,6 +10,8 @@ The repo root **`install.sh`** forwards to **`scripts/install.sh`** (Phase 55/56
 curl -fsSL https://raw.githubusercontent.com/pilotmain/nexa-next/main/scripts/install_nexa_next_native.sh | bash
 ```
 
+This only works if the repo is **public** (or you pass GitHub auth). If **`curl` returns 404**, GitHub is usually hiding a **private** repo from anonymous raw access — use [Clone first (private or when curl 404)](#clone-first-private-or-when-curl-404) below.
+
 Defaults clone to `~/nexa-next`. Override:
 
 ```bash
@@ -18,9 +20,20 @@ export NEXA_REPO_URL="https://github.com/pilotmain/nexa-next.git"
 curl -fsSL https://raw.githubusercontent.com/pilotmain/nexa-next/main/scripts/install_nexa_next_native.sh | bash
 ```
 
-Already cloned? From the repo root:
+### Clone first (private or when curl 404)
+
+Use the same installer **from a local checkout** (SSH or HTTPS with your credentials):
 
 ```bash
+git clone https://github.com/pilotmain/nexa-next.git "${HOME}/nexa-next"
+cd "${HOME}/nexa-next"
+bash scripts/install_nexa_next_native.sh
+```
+
+If you already have the repo on disk, set `NEXA_USE_CURRENT_REPO=1` so it does not clone again:
+
+```bash
+cd /path/to/nexa-next
 NEXA_USE_CURRENT_REPO=1 bash scripts/install_nexa_next_native.sh
 ```
 

@@ -3,6 +3,8 @@
 # Does not replace scripts/install.sh (Docker bootstrap). Use when you want repo nexa-next only:
 #
 #   curl -fsSL https://raw.githubusercontent.com/pilotmain/nexa-next/main/scripts/install_nexa_next_native.sh | bash
+#   (Public repo only — private repos return 404 for unauthenticated raw URLs; git clone, then:)
+#   git clone https://github.com/pilotmain/nexa-next.git && cd nexa-next && bash scripts/install_nexa_next_native.sh
 #
 # From checkout:
 #   NEXA_USE_CURRENT_REPO=1 bash scripts/install_nexa_next_native.sh
