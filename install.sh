@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Thin wrapper so you can run ./install.sh from the repo root after clone.
+# Thin wrapper — forwards all arguments to scripts/install.sh (Phase 55/56 bootstrap).
 set -euo pipefail
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-exec bash "${ROOT}/scripts/install.sh" --no-clone "$@"
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+exec bash "${HERE}/scripts/install.sh" "$@"
