@@ -610,6 +610,18 @@ class Settings(BaseSettings):
     nexa_github_default_branch: str = "main"
     github_token: str | None = None
 
+    # Automated GitHub PR reviews (webhook + manual API; optional LLM summary)
+    nexa_pr_review_enabled: bool = False
+    nexa_pr_review_webhook_secret: str | None = None
+    nexa_pr_review_poll_interval: int = 60
+    nexa_pr_review_auto_approve: bool = False
+    nexa_pr_review_max_files: int = 50
+    # Comma-separated glob/substrings — parsed by app.services.pr_review (fnmatch + basename).
+    nexa_pr_review_ignore_patterns: str = (
+        "*.md,*.txt,*.lock,package-lock.json,yarn.lock,*.min.js"
+    )
+
+
     @field_validator("nexa_user_privacy_mode", mode="before")
     @classmethod
     def _normalize_nexa_user_privacy_mode(cls, v: object) -> str:
@@ -663,6 +675,10 @@ def print_local_service_urls() -> None:
     print(f"  SMS inbound (Twilio) {base}{p}/sms/inbound  (POST form)", flush=True)
     print(
         f"  Apple Messages        {base}{p}/apple-messages/inbound  (POST JSON)",
+        flush=True,
+    )
+    print(
+        f"  GitHub PR review      {base}{p}/pr-review/webhook  (POST; NEXA_PR_REVIEW_ENABLED)",
         flush=True,
     )
     print("--------------------------", flush=True)

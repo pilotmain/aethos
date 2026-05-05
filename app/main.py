@@ -42,6 +42,7 @@ from app.api.routes import (
     orchestration,
     permissions,
     plans,
+    pr_review,
     providers_usage,
     report_watcher,
     slack,
@@ -265,6 +266,7 @@ app.include_router(orchestration.router, prefix=settings.api_v1_prefix)
 app.include_router(jobs.router, prefix=settings.api_v1_prefix)
 app.include_router(web.router, prefix=settings.api_v1_prefix)
 app.include_router(permissions.router, prefix=settings.api_v1_prefix)
+app.include_router(pr_review.router, prefix=settings.api_v1_prefix)
 app.include_router(trust.router, prefix=settings.api_v1_prefix)
 app.include_router(user_settings.router, prefix=settings.api_v1_prefix)
 app.include_router(providers_usage.router, prefix=settings.api_v1_prefix)

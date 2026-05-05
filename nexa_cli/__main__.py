@@ -213,6 +213,16 @@ def main() -> int:
 
     sub.add_parser("run-dev", help="Deprecated alias; use: nexa dev run …")
 
+
+    sp_pr = sub.add_parser(
+        "pr",
+        help="Automated GitHub PR review (requires GITHUB_TOKEN + NEXA_PR_REVIEW_ENABLED)",
+    )
+    pr_sub = sp_pr.add_subparsers(dest="pr_cmd", required=True)
+    sp_prev = pr_sub.add_parser("review", help="Analyze PR and post GitHub review")
+    sp_prev.add_argument("repo", help="owner/repo")
+    sp_prev.add_argument("pr_number", type=int)
+
     args = p.parse_args()
     uid = str(args.user_id)
 
@@ -265,6 +275,13 @@ def main() -> int:
                 interval_seconds=args.interval_seconds,
                 agent=args.agent,
             )
+
+
+    if args.cmd == "pr":
+        from nexa_cli.pr_review import cmd_pr_review
+
+        if args.pr_cmd == "review":
+            return cmd_pr_review(str(args.repo), int(args.pr_number))
 
     if args.cmd == "run-dev":
         print(
