@@ -129,3 +129,57 @@ export interface Task {
 }
 
 export type KanbanColumnType = "pending" | "in_progress" | "done";
+
+/** Phase 33 M5 — Budget & usage (derived from `/providers/usage` + user settings). */
+export interface UsageRecord {
+  date: string;
+  tokens: number;
+  cost: number;
+  provider: string;
+  model?: string;
+}
+
+export interface ProviderUsage {
+  provider: string;
+  /** Recharts `Pie` label key. */
+  name?: string;
+  tokens: number;
+  cost: number;
+  percentage: number;
+}
+
+export interface MemberUsage {
+  member_id: string;
+  member_name: string;
+  tokens: number;
+  cost: number;
+  percentage: number;
+  last_active: string;
+}
+
+export interface BudgetSettings {
+  monthly_limit: number;
+  daily_limit: number;
+  current_usage: number;
+  remaining: number;
+  reset_day: number;
+  alerts_enabled: boolean;
+  warning_threshold: number;
+  critical_threshold: number;
+}
+
+export interface BudgetAlert {
+  id: string;
+  type: "warning" | "critical" | "exceeded";
+  message: string;
+  timestamp: string;
+  acknowledged: boolean;
+}
+
+export interface UsageForecast {
+  projected_total: number;
+  projected_cost: number;
+  days_remaining: number;
+  estimated_daily_average: number;
+  recommended_daily_cap: number;
+}
