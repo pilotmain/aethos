@@ -64,3 +64,34 @@ export type DashboardBundle = {
   attention: AttentionActivityItem[];
   quiet?: boolean;
 };
+
+/** Phase 33 M3 — Team view (agents + optional governance members). */
+export type TeamMemberStatus = "active" | "busy" | "idle" | "offline";
+
+export type GovernanceRoleKey = "owner" | "admin" | "member" | "viewer" | "auditor";
+
+export interface TeamMember {
+  kind: "agent" | "human";
+  id: string;
+  name: string;
+  user_id: string;
+  /** Normalized when possible for styling (governance). */
+  roleKey: GovernanceRoleKey | "agent_role";
+  /** Raw role label from API (always shown). */
+  roleLabel: string;
+  status: TeamMemberStatus;
+  current_task?: string;
+  joined_at: string;
+  last_active?: string;
+  avatar?: string;
+  /** When `human`, PATCH targets this org. */
+  governance?: { org_id: string; enabled: boolean };
+}
+
+export interface OrgChartNode {
+  id: string;
+  name: string;
+  role: string;
+  children: OrgChartNode[];
+  metadata?: Record<string, unknown>;
+}
