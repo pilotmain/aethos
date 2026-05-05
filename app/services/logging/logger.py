@@ -7,6 +7,8 @@ import logging
 _LOG = logging.getLogger("nexa")
 _LOG.setLevel(logging.INFO)
 
+_TEXT_FMT = "%(asctime)s %(levelname)s [%(name)s] %(message)s"
+
 
 def get_logger(name: str | None = None) -> logging.Logger:
     """Return the shared Nexa logger or a child (``nexa.worker``, ``nexa.gateway``, …)."""
@@ -15,28 +17,55 @@ def get_logger(name: str | None = None) -> logging.Logger:
     return logging.getLogger(f"nexa.{name}")
 
 
-def configure_logging(level: int = logging.INFO) -> None:
-    """Idempotent basic config if no handlers (API/bot startup)."""
-    from app.core.config import get_settings
+def _upgrade_root_stream_handlers(*, use_json: bool) -> None:
+    """Ensure StreamHandler formatters redact secrets (handles pre-existing basicConfig)."""
+    from app.core.logging import RedactingFormatter
 
     root = logging.getLogger()
-    if root.handlers:
-        _LOG.setLevel(level)
-        return
-    use_json = bool(getattr(get_settings(), "log_json_format", False))
     if use_json:
-        h = logging.StreamHandler()
         from app.services.logging.json_formatter import NexaJsonFormatter
 
-        h.setFormatter(NexaJsonFormatter())
-        h.setLevel(level)
+        for h in root.handlers:
+            if isinstance(h, logging.StreamHandler) and not isinstance(h.formatter, NexaJsonFormatter):
+                h.setFormatter(NexaJsonFormatter())
+        return
+
+    for h in root.handlers:
+        if not isinstance(h, logging.StreamHandler):
+            continue
+        if isinstance(h.formatter, RedactingFormatter):
+            continue
+        old = h.formatter
+        datefmt = getattr(old, "datefmt", None) if old is not None else None
+        h.setFormatter(RedactingFormatter(_TEXT_FMT, datefmt=datefmt))
+
+
+def configure_logging(level: int = logging.INFO) -> None:
+    """Idempotent basic config if no handlers (API/bot startup); always prefer redacting formatters."""
+    from app.core.config import get_settings
+    from app.core.logging import RedactingFormatter
+
+    root = logging.getLogger()
+    use_json = bool(getattr(get_settings(), "log_json_format", False))
+
+    if not root.handlers:
         root.setLevel(level)
-        root.addHandler(h)
+        if use_json:
+            h = logging.StreamHandler()
+            from app.services.logging.json_formatter import NexaJsonFormatter
+
+            h.setFormatter(NexaJsonFormatter())
+            h.setLevel(level)
+            root.addHandler(h)
+        else:
+            h = logging.StreamHandler()
+            h.setFormatter(RedactingFormatter(_TEXT_FMT))
+            h.setLevel(level)
+            root.addHandler(h)
     else:
-        logging.basicConfig(
-            level=level,
-            format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
-        )
+        _upgrade_root_stream_handlers(use_json=use_json)
+        root.setLevel(level)
+
     _LOG.setLevel(level)
 
 

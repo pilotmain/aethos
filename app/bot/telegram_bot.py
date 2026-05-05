@@ -121,7 +121,9 @@ from app.services.user_capabilities import (
     is_trusted_or_owner,
 )
 
-logging.basicConfig(level=logging.INFO)
+from app.services.logging.logger import configure_logging
+
+configure_logging(logging.INFO)
 logger = logging.getLogger(__name__)
 
 
@@ -1426,6 +1428,40 @@ async def agents_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
         out2 += "\n\n**Custom agents** — your list above. Use “create agent: …” in chat to add more."
         for piece in _split_telegram_text(out2[:12_000], max_len=4000):
             await update.message.reply_text(piece)
+    finally:
+        db.close()
+
+
+async def agent_count_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Report orchestration sub-agents for this chat (AgentRegistry / TeamRoster)."""
+    if not update.effective_user or not update.message or not update.effective_chat:
+        return
+    chat_id = str(update.effective_chat.id)
+    db = SessionLocal()
+    try:
+        link = telegram_service.get_link(db, update.effective_user.id)
+        if not link:
+            await update.message.reply_text("Use /start first.")
+            return
+        from app.core.config import get_settings
+        from app.services.team.roster import TeamRoster
+
+        roster = TeamRoster()
+        members = roster.list_members(chat_id)
+        settings = get_settings()
+        orch = bool(getattr(settings, "nexa_agent_orchestration_enabled", False))
+        lines = [
+            f"Active agents (this chat): {len(members)}",
+            "",
+            "This count comes from Nexa's orchestration registry (same roster as /team).",
+            "· /team — list members · /agents — LLM agent catalog",
+        ]
+        if not orch:
+            lines.insert(
+                1,
+                "Note: NEXA_AGENT_ORCHESTRATION_ENABLED is off — the registry will stay empty until enabled.",
+            )
+        await update.message.reply_text("\n".join(lines))
     finally:
         db.close()
 

@@ -129,6 +129,7 @@ def register_telegram_handlers(application: Application) -> None:
     application.add_handler(CommandHandler("forget", tb.forget_cmd))
     application.add_handler(CommandHandler("soul", tb.soul_cmd))
     application.add_handler(CommandHandler("agents", tb.agents_cmd))
+    application.add_handler(CommandHandler("agent_count", tb.agent_count_cmd))
     application.add_handler(CommandHandler("agent", tb.user_agent_cmd))
     application.add_handler(CommandHandler("learning", tb.learning_cmd))
     application.add_handler(CommandHandler("access", tb.access_cmd))

@@ -6,6 +6,8 @@ import json
 import logging
 from datetime import datetime, timezone
 
+from app.core.logging import redact_sensitive_data
+
 # Keys we emit from ``Logger.info(..., extra={...})`` for host-executor / chain observability.
 _NEXA_EXTRA_KEYS = frozenset(
     {
@@ -59,4 +61,4 @@ class NexaJsonFormatter(logging.Formatter):
         for k in _NEXA_EXTRA_KEYS:
             if k in record.__dict__ and record.__dict__[k] is not None:
                 payload[k] = record.__dict__[k]
-        return json.dumps(payload, default=str)
+        return redact_sensitive_data(json.dumps(payload, default=str))
