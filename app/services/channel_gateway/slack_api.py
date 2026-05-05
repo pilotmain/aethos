@@ -57,3 +57,41 @@ def slack_chat_post_message(
         return data
 
     return outbound_with_retry(channel="slack", operation="chat.postMessage", func=_send)
+
+
+def slack_files_upload(
+    bot_token: str,
+    *,
+    channel: str,
+    content: bytes,
+    filename: str,
+    initial_comment: str | None = None,
+    rate_limit_user_id: str | None = None,
+) -> dict[str, Any]:
+    """https://api.slack.com/methods/files.upload — binary image post when no public URL."""
+    acquire_outbound_slot(channel="slack", user_id=rate_limit_user_id)
+
+    def _upload() -> dict[str, Any]:
+        data: dict[str, str] = {"channels": channel}
+        if initial_comment:
+            data["initial_comment"] = initial_comment[:4000]
+        files = {"file": (filename, content)}
+        r = httpx.post(
+            "https://slack.com/api/files.upload",
+            headers={"Authorization": f"Bearer {bot_token}"},
+            data=data,
+            files=files,
+            timeout=120.0,
+        )
+        try:
+            resp = r.json()
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("slack files.upload non-json status=%s", r.status_code)
+            raise RuntimeError("invalid_response") from exc
+        if not resp.get("ok"):
+            err = resp.get("error") or "slack_api_error"
+            logger.info("slack files.upload failed: %s", err)
+            raise RuntimeError(err)
+        return resp
+
+    return outbound_with_retry(channel="slack", operation="files.upload", func=_upload)

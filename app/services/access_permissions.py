@@ -422,6 +422,8 @@ def host_action_scope_and_risk(
         return SCOPE_CLOUD_CLI, RISK_HIGH
     if a == "chain":
         return SCOPE_GIT_OPERATIONS, RISK_HIGH
+    if a == "plugin_skill":
+        return SCOPE_COMMAND_RUN, RISK_HIGH
     return SCOPE_COMMAND_RUN, RISK_MEDIUM
 
 

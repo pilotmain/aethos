@@ -19,7 +19,7 @@ from app.services.channel_gateway.metadata import build_channel_origin
 from app.services.channel_gateway.origin_context import bind_channel_origin
 from app.services.channel_gateway.router import handle_incoming_channel_message
 from app.services.channel_gateway.slack_adapter import get_slack_adapter
-from app.services.channel_gateway.slack_api import slack_chat_post_message
+from app.services.channel_gateway.slack_api import slack_chat_post_message, slack_files_upload
 from app.services.channel_gateway.slack_adapter import get_slack_adapter
 from app.services.channel_gateway.slack_blocks import permission_blocks
 from app.services.channels.slack_bot import slack_inbound_via_gateway
@@ -90,12 +90,21 @@ def register_slack_handlers(app: AsyncApp) -> None:
         s_set = get_settings()
         files = ev.get("files")
         image_private_url: str | None = None
+        audio_private_url: str | None = None
+        audio_file_mime: str | None = None
         if isinstance(files, list):
             for fi in files:
-                if isinstance(fi, dict) and str(fi.get("mimetype") or "").startswith("image/"):
-                    image_private_url = (fi.get("url_private_download") or fi.get("url_private") or "").strip()
-                    if image_private_url:
-                        break
+                if not isinstance(fi, dict):
+                    continue
+                mt = str(fi.get("mimetype") or "")
+                url = (fi.get("url_private_download") or fi.get("url_private") or "").strip()
+                if not url:
+                    continue
+                if mt.startswith("image/") and not image_private_url:
+                    image_private_url = url
+                elif mt.startswith("audio/") and not audio_private_url:
+                    audio_private_url = url
+                    audio_file_mime = mt.split(";")[0].strip()
 
         if (
             not text
@@ -159,6 +168,56 @@ def register_slack_handlers(app: AsyncApp) -> None:
             except Exception as exc:  # noqa: BLE001
                 logger.exception("slack vision outbound failed: %s", exc)
             return
+
+        if (
+            not text
+            and audio_private_url
+            and s_set.nexa_multimodal_enabled
+        ):
+            from app.services.multimodal.orchestrator import audio_input_enabled, transcribe_uploaded_audio_bytes
+            from app.services.multimodal.stt import audio_mime_allowed, max_audio_bytes_cap
+
+            if not audio_input_enabled():
+                return
+            token = (s_set.slack_bot_token or "").strip()
+            if not token:
+                return
+            try:
+                import httpx
+
+                headers = {"Authorization": f"Bearer {token}"}
+                with httpx.Client(timeout=120.0, follow_redirects=True) as client:
+                    resp = client.get(audio_private_url, headers=headers)
+                    resp.raise_for_status()
+                    raw_b = resp.content
+                    ct = (resp.headers.get("content-type") or audio_file_mime or "application/ogg").split(
+                        ";"
+                    )[0].strip()
+                cap_b = max_audio_bytes_cap()
+                if len(raw_b) > cap_b:
+                    logger.warning("slack audio exceeds configured max bytes")
+                    return
+                if not audio_mime_allowed(ct):
+                    logger.warning("slack audio mime not allowed: %s", ct)
+                    return
+                ext = (ct.split("/")[-1] if "/" in ct else "ogg").split("+")[0][:32] or "ogg"
+                fname = f"slack_audio.{ext}"
+                out = await asyncio.to_thread(
+                    transcribe_uploaded_audio_bytes,
+                    raw_b,
+                    filename=fname,
+                    mime=ct,
+                )
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("slack audio STT failed: %s", exc)
+                return
+            if not out.get("ok"):
+                return
+            transcript = (out.get("text") or "").strip()
+            if not transcript:
+                return
+            ev["text"] = transcript
+            text = transcript
 
         if not text:
             return
@@ -356,6 +415,127 @@ def register_slack_handlers(app: AsyncApp) -> None:
                 )
             except Exception as exc:  # noqa: BLE001
                 logger.warning("slack /nexa_browser reply failed: %s", exc)
+
+    @app.command("/imagine")
+    async def _imagine_slack(ack: Any, command: dict[str, Any]) -> None:
+        await ack()
+        from app.services.multimodal.image_generation import first_image_payload_for_telegram
+        from app.services.multimodal.orchestrator import generate_images_from_prompt, image_gen_enabled
+
+        s_set = get_settings()
+        raw = (command.get("text") or "").strip()
+        channel_id = str(command.get("channel_id") or "")
+        user_id = str(command.get("user_id") or "")
+        token = (s_set.slack_bot_token or "").strip()
+        if not token or not channel_id:
+            return
+        if not s_set.nexa_multimodal_enabled or not image_gen_enabled():
+            try:
+                await asyncio.to_thread(
+                    _post_reply,
+                    token=token,
+                    channel=channel_id,
+                    text_out=(
+                        "Image generation is off (enable NEXA_MULTIMODAL_ENABLED and "
+                        "NEXA_MULTIMODAL_IMAGE_ENABLED or NEXA_IMAGE_GEN_ENABLED)."
+                    ),
+                    thread_ts=None,
+                    blocks=None,
+                    app_uid=user_id or "slack_imagine",
+                )
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("slack /imagine disabled reply failed: %s", exc)
+            return
+        if not raw:
+            try:
+                await asyncio.to_thread(
+                    _post_reply,
+                    token=token,
+                    channel=channel_id,
+                    text_out="Usage: /imagine <prompt>",
+                    thread_ts=None,
+                    blocks=None,
+                    app_uid=user_id or "slack_imagine",
+                )
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("slack /imagine usage reply failed: %s", exc)
+            return
+        try:
+            out = await asyncio.to_thread(generate_images_from_prompt, raw)
+        except Exception as exc:  # noqa: BLE001
+            logger.exception("slack /imagine generation failed: %s", exc)
+            try:
+                await asyncio.to_thread(
+                    _post_reply,
+                    token=token,
+                    channel=channel_id,
+                    text_out=f"Image generation failed: {exc!s}"[:500],
+                    thread_ts=None,
+                    blocks=None,
+                    app_uid=user_id or "slack_imagine",
+                )
+            except Exception as exc2:  # noqa: BLE001
+                logger.warning("slack /imagine error reply failed: %s", exc2)
+            return
+        if not out.get("ok"):
+            err = str(out.get("error") or out.get("code") or "failed")
+            try:
+                await asyncio.to_thread(
+                    _post_reply,
+                    token=token,
+                    channel=channel_id,
+                    text_out=err[:39000],
+                    thread_ts=None,
+                    blocks=None,
+                    app_uid=user_id or "slack_imagine",
+                )
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("slack /imagine err reply failed: %s", exc)
+            return
+        url, raw_b = first_image_payload_for_telegram(out)
+        if url:
+            blocks: list[dict[str, Any]] = [
+                {"type": "image", "image_url": str(url), "alt_text": "Generated image"},
+            ]
+            try:
+                await asyncio.to_thread(
+                    _post_reply,
+                    token=token,
+                    channel=channel_id,
+                    text_out="Generated image",
+                    thread_ts=None,
+                    blocks=blocks,
+                    app_uid=user_id or "slack_imagine",
+                )
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("slack /imagine image post failed: %s", exc)
+            return
+        if raw_b is not None:
+            try:
+                await asyncio.to_thread(
+                    slack_files_upload,
+                    token,
+                    channel=channel_id,
+                    content=raw_b,
+                    filename="generated.png",
+                    initial_comment="Generated image",
+                    rate_limit_user_id=user_id,
+                )
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("slack /imagine file upload failed: %s", exc)
+            return
+        try:
+            await asyncio.to_thread(
+                _post_reply,
+                token=token,
+                channel=channel_id,
+                text_out="Generation returned no image data.",
+                thread_ts=None,
+                blocks=None,
+                app_uid=user_id or "slack_imagine",
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("slack /imagine empty reply failed: %s", exc)
 
 
 __all__ = ["register_slack_handlers"]

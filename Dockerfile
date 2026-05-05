@@ -31,12 +31,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir -r requirements.txt
+    && pip install --no-cache-dir -r requirements.txt \
+    && playwright install chromium --with-deps
 
 # Application code
 COPY app ./app
 COPY scripts ./scripts
-RUN mkdir -p /app/.agent_tasks /app/.runtime /app/data
+RUN mkdir -p /app/.agent_tasks /app/.runtime /app/data /app/data/screenshots
 
 EXPOSE 8000
 

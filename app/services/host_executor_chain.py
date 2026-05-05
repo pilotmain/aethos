@@ -6,7 +6,7 @@ from typing import Any
 
 # Default inner steps — configurable via ``nexa_host_executor_chain_allowed_actions``.
 DEFAULT_CHAIN_INNER_ALLOWED: frozenset[str] = frozenset(
-    {"file_write", "git_commit", "git_push", "vercel_projects_list"}
+    {"file_write", "git_commit", "git_push", "vercel_projects_list", "plugin_skill"}
 )
 
 

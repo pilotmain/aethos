@@ -80,6 +80,9 @@ def title_for_payload(payload: dict[str, Any]) -> str:
     if act == "chain":
         n = len(payload.get("actions") or []) if isinstance(payload.get("actions"), list) else 0
         return f"Host action chain ({n} steps)" if n else "Host action chain"
+    if act == "plugin_skill":
+        sn = (payload.get("skill_name") or "").strip()
+        return f"Plugin skill ({sn})" if sn else "Plugin skill"
     return "Host action"
 
 

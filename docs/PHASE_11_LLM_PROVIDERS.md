@@ -1,18 +1,19 @@
 # Phase 11 — Multi-provider LLM (spec)
 
-**Status:** Implemented for primary chat paths — registry under `app/services/llm/`, env `NEXA_LLM_*`, gateway vendors `deepseek` / `openrouter`.  
+**Status:** Implemented for primary chat paths — registry under `app/services/llm/`, env `NEXA_LLM_*`, gateway vendors `deepseek` / `openrouter`. Streaming completions (**Phase 11.5**) live on `LLMProvider.complete_chat_streaming`, `primary_complete_streaming`, and async SDK builders in `app/services/providers/sdk.py`.  
 **Related:** [ARCHITECTURE.md](ARCHITECTURE.md) (provider gateway and import boundaries), [ROADMAP.md](ROADMAP.md).
 
 **Code layout**
 
 | Piece | Role |
 | ----- | ---- |
-| `app/services/llm/base.py` | `Message`, `Tool`, `LLMProvider` ABC |
+| `app/services/llm/base.py` | `Message`, `Tool`, `LLMProvider` ABC + `complete_chat_streaming` |
 | `app/services/llm/registry.py` | Process-local registry + `get_llm_registry()` |
 | `app/services/llm/bootstrap.py` | Register backends from `Settings` + BYOK merge |
-| `app/services/llm/completion.py` | `primary_complete_raw`, `providers_available`, provider chain |
-| `app/services/llm/providers/*_backend.py` | OpenAI-compatible, Anthropic, Ollama |
+| `app/services/llm/completion.py` | `primary_complete_raw`, `primary_complete_messages`, `primary_complete_streaming`, `providers_available`, provider chain |
+| `app/services/llm/providers/*_backend.py` | OpenAI-compatible, Anthropic, Ollama (`complete_chat` + streaming) |
 | `app/services/llm_service.py` | `call_primary_llm_text` / `call_primary_llm_json` use Phase 11 completion |
+| `app/services/response_composer.py` | Structured replies via Phase 11 `primary_complete_messages` (no direct vendor clients) |
 | `app/services/providers/gateway.py` | Mission `ProviderRequest` also supports `deepseek` and `openrouter` |
 | `app/services/providers/openai_compatible_vendor.py` | OpenAI-HTTP calls for DeepSeek / OpenRouter in the gateway |
 

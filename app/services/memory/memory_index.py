@@ -70,5 +70,11 @@ class MemoryIndex:
             enriched.append(row)
         return apply_pro_memory_ranking(user_id, q, enriched)
 
+    def active_recall(self, user_id: str, query: str, *, limit: int | None = None) -> list[dict[str, Any]]:
+        """Chunked recall (Phase 15); respects ``nexa_active_memory_enabled`` inside the service."""
+        from app.services.memory.active_memory import ActiveMemoryService
+
+        return ActiveMemoryService(self.store).recall(user_id, query, limit=limit)
+
 
 __all__ = ["MemoryIndex"]

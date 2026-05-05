@@ -473,6 +473,37 @@ class NexaGateway:
         cctx = get_or_create_context(db, uid)
         snap = build_context_snapshot(cctx, db)
 
+        from app.core.config import get_settings as _orch_get_settings
+
+        if (
+            _orch_get_settings().nexa_orchestration_enabled
+            and (uid or "").strip()
+            and raw
+        ):
+            from app.services.orchestration.delegate import format_delegation_reply, run_delegation
+            from app.services.orchestration.policy import parse_gateway_delegate
+
+            parsed = parse_gateway_delegate(raw)
+            if parsed:
+                agents, goal, parallel = parsed
+                out = run_delegation(
+                    db,
+                    uid,
+                    agents,
+                    goal,
+                    parallel=parallel,
+                    channel=str(channel or "web")[:32],
+                    web_session_id=gctx.extras.get("web_session_id"),
+                )
+                return {
+                    "mode": "chat",
+                    "text": format_delegation_reply(out),
+                    "intent": "orchestration_delegate",
+                    "orchestration_delegate": True,
+                    "spawn_group_id": out.get("spawn_group_id"),
+                    "ok": out.get("ok"),
+                }
+
         if not gctx.extras.get("operator_execution_attempted"):
             from app.services.operator_execution_loop import try_operator_execution
 
@@ -536,6 +567,12 @@ class NexaGateway:
                 if gctx.memory is None:
                     gctx.memory = {}
                 gctx.memory.update(turn_mem)
+                if turn_mem.get("active_memory_used"):
+                    _log.info(
+                        "gateway.active_memory hits=%s",
+                        turn_mem.get("active_memory_hits"),
+                        extra={"nexa_event": "gateway_active_memory"},
+                    )
 
         orchestrator = OrchestratorService()
         memory_service = MemoryService()

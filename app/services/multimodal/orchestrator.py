@@ -34,17 +34,29 @@ def vision_enabled() -> bool:
 
 def audio_input_enabled() -> bool:
     s = get_settings()
-    return bool(s.nexa_multimodal_enabled and s.nexa_audio_input_enabled)
+    if not s.nexa_multimodal_enabled:
+        return False
+    if bool(getattr(s, "nexa_multimodal_audio_enabled", False)):
+        return True
+    return bool(s.nexa_audio_input_enabled)
 
 
 def audio_output_enabled() -> bool:
     s = get_settings()
-    return bool(s.nexa_multimodal_enabled and s.nexa_audio_output_enabled)
+    if not s.nexa_multimodal_enabled:
+        return False
+    if bool(getattr(s, "nexa_multimodal_audio_enabled", False)):
+        return True
+    return bool(s.nexa_audio_output_enabled)
 
 
 def image_gen_enabled() -> bool:
     s = get_settings()
-    return bool(s.nexa_multimodal_enabled and s.nexa_image_gen_enabled)
+    if not s.nexa_multimodal_enabled:
+        return False
+    if bool(getattr(s, "nexa_multimodal_image_enabled", False)):
+        return True
+    return bool(s.nexa_image_gen_enabled)
 
 
 def _allowed_image_mime(m: str) -> bool:
@@ -178,21 +190,53 @@ async def analyze_image_stub(*, prompt: str | None = None, session_id: str | Non
     raise MultimodalPhase18APlaceholder()
 
 
+def transcribe_uploaded_audio_bytes(
+    data: bytes,
+    *,
+    filename: str,
+    mime: str | None,
+) -> dict[str, Any]:
+    """STT entry point for HTTP and channels — see :mod:`app.services.multimodal.stt`."""
+    from app.services.multimodal import stt as stt_mod
+
+    return stt_mod.transcribe_audio_bytes(data, filename=filename, mime=mime)
+
+
+def synthesize_spoken_audio(text: str, *, voice: str | None = None) -> dict[str, Any]:
+    """TTS entry point — see :mod:`app.services.multimodal.tts`."""
+    from app.services.multimodal import tts as tts_mod
+
+    return tts_mod.synthesize_speech_bytes(text, voice=voice)
+
+
 async def transcribe_audio_stub(*, mime: str | None = None) -> dict[str, Any]:
-    """STT — Phase 18d will call Whisper-class APIs."""
+    """Deprecated — use :func:`transcribe_uploaded_audio_bytes`."""
     _ = mime
     raise MultimodalPhase18APlaceholder()
 
 
 async def synthesize_speech_stub(*, text: str, voice: str | None = None) -> dict[str, Any]:
-    """TTS — optional later sub-phase."""
+    """Deprecated — use :func:`synthesize_spoken_audio`."""
     _ = (text, voice)
     raise MultimodalPhase18APlaceholder()
+
+
+def generate_images_from_prompt(
+    prompt: str,
+    *,
+    size: str | None = None,
+    quality: str | None = None,
+    n: int = 1,
+) -> dict[str, Any]:
+    """Image generation for HTTP and channels — see :mod:`app.services.multimodal.image_generation`."""
+    from app.services.multimodal import image_generation as ig_mod
+
+    return ig_mod.generate_images(prompt, size=size, quality=quality, n=n)
 
 
 async def generate_image_stub(
     *, prompt: str, size: str | None = None, n: int = 1
 ) -> dict[str, Any]:
-    """Image generation — Phase 18e+ provider adapter."""
+    """Deprecated — use :func:`generate_images_from_prompt`."""
     _ = (prompt, size, n)
     raise MultimodalPhase18APlaceholder()

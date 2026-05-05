@@ -1,7 +1,6 @@
 # Channel Gateway — next-step design
 
-**Status:** Design / handoff — not implemented.  
-**Implementation plan (phased, no duplicate stacks):** [CHANNEL_GATEWAY_EXECUTION.md](CHANNEL_GATEWAY_EXECUTION.md)  
+**Status:** Partially implemented — Slack Events API + Bolt Socket Mode + Channel Gateway adapters ship in-repo; see [SLACK_SETUP.md](SLACK_SETUP.md). Broader “single adapter tree” refactor remains phased — [CHANNEL_GATEWAY_EXECUTION.md](CHANNEL_GATEWAY_EXECUTION.md).  
 **Goal:** Extend Nexa from **Telegram + Web** into a **channel gateway platform** (Slack, WhatsApp, email, SMS, iMessage via providers, etc.) **without** weakening permissions, approval flow, audit/trust, or agent routing.
 
 ---
@@ -11,6 +10,7 @@
 From [HANDOFF_PLATFORM_OVERVIEW.md](HANDOFF_PLATFORM_OVERVIEW.md) and the codebase today:
 
 - **Telegram** is tightly integrated with permissions, agents, dev jobs, and access control (`app/bot/telegram_bot.py`).
+- **Slack** — HTTP endpoints under `/api/v1/slack/*` plus optional **Socket Mode** (`app/channels/slack/`, `NEXA_SLACK_ENABLED`).
 - **Web UI:** sessions, trust activity, permission lifecycle (`web/`).
 - **Backend:** service-layer architecture, execution safety and policy enforcement, audit and correlation IDs.
 - **Bootstrap:** one-line install (`scripts/install.sh`, [SETUP.md](SETUP.md)).

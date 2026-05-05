@@ -18,11 +18,15 @@ from app.services.multimodal.orchestrator import (
     analyze_image_url,
     audio_input_enabled,
     audio_output_enabled,
+    generate_images_from_prompt,
     image_gen_enabled,
     max_image_bytes_cap,
     multimodal_globally_enabled,
+    synthesize_spoken_audio,
+    transcribe_uploaded_audio_bytes,
     vision_enabled,
 )
+from app.services.multimodal.stt import audio_mime_allowed
 
 logger = logging.getLogger(__name__)
 
@@ -41,8 +45,10 @@ def multimodal_status(
     s = get_settings()
     return {
         "ok": True,
-        "phase": "18b",
+        "phase": "18d",
         "nexa_multimodal_enabled": s.nexa_multimodal_enabled,
+        "nexa_multimodal_audio_enabled": bool(getattr(s, "nexa_multimodal_audio_enabled", False)),
+        "nexa_multimodal_image_enabled": bool(getattr(s, "nexa_multimodal_image_enabled", False)),
         "vision": {
             "enabled": vision_enabled(),
             "provider": (s.nexa_multimodal_vision_provider or "auto").strip(),
@@ -52,10 +58,12 @@ def multimodal_status(
             "input": audio_input_enabled(),
             "output": audio_output_enabled(),
             "transcription_provider": (s.nexa_audio_transcription_provider or "openai").strip(),
+            "output_provider": (getattr(s, "nexa_audio_output_provider", None) or "openai").strip(),
         },
         "image_gen": {
             "enabled": image_gen_enabled(),
             "provider": (s.nexa_image_gen_provider or "openai").strip(),
+            "openai_model": (getattr(s, "nexa_openai_image_model", None) or "dall-e-3").strip(),
         },
         "limits": {
             "max_image_mb": int(s.nexa_multimodal_max_image_mb or 10),
@@ -186,7 +194,6 @@ async def audio_transcribe(
     _app_user_id: str = Depends(get_valid_web_user_id),
     audio: UploadFile | None = File(None),
 ) -> dict[str, Any]:
-    _ = audio
     if not multimodal_globally_enabled():
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -195,12 +202,47 @@ async def audio_transcribe(
     if not audio_input_enabled():
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=_err("AUDIO_INPUT_DISABLED", "Enable NEXA_AUDIO_INPUT_ENABLED when the master flag is on"),
+            detail=_err(
+                "AUDIO_INPUT_DISABLED",
+                "Enable NEXA_MULTIMODAL_AUDIO_ENABLED, or NEXA_AUDIO_INPUT_ENABLED, with the master flag on",
+            ),
         )
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail=_err("PHASE_18A_PLACEHOLDER", "Speech-to-text ships in Phase 18d"),
+    if audio is None or not getattr(audio, "filename", None):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=_err("MISSING_AUDIO", "multipart field `audio` is required"),
+        )
+    try:
+        raw = await audio.read()
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=_err("READ_FAILED", str(exc)[:500]),
+        ) from exc
+    mime = (audio.content_type or "application/octet-stream").split(";")[0].strip()
+    if not audio_mime_allowed(mime):
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail=_err("UNSUPPORTED_AUDIO_MIME", mime),
+        )
+    name = (audio.filename or "audio.bin").strip() or "audio.bin"
+    out = await asyncio.to_thread(
+        transcribe_uploaded_audio_bytes,
+        raw,
+        filename=name,
+        mime=mime,
     )
+    if not out.get("ok"):
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=_err(str(out.get("code") or "STT_FAILED"), str(out.get("error") or "transcription failed")),
+        )
+    return {
+        "ok": True,
+        "text": out.get("text") or "",
+        "language": out.get("language"),
+        "provider": out.get("provider"),
+    }
 
 
 class SpeechSynthesizeBody(BaseModel):
@@ -209,11 +251,11 @@ class SpeechSynthesizeBody(BaseModel):
 
 
 @router.post("/speech/synthesize")
+@router.post("/audio/speak")
 async def speech_synthesize(
     payload: SpeechSynthesizeBody,
     _app_user_id: str = Depends(get_valid_web_user_id),
 ) -> dict[str, Any]:
-    _ = payload
     if not multimodal_globally_enabled():
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -222,17 +264,34 @@ async def speech_synthesize(
     if not audio_output_enabled():
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=_err("AUDIO_OUTPUT_DISABLED", "Enable NEXA_AUDIO_OUTPUT_ENABLED when the master flag is on"),
+            detail=_err(
+                "AUDIO_OUTPUT_DISABLED",
+                "Enable NEXA_MULTIMODAL_AUDIO_ENABLED, or NEXA_AUDIO_OUTPUT_ENABLED, with the master flag on",
+            ),
         )
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail=_err("PHASE_18A_PLACEHOLDER", "Text-to-speech ships in a later 18.x milestone"),
-    )
+    out = await asyncio.to_thread(synthesize_spoken_audio, payload.text, voice=payload.voice)
+    if not out.get("ok"):
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=_err(str(out.get("code") or "TTS_FAILED"), str(out.get("error") or "synthesis failed")),
+        )
+    b = out.get("audio_bytes") or b""
+    return {
+        "ok": True,
+        "audio_base64": base64.b64encode(b).decode("ascii") if b else "",
+        "mime_type": out.get("mime_type") or "audio/mpeg",
+        "provider": out.get("provider"),
+    }
 
 
 class ImageGenerateBody(BaseModel):
     prompt: str = Field(..., min_length=1, max_length=8000)
     size: str | None = Field(default=None, max_length=32)
+    quality: str | None = Field(
+        default=None,
+        max_length=16,
+        description="DALL-E 3 only: standard | hd",
+    )
     n: int = Field(default=1, ge=1, le=10)
 
 
@@ -241,7 +300,6 @@ async def image_generate(
     payload: ImageGenerateBody,
     _app_user_id: str = Depends(get_valid_web_user_id),
 ) -> dict[str, Any]:
-    _ = payload
     if not multimodal_globally_enabled():
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -250,12 +308,30 @@ async def image_generate(
     if not image_gen_enabled():
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=_err("IMAGE_GEN_DISABLED", "Enable NEXA_IMAGE_GEN_ENABLED when the master flag is on"),
+            detail=_err(
+                "IMAGE_GEN_DISABLED",
+                "Enable NEXA_MULTIMODAL_IMAGE_ENABLED or NEXA_IMAGE_GEN_ENABLED with the master flag on",
+            ),
         )
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail=_err("PHASE_18A_PLACEHOLDER", "Image generation ships in Phase 18e+"),
+    out = await asyncio.to_thread(
+        generate_images_from_prompt,
+        payload.prompt,
+        size=payload.size,
+        quality=payload.quality,
+        n=payload.n,
     )
+    if not out.get("ok"):
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=_err(str(out.get("code") or "IMAGE_GEN_FAILED"), str(out.get("error") or "generation failed")),
+        )
+    imgs = out.get("images") or []
+    return {
+        "ok": True,
+        "provider": out.get("provider"),
+        "model": out.get("model"),
+        "images": imgs,
+    }
 
 
 __all__ = ["router"]

@@ -429,6 +429,18 @@ def execute_payload(
         _log_chain_summary(exit_reason="complete")
         return _finalize_output("\n\n".join(parts_out))
 
+    if action == "plugin_skill":
+        from app.services.skills.plugin_skill_bridge import run_plugin_skill_sync
+
+        name = (payload.get("skill_name") or "").strip()
+        if not name:
+            raise ValueError("plugin_skill requires skill_name")
+        inp = payload.get("input")
+        if inp is not None and not isinstance(inp, dict):
+            raise ValueError("plugin_skill input must be an object")
+        raw = run_plugin_skill_sync(name, dict(inp or {}))
+        return _finalize_output(str(raw)[:24_000])
+
     if action == "git_status":
         code, out, err = _run_argv(
             ["git", "status", "--short", "--branch"],
@@ -748,7 +760,7 @@ def execute_payload(
         return _finalize_output((msg or "Removed.")[:8000])
 
     raise ValueError(
-        f"unknown host_action {action!r}; try: chain, git_status, run_command, file_read, file_write, "
+        f"unknown host_action {action!r}; try: plugin_skill, chain, git_status, run_command, file_read, file_write, "
         "git_commit, git_push, vercel_projects_list, vercel_remove, list_directory, find_files, "
         "read_multiple_files"
     )

@@ -118,6 +118,10 @@ def provider_canonical_probe_url(provider: str) -> str | None:
         return "https://openrouter.ai/"
     if p in ("google", "gemini"):
         return "https://generativelanguage.googleapis.com/"
+    if p == "elevenlabs":
+        return "https://api.elevenlabs.io/"
+    if p == "replicate":
+        return "https://api.replicate.com/"
     return None
 
 

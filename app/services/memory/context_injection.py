@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from app.core.config import get_settings
 from app.services.memory.memory_index import MemoryIndex
 
 _FOLLOWUP_CUES = re.compile(
@@ -68,7 +69,51 @@ def build_memory_context_for_turn(
     follow = _looks_like_memory_followup(raw)
     semantic_blob = ""
 
-    if follow and raw:
+    s_mem = get_settings()
+    active_on = bool(getattr(s_mem, "nexa_active_memory_enabled", False))
+    active_always = bool(getattr(s_mem, "nexa_active_memory_always", False))
+    run_active = bool(active_on and raw.strip() and (active_always or follow))
+
+    sem: list[dict[str, Any]] = []
+    active_used: bool = False
+    if run_active:
+        from app.services.memory.active_memory import ActiveMemoryService
+
+        ah = ActiveMemoryService(idx.store).recall(uid, raw[:2000])
+        if ah:
+            sem = ah
+            active_used = True
+            lines = []
+            for e in ah[:max_items]:
+                title = str(e.get("title") or "").strip()
+                pv = str(e.get("text") or "").strip()[:360]
+                lines.append(f"- {title}\n  {pv}".strip())
+            semantic_blob = "Most relevant memory chunks:\n" + "\n".join(lines)
+            for e in ah:
+                eid = str(e.get("entry_id") or "")
+                ck = str(e.get("chunk_index", 0))
+                dedupe = f"{eid}:{ck}"
+                if dedupe not in seen:
+                    seen.add(dedupe)
+                    syn = dict(e)
+                    syn["id"] = eid
+                    syn["preview"] = str(e.get("text") or "")[:280]
+                    items.append(syn)
+        elif follow:
+            sem = idx.semantic_search(uid, raw[:2000], limit=max_items)
+            for e in sem:
+                eid = str(e.get("id") or "")
+                if eid and eid not in seen:
+                    seen.add(eid)
+                    items.append(e)
+            if sem:
+                lines = []
+                for e in sem[:max_items]:
+                    title = str(e.get("title") or "").strip()
+                    pv = str(e.get("preview") or "").strip()[:360]
+                    lines.append(f"- {title}\n  {pv}".strip())
+                semantic_blob = "Most relevant notes for this question:\n" + "\n".join(lines)
+    elif follow and raw:
         sem = idx.semantic_search(uid, raw[:2000], limit=max_items)
         for e in sem:
             eid = str(e.get("id") or "")
@@ -122,12 +167,12 @@ def build_memory_context_for_turn(
         "memory_context": memory_context,
         "tags": tags[:24],
         "purpose": purpose,
+        "active_memory_used": active_used,
+        "active_memory_hits": len(sem) if active_used else 0,
     }
 
     # Optional structured workspace files (markdown/json under data/nexa_workspace/).
-    from app.core.config import get_settings as _gs_workspace
-
-    _s = _gs_workspace()
+    _s = get_settings()
     if getattr(_s, "nexa_workspace_intelligence_enabled", False):
         from app.services.workspace_intelligence.bundle import select_workspace_context_pack as _wi_pack
 

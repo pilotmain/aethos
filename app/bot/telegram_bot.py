@@ -1767,6 +1767,67 @@ async def why_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         db.close()
 
 
+async def imagine_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Phase 18d — /imagine: DALL-E / Replicate / local SD (see NEXA_IMAGE_GEN_*)."""
+    if not update.effective_user or not update.message:
+        return
+    s = get_settings()
+    from app.services.multimodal.image_generation import first_image_payload_for_telegram
+    from app.services.multimodal.orchestrator import generate_images_from_prompt, image_gen_enabled
+
+    if not (s.nexa_multimodal_enabled and image_gen_enabled()):
+        await update.message.reply_text(
+            "Image generation is off (enable NEXA_MULTIMODAL_ENABLED and "
+            "NEXA_MULTIMODAL_IMAGE_ENABLED or NEXA_IMAGE_GEN_ENABLED)."
+        )
+        return
+    db = SessionLocal()
+    try:
+        effu = update.effective_user
+        tg_role = get_telegram_role(effu.id, db)
+        if tg_role == "blocked":
+            await update.message.reply_text(BLOCKED_MSG)
+            return
+    finally:
+        db.close()
+
+    args = context.args or []
+    if not args:
+        await update.message.reply_text("Usage: /imagine <prompt>")
+        return
+    prompt = " ".join(args).strip()
+    if not prompt:
+        await update.message.reply_text("Usage: /imagine <prompt>")
+        return
+
+    async with typing_indicator(update, context, interval_seconds=2.0, min_visible_seconds=0.5):
+        try:
+            out = await asyncio.to_thread(generate_images_from_prompt, prompt)
+        except Exception as exc:  # noqa: BLE001
+            await update.message.reply_text(f"Image generation failed: {exc!s}"[:3500])
+            return
+    if not out.get("ok"):
+        err = str(out.get("error") or out.get("code") or "failed")
+        await update.message.reply_text(err[:3500])
+        return
+    url, raw_b = first_image_payload_for_telegram(out)
+    if url:
+        try:
+            await update.message.reply_photo(photo=url)
+        except Exception as exc:  # noqa: BLE001
+            await update.message.reply_text(f"Could not send image: {exc!s}"[:2000])
+        return
+    if raw_b is not None:
+        from io import BytesIO
+
+        try:
+            await update.message.reply_photo(photo=BytesIO(raw_b))
+        except Exception as exc:  # noqa: BLE001
+            await update.message.reply_text(f"Could not send image: {exc!s}"[:2000])
+        return
+    await update.message.reply_text("Generation returned no image data.")
+
+
 async def cancel_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     db = SessionLocal()
     try:
@@ -1855,6 +1916,85 @@ async def handle_incoming_photo(update: Update, context: ContextTypes.DEFAULT_TY
             await update.message.reply_text(piece)
 
 
+async def handle_incoming_voice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Phase 18c — voice: STT (when enabled) and route transcript through the text pipeline."""
+    if not update.effective_user or not update.message or not update.message.voice:
+        return
+    s = get_settings()
+    from app.services.multimodal.orchestrator import audio_input_enabled
+
+    if not (s.nexa_multimodal_enabled and audio_input_enabled()):
+        if update.message:
+            await update.message.reply_text(
+                "Voice transcription is off (enable NEXA_MULTIMODAL_ENABLED and "
+                "NEXA_MULTIMODAL_AUDIO_ENABLED, or NEXA_AUDIO_INPUT_ENABLED)."
+            )
+        return
+    db = SessionLocal()
+    try:
+        _tg_ad = get_telegram_adapter()
+        _tg_ad.resolve_app_user_id(db, update)
+        effu = update.effective_user
+        if not effu or not update.message:
+            return
+        tg_role = get_telegram_role(effu.id, db)
+        if tg_role == "blocked":
+            await update.message.reply_text(BLOCKED_MSG)
+            return
+    finally:
+        db.close()
+
+    voice = update.message.voice
+    f = await context.bot.get_file(voice.file_id)
+    try:
+        buf = await f.download_as_bytearray()
+    except Exception as exc:  # noqa: BLE001
+        if update.message:
+            await update.message.reply_text(f"Could not download the voice note: {exc!s}"[:2000])
+        return
+
+    from app.services.multimodal.orchestrator import transcribe_uploaded_audio_bytes
+    from app.services.multimodal.stt import audio_mime_allowed, max_audio_bytes_cap
+
+    cap = max_audio_bytes_cap()
+    if len(buf) > cap:
+        if update.message:
+            await update.message.reply_text("That voice message is too large for the configured cap.")
+        return
+    mime = (getattr(voice, "mime_type", None) or "audio/ogg").split(";")[0].strip()
+    if not audio_mime_allowed(mime):
+        if update.message:
+            await update.message.reply_text(
+                f"Unsupported voice format ({mime}). Use a standard voice note from Telegram."
+            )
+        return
+    name = f"voice.{mime.rsplit('/', 1)[-1] if '/' in mime else 'ogg'}"
+
+    async with typing_indicator(update, context, interval_seconds=3.0, min_visible_seconds=0.8):
+        try:
+            out = await asyncio.to_thread(
+                transcribe_uploaded_audio_bytes,
+                bytes(buf),
+                filename=name,
+                mime=mime,
+            )
+        except Exception as exc:  # noqa: BLE001
+            if update.message:
+                await update.message.reply_text(f"Transcription failed: {exc!s}"[:3500])
+            return
+    if not out.get("ok"):
+        err = str(out.get("error") or out.get("code") or "failed")
+        if update.message:
+            await update.message.reply_text(err[:3500])
+        return
+    transcript = (out.get("text") or "").strip()
+    if not transcript:
+        if update.message:
+            await update.message.reply_text("(No speech detected in that voice message.)")
+        return
+    await _handle_incoming_text_impl(update, context, text_override=transcript)
+
+
 async def handle_incoming_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not update.effective_user or not update.message or not update.message.text:
         return
@@ -1864,9 +2004,14 @@ async def handle_incoming_text(update: Update, context: ContextTypes.DEFAULT_TYP
         await _handle_incoming_text_impl(update, context)
 
 
-async def _handle_incoming_text_impl(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    text = update.message.text
-    logger.info("incoming_text=%s", text[:120])
+async def _handle_incoming_text_impl(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    *,
+    text_override: str | None = None,
+) -> None:
+    text = text_override if text_override is not None else update.message.text
+    logger.info("incoming_text=%s", (text or "")[:120])
     db = SessionLocal()
     try:
         _tg_ad = get_telegram_adapter()

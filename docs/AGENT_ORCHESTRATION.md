@@ -203,3 +203,54 @@ Reply in chat with one of:
 - **“implement Week 4 Phase 1”** — registry + settings + tests + `.env.example` only  
 - **“implement Week 4”** — phased PRs in order (1 → 2 → 3)  
 - **“modify spec: …”** — iterate this document before code  
+
+---
+
+## 12. Phase 16a — bounded delegation (`agent_team`)
+
+This phase is **separate** from Week 4 sub-agent registry routing (`sub_agent_router`). It reuses **`create_assignment`** / **`dispatch_assignment`** to fan out one user goal to **multiple custom-agent handles** with a shared **`spawn_group_id`** and orchestration metadata in **`input_json`**.
+
+### Feature flags (environment)
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `NEXA_ORCHESTRATION_ENABLED` | `false` | When true, gateway recognizes `/delegate …` and creates assignments. |
+| `NEXA_ORCHESTRATION_MAX_DELEGATES` | `5` | Max distinct `@handles` per delegation (hard-clamped in policy). |
+| `NEXA_ORCH_MAX_PARALLEL_AGENTS` | `3` | Max concurrent `dispatch_assignment` threads when `parallel` is used. |
+| `NEXA_ORCH_DELEGATION_TIMEOUT_MS` | `30000` | Per-dispatch timeout budget (parallel path uses seconds derived from this). |
+| `NEXA_ORCH_REQUIRE_APPROVAL` | `false` | When true, assignments are created as **`waiting_approval`** and not dispatched. |
+
+### Gateway usage
+
+Send a message beginning with **`/delegate`** (so accidental `@mentions` do not trigger orchestration):
+
+```text
+/delegate @agent-one @agent-two Summarize the repo and open a PR draft
+/delegate parallel @frontend @backend Ship the hotfix with coordinated checks
+```
+
+Handles must match **`@handle`** tokens at the start of the command; the rest is the **goal** text. At least **two** distinct agents are required.
+
+### REST API
+
+Mission Control auth only (**not** cron Bearer): **`X-User-Id`** plus optional **`Authorization: Bearer`** when `NEXA_WEB_API_TOKEN` is set.
+
+- **`POST /api/v1/orchestration/delegate`**
+
+```json
+{
+  "agents": ["agent-one", "agent-two"],
+  "goal": "Your shared objective",
+  "parallel": false
+}
+```
+
+Response mirrors **`run_delegation`**: `ok`, `spawn_group_id`, `assignment_ids`, `results`, etc.
+
+### SQLite and parallel dispatch
+
+Parallel dispatches run **`dispatch_assignment`** in a **`ThreadPoolExecutor`**. Each worker opens its **own** SQLAlchemy session (`SessionLocal`) so SQLite connections are not shared across threads.
+
+### Logs
+
+Delegation emits structured logs with **`nexa_event`: `orchestration_delegate`** (see `app/services/orchestration/delegate.py`).

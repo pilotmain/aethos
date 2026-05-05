@@ -131,6 +131,9 @@ def reason_for_host_payload(payload: dict[str, Any]) -> str:
         return "Remove a Vercel project (destructive)"
     if ha == "chain":
         return "Run a batched chain of allowlisted host actions"
+    if ha == "plugin_skill":
+        sn = (payload.get("skill_name") or "").strip()
+        return f"Run registered plugin skill ({sn})" if sn else "Run registered plugin skill"
     if ha == "run_command":
         rn = (payload.get("run_name") or "").strip().lower()
         if rn == "pytest":
@@ -156,6 +159,8 @@ def card_message_for_host_payload(payload: dict[str, Any]) -> str:
         return "Nexa needs permission to read local files before continuing."
     if ha == "file_write":
         return "Nexa needs permission to write this file before continuing."
+    if ha == "plugin_skill":
+        return "Nexa needs permission to run this automation skill before continuing."
     return "Nexa needs permission before continuing."
 
 

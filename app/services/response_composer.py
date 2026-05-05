@@ -9,14 +9,13 @@ import re
 from typing import Any, TypedDict
 
 from app.core.config import get_settings
-from app.services.llm_key_resolution import get_merged_api_keys
-from app.services.llm_usage_recorder import record_anthropic_message_usage, record_openai_message_usage
+from app.services.llm.base import Message
+from app.services.llm.completion import primary_complete_messages, providers_available
 from app.services.memory_preferences import (
     identity_pronoun_system_instructions,
     maybe_apply_single_plain_cursor_block,
     preference_formatting_system_instructions,
 )
-from app.services.providers.sdk import build_anthropic_client, build_openai_client
 from app.services.response_formatter import LIST_FORMATTING_LLM_GUIDANCE
 from app.services.safe_llm_gateway import composer_context_to_safe_llm_payload
 from app.services.structured_response_style import structured_system_suffix_for_nexa_composer
@@ -505,16 +504,6 @@ def _parse_composer_response_text(response_text: str) -> dict[str, Any]:
         raise
 
 
-def _get_clients() -> tuple:
-    s = get_settings()
-    m = get_merged_api_keys()
-    anth = (
-        build_anthropic_client(api_key=m.anthropic_api_key) if m.anthropic_api_key else None
-    )
-    oai = build_openai_client(api_key=m.openai_api_key) if m.openai_api_key else None
-    return s, anth, oai
-
-
 def _system_memory_block() -> str:
     try:
         from app.services.safe_llm_gateway import read_safe_system_memory_snapshot
@@ -575,63 +564,29 @@ def _build_system_prompt(ctx: ResponseContext, strategy_body: str) -> str:
 
 
 def _invoke_llm(system: str, user_content: str, ctx: ResponseContext | None = None) -> dict[str, Any]:
+    """Structured JSON composer via Phase 11 registry (no direct vendor clients)."""
     from app.services.llm_routing import resolve_anthropic_model_for_composer
 
-    settings, anth_client, oai_client = _get_clients()
-    m = get_merged_api_keys()
+    settings = get_settings()
     anth_model = resolve_anthropic_model_for_composer(ctx)
-    if anth_client:
-        try:
-            logger.warning("LLM_CALL_TRIGGERED provider=anthropic model=%s", anth_model)
-            msg = anth_client.messages.create(
-                model=anth_model,
-                max_tokens=2048,
-                temperature=0.8,
-                system=system,
-                messages=[{"role": "user", "content": user_content}],
-            )
-            try:
-                record_anthropic_message_usage(
-                    msg,
-                    model=anth_model,
-                    used_user_key=m.has_user_anthropic,
-                )
-            except Exception:  # noqa: BLE001
-                pass
-            parts: list[str] = []
-            for block in msg.content:
-                t = getattr(block, "text", None)
-                if t:
-                    parts.append(t)
-            body = "".join(parts) if parts else "{}"
-            return _parse_composer_response_text(body)
-        except Exception as exc:
-            logger.warning("Anthropic composer failed: %s", exc)
-    if oai_client:
-        try:
-            logger.warning("LLM_CALL_TRIGGERED provider=openai")
-            resp = oai_client.chat.completions.create(
-                model=settings.openai_model,
-                temperature=0.8,
-                response_format={"type": "json_object"},
-                messages=[
-                    {"role": "system", "content": system},
-                    {"role": "user", "content": user_content},
-                ],
-            )
-            try:
-                record_openai_message_usage(
-                    resp,
-                    model=settings.openai_model,
-                    used_user_key=m.has_user_openai,
-                )
-            except Exception:  # noqa: BLE001
-                pass
-            body = resp.choices[0].message.content or "{}"
-            return _parse_composer_response_text(body)
-        except Exception as exc:
-            logger.warning("OpenAI composer failed: %s", exc)
-    raise RuntimeError("No LLM available or both providers failed")
+    max_tok = max(2048, int(settings.nexa_llm_max_tokens or 4096))
+    logger.warning(
+        "LLM_CALL_TRIGGERED phase11_registry anthropic_model_override=%s max_tokens=%s",
+        anth_model,
+        max_tok,
+    )
+    messages = [
+        Message(role="system", content=system),
+        Message(role="user", content=user_content),
+    ]
+    body = primary_complete_messages(
+        messages,
+        response_format_json=True,
+        max_tokens=max_tok,
+        temperature=0.8,
+        anthropic_model_override=anth_model,
+    )
+    return _parse_composer_response_text(body)
 
 
 def _apply_single_agent_output_guard(text: str | None) -> str | None:
@@ -722,8 +677,7 @@ def use_real_llm() -> bool:
     s = get_settings()
     if not s.use_real_llm:
         return False
-    m = get_merged_api_keys()
-    return bool(m.anthropic_api_key or m.openai_api_key)
+    return providers_available()
 
 
 def fallback_capability_response(text: str) -> str:

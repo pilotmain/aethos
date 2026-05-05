@@ -15,6 +15,7 @@ import re
 from pathlib import Path
 from typing import Any
 
+
 from app.core.config import get_settings
 from app.services.host_executor_intent import safe_relative_path
 
@@ -229,4 +230,135 @@ def try_infer_readme_push_chain_nl(user_text: str) -> dict[str, Any] | None:
         "host_action": "chain",
         "actions": actions,
         "stop_on_failure": True,
+    }
+
+
+def browser_nl_allowed() -> bool:
+    s = get_settings()
+    if not bool(getattr(s, "nexa_host_executor_enabled", False)):
+        return False
+    return bool(getattr(s, "nexa_browser_enabled", True)) or bool(
+        getattr(s, "nexa_browser_automation_enabled", False),
+    )
+
+
+def _normalize_browser_url(raw: str) -> str:
+    u = (raw or "").strip().rstrip(".,);]")
+    if not u:
+        return ""
+    if u.startswith(("http://", "https://")):
+        return u
+    return f"https://{u}"
+
+
+BROWSER_NAV_PATTERNS = (
+    r"go to (https?://[^\s]+)",
+    r"navigate to (https?://[^\s]+)",
+    r"open (https?://[^\s]+)",
+    r"go to ((?:www\.)?[a-zA-Z0-9][-a-zA-Z0-9.]*\.[a-zA-Z]{2,}[^\s,)]*)",
+    r"open ((?:www\.)?[a-zA-Z0-9][-a-zA-Z0-9.]*\.[a-zA-Z]{2,}[^\s,)]*)",
+    r"navigate to ((?:www\.)?[a-zA-Z0-9][-a-zA-Z0-9.]*\.[a-zA-Z]{2,}[^\s,)]*)",
+)
+
+
+def extract_browser_intent(user_text: str) -> dict[str, Any] | None:
+    """Map a single phrase to a plugin_skill payload fragment (skill_name + input)."""
+    t = user_text or ""
+
+    for pattern in BROWSER_NAV_PATTERNS:
+        m = re.search(pattern, t, re.I)
+        if m:
+            url = _normalize_browser_url(m.group(1))
+            if url:
+                return {"skill_name": "browser_navigate", "input": {"url": url}}
+
+    if any(re.search(p, t, re.I) for p in (r"take a screenshot", r"\bscreenshot\b", r"capture the page")):
+        return {"skill_name": "browser_screenshot", "input": {}}
+
+    for pattern in (
+        r"click on ['\"]([^'\"]+)['\"]",
+        r"click the (?:button|link|element) ['\"]([^'\"]+)['\"]",
+    ):
+        m = re.search(pattern, t, re.I)
+        if m:
+            return {"skill_name": "browser_click", "input": {"selector": m.group(1)}}
+
+    m = re.search(r"fill ['\"]([^'\"]+)['\"] with ['\"]([^'\"]+)['\"]", t, re.I)
+    if m:
+        return {
+            "skill_name": "browser_fill",
+            "input": {"selector": m.group(1), "value": m.group(2)},
+        }
+    m = re.search(r"enter ['\"]([^'\"]+)['\"] in ['\"]([^'\"]+)['\"]", t, re.I)
+    if m:
+        return {
+            "skill_name": "browser_fill",
+            "input": {"selector": m.group(2), "value": m.group(1)},
+        }
+
+    m = re.search(r"get (?:the )?text from ['\"]([^'\"]+)['\"]", t, re.I)
+    if m:
+        return {"skill_name": "browser_get_text", "input": {"selector": m.group(1)}}
+
+    if re.search(r"\bscrape (?:the )?page\b", t, re.I):
+        return {"skill_name": "browser_get_html", "input": {}}
+
+    return None
+
+
+def try_infer_browser_automation_nl(user_text: str) -> dict[str, Any] | None:
+    """Natural language → ``host_action: plugin_skill`` or a short browser chain."""
+    if not browser_nl_allowed():
+        return None
+
+    t = (user_text or "").strip()
+    if not t or len(t) > _MAX_USER_TEXT:
+        return None
+
+    tl = t.lstrip()
+    if tl.startswith("{") and '"host_action"' in t:
+        return None
+
+    low = t.lower()
+    url_match = None
+    for pattern in BROWSER_NAV_PATTERNS:
+        url_match = re.search(pattern, t, re.I)
+        if url_match:
+            break
+    if url_match and (
+        re.search(r"\b(screenshot|capture the page)\b", low)
+        or "take a screenshot" in low
+    ):
+        url = _normalize_browser_url(url_match.group(1))
+        if url:
+            return {
+                "host_action": "chain",
+                "actions": [
+                    {
+                        "host_action": "plugin_skill",
+                        "skill_name": "browser_navigate",
+                        "input": {"url": url},
+                    },
+                    {
+                        "host_action": "plugin_skill",
+                        "skill_name": "browser_screenshot",
+                        "input": {},
+                    },
+                ],
+                "stop_on_failure": True,
+            }
+
+    frag = extract_browser_intent(t)
+    if not frag:
+        return None
+
+    logger.info(
+        "NL browser intent inferred",
+        extra={"nexa_event": "nl_browser_inferred", "skill": frag.get("skill_name")},
+    )
+
+    return {
+        "host_action": "plugin_skill",
+        "skill_name": frag["skill_name"],
+        "input": dict(frag.get("input") or {}),
     }
