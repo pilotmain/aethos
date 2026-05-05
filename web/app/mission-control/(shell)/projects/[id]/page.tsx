@@ -1,11 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 
 import { formatMissionControlApiError } from "@/lib/api";
-import { fetchMissionControlState } from "@/lib/api/mission-control-state";
+import { clearMissionControlStateCache, fetchMissionControlState } from "@/lib/api/mission-control-state";
 import { fetchWorkspaceProjects } from "@/lib/api/projects";
 import { fetchTasksForKanban, updateTaskStatus } from "@/lib/api/tasks";
 import {
@@ -33,7 +33,8 @@ function missionCardStatus(raw: string): Project["status"] {
 export default function MissionControlProjectDetailPage() {
   const params = useParams();
   const segment = typeof params.id === "string" ? params.id : "";
-  const parsed = parseProjectsRouteSegment(segment);
+  /** New object each call would change `load` every render → infinite useEffect loop. */
+  const parsed = useMemo(() => parseProjectsRouteSegment(segment), [segment]);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -132,10 +133,16 @@ export default function MissionControlProjectDetailPage() {
     void load();
   }, [load]);
 
-  const handleTaskStatusChange = async (taskId: string, newStatus: KanbanColumnType) => {
+  const handleTaskStatusChange = useCallback(async (taskId: string, newStatus: KanbanColumnType) => {
     await updateTaskStatus(taskId, newStatus);
-    await load();
-  };
+    clearMissionControlStateCache();
+    setTasks((prev) => {
+      const next = prev.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t));
+      setProject((p) => (p ? { ...p, progress: taskProgressPercent(next) } : null));
+      return next;
+    });
+  }, []);
+
 
   if (loading) {
     return (

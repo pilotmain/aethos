@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   DndContext,
   DragEndEvent,
@@ -68,40 +68,46 @@ export function KanbanBoard({ tasks, readOnly, onTaskStatusChange, onTasksRefres
     return grouped;
   }, [tasks]);
 
-  const handleDragStart = (event: DragStartEvent) => {
-    const raw = String(event.active.id);
-    if (!raw.startsWith("kanban-")) return;
-    const id = raw.slice("kanban-".length);
-    const task = tasks.find((t) => t.id === id);
-    if (task) setActiveTask(task);
-  };
+  const handleDragStart = useCallback(
+    (event: DragStartEvent) => {
+      const raw = String(event.active.id);
+      if (!raw.startsWith("kanban-")) return;
+      const id = raw.slice("kanban-".length);
+      const task = tasks.find((t) => t.id === id);
+      if (task) setActiveTask(task);
+    },
+    [tasks],
+  );
 
-  const handleDragEnd = async (event: DragEndEvent) => {
-    const { active, over } = event;
-    setActiveTask(null);
-    if (readOnly || !onTaskStatusChange) return;
+  const handleDragEnd = useCallback(
+    async (event: DragEndEvent) => {
+      const { active, over } = event;
+      setActiveTask(null);
+      if (readOnly || !onTaskStatusChange) return;
 
-    const nextCol = resolveDropColumn(over?.id ? String(over.id) : null, tasks);
-    if (!nextCol) return;
+      const nextCol = resolveDropColumn(over?.id ? String(over.id) : null, tasks);
+      if (!nextCol) return;
 
-    const raw = String(active.id);
-    if (!raw.startsWith("kanban-")) return;
-    const taskId = raw.slice("kanban-".length);
-    const task = tasks.find((t) => t.id === taskId);
-    if (!task || columnForTaskStatus(task.status) === nextCol) return;
+      const raw = String(active.id);
+      if (!raw.startsWith("kanban-")) return;
+      const taskId = raw.slice("kanban-".length);
+      const task = tasks.find((t) => t.id === taskId);
+      if (!task || columnForTaskStatus(task.status) === nextCol) return;
 
-    await onTaskStatusChange(taskId, nextCol);
-  };
+      await onTaskStatusChange(taskId, nextCol);
+    },
+    [tasks, readOnly, onTaskStatusChange],
+  );
 
-  const handleTaskClick = (task: Task) => {
+  const handleTaskClick = useCallback((task: Task) => {
     setSelectedTask(task);
     setDialogOpen(true);
-  };
+  }, []);
 
-  const handleAfterTaskSaved = async () => {
+  const handleAfterTaskSaved = useCallback(async () => {
     await onTasksRefresh?.();
     setDialogOpen(false);
-  };
+  }, [onTasksRefresh]);
 
   return (
     <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>

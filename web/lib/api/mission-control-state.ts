@@ -4,10 +4,31 @@ import { apiFetch } from "@/lib/api/client";
 
 export type MissionControlStatePayload = Record<string, unknown>;
 
-/** GET /api/v1/mission-control/state — unified execution + dashboard payload. */
+const CACHE_TTL_MS = 30_000;
+
+let stateCache: { data: MissionControlStatePayload | null; hours: number; at: number } | null = null;
+
+/** Invalidate cached GET /mission-control/state (call after mutations that affect dashboard lists). */
+export function clearMissionControlStateCache(): void {
+  stateCache = null;
+}
+
+/** GET /api/v1/mission-control/state — unified execution + dashboard payload (short TTL in-memory cache). */
 export async function fetchMissionControlState(hours = 48): Promise<MissionControlStatePayload | null> {
+  const now = Date.now();
+  if (
+    stateCache &&
+    stateCache.hours === hours &&
+    now - stateCache.at < CACHE_TTL_MS &&
+    stateCache.data !== null
+  ) {
+    return stateCache.data;
+  }
+
   try {
-    return await apiFetch<MissionControlStatePayload>(`/mission-control/state?hours=${hours}`);
+    const data = await apiFetch<MissionControlStatePayload>(`/mission-control/state?hours=${hours}`);
+    stateCache = { data, hours, at: Date.now() };
+    return data;
   } catch {
     return null;
   }
