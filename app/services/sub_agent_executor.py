@@ -15,6 +15,9 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
+from app.services.budget.hooks import budget_enabled, estimate_tokens_from_text
+from app.services.budget.models import UsageType
+from app.services.budget.tracker import BudgetTracker
 from app.services.host_executor import execute_payload
 from app.services.host_executor_chat import _validate_enqueue_payload, enqueue_host_job_from_validated_payload
 from app.services.host_executor_intent import title_for_payload
@@ -52,6 +55,18 @@ class AgentExecutor:
         if not msg:
             return f"Agent '{agent.name}' has no instruction text."
 
+        if budget_enabled():
+            bt = BudgetTracker()
+            bt.check_and_reset_budget(agent.id)
+            budget = bt.get_or_create_budget(agent.id)
+            reserve = max(2048, estimate_tokens_from_text(msg))
+            if not budget.can_execute(reserve):
+                return (
+                    f"⚠️ Agent '{agent.name}' work-hour budget is exhausted for this period "
+                    f"(monthly limit: {budget.monthly_limit:,} tokens). "
+                    "Ask an admin to raise limits with `/budget` or wait for the next reset."
+                )
+
         ok, rate_err = check_rate_limits(agent.id, agent.domain, chat_id)
         if not ok:
             log_agent_event(
@@ -73,6 +88,16 @@ class AgentExecutor:
             out = self._dispatch(
                 agent, msg, chat_id, db=db, user_id=user_id, web_session_id=web_session_id
             )
+            if budget_enabled():
+                bt = BudgetTracker()
+                used = estimate_tokens_from_text(msg) + estimate_tokens_from_text(out)
+                bt.record_usage(
+                    agent.id,
+                    max(1, used),
+                    UsageType.AGENT_TASK,
+                    description=f"Agent task: {msg[:120]}",
+                    member_name=agent.name,
+                )
             record_rate_limited_action(agent.id, agent.domain, chat_id)
             self.registry.touch_agent(agent.id)
             log_agent_event(

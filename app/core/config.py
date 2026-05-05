@@ -523,6 +523,10 @@ class Settings(BaseSettings):
     nexa_data_dir: str = Field(default_factory=lambda: str(REPO_ROOT / "data"))
     # Task checkout (claim) auto-release when lock age exceeds this (seconds).
     nexa_task_lock_timeout_seconds: int = 3600
+    # Phase 28 — per-member work-hour budgets (token metering; SQLite under NEXA_DATA_DIR/budget.db).
+    nexa_budget_enabled: bool = True
+    nexa_budget_default_monthly_limit: int = 1_000_000
+    nexa_budget_reset_day: int = 1
 
     # Phase 13 — strict privacy lockdown (external providers off; local_stub only)
     nexa_strict_privacy_mode: bool = False
@@ -684,6 +688,15 @@ class Settings(BaseSettings):
     def _normalize_nexa_user_privacy_mode(cls, v: object) -> str:
         x = (str(v) if v is not None else "standard").strip().lower()
         return x if x in ("standard", "strict", "paranoid") else "standard"
+
+    @field_validator("nexa_budget_reset_day", mode="before")
+    @classmethod
+    def _clamp_nexa_budget_reset_day(cls, v: object) -> int:
+        try:
+            n = int(v)  # type: ignore[arg-type]
+        except (TypeError, ValueError):
+            return 1
+        return max(1, min(28, n))
 
     @model_validator(mode="after")
     def _phase33_production_lock(self) -> Settings:

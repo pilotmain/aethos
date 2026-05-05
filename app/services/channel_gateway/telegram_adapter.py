@@ -110,6 +110,7 @@ def register_telegram_handlers(application: Application) -> None:
     Plain text messages hit ``telegram_bot.handle_incoming_text``, which routes non-slash
     lines through :func:`route_telegram_text_through_gateway` / :func:`~app.services.channels.router.route_inbound`.
     """
+    from app.bot import budget_commands as budget_cmds
     from app.bot import project_commands as mission_ctrl
     from app.bot import social_commands as social_cmds
     from app.bot import telegram_bot as tb
@@ -146,6 +147,10 @@ def register_telegram_handlers(application: Application) -> None:
     application.add_handler(CommandHandler("done", mission_ctrl.done_cmd))
     application.add_handler(CommandHandler("mission", mission_ctrl.mission_cmd))
     application.add_handler(CommandHandler("mcstatus", mission_ctrl.mcstatus_cmd))
+    # Phase 28 — work-hour (token) budgets per team member (/timesheet = usage history; /usage is LLM stats)
+    application.add_handler(CommandHandler("budget", budget_cmds.budget_cmd))
+    application.add_handler(CommandHandler("timesheet", budget_cmds.timesheet_cmd))
+    application.add_handler(CommandHandler("workhours", budget_cmds.timesheet_cmd))
     application.add_handler(CommandHandler("projects", tb.nexa_projects_list_cmd))
     application.add_handler(CommandHandler("project", tb.nexa_project_cmd))
     application.add_handler(CommandHandler("projects", tb.projects_cmd))
