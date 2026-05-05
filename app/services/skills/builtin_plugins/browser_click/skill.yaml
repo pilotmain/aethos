@@ -1,0 +1,13 @@
+name: browser_click
+version: 1.0.0
+description: Click a CSS selector on the current page.
+author: nexa
+tags: [browser, phase14]
+input_schema: {}
+output_schema: {}
+execution:
+  type: python
+  entry: ../browser_handlers.py
+  handler: browser_click
+dependencies: []
+permissions: []

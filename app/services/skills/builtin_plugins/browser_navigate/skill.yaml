@@ -1,0 +1,13 @@
+name: browser_navigate
+version: 1.0.0
+description: Open a URL in the shared Chromium session (Phase 14).
+author: nexa
+tags: [browser, phase14]
+input_schema: {}
+output_schema: {}
+execution:
+  type: python
+  entry: ../browser_handlers.py
+  handler: browser_navigate
+dependencies: []
+permissions: []

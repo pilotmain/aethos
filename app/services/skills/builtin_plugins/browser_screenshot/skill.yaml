@@ -1,0 +1,13 @@
+name: browser_screenshot
+version: 1.0.0
+description: Save a PNG screenshot of the current page.
+author: nexa
+tags: [browser, phase14]
+input_schema: {}
+output_schema: {}
+execution:
+  type: python
+  entry: ../browser_handlers.py
+  handler: browser_screenshot
+dependencies: []
+permissions: []

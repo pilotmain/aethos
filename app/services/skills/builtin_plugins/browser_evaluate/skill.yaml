@@ -1,0 +1,13 @@
+name: browser_evaluate
+version: 1.0.0
+description: Run JavaScript in the page context (expression body).
+author: nexa
+tags: [browser, phase14]
+input_schema: {}
+output_schema: {}
+execution:
+  type: python
+  entry: ../browser_handlers.py
+  handler: browser_evaluate
+dependencies: []
+permissions: []

@@ -1,0 +1,13 @@
+name: browser_fill
+version: 1.0.0
+description: Fill an input/textarea identified by CSS selector.
+author: nexa
+tags: [browser, phase14]
+input_schema: {}
+output_schema: {}
+execution:
+  type: python
+  entry: ../browser_handlers.py
+  handler: browser_fill
+dependencies: []
+permissions: []

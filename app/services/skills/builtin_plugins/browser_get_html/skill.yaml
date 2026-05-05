@@ -1,0 +1,13 @@
+name: browser_get_html
+version: 1.0.0
+description: Get inner HTML for selector or full page HTML when selector omitted.
+author: nexa
+tags: [browser, phase14]
+input_schema: {}
+output_schema: {}
+execution:
+  type: python
+  entry: ../browser_handlers.py
+  handler: browser_get_html
+dependencies: []
+permissions: []
