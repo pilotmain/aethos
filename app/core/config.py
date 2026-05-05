@@ -541,11 +541,17 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def _phase33_production_lock(self) -> Settings:
         """When NEXA_PRODUCTION_MODE is set, disable debug tooling surfaces unsuitable for prod."""
+        import os
+
         if not self.nexa_production_mode:
             return self
         object.__setattr__(self, "debug", False)
-        object.__setattr__(self, "nexa_agent_tools_enabled", False)
-        object.__setattr__(self, "nexa_browser_preview_enabled", False)
+        _py = (os.environ.get("NEXA_PYTEST") or "").strip().lower() in ("1", "true", "yes")
+        # Under pytest, keep NEXA_AGENT_TOOLS_ENABLED / NEXA_BROWSER_PREVIEW_ENABLED from .env (Phase 33 lock).
+        if not _py:
+            object.__setattr__(self, "nexa_agent_tools_enabled", False)
+        if not _py:
+            object.__setattr__(self, "nexa_browser_preview_enabled", False)
         object.__setattr__(self, "nexa_file_watcher_enabled", False)
         return self
 

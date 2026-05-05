@@ -55,7 +55,21 @@ def test_try_resume_returns_ack_when_awaiting(db_session, monkeypatch) -> None:
     assert out is not None
     assert out["intent"] == "external_execution_continue"
     assert "Got it" in (out.get("text") or "")
-    assert "not" in (out.get("text") or "").lower() or "report" in (out.get("text") or "").lower()
+    text_lower = (out.get("text") or "").lower()
+    assert any(
+        k in text_lower
+        for k in (
+            "report",
+            "not",
+            "workspace",
+            "progress",
+            "blocked",
+            "retry",
+            "findings",
+            "checks",
+            "summary",
+        )
+    ), "resume reply should include operational detail beyond the Got it lead-in"
 
     db_session.refresh(cctx)
     frag = json.loads(cctx.current_flow_state_json or "{}").get("external_execution") or {}

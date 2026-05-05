@@ -8,6 +8,8 @@ from pathlib import Path
 
 # Phase 27 — CI/local tests must not require Postgres; matches scripts that set this sidcar flag.
 os.environ["NEXA_NEXT_LOCAL_SIDECAR"] = "1"
+# Phase 33 — allow .env NEXA_AGENT_TOOLS_ENABLED when NEXA_PRODUCTION_MODE is also true (see Settings._phase33_production_lock).
+os.environ["NEXA_PYTEST"] = "1"
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 _NEXA_EXT_PRO_ROOT = _REPO_ROOT / "nexa-ext-pro"

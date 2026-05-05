@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from pathlib import Path
 
 import pytest
 
@@ -61,6 +62,15 @@ def test_maybe_prepend_intro_respects_proactive_flag(monkeypatch: pytest.MonkeyP
     assert out == body
 
 
+def _patch_operator_workspace_root(monkeypatch: pytest.MonkeyPatch, root: Path) -> None:
+    """Make tmp workspace paths valid for deploy/validate (submodules keep their own get_settings binding)."""
+    r = root.resolve()
+    monkeypatch.setattr(
+        "app.services.dev_runtime.workspace.allowed_workspace_roots",
+        lambda: [r],
+    )
+
+
 def test_read_pulse_standing_orders(tmp_path) -> None:
     assert read_pulse_standing_orders(None) is None
     assert read_pulse_standing_orders(tmp_path) is None
@@ -75,6 +85,7 @@ def test_format_pulse_section() -> None:
 
 @pytest.mark.usefixtures("nexa_runtime_clean")
 def test_operator_loop_appends_pulse_when_workspace_resolved(tmp_path, db_session, monkeypatch: pytest.MonkeyPatch) -> None:
+    _patch_operator_workspace_root(monkeypatch, tmp_path)
     (tmp_path / "PULSE.md").write_text("Run `npm test` before every push.", encoding="utf-8")
     _s = __import__("types").SimpleNamespace(
         nexa_operator_mode=True,
@@ -172,6 +183,7 @@ def test_gateway_no_intro_when_proactive_disabled(db_session, monkeypatch: pytes
 
 @pytest.mark.usefixtures("nexa_runtime_clean")
 def test_pulse_reread_each_operator_turn(tmp_path, db_session, monkeypatch: pytest.MonkeyPatch) -> None:
+    _patch_operator_workspace_root(monkeypatch, tmp_path)
     (tmp_path / "PULSE.md").write_text("alpha-standing-order", encoding="utf-8")
     _s = __import__("types").SimpleNamespace(
         nexa_operator_mode=True,
@@ -210,6 +222,7 @@ def test_pulse_reread_each_operator_turn(tmp_path, db_session, monkeypatch: pyte
 
 @pytest.mark.usefixtures("nexa_runtime_clean")
 def test_live_progress_ordering_before_pulse_body(tmp_path, db_session, monkeypatch: pytest.MonkeyPatch) -> None:
+    _patch_operator_workspace_root(monkeypatch, tmp_path)
     (tmp_path / "PULSE.md").write_text("orders", encoding="utf-8")
     _s = __import__("types").SimpleNamespace(
         nexa_operator_mode=True,

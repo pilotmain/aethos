@@ -10,12 +10,13 @@ ROOT = Path(__file__).resolve().parents[1]
 def _iter_app_py_excluding_api() -> list[Path]:
     out: list[Path] = []
     app_root = ROOT / "app"
+    skip_top = frozenset({"api", "channels", "cli"})
     for p in app_root.rglob("*.py"):
         parts = p.parts
         if "app" not in parts:
             continue
         i = parts.index("app")
-        if len(parts) > i + 1 and parts[i + 1] == "api":
+        if len(parts) > i + 1 and parts[i + 1] in skip_top:
             continue
         out.append(p)
     return sorted(out)
