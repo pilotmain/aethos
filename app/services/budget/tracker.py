@@ -99,15 +99,28 @@ class BudgetTracker:
     def _apply_org_columns(self) -> None:
         """Phase 29 — optional tenant columns on member_budgets."""
         with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.execute("PRAGMA table_info(member_budgets)")
+            existing_columns = {str(row[1]) for row in cursor.fetchall()}
 
-            def _has(table: str, col: str) -> bool:
-                cur = conn.execute(f"PRAGMA table_info({table})")
-                return any(str(r[1]) == col for r in cur.fetchall())
+            def _add_column_if_missing(col: str, ddl: str) -> None:
+                if col in existing_columns:
+                    return
+                try:
+                    conn.execute(ddl)
+                    existing_columns.add(col)
+                except sqlite3.OperationalError as exc:
+                    # Race: another connection added the column; ignore duplicate.
+                    if "duplicate column" not in str(exc).lower():
+                        raise
 
-            if not _has("member_budgets", "organization_id"):
-                conn.execute("ALTER TABLE member_budgets ADD COLUMN organization_id TEXT")
-            if not _has("member_budgets", "team_id"):
-                conn.execute("ALTER TABLE member_budgets ADD COLUMN team_id TEXT")
+            _add_column_if_missing(
+                "organization_id",
+                "ALTER TABLE member_budgets ADD COLUMN organization_id TEXT",
+            )
+            _add_column_if_missing(
+                "team_id",
+                "ALTER TABLE member_budgets ADD COLUMN team_id TEXT",
+            )
 
     def get_or_create_budget(
         self, member_id: str, monthly_limit: int | None = None
