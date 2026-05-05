@@ -236,6 +236,27 @@ class ProjectController:
                 self.update_project_status(task.project_id, ProjectStatus.COMPLETED)
         return True
 
+    def update_task_status(self, task_id: str, new_status: TaskStatus, team_scope: str) -> bool:
+        """Mobile Kanban — set task status if it belongs to ``team_scope``."""
+        task = self.task_store.get(task_id)
+        if not task or task.team_scope != team_scope:
+            return False
+        task.status = new_status
+        task.updated_at = self._now()
+        if new_status == TaskStatus.DONE:
+            task.completed_at = self._now()
+            task.locked_by = None
+            task.locked_at = None
+        else:
+            task.completed_at = None
+        self.task_store.save(task)
+
+        if task.project_id and new_status == TaskStatus.DONE:
+            pts = self.task_store.list_by_project(task.project_id)
+            if pts and all(t.status == TaskStatus.DONE for t in pts):
+                self.update_project_status(task.project_id, ProjectStatus.COMPLETED)
+        return True
+
     def build_mission_tree(self, project_id: str) -> dict[str, Any]:
         return build_mission_tree(self.project_store, self.task_store, project_id)
 

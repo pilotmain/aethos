@@ -62,10 +62,10 @@ export default function ProjectsScreen({navigation}: Props) {
 }
 
 const styles = StyleSheet.create({
-  c: {flex: 1},
-  row: {padding: 16, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: '#e5e7eb'},
-  title: {fontWeight: '700', fontSize: 16},
-  goal: {color: '#4b5563', marginTop: 6},
-  meta: {marginTop: 8, color: '#6b7280', fontSize: 12},
-  warn: {padding: 16, color: '#b45309'},
+  c: {flex: 1, backgroundColor: '#09090b'},
+  row: {padding: 16, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: '#27272a'},
+  title: {fontWeight: '700', fontSize: 16, color: '#fafafa'},
+  goal: {color: '#a1a1aa', marginTop: 6},
+  meta: {marginTop: 8, color: '#71717a', fontSize: 12},
+  warn: {padding: 16, color: '#fbbf24'},
 });

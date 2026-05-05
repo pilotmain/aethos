@@ -78,12 +78,22 @@ def test_claim_and_unclaim(_, controller: ProjectController) -> None:
 
 
 @patch("app.services.project.controller.get_settings", return_value=_S())
+def test_update_task_status(_, controller: ProjectController) -> None:
+    p = controller.create_project("P", "g", team_scope="c6")
+    t = controller.add_task("T", project_id=p.id)
+    assert controller.update_task_status(t.id, TaskStatus.IN_PROGRESS, "c6") is True
+    assert controller.get_task(t.id).status == TaskStatus.IN_PROGRESS  # type: ignore[union-attr]
+    assert controller.update_task_status("badid", TaskStatus.DONE, "c6") is False
+
+
+@patch("app.services.project.controller.get_settings", return_value=_S())
 def test_mission_tree(_, controller: ProjectController) -> None:
     p = controller.create_project("Big", "Because revenue", team_scope="c4")
     controller.add_task("A", project_id=p.id)
     controller.add_task("B", project_id=p.id)
     tree = controller.build_mission_tree(p.id)
     assert tree["tasks"]["total"] == 2
+    assert len(tree["tasks"]["items"]) == 2
     assert "why_this_matters" in tree
 
 

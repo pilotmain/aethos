@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import logging
+from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, WebSocket, WebSocketDisconnect, status
@@ -17,6 +18,8 @@ from pydantic import BaseModel, Field
 from app.core.config import get_settings
 from app.core.mobile_token import MobileTokenError, create_mobile_access_token, decode_mobile_access_token
 from app.services.project import get_project_controller
+from app.services.project.models import ProjectStatus, TaskStatus
+from app.services.project.persistence import MobilePushTokenStore
 from app.services.rbac.organization_service import OrganizationService
 
 logger = logging.getLogger(__name__)
@@ -245,6 +248,138 @@ async def mobile_create_task(
         description=body.description,
     )
     return {"task": {"id": t.id, "title": t.title, "status": t.status.value}}
+
+
+class PatchTaskBody(BaseModel):
+    status: str = Field(..., min_length=1, max_length=32)
+
+
+@router.patch("/tasks/{task_id}")
+async def mobile_patch_task(
+    task_id: str,
+    body: PatchTaskBody,
+    user_id: str = Depends(require_mobile_user),
+) -> dict[str, Any]:
+    try:
+        new_status = TaskStatus(body.status.strip())
+    except ValueError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="invalid task status") from exc
+    ctrl = get_project_controller()
+    scope = mobile_team_scope(user_id)
+    ok = ctrl.update_task_status(task_id, new_status, scope)
+    if not ok:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Task not found")
+    t = ctrl.get_task(task_id)
+    assert t is not None
+    return {"task": {"id": t.id, "title": t.title, "status": t.status.value}}
+
+
+class PushTokenBody(BaseModel):
+    push_token: str = Field(..., min_length=1, max_length=4096)
+    platform: str = Field(..., min_length=1, max_length=32)
+
+
+@router.post("/push-token")
+async def mobile_push_token(
+    body: PushTokenBody,
+    user_id: str = Depends(require_mobile_user),
+) -> dict[str, Any]:
+    MobilePushTokenStore().upsert(user_id, body.push_token.strip(), body.platform.strip().lower())
+    return {"ok": True}
+
+
+@router.get("/dashboard")
+async def mobile_dashboard(user_id: str = Depends(require_mobile_user)) -> dict[str, Any]:
+    org_svc = OrganizationService()
+    ctrl = get_project_controller()
+    scope = mobile_team_scope(user_id)
+    active_org = org_svc.get_active_organization_id(user_id)
+
+    projects = ctrl.list_projects(scope, organization_id=active_org)
+    active_projects = len([p for p in projects if p.status == ProjectStatus.ACTIVE])
+
+    team_members = 0
+    if active_org:
+        team_members = len(org_svc.list_members(active_org))
+
+    all_tasks = ctrl.list_tasks(team_scope=scope)
+    recent_tasks = sorted(all_tasks, key=lambda t: t.updated_at, reverse=True)[:10]
+    dash = ctrl.get_dashboard(scope)
+
+    return {
+        "active_projects": active_projects,
+        "team_members": team_members,
+        "total_tasks": int(dash.get("total_tasks", len(all_tasks))),
+        "in_progress_tasks": int(dash.get("in_progress_tasks", 0)),
+        "budget_used": 0,
+        "budget_limit": 0,
+        "budget_percentage": 0.0,
+        "recent_tasks": [
+            {"id": t.id, "title": t.title, "status": t.status.value} for t in recent_tasks
+        ],
+        "active_organization_id": active_org,
+    }
+
+
+@router.get("/sync")
+async def mobile_sync(user_id: str = Depends(require_mobile_user)) -> dict[str, Any]:
+    org_svc = OrganizationService()
+    ctrl = get_project_controller()
+    scope = mobile_team_scope(user_id)
+    active_org = org_svc.get_active_organization_id(user_id)
+
+    projects = ctrl.list_projects(scope, organization_id=active_org)
+    tasks = ctrl.list_tasks(team_scope=scope)
+
+    team: list[dict[str, Any]] = []
+    if active_org:
+        for m in org_svc.list_members(active_org):
+            team.append(
+                {
+                    "id": m.id,
+                    "user_id": m.user_id,
+                    "user_name": m.user_name,
+                    "role": m.role.value,
+                }
+            )
+
+    budget_note = (
+        "Per-agent token budgets (Phase 28) require linked sub-agents; this summary is a placeholder."
+    )
+
+    return {
+        "projects": [
+            {
+                "id": p.id,
+                "name": p.name,
+                "goal": p.goal,
+                "status": p.status.value,
+                "organization_id": p.organization_id,
+                "updated_at": p.updated_at.isoformat(),
+            }
+            for p in projects
+        ],
+        "tasks": [
+            {
+                "id": t.id,
+                "title": t.title,
+                "description": t.description,
+                "status": t.status.value,
+                "project_id": t.project_id,
+                "assigned_to": t.assigned_to,
+                "updated_at": t.updated_at.isoformat(),
+            }
+            for t in tasks
+        ],
+        "team": team,
+        "budget": {
+            "organization_id": active_org,
+            "note": budget_note,
+            "team_total_used": 0,
+            "team_total_limit": 0,
+        },
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
 
 
 @router.get("/orgs/{org_id}/budget-summary")

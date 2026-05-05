@@ -86,6 +86,12 @@ class MissionControlStoreBase:
                     current_project_id TEXT,
                     updated_at TEXT NOT NULL
                 );
+                CREATE TABLE IF NOT EXISTS mobile_push_tokens (
+                    user_id TEXT PRIMARY KEY,
+                    push_token TEXT NOT NULL,
+                    platform TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                );
                 """
             )
             self._apply_rbac_migrations(conn)
@@ -392,8 +398,27 @@ class MissionControlStateStore(MissionControlStoreBase):
             )
 
 
+class MobilePushTokenStore(MissionControlStoreBase):
+    """FCM / device tokens for mobile push (Phase 34)."""
+
+    def upsert(self, user_id: str, push_token: str, platform: str) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO mobile_push_tokens (user_id, push_token, platform, updated_at)
+                VALUES (?, ?, ?, ?)
+                ON CONFLICT(user_id) DO UPDATE SET
+                    push_token = excluded.push_token,
+                    platform = excluded.platform,
+                    updated_at = excluded.updated_at
+                """,
+                (user_id, push_token, platform, _utcnow_iso()),
+            )
+
+
 __all__ = [
     "MissionControlStateStore",
+    "MobilePushTokenStore",
     "ProjectStore",
     "TaskStore",
 ]

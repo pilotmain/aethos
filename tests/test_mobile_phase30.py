@@ -63,4 +63,42 @@ def test_mobile_login_me_and_org_projects(client: TestClient) -> None:
 
     tree = client.get(f"/api/v1/mobile/projects/{pid}/tree", headers=auth)
     assert tree.status_code == 200
-    assert "project" in tree.json()
+    tj = tree.json()
+    assert "project" in tj
+    assert "items" in tj["tasks"]
+
+    tk = client.post(
+        "/api/v1/mobile/tasks",
+        json={"title": "Kanban task", "project_id": pid},
+        headers=auth,
+    )
+    assert tk.status_code == 200
+    tid = tk.json()["task"]["id"]
+
+    tree_after = client.get(f"/api/v1/mobile/projects/{pid}/tree", headers=auth)
+    assert tree_after.status_code == 200
+    assert len(tree_after.json()["tasks"]["items"]) >= 1
+
+    patch = client.patch(
+        f"/api/v1/mobile/tasks/{tid}",
+        json={"status": "in_progress"},
+        headers=auth,
+    )
+    assert patch.status_code == 200
+    assert patch.json()["task"]["status"] == "in_progress"
+
+    dash = client.get("/api/v1/mobile/dashboard", headers=auth)
+    assert dash.status_code == 200
+    assert "recent_tasks" in dash.json()
+
+    sync = client.get("/api/v1/mobile/sync", headers=auth)
+    assert sync.status_code == 200
+    assert "projects" in sync.json() and "tasks" in sync.json()
+
+    reg = client.post(
+        "/api/v1/mobile/push-token",
+        json={"push_token": "test-device-token", "platform": "ios"},
+        headers=auth,
+    )
+    assert reg.status_code == 200
+    assert reg.json().get("ok") is True

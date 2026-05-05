@@ -8,8 +8,20 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.services.project.models import TaskStatus
+from app.services.project.models import Task, TaskStatus
 from app.services.project.persistence import ProjectStore, TaskStore
+
+
+def _task_item(t: Task) -> dict[str, Any]:
+    return {
+        "id": t.id,
+        "title": t.title,
+        "description": t.description,
+        "status": t.status.value,
+        "assigned_to": t.assigned_to,
+        "updated_at": t.updated_at.isoformat(),
+        "order_index": t.order_index,
+    }
 
 
 def build_mission_tree(
@@ -58,6 +70,7 @@ def build_mission_tree(
             "done": completed_count,
             "blocked": len(blocked),
             "list": [t.to_user_display() for t in tasks],
+            "items": [_task_item(t) for t in tasks],
         },
         "sub_projects": sub_trees,
         "why_this_matters": project.goal,

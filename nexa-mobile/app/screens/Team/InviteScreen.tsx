@@ -1,15 +1,19 @@
 import React from 'react';
-import {StyleSheet, Text, View} from 'react-native';
+import {ScrollView, StyleSheet} from 'react-native';
+import {Text} from 'react-native-paper';
 
 export default function InviteScreen() {
   return (
-    <View style={styles.c}>
-      <Text style={styles.t}>Create invites from Telegram (/org invite) or wire POST /mobile/invite later.</Text>
-    </View>
+    <ScrollView contentContainerStyle={styles.c}>
+      <Text variant="bodyMedium" style={styles.t}>
+        Invites are issued from the Nexa Telegram bot (`/org invite`) or the web console today. A dedicated mobile
+        invite API can register tokens here later.
+      </Text>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  c: {flex: 1, padding: 16},
-  t: {color: '#374151'},
+  c: {padding: 16, backgroundColor: '#09090b'},
+  t: {color: '#a1a1aa'},
 });
