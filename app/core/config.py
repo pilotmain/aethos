@@ -242,7 +242,13 @@ class Settings(BaseSettings):
     nexa_audio_transcription_provider: str = "openai"
     nexa_audio_output_enabled: bool = False
     nexa_image_gen_enabled: bool = False
-    nexa_image_gen_provider: str = "openai"
+    nexa_image_gen_provider: str = "openai"  # openai | replicate | local_sd
+    # Phase 18d — image generation shortcut (with NEXA_MULTIMODAL_ENABLED).
+    nexa_multimodal_image_enabled: bool = False
+    nexa_openai_image_model: str = "dall-e-3"  # dall-e-2 | dall-e-3
+    nexa_replicate_api_token: str | None = None
+    nexa_replicate_image_version: str | None = None  # prediction model version hash
+    nexa_local_sd_url: str | None = None  # e.g. http://127.0.0.1:7860/sdapi/v1/txt2img (A1111)
     nexa_multimodal_max_image_mb: int = 10
     nexa_multimodal_max_audio_seconds: int = 300
     nexa_multimodal_max_image_side_px: int = 8192
@@ -250,6 +256,14 @@ class Settings(BaseSettings):
     nexa_multimodal_strip_image_metadata: bool = False
     # Google Gemini (REST :generateContent) — optional; used when `nexa_multimodal_vision_provider=gemini`.
     nexa_gemini_api_key: str | None = None
+    # Phase 18c — audio (STT/TTS); when true, enables STT+TTS with NEXA_MULTIMODAL_ENABLED (or use the granular flags below).
+    nexa_multimodal_audio_enabled: bool = False
+    nexa_multimodal_max_audio_mb: int = 25
+    nexa_audio_output_provider: str = "openai"  # openai | elevenlabs
+    nexa_openai_tts_model: str = "tts-1"
+    nexa_openai_tts_voice: str = "alloy"
+    nexa_elevenlabs_api_key: str | None = None
+    nexa_elevenlabs_voice_id: str = "21m00Tcm4TlvDq8ikWAM"
 
     nexa_plugin_skills_root: str = Field(
         default_factory=lambda: str(REPO_ROOT / "data" / "nexa_plugin_skills")
@@ -259,7 +273,9 @@ class Settings(BaseSettings):
     nexa_network_allowed_hosts: str = (
         "api.openai.com,api.anthropic.com,api.deepseek.com,openrouter.ai,localhost,127.0.0.1,"
         "api.telegram.org,api.search.brave.com,api.tavily.com,serpapi.com,"
-        "www.googleapis.com,generativelanguage.googleapis.com"
+        "www.googleapis.com,generativelanguage.googleapis.com,api.elevenlabs.io,api.replicate.com,"
+        "api.twitter.com,api.x.com,graph.facebook.com,graph.instagram.com,api.linkedin.com,"
+        "open.tiktokapis.com,open-upload.tiktokapis.com"
     )
     nexa_resource_max_cpu_percent: float = 0.0
     nexa_resource_max_memory_mb: int = 0
@@ -295,6 +311,43 @@ class Settings(BaseSettings):
     nexa_web_max_redirects: int = 5
     nexa_web_respect_robots: bool = True
     nexa_web_user_agent: str = "Nexa/1.0; +https://github.com (public fetch, contact owner)"
+
+    # Phase 21 — HTTP scraping (httpx + BeautifulSoup + lxml; API uses NEXA_CRON_API_TOKEN)
+    nexa_scraping_enabled: bool = True
+    nexa_scraping_max_pages: int = 10
+    nexa_scraping_timeout_seconds: int = 30
+    nexa_scraping_rate_limit_per_minute: int = 60
+    # JSON array, or "UA1||UA2" (double-pipe) when not JSON; empty → built-in default pool
+    nexa_scraping_user_agents: str = ""
+    nexa_scraping_proxy_url: str | None = None
+    nexa_scraping_stealth_mode: bool = True
+
+    # Phase 22 — social media automation (opt-in; secrets via env)
+    nexa_social_enabled: bool = False
+    nexa_twitter_enabled: bool = False
+    twitter_api_key: str | None = None
+    twitter_api_secret: str | None = None
+    twitter_access_token: str | None = None
+    twitter_access_secret: str | None = None
+    twitter_bearer_token: str | None = None
+    nexa_linkedin_enabled: bool = False
+    linkedin_access_token: str | None = None
+    linkedin_person_urn: str | None = None
+    nexa_facebook_enabled: bool = False
+    facebook_page_access_token: str | None = None
+    facebook_page_id: str | None = None
+    # Phase 24 — Instagram feed (Graph ``media`` + ``media_publish``). Token may match Page token.
+    nexa_instagram_enabled: bool = False
+    instagram_page_access_token: str | None = None
+    instagram_business_account_id: str | None = None
+    # Phase 24 — TikTok Content Posting (Direct Post FILE_UPLOAD + status fetch)
+    nexa_tiktok_enabled: bool = False
+    tiktok_access_token: str | None = None
+    tiktok_open_id: str | None = None
+    # Required values depend on creator / app audit — default safe for sandbox unaudited apps
+    tiktok_privacy_level: str = "SELF_ONLY"
+    nexa_social_rate_limit_per_hour: int = 50
+    nexa_social_max_media_size_mb: int = 10
 
     # Optional Playwright-based owner-only public preview (off by default; no login/forms)
     nexa_browser_preview_enabled: bool = False
@@ -620,7 +673,6 @@ class Settings(BaseSettings):
     nexa_pr_review_ignore_patterns: str = (
         "*.md,*.txt,*.lock,package-lock.json,yarn.lock,*.min.js"
     )
-
 
     @field_validator("nexa_user_privacy_mode", mode="before")
     @classmethod
