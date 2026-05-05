@@ -118,23 +118,31 @@ class AgentRouter:
                 "clean_message": clean_message,
             }
 
-        if not (clean_message or "").strip():
-            return {
-                "handled": True,
-                "response": (
-                    f"Agent '@{agent_name}' ({agent.domain}) is ready. "
-                    f"Send `@{agent_name} <instruction>` to run tools."
-                ),
-                "agent_id": agent.id,
-                "agent_name": agent_name,
-                "clean_message": clean_message,
-            }
+        effective_message = (clean_message or "").strip()
+        if not effective_message:
+            name_l = (agent_name or "").strip().lower()
+            dom_l = (agent.domain or "").strip().lower()
+            if name_l in ("qa_agent", "qa", "security_agent") or dom_l in ("qa", "security", "sec"):
+                effective_message = (
+                    "security review: scan the default workspace root for heuristic secrets and unsafe patterns."
+                )
+            else:
+                return {
+                    "handled": True,
+                    "response": (
+                        f"Agent '@{agent_name}' ({agent.domain}) is ready. "
+                        f"Send `@{agent_name} <instruction>` to run tools."
+                    ),
+                    "agent_id": agent.id,
+                    "agent_name": agent_name,
+                    "clean_message": clean_message,
+                }
 
         from app.services.sub_agent_executor import AgentExecutor
 
         exec_out = AgentExecutor().execute(
             agent,
-            clean_message,
+            effective_message,
             chat_id,
             db=db,
             user_id=(user_id or "").strip(),

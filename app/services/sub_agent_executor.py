@@ -33,6 +33,9 @@ from app.services.sub_agent_registry import AgentRegistry, AgentStatus, SubAgent
 
 logger = logging.getLogger(__name__)
 
+_QA_NAMES = frozenset({"qa_agent", "qa", "security_agent"})
+_QA_DOMAINS = frozenset({"qa", "security", "sec"})
+
 
 class AgentExecutor:
     """Dispatches sub-agent messages to allowlisted host payloads (sync)."""
@@ -130,6 +133,11 @@ class AgentExecutor:
         finally:
             self.registry.update_status(agent.id, AgentStatus.IDLE)
 
+    def _is_qa_security_agent(self, agent: SubAgent) -> bool:
+        n = (agent.name or "").strip().lower()
+        d = (agent.domain or "").strip().lower()
+        return n in _QA_NAMES or d in _QA_DOMAINS
+
     def _dispatch(
         self,
         agent: SubAgent,
@@ -140,6 +148,11 @@ class AgentExecutor:
         user_id: str,
         web_session_id: str,
     ) -> str:
+        if self._is_qa_security_agent(agent):
+            from app.services.qa_agent.security_review import run_security_review_sync
+
+            return run_security_review_sync(agent, message, db=db, user_id=user_id)
+
         domain = (agent.domain or "").strip().lower()
         if domain == "git":
             return self._git(agent, message, chat_id, db=db, user_id=user_id, web_session_id=web_session_id)
