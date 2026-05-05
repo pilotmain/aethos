@@ -35,7 +35,9 @@ def print_welcome_screen(
     print(f"   🔧 Features:      {feat}")
     print(f"   📊 Workspace:    {workspace}")
     print(f"\n   🚀 Quick start:")
-    print("      python -m nexa_cli serve          # API (default http://0.0.0.0:8010)")
+    print(
+        "      python -m nexa_cli serve          # API (default :8010); Telegram bot polls in-process if TELEGRAM_BOT_TOKEN is set"
+    )
     print("      python -m nexa_cli status         # Health checks")
     print("\n   🌐 After `serve`, open API docs at:")
     print(f"      {api_base.rstrip('/')}/docs")

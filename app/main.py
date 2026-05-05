@@ -191,6 +191,15 @@ async def lifespan(app: FastAPI):
             slack_bg = asyncio.create_task(run_slack_socket_bot_forever())
         except Exception as exc:
             logging.getLogger("nexa").warning("slack socket bot start failed: %s", exc)
+    if getattr(_boot, "nexa_telegram_embed_with_api", True) and (
+        getattr(_boot, "telegram_bot_token", None) or ""
+    ).strip():
+        try:
+            from app.bot.telegram_bot import start_telegram_polling_daemon
+
+            start_telegram_polling_daemon()
+        except Exception as exc:
+            logging.getLogger("nexa").warning("telegram bot start failed: %s", exc)
     yield
     try:
         from app.services.browser.session import shutdown_browser_session

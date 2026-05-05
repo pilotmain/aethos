@@ -139,6 +139,10 @@ class Settings(BaseSettings):
 
     telegram_bot_token: str | None = None
     telegram_webhook_secret: str | None = None
+    # When True (default), FastAPI lifespan starts Telegram long polling in a background thread when
+    # TELEGRAM_BOT_TOKEN is set (same process as ``nexa serve``). Set false if you run
+    # ``python -m app.bot.telegram_bot`` in a separate terminal to avoid duplicate polling.
+    nexa_telegram_embed_with_api: bool = True
     # Slack (Events API + Interactions + optional Socket Mode) — Channel Gateway / Phase 12.1
     slack_bot_token: str | None = None
     slack_app_token: str | None = None  # xapp- — Socket Mode (Bolt); omit if using HTTP Events only

@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import re
+import threading
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import Application, ContextTypes
@@ -3579,6 +3580,66 @@ async def job_inline_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 async def post_init(app: Application) -> None:
     app.create_task(poll_due_checkins(app))
+
+
+def _run_telegram_polling_embedded() -> None:
+    """Long polling in a daemon thread (PTB ``run_polling`` is blocking). ``stop_signals=None`` avoids
+    competing with uvicorn's signal handlers in the API process."""
+    from app.core.config import get_settings as get_settings_fresh
+    from app.services.startup_ensure import (
+        ensure_nexa_secret_key,
+        maybe_warn_missing_venv,
+        print_env_validation_at_startup,
+        print_missing_python_modules_hint,
+    )
+
+    global settings
+    log = logging.getLogger("nexa.telegram")
+    try:
+        ensure_nexa_secret_key()
+        get_settings_fresh.cache_clear()
+        settings = get_settings_fresh()
+        if not getattr(settings, "nexa_telegram_embed_with_api", True):
+            log.info("telegram bot skipped (NEXA_TELEGRAM_EMBED_WITH_API=false)")
+            return
+        maybe_warn_missing_venv()
+        if not (settings.telegram_bot_token or "").strip():
+            log.info("telegram bot skipped (no TELEGRAM_BOT_TOKEN)")
+            return
+        log_sanitized_nexa_config("bot")
+        print_env_validation_at_startup("bot")
+        print_missing_python_modules_hint()
+        print_llm_debug_banner()
+        maybe_log_llm_key_hint()
+        ensure_schema()
+        application = (
+            Application.builder().token(settings.telegram_bot_token).post_init(post_init).build()
+        )
+        register_telegram_handlers(application)
+        log.info("telegram bot long polling (embedded with API)")
+        application.run_polling(stop_signals=None)
+    except Exception:
+        log.exception("telegram embedded bot failed")
+
+
+def start_telegram_polling_daemon() -> threading.Thread | None:
+    """Used by ``app.main`` lifespan when TELEGRAM_BOT_TOKEN is set and embed is enabled."""
+    from app.core.config import get_settings as get_settings_fresh
+
+    get_settings_fresh.cache_clear()
+    s = get_settings_fresh()
+    if not getattr(s, "nexa_telegram_embed_with_api", True):
+        return None
+    if not (s.telegram_bot_token or "").strip():
+        return None
+    t = threading.Thread(
+        target=_run_telegram_polling_embedded,
+        name="nexa-telegram-bot",
+        daemon=True,
+    )
+    t.start()
+    logging.getLogger("nexa").info("telegram bot polling thread started")
+    return t
 
 
 def main() -> None:
