@@ -183,3 +183,43 @@ export interface UsageForecast {
   estimated_daily_average: number;
   recommended_daily_cap: number;
 }
+
+/** Phase 33 M6 — Advanced settings (aligned with `/web/keys`, `/user/settings`, `/system/*`). */
+export interface LLMProviderConfig {
+  name: "openai" | "anthropic" | "deepseek" | "ollama";
+  configured: boolean;
+  model?: string;
+  base_url?: string;
+  status: "connected" | "disconnected" | "unknown";
+  last_check?: string;
+}
+
+export interface IntegrationConfig {
+  id: string;
+  name: string;
+  type: "slack" | "github" | "telegram" | "discord";
+  enabled: boolean;
+  configured: boolean;
+  webhook_url?: string;
+  channel?: string;
+  last_active?: string;
+}
+
+export interface SystemConfig {
+  workspace_root: string;
+  sandbox_mode: boolean;
+  network_policy_strict: boolean;
+  approvals_enabled: boolean;
+  autonomous_mode: boolean;
+  log_level: "debug" | "info" | "warning" | "error";
+  data_dir: string;
+}
+
+export interface DiagnosticInfo {
+  api_status: "healthy" | "degraded" | "down";
+  database_status: "healthy" | "error";
+  cron_status: "running" | "stopped";
+  workers: number;
+  uptime_seconds: number;
+  version: string;
+}
