@@ -1,7 +1,7 @@
 """
 Static security heuristics over a repo tree (secrets-ish patterns, unsafe calls).
 
-Intended for QA / ``@qa_agent`` orchestration — not a substitute for pip-audit or npm audit.
+``@qa_agent`` uses the enhanced pipeline in ``app.services.qa_agent.security_review`` (ignores, gitleaks/trufflehog/pip-audit when available). This module remains a lightweight heuristic helper.
 """
 
 from __future__ import annotations
