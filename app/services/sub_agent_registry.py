@@ -67,7 +67,10 @@ def _default_capabilities_for_domain(domain: str) -> list[str]:
         "vercel": ["list", "deploy", "remove", "logs"],
         "railway": ["up", "down", "logs", "status"],
         "ops": ["railway", "status", "projects", "deploy", "logs"],
+        "qa": ["pytest", "lint", "integration", "review"],
         "test": ["pytest", "unit", "integration", "lint"],
+        "marketing": ["campaign", "copy", "brand", "brief"],
+        "security": ["scan", "review", "audit"],
     }
     return list(domain_capabilities.get(domain, []))
 

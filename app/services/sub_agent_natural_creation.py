@@ -22,8 +22,8 @@ def normalize_sub_agent_domain(raw: str) -> str:
     aliases = {
         "github": "git",
         "gh": "git",
-        "qa": "test",
-        "quality": "test",
+        "quality": "qa",
+        "quality_assurance": "qa",
         "pytest": "test",
         "sec": "security",
         "deploy": "vercel",
@@ -40,6 +40,7 @@ def normalize_sub_agent_domain(raw: str) -> str:
             "vercel",
             "railway",
             "ops",
+            "qa",
             "test",
             "security",
             "marketing",
@@ -80,15 +81,43 @@ def prefers_registry_sub_agent(text: str) -> bool:
 
 
 def _infer_domain(name: str, full_text: str) -> str:
+    """Pick registry domain from handle + message (Phase 47 — qa/marketing are first-class)."""
     n = (name or "").lower()
     ctx = (full_text or "").lower()
     blob = f"{n} {ctx}"
-    if any(x in blob for x in ("qa", "quality", "pytest", "lint", "test")):
-        return "test"
-    if any(x in blob for x in ("security", "sec", "scan", "vuln")):
+
+    # Name-first (handles like qa_agent, marketing_agent, security_expert)
+    if n.endswith("_agent"):
+        prefix = n[: -len("_agent")]
+        if prefix in (
+            "qa",
+            "marketing",
+            "security",
+            "ops",
+            "ceo",
+            "support",
+            "scrum",
+            "test",
+            "git",
+            "vercel",
+            "railway",
+        ):
+            return prefix if prefix != "test" else "test"
+    if n in ("qa", "qa_agent") or n.startswith("qa_"):
+        return "qa"
+    if "marketing" in n or n.startswith("market"):
+        return "marketing"
+    if "security" in n or n.startswith("sec_"):
         return "security"
+
+    if re.search(r"\bqa\b", blob) or "quality assurance" in blob or "quality_assurance" in blob:
+        return "qa"
     if any(x in blob for x in ("marketing", "campaign", "copy", "brand")):
         return "marketing"
+    if any(x in blob for x in ("security", "sec", "vuln")) and "qa" not in n:
+        return "security"
+    if any(x in blob for x in ("pytest", "lint", "integration test", "unit test")) and "qa" not in blob:
+        return "test"
     if any(x in blob for x in ("ceo", "strategy", "exec")):
         return "ceo"
     if any(x in blob for x in ("support", "customer", "helpdesk")):
@@ -103,12 +132,7 @@ def _infer_domain(name: str, full_text: str) -> str:
         return "vercel"
     if any(x in blob for x in ("git", "github", "commit", "branch")):
         return "git"
-    # Explicit tail domain: "... security_expert security" → last token
-    parts = (full_text or "").strip().split()
-    if len(parts) >= 2:
-        last = normalize_sub_agent_domain(parts[-1])
-        if last != "general":
-            return last
+
     return normalize_sub_agent_domain(n.split("_")[0] if "_" in n else n)
 
 
@@ -236,10 +260,11 @@ def try_spawn_natural_sub_agents(
         return (
             "**Create orchestration agents**\n\n"
             "Examples:\n"
-            "• `create agent qa_agent test`\n"
             "• `create two agents qa_agent and marketing_agent`\n"
-            "• `subagent create ops_agent ops`\n\n"
-            "Domains include **git**, **vercel**, **railway**, **ops**, **test**, **security**, **qa**."
+            "• `subagent create ops_agent ops`\n"
+            "• `create agent security_expert security`\n\n"
+            "Domains include **qa**, **marketing**, **git**, **vercel**, **railway**, **ops**, **test**, **security**.\n\n"
+            "View roster: `/subagent list` · Mission Control (web) shows the same team under **orchestration**."
         )
 
     registry = AgentRegistry()
@@ -269,6 +294,8 @@ def try_spawn_natural_sub_agents(
 
     if not lines:
         return None
+    lines.append("")
+    lines.append("📋 **Team** — `/subagent list` · Mission Control → dashboard **orchestration.sub_agents**")
     return "\n".join(lines).strip()[:9000]
 
 

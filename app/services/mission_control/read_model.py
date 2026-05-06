@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
+from time import time as wall_time
 from typing import Any
 
 from sqlalchemy import select
@@ -26,6 +27,34 @@ from app.services.trust_audit_constants import NETWORK_EXTERNAL_SEND_BLOCKED
 from app.services.trust_audit_read_model import audit_row_to_event, query_trust_activity, summarize_trust_activity
 
 _GATEWAY_OUTBOUND_FAILED = "gateway.outbound_failed"
+
+
+def _registry_sub_agents_for_user(user_id: str) -> list[dict[str, Any]]:
+    """Orchestration registry handles (same scopes as ``GET /api/v1/agents/list``)."""
+    from app.api.routes.agent_spawn import _agent_payload, _api_orchestration_scopes
+
+    from app.services.sub_agent_registry import AgentRegistry, AgentStatus
+
+    uid = (user_id or "").strip()[:64]
+    if not uid:
+        return []
+    scopes = _api_orchestration_scopes(uid)
+    reg = AgentRegistry()
+    agents = reg.list_agents_merged(scopes)
+    now = wall_time()
+    out: list[dict[str, Any]] = []
+    for a in agents:
+        if a.status == AgentStatus.TERMINATED:
+            continue
+        row = _agent_payload(a, include_stats=True)
+        la = float(getattr(a, "last_active", 0) or 0)
+        row["seconds_since_active"] = round(now - la, 3) if la else None
+        row["alive"] = bool(
+            la and (now - la) < 3600.0 and a.status not in (AgentStatus.ERROR, AgentStatus.PAUSED)
+        )
+        row["heartbeat_at"] = row.get("last_active")
+        out.append(row)
+    return out
 
 
 def _iso(dt: datetime | None) -> str | None:
@@ -102,7 +131,12 @@ def _orchestration_snapshot(db: Session, user_id: str) -> dict[str, Any]:
         if not assignment_hidden_mc(a)
         and str(a.get("status") or "").strip().lower() != "cancelled"
     ]
-    return {"organization": org_out, "roles": roles_out, "assignments": assigns}
+    return {
+        "organization": org_out,
+        "roles": roles_out,
+        "assignments": assigns,
+        "sub_agents": _registry_sub_agents_for_user(uid),
+    }
 
 
 def _attention_sort_key(item: dict[str, Any]) -> tuple[int, str]:

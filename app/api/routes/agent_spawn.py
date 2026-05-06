@@ -14,13 +14,14 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.core.db import get_db
 from app.core.security import get_valid_web_user_id
+from app.services.agent.activity_stream import recent_activity_for_agents
 from app.services.agent.activity_tracker import get_activity_tracker
 from app.services.sub_agent_executor import AgentExecutor
 from app.services.sub_agent_registry import AgentRegistry, AgentStatus
@@ -236,6 +237,20 @@ def get_agents_list(
     scopes = _api_orchestration_scopes(app_user_id)
     agents = AgentRegistry().list_agents_merged(scopes)
     return {"ok": True, "agents": [_agent_payload(a, include_stats=True) for a in agents], "count": len(agents)}
+
+
+@router.get("/activity/recent")
+def get_agents_activity_recent(
+    app_user_id: str = Depends(get_valid_web_user_id),
+    hours: int = Query(24, ge=1, le=168),
+    limit: int = Query(80, ge=1, le=300),
+) -> dict[str, Any]:
+    """Recent orchestration actions (SQLite audit) for agents visible to this user."""
+    scopes = _api_orchestration_scopes(app_user_id)
+    agents = AgentRegistry().list_agents_merged(scopes)
+    ids = [a.id for a in agents]
+    items = recent_activity_for_agents(ids, hours=hours, limit=limit)
+    return {"ok": True, "items": items, "count": len(items)}
 
 
 @router.get("/by-id/{agent_id}")

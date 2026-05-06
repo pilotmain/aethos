@@ -41,8 +41,7 @@ from app.services.sub_agent_registry import AgentRegistry, AgentStatus, SubAgent
 
 logger = logging.getLogger(__name__)
 
-_QA_NAMES = frozenset({"qa_agent", "qa", "security_agent"})
-_QA_DOMAINS = frozenset({"qa", "security", "sec"})
+_SECURITY_REVIEW_NAMES = frozenset({"security_agent", "security_expert", "sec_agent"})
 
 
 class AgentExecutor:
@@ -165,10 +164,15 @@ class AgentExecutor:
             if cur is not None and cur.status == AgentStatus.BUSY:
                 self.registry.update_status(agent.id, AgentStatus.IDLE)
 
-    def _is_qa_security_agent(self, agent: SubAgent) -> bool:
+    def _should_run_security_review_sync(self, agent: SubAgent) -> bool:
+        """Security scanner path — **not** generic QA/pytest agents (Phase 47)."""
         n = (agent.name or "").strip().lower()
         d = (agent.domain or "").strip().lower()
-        return n in _QA_NAMES or d in _QA_DOMAINS
+        if d in ("security", "sec"):
+            return True
+        if n in _SECURITY_REVIEW_NAMES:
+            return True
+        return False
 
     def _dispatch(
         self,
@@ -180,7 +184,7 @@ class AgentExecutor:
         user_id: str,
         web_session_id: str,
     ) -> str:
-        if self._is_qa_security_agent(agent):
+        if self._should_run_security_review_sync(agent):
             from app.services.qa_agent.security_review import run_security_review_sync
 
             return run_security_review_sync(agent, message, db=db, user_id=user_id)
@@ -199,13 +203,13 @@ class AgentExecutor:
             return self._git(agent, message, chat_id, db=db, user_id=user_id, web_session_id=web_session_id)
         if domain == "vercel":
             return self._vercel(agent, message, chat_id, db=db, user_id=user_id, web_session_id=web_session_id)
-        if domain == "test":
+        if domain in {"qa", "test"}:
             return self._test(agent, message, chat_id, db=db, user_id=user_id, web_session_id=web_session_id)
         if domain in {"general", "marketing", "ceo", "support", "scrum"}:
             return (
                 f"🤖 **@{agent.name}** ({domain}) is registered for this chat.\n\n"
                 "Send a concrete instruction. For tooling runs, use agents with domains "
-                "**git**, **vercel**, **railway**, **ops**, **test**, or **security**."
+                "**git**, **vercel**, **railway**, **ops**, **qa**, **test**, or **security**."
             )[:4000]
         return f"Unknown sub-agent domain {domain!r}."
 
@@ -370,7 +374,7 @@ class AgentExecutor:
                 db=db,
                 user_id=user_id,
                 web_session_id=web_session_id,
-                domain="test",
+                domain=(agent.domain or "test").strip().lower() or "test",
                 agent=agent,
             )
         return "Test sub-agent: ask to `run pytest` (allowlisted run_command)."

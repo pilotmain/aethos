@@ -34,8 +34,11 @@ def test_parse_multi_and_handles() -> None:
     assert len(spec) == 2
     assert spec[0][0] == "qa_agent"
     assert spec[1][0] == "marketing_agent"
+    assert spec[0][1] == "qa"
+    assert spec[1][1] == "marketing"
 
 
-def test_normalize_security_not_general() -> None:
+def test_normalize_security_and_qa() -> None:
     assert normalize_sub_agent_domain("security") == "security"
-    assert normalize_sub_agent_domain("qa") == "test"
+    assert normalize_sub_agent_domain("qa") == "qa"
+    assert normalize_sub_agent_domain("quality") == "qa"

@@ -60,8 +60,31 @@ class AgentSupervisor:
                 await asyncio.sleep(10.0)
 
     async def _check_agent_health(self) -> None:
+        from app.core.config import get_settings
+        from app.services.agent.heartbeat import ORCHESTRATION_HEARTBEAT_EVENT
+        from app.services.events.bus import publish
+
+        publish_hb = bool(getattr(get_settings(), "nexa_agent_monitoring_enabled", False))
+
         agents = self.registry.list_agents(None)
         for agent in agents:
+            if publish_hb:
+                try:
+                    publish(
+                        {
+                            "type": ORCHESTRATION_HEARTBEAT_EVENT,
+                            "payload": {
+                                "agent_id": agent.id,
+                                "domain": agent.domain,
+                                "status": agent.status.value,
+                                "last_active_ts": getattr(agent, "last_active", None),
+                                "parent_chat_id": agent.parent_chat_id,
+                            },
+                            "agent": agent.name,
+                        }
+                    )
+                except Exception:
+                    logger.debug("heartbeat publish skipped", exc_info=True)
             stats = self.tracker.get_agent_statistics(agent.id, days=1)
             total = int(stats.get("total_actions", 0) or 0)
             rate = float(stats.get("success_rate", 100.0) or 100.0)
