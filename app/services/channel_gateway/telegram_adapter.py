@@ -116,11 +116,13 @@ def register_telegram_handlers(application: Application) -> None:
     from app.bot import project_commands as mission_ctrl
     from app.bot import social_commands as social_cmds
     from app.bot import telegram_bot as tb
+    from app.bot.vercel_commands import vercel_command
 
     application.add_handler(CommandHandler("start", tb.start))
     application.add_handler(CommandHandler("help", tb.help_cmd))
     # Orchestration registry — register early so /subagent is never confused with /agent or text routing.
     application.add_handler(CommandHandler("subagent", subagent_command))
+    application.add_handler(CommandHandler("vercel", vercel_command))
     application.add_handler(CommandHandler("updates", tb.updates_cmd))
     application.add_handler(CommandHandler("usage", tb.usage_cmd))
     application.add_handler(CommandHandler("today", tb.today))

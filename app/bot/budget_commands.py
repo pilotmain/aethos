@@ -3,7 +3,7 @@ Telegram — team work-hour / token budgets (Phase 28).
 
 Commands: /budget, /timesheet (and /workhours)
 
-Note: /usage is already reserved for Nexa LLM call stats; use /timesheet for member usage history.
+Note: /usage is already reserved for AethOS LLM call stats; use /timesheet for member usage history.
 """
 
 from __future__ import annotations

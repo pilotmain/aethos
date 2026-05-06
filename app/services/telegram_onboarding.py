@@ -10,7 +10,7 @@ from app.services.general_response import should_skip_weak_input_for_substantive
 def first_time_nexa_start_text() -> str:
     """No BYOK row yet — welcome without command syntax."""
     return (
-        "Welcome to Nexa.\n\n"
+        "Welcome to AethOS.\n\n"
         "Tell me what you want to get done — I’ll take care of it.\n\n"
         "You can ask me to fix code issues, run development tasks, plan projects, analyze problems, "
         "create agents, or automate workflows. Just describe the goal — no special syntax.\n\n"
@@ -26,7 +26,7 @@ def start_message() -> str:
 def start_message_for_role(role: str) -> str:
     r = (role or "guest").strip() or "guest"
     base = (
-        "Welcome to Nexa.\n\n"
+        "Welcome to AethOS.\n\n"
         "Tell me what you want to get done — I’ll take care of it.\n\n"
         "You can ask me to fix code issues, run development tasks, plan projects, analyze problems, "
         "create agents, or automate workflows. No commands needed — just describe the goal.\n\n"
@@ -46,7 +46,7 @@ def start_message_for_role(role: str) -> str:
             + "Say what you’re trying to accomplish — I’ll help within what’s enabled for you."
         )
     if r == "blocked":
-        return "This account does not have access to this Nexa instance."
+        return "This account does not have access to this AethOS instance."
     return (
         base
         + "You can chat, describe plans in your own words, and ask questions. "
@@ -58,12 +58,12 @@ def start_message_for_role(role: str) -> str:
 def help_message(has_active_plan: bool, focus_task: str | None) -> str:
     if has_active_plan and focus_task:
         return (
-            "Nexa — I’m here to help you move forward.\n\n"
+            "AethOS — I’m here to help you move forward.\n\n"
             f"A good place to start: {focus_task}\n\n"
             "Describe what you want in plain language — I’ll take it from there."
         )
     return (
-        "Nexa — describe what you want in plain language.\n\n"
+        "AethOS — describe what you want in plain language.\n\n"
         "I can help with brain dumps, planning next steps, when you’re stuck, status updates, "
         "development work when your workspace is connected, and structured missions — just say what you need."
     )

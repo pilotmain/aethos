@@ -62,6 +62,7 @@ async def subagent_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
                 "• /subagent pause <name>\n"
                 "• /subagent resume <name>\n"
                 "• /subagent delete <name> confirm — remove permanently\n\n"
+                "Domains include **git**, **vercel**, **railway**, **ops**, **qa**, **security**, **test**, **general**.\n\n"
                 "Includes agents created via the API / Mission Control (same account).\n"
                 "Also: /agent_status (quick list)."
             )

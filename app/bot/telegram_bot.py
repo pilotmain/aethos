@@ -443,7 +443,7 @@ def _format_job_line(job) -> str:
             f"Tool: {tool}\n"
             f"Mode: {mode}\n"
             f"Title: {job.title}\n\n"
-            "The host worker runs the Nexa dev pipeline (autonomous CLI, IDE handoff, or manual review). "
+            "The host worker runs the AethOS dev pipeline (autonomous CLI, IDE handoff, or manual review). "
             f"I can notify this chat on milestones.{extra}"
         )
     if wtype == "dev_executor" and st == "waiting_approval":
@@ -609,7 +609,7 @@ async def usage_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         if sub in ("recent", "last"):
             rec = get_recent_llm_usage(db, 15, app_user_id, is_owner=owner)
             lines: list[str] = [
-                "Nexa Usage (recent, estimates; provider billing is the source of truth):"
+                "AethOS Usage (recent, estimates; provider billing is the source of truth):"
             ]
             for row in rec:
                 al = (row.get("at") or "")[:19] or "—"
@@ -631,7 +631,7 @@ async def usage_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             top = s.get("by_action") or []
             top3 = [x for x in (top or []) if isinstance(x, dict)][:6]
             lines = [
-                "Nexa Usage (today, estimates — provider billing is source of truth)",
+                "AethOS Usage (today, estimates — provider billing is source of truth)",
                 f"LLM calls: {s.get('total_calls', 0)}",
                 f"Tokens: {int(s.get('total_tokens') or 0):,}",
                 f"Estimated cost: ${est:.4f}",
@@ -645,7 +645,7 @@ async def usage_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
                 c = int((r or {}).get("calls") or 0)
                 lines.append(f"• {a}: {c} call(s)")
             lines.append(
-                "Why Nexa: routing, tools, and local execution reduce unnecessary LLM calls."
+                "Why AethOS: routing, tools, and local execution reduce unnecessary LLM calls."
             )
         text = "\n".join((ln for ln in lines if ln is not None))[:3900]
         await update.message.reply_text(text)
@@ -794,7 +794,7 @@ async def doc_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             return
         if args[0] == "create" and len(args) >= 2 and args[1] in ("pdf", "docx", "md", "txt"):
             fmt = args[1]
-            title = " ".join((context.args or [])[2:]).strip() or "Nexa export"
+            title = " ".join((context.args or [])[2:]).strip() or "AethOS export"
             last = get_last_assistant_text(db, app_uid)
             if not last:
                 await update.message.reply_text(
@@ -1024,11 +1024,11 @@ async def permissions_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         rows = list_permissions(db, uid, limit=40)
         if not rows:
             await update.message.reply_text(
-                "No permission rows yet. When Nexa needs local access through Nexa's local system, "
+                "No permission rows yet. When AethOS needs local access through this instance's host system, "
                 "it can create a pending request — see System → Permissions in the web UI."
             )
             return
-        lines = ["Nexa — local access permissions:", ""]
+        lines = ["AethOS — local access permissions:", ""]
         for r in rows[:25]:
             st = (r.status or "").strip()
             t = (r.target or "")[:100] + ("…" if len(r.target or "") > 100 else "")
@@ -1090,7 +1090,7 @@ async def workspace_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
                     "No active workspace roots. Owner: /workspace add /absolute/path"
                 )
                 return
-            lines = ["Nexa — workspace roots (host executor boundaries):", ""]
+            lines = ["AethOS — workspace roots (host executor boundaries):", ""]
             for r in rows[:30]:
                 lab = (r.label or "").strip()
                 lines.append(f"#{r.id}  {r.path_normalized}" + (f"  ({lab})" if lab else ""))
@@ -1138,7 +1138,7 @@ async def workspace_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
 
 async def nexa_projects_list_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """List Nexa workspace projects (named folders) and active id for this chat."""
+    """List AethOS workspace projects (named folders) and active id for this chat."""
     if not update.effective_user or not update.message:
         return
     from app.services.conversation_context_service import get_or_create_context
@@ -1158,14 +1158,14 @@ async def nexa_projects_list_cmd(update: Update, context: ContextTypes.DEFAULT_T
         rows = list_workspace_projects(db, uid, limit=50)
         if not rows:
             await update.message.reply_text(
-                "No Nexa projects yet. Owner: /project add /absolute/path Name — path must be under "
+                "No workspace projects yet. Owner: /project add /absolute/path Name — path must be under "
                 "registered /workspace roots and HOST_EXECUTOR_WORK_ROOT."
             )
             return
         head = ""
         if getattr(cctx, "active_project_id", None):
             head = f"Active in this chat: #{cctx.active_project_id}\n\n"
-        lines = [head + "Nexa — workspace projects:", ""]
+        lines = [head + "AethOS — workspace projects:", ""]
         for r in rows[:40]:
             mark = "  ← active" if cctx.active_project_id == r.id else ""
             lines.append(f"#{r.id}  {r.name}{mark}\n    {r.path_normalized[:280]}")
@@ -1212,7 +1212,7 @@ async def nexa_project_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         sub = (args[0] or "").strip().lower()
         if sub in ("clear", "none", "off"):
             set_active_workspace_project(db, owner_user_id=uid, cctx=cctx, project_id=None)
-            await update.message.reply_text("Cleared active Nexa project for this chat.")
+            await update.message.reply_text("Cleared active workspace project for this chat.")
             return
         if sub in ("use", "switch"):
             if len(args) < 2:
@@ -1234,7 +1234,7 @@ async def nexa_project_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             return
         if sub == "add":
             if not is_owner_role(tr):
-                await update.message.reply_text("Only the owner can add Nexa workspace projects.")
+                await update.message.reply_text("Only the owner can add workspace projects.")
                 return
             if len(args) < 3:
                 await update.message.reply_text("Usage: /project add /absolute/path Project name")
@@ -1476,7 +1476,7 @@ async def agents_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
                     "You don’t have custom agents yet. Try: “Create me a custom agent: financial advisor”"
                 )
                 return
-            lines = ["**Your custom agents** (Nexa, LLM-only):", ""]
+            lines = ["**Your custom agents** (AethOS, LLM-only):", ""]
             for a in custom:
                 lines.append(f"· `@{a.agent_key}` — {a.display_name}\n  {a.description[:200] + ('…' if len(a.description) > 200 else '') if a.description else '—'}")
             for piece in _split_telegram_text("\n".join(lines)[:10_000], max_len=4000):
@@ -1520,7 +1520,7 @@ async def agent_count_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         lines = [
             f"Active agents (this chat): {len(members)}",
             "",
-            "This count comes from Nexa's orchestration registry (same roster as /team).",
+            "This count comes from the orchestration registry (same roster as /team).",
             "· /team — list members · /agents — LLM agent catalog",
         ]
         if not orch:
@@ -1608,7 +1608,7 @@ async def user_agent_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                     "You don’t have custom agents yet. Try: “Create me a custom agent: financial advisor”"
                 )
                 return
-            lines = ["**Your custom agents** (Nexa, LLM-only):", ""]
+            lines = ["**Your custom agents** (AethOS, LLM-only):", ""]
             for a in custom:
                 lines.append(
                     f"· `@{a.agent_key}` — {a.display_name}\n  {a.description[:200] + ('…' if len(a.description) > 200 else '') if a.description else '—'}"
@@ -1709,7 +1709,7 @@ async def learning_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             await update.message.reply_text("No pending learning items.")
             return
         lines: list[str] = [
-            "Pending learning (Nexa):",
+            "Pending learning (AethOS):",
             "Reply: /learning approve <id>  or  /learning reject <id>",
             "",
         ]
@@ -1765,7 +1765,7 @@ async def users_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             await update.message.reply_text(ACCESS_RESTRICTED)
             return
         rows = telegram_service.repo.list_recent(db, limit=30)
-        lines: list[str] = ["Nexa — recent Telegram user links (this instance):", ""]
+        lines: list[str] = ["AethOS — recent Telegram user links (this instance):", ""]
         for r in rows:
             role = get_telegram_role(int(r.telegram_user_id), db)
             u = (r.username or "—")[:40]
@@ -1800,7 +1800,7 @@ async def keys_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 
 KEY_HELP = (
-    "Nexa /key (bring your own API key)\n\n"
+    "AethOS /key (bring your own API key)\n\n"
     "• /keys  or  /key list — which providers you have set\n"
     "• /key status — resolved LLM (your keys vs server env)\n"
     "• /key set openai <key>  or  /key set anthropic <key>\n"
@@ -1890,7 +1890,7 @@ async def key_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 
 async def why_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Last Nexa decision (transparency, not private reasoning)."""
+    """Last AethOS decision (transparency, not private reasoning)."""
     if not update.effective_user or not update.message:
         return
     from app.services.decision_summary import format_decision_for_telegram_why
@@ -2422,7 +2422,7 @@ async def _handle_incoming_text_impl(
                         try:
                             art = generate_document(
                                 db,
-                                title="Nexa export",
+                                title="AethOS export",
                                 body_markdown=last,
                                 format=nfmt,
                                 user_id=app_user_id,
@@ -3820,7 +3820,7 @@ def main() -> None:
     maybe_warn_missing_venv()
     if not settings.telegram_bot_token:
         print(
-            "Nexa: set TELEGRAM_BOT_TOKEN in .env (or run python scripts/nexa_bootstrap.py). The bot will not start without it.\n",
+            "AethOS: set TELEGRAM_BOT_TOKEN in .env (see docs/SETUP for bootstrap). The bot will not start without it.\n",
             flush=True,
         )
         raise RuntimeError("TELEGRAM_BOT_TOKEN is required to run the bot")

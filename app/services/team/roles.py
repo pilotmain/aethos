@@ -40,6 +40,12 @@ KNOWN_ROLES: Final[dict[str, RoleDefinition]] = {
         description="Service lifecycle and operational checks on Railway.",
         default_skills=("up", "down", "logs", "status"),
     ),
+    "ops": RoleDefinition(
+        key="ops",
+        user_label="Ops & platform",
+        description="Operations, Railway, deploy health, and infrastructure checks.",
+        default_skills=("railway", "status", "projects", "deploy"),
+    ),
     "test": RoleDefinition(
         key="test",
         user_label="Tests & quality",
@@ -66,6 +72,10 @@ def normalize_role_key(raw: str) -> str:
         "deploy": "vercel",
         "qa": "test",
         "quality": "test",
+        "infrastructure": "ops",
+        "infra": "ops",
+        "operations": "ops",
+        "platform": "ops",
     }
     k = aliases.get(k, k)
     return k if k in KNOWN_ROLES else "general"

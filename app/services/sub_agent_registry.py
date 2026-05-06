@@ -66,6 +66,7 @@ def _default_capabilities_for_domain(domain: str) -> list[str]:
         "git": ["status", "clone", "commit", "push", "pull"],
         "vercel": ["list", "deploy", "remove", "logs"],
         "railway": ["up", "down", "logs", "status"],
+        "ops": ["railway", "status", "projects", "deploy", "logs"],
         "test": ["pytest", "unit", "integration", "lint"],
     }
     return list(domain_capabilities.get(domain, []))

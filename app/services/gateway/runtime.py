@@ -1,4 +1,4 @@
-"""Nexa Gateway runtime — single entry for channels → missions → agents → MC."""
+"""AethOS Gateway runtime — single entry for channels → missions → agents → MC."""
 
 from __future__ import annotations
 

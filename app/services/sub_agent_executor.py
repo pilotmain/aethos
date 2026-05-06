@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 import re
+import shutil
 import time
 from typing import Any
 
@@ -18,6 +19,12 @@ from app.core.config import get_settings
 from app.services.budget.hooks import budget_enabled, estimate_tokens_from_text
 from app.services.budget.models import UsageType
 from app.services.budget.tracker import BudgetTracker
+from app.services.infra_cli import (
+    railway_projects as _cli_railway_projects,
+    railway_whoami as _cli_railway_whoami,
+    vercel_projects_list as _cli_vercel_projects,
+    vercel_whoami as _cli_vercel_whoami,
+)
 from app.services.host_executor import execute_payload
 from app.services.host_executor_chat import _validate_enqueue_payload, enqueue_host_job_from_validated_payload
 from app.services.host_executor_intent import title_for_payload
@@ -179,18 +186,83 @@ class AgentExecutor:
             return run_security_review_sync(agent, message, db=db, user_id=user_id)
 
         domain = (agent.domain or "").strip().lower()
+        if domain in {"ops", "railway"}:
+            return self._infra_ops(
+                agent,
+                message,
+                chat_id,
+                db=db,
+                user_id=user_id,
+                web_session_id=web_session_id,
+            )
         if domain == "git":
             return self._git(agent, message, chat_id, db=db, user_id=user_id, web_session_id=web_session_id)
         if domain == "vercel":
             return self._vercel(agent, message, chat_id, db=db, user_id=user_id, web_session_id=web_session_id)
         if domain == "test":
             return self._test(agent, message, chat_id, db=db, user_id=user_id, web_session_id=web_session_id)
-        if domain == "railway":
-            return (
-                "Railway sub-agent is not wired to host execution in this release. "
-                "Use the operator / execution loop for Railway, or extend `sub_agent_executor`."
-            )
         return f"Unknown sub-agent domain {domain!r}."
+
+    def _infra_ops(
+        self,
+        agent: SubAgent,
+        message: str,
+        chat_id: str,
+        *,
+        db: Session | None,
+        user_id: str,
+        web_session_id: str,
+    ) -> str:
+        """Railway/Vercel-oriented ops (direct CLI when available)."""
+        low = (message or "").lower()
+        domain = (agent.domain or "").strip().lower()
+
+        if "vercel" in low:
+            if any(k in low for k in ("whoami", "account", "login")):
+                return _cli_vercel_whoami()
+            if any(k in low for k in ("list", "project", "ls")):
+                return self._vercel(
+                    agent,
+                    message,
+                    chat_id,
+                    db=db,
+                    user_id=user_id,
+                    web_session_id=web_session_id,
+                )
+
+        # Railway — keyword or railway-tagged agent domain
+        if "railway" in low or domain == "railway":
+            if any(k in low for k in ("whoami", "status", "logged", "account")):
+                return _cli_railway_whoami()
+            if any(k in low for k in ("project", "list", "apps", "service")):
+                return _cli_railway_projects()
+            # Short prompts like "status" alone on a railway-domain agent
+            if domain == "railway" and any(
+                k in low for k in ("status", "health", "check", "who")
+            ):
+                return _cli_railway_whoami()
+            return (
+                "🤖 **Railway** — try:\n"
+                "- `railway whoami` (login status)\n"
+                "- `railway list` (projects)\n"
+                "_Requires Railway CLI on the worker (`npm i -g @railway/cli`)._"
+            )
+
+        if "vercel" in low:
+            return self._vercel(
+                agent,
+                message,
+                chat_id,
+                db=db,
+                user_id=user_id,
+                web_session_id=web_session_id,
+            )
+
+        return (
+            "🤖 **Ops agent** — mention **railway** (`railway whoami`, `railway list`) "
+            "or **vercel** (`vercel projects`, `/vercel projects list`). "
+            "Spawn a **vercel**-domain agent for deploy-focused flows."
+        )
 
     def _git(
         self,
@@ -245,10 +317,18 @@ class AgentExecutor:
         web_session_id: str,
     ) -> str:
         low = message.lower()
-        if "list" in low or "projects" in low:
+        if any(k in low for k in ("whoami", "account")):
+            return _cli_vercel_whoami()
+        wants_list = any(
+            k in low for k in ("list", "project", "projects")
+        ) or low.strip() in {"ls", "list"}
+        if wants_list:
+            if shutil.which("vercel"):
+                return _cli_vercel_projects()
+            cli_msg = _cli_vercel_projects()
             safe = _validate_enqueue_payload({"host_action": "vercel_projects_list"})
             if not safe:
-                return "Could not build Vercel projects list."
+                return cli_msg
             return self._run_host_payload(
                 safe,
                 chat_id=chat_id,
@@ -259,8 +339,8 @@ class AgentExecutor:
                 agent=agent,
             )
         return (
-            "Vercel sub-agent: ask to `list projects` / `list my Vercel projects`. "
-            "(Deploy/remove are not routed here yet.)"
+            "Vercel sub-agent: ask to **list projects** / **list my Vercel projects**, "
+            "or **whoami**. Use `/vercel help` in Telegram for shortcuts."
         )
 
     def _test(
