@@ -14,6 +14,7 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from app.models.project import Project
+from app.core.logging import redact_sensitive_data
 from app.services.handoff_paths import PROJECT_ROOT
 from app.services.ops import provider_registry
 from app.services.ops.ops_project_context import resolve_ops_project, validate_project_repo
@@ -45,6 +46,7 @@ def sanitize_log_text(s: str, max_len: int = MAX_OUT) -> str:
     for pat, rep in SECRETS_PATTERNS:
         r = pat.sub(rep, r)
     r = sanitize_text(r)[: max_len * 2]
+    r = redact_sensitive_data(r)
     return (r or "")[:max_len]
 
 
