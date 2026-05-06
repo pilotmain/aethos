@@ -61,3 +61,21 @@ ruff check app/
 `scripts/run_ci_checks.sh` runs the same sequence (and sets `NEXA_NEXT_LOCAL_SIDECAR=1` so pytest uses SQLite when Postgres from `.env` is unavailable).
 
 Public HTTP surfaces are listed in **[docs/API_CONTRACT.md](API_CONTRACT.md)**; changes require updating that file.
+
+## AethOS product layer (high level)
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│                        AethOS core                          │
+├─────────────────────────────────────────────────────────────┤
+│  Gateway / router → agent registry → Mission Control      │
+│  Channel adapters (Telegram, web, mobile, …)              │
+│  Sub-agent executor · project / task services              │
+├─────────────────────────────────────────────────────────────┤
+│  Services: LLM providers · host executor · cron · PR review  │
+├─────────────────────────────────────────────────────────────┤
+│  Data: SQLite (default) · PostgreSQL · optional Redis        │
+└─────────────────────────────────────────────────────────────┘
+```
+
+Deeper module boundaries and provider rules are in the sections above; product story: [USERGUID.md](USERGUID.md), [README.md](../README.md).

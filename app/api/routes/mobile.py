@@ -67,6 +67,7 @@ async def mobile_login(body: LoginRequest) -> dict[str, Any]:
         ) from exc
     ttl = max(1, int(get_settings().nexa_mobile_token_ttl_hours or 168))
     org_svc = OrganizationService()
+    org_svc.ensure_personal_organization(body.user_id)
     orgs = org_svc.list_organizations_for_user(body.user_id)
     return {
         "token": token,

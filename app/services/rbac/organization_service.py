@@ -224,6 +224,14 @@ class OrganizationService:
             )
             return [self._row_to_org(r) for r in cur.fetchall()]
 
+    def ensure_personal_organization(self, user_id: str) -> Organization:
+        """If the user has no RBAC workspace, create a default personal org (mobile / Mission Control)."""
+        uid = (user_id or "").strip()
+        orgs = self.list_organizations_for_user(uid)
+        if orgs:
+            return orgs[0]
+        return self.create_organization("Personal workspace", slug=None, created_by=uid)
+
     def update_organization(
         self,
         org_id: str,

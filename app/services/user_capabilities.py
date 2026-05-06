@@ -116,6 +116,30 @@ def get_telegram_role_for_app_user(db: Session, app_user_id: str) -> str:
     return "guest"
 
 
+def require_personal_workspace_mutation_allowed(db: Session, app_user_id: str) -> None:
+    """
+    Who may add workspace roots and Nexa workspace projects (labeled folders).
+
+    - Non-Telegram-shaped app user ids (``web_*``, ``local_*``, email, etc.) are treated as
+      the sole operator of that id and may manage their own rows.
+    - Telegram-linked ``tg_*`` users need **owner** or **trusted** (guest cannot register paths).
+    """
+    from fastapi import HTTPException, status
+
+    from app.services.app_user_id_parse import parse_telegram_id_from_app_user_id
+
+    uid = (app_user_id or "").strip()
+    if not parse_telegram_id_from_app_user_id(uid):
+        return
+    role = get_telegram_role_for_app_user(db, uid)
+    if is_trusted_or_owner(role):
+        return
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="This action requires owner or trusted role for Telegram-linked accounts.",
+    )
+
+
 # --- high-level permissions ---
 
 def can_run_dev_agent_jobs(role: str) -> bool:

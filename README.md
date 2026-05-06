@@ -8,6 +8,14 @@
 
 ---
 
+## One-command install
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/pilotmain/aethos/main/scripts/install_aethos.sh | bash
+```
+
+Then: `aethos setup` → `aethos serve`. Deeper bootstrap: [docs/SETUP.md](docs/SETUP.md). Short guides: [docs/API.md](docs/API.md) · [docs/AGENTS.md](docs/AGENTS.md) · [docs/SECURITY_SCAN.md](docs/SECURITY_SCAN.md).
+
 # AethOS
 
 **AethOS** is an **agentic operating system**: it helps you think, plan, research, create documents, manage projects, and **execute** work through chat, a **web** workspace, **Telegram**, and automation. It **creates task-focused agents dynamically** when work needs them. It is a **platform**: custom agents, dedicated Dev and Ops surfaces, public web research and **web search**, **BYOK** multi-tenant key handling, a **usage / cost** dashboard, and durable **memory**—not a single “chat only” app.

@@ -118,7 +118,11 @@ from app.services.user_api_keys import (
     normalize_provider,
     set_user_api_key,
 )
-from app.services.user_capabilities import get_telegram_role_for_app_user, is_owner_role
+from app.services.user_capabilities import (
+    get_telegram_role_for_app_user,
+    is_owner_role,
+    require_personal_workspace_mutation_allowed,
+)
 from app.services.work_context import build_work_context
 from app.services.worker_heartbeat import read_heartbeat
 from app.services.workspace_registry import add_root as wr_add_root
@@ -149,14 +153,6 @@ def _web_access_perm_out(row: AccessPermission) -> WebAccessPermissionOut:
         reason=row.reason,
         grant_mode=str(gm),
     )
-
-
-def _require_owner_web(db: Session, app_user_id: str) -> None:
-    if not is_owner_role(get_telegram_role_for_app_user(db, app_user_id)):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="That action requires the owner role.",
-        )
 
 
 def _norm_web_session_id(raw: str | None) -> str:
@@ -935,7 +931,7 @@ def web_add_workspace_root(
     db: Session = Depends(get_db),
     app_user_id: str = Depends(get_valid_web_user_id),
 ) -> WebWorkspaceRootOut:
-    _require_owner_web(db, app_user_id)
+    require_personal_workspace_mutation_allowed(db, app_user_id)
     try:
         r = wr_add_root(db, app_user_id, body.path, label=body.label)
     except ValueError as e:
@@ -977,7 +973,7 @@ def web_create_nexa_workspace_project(
     db: Session = Depends(get_db),
     app_user_id: str = Depends(get_valid_web_user_id),
 ) -> WebNexaWorkspaceProjectOut:
-    _require_owner_web(db, app_user_id)
+    require_personal_workspace_mutation_allowed(db, app_user_id)
     try:
         r = nxp_add(
             db,
@@ -997,7 +993,7 @@ def web_delete_nexa_workspace_project(
     db: Session = Depends(get_db),
     app_user_id: str = Depends(get_valid_web_user_id),
 ) -> WebNexaWorkspaceProjectOut:
-    _require_owner_web(db, app_user_id)
+    require_personal_workspace_mutation_allowed(db, app_user_id)
     row = nxp_remove(db, app_user_id, project_id)
     if not row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
@@ -1030,7 +1026,7 @@ def web_revoke_workspace_root(
     db: Session = Depends(get_db),
     app_user_id: str = Depends(get_valid_web_user_id),
 ) -> WebWorkspaceRootOut:
-    _require_owner_web(db, app_user_id)
+    require_personal_workspace_mutation_allowed(db, app_user_id)
     r = wr_revoke_root(db, app_user_id, root_id)
     if not r:
         raise HTTPException(
