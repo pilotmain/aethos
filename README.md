@@ -1,3 +1,26 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="github-banner-dark.svg">
+    <img src="github-banner-light.svg" alt="AethOS — The Agentic Operating System" width="100%">
+  </picture>
+</p>
+
+<p align="center">
+  <strong>The invisible layer that connects all autonomous agents</strong>
+</p>
+
+<p align="center">
+  <a href="https://github.com/pilotmain/aethos/stargazers">
+    <img src="https://img.shields.io/github/stars/pilotmain/aethos" alt="GitHub stars">
+  </a>
+  <a href="https://github.com/pilotmain/aethos/issues">
+    <img src="https://img.shields.io/github/issues/pilotmain/aethos" alt="GitHub issues">
+  </a>
+  <a href="https://github.com/pilotmain/aethos/blob/main/LICENSE">
+    <img src="https://img.shields.io/github/license/pilotmain/aethos" alt="License">
+  </a>
+</p>
+
 # AethOS
 
 > **Pronunciation:** “EE-thos” · **Tagline:** *The Agentic Operating System* — the invisible layer that connects autonomous agents.  

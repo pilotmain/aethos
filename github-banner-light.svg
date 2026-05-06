@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 400" width="1200" height="400">
+  <defs>
+    <linearGradient id="gradL" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#5B21B6"/>
+      <stop offset="50%" stop-color="#DB2777"/>
+      <stop offset="100%" stop-color="#0891B2"/>
+    </linearGradient>
+    <linearGradient id="glowL" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#A855F7" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#EC4899" stop-opacity="0.12"/>
+    </linearGradient>
+    <filter id="shadowL">
+      <feDropShadow dx="0" dy="3" stdDeviation="6" flood-color="#6B21E5" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+
+  <rect width="1200" height="400" fill="#F8FAFC" rx="16"/>
+  <rect x="2" y="2" width="1196" height="396" rx="14" fill="none" stroke="#E2E8F0" stroke-width="2"/>
+
+  <circle cx="200" cy="200" r="220" fill="url(#glowL)"/>
+  <circle cx="1020" cy="180" r="180" fill="url(#glowL)"/>
+
+  <text x="600" y="118" text-anchor="middle" font-family="'Courier New', Courier, monospace" font-size="56" font-weight="bold" fill="url(#gradL)" filter="url(#shadowL)">AETHOS</text>
+
+  <text x="600" y="156" text-anchor="middle" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="15" fill="#475569" letter-spacing="3">THE AGENTIC OPERATING SYSTEM</text>
+
+  <text x="600" y="192" text-anchor="middle" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" fill="#64748B">&#127756; The invisible layer that connects all autonomous agents &#127756;</text>
+
+  <line x1="180" y1="218" x2="1020" y2="218" stroke="url(#gradL)" stroke-width="1.25" stroke-dasharray="6,6"/>
+
+  <g transform="translate(300, 228)">
+    <rect x="0" y="0" width="80" height="40" rx="20" fill="#FFFFFF" stroke="#7C3AED" stroke-width="1.5"/>
+    <text x="40" y="25" text-anchor="middle" font-family="monospace" font-size="12" fill="#5B21B6">&#129302; QA</text>
+
+    <rect x="100" y="0" width="80" height="40" rx="20" fill="#FFFFFF" stroke="#0891B2" stroke-width="1.5"/>
+    <text x="140" y="25" text-anchor="middle" font-family="monospace" font-size="12" fill="#0E7490">&#128274; SEC</text>
+
+    <rect x="200" y="0" width="80" height="40" rx="20" fill="#FFFFFF" stroke="#DB2777" stroke-width="1.5"/>
+    <text x="240" y="25" text-anchor="middle" font-family="monospace" font-size="12" fill="#BE185D">&#128081; CEO</text>
+
+    <rect x="300" y="0" width="80" height="40" rx="20" fill="#FFFFFF" stroke="#059669" stroke-width="1.5"/>
+    <text x="340" y="25" text-anchor="middle" font-family="monospace" font-size="12" fill="#047857">&#128226; MKT</text>
+
+    <rect x="400" y="0" width="80" height="40" rx="20" fill="#FFFFFF" stroke="#D97706" stroke-width="1.5"/>
+    <text x="440" y="25" text-anchor="middle" font-family="monospace" font-size="12" fill="#B45309">&#129309; SUP</text>
+
+    <rect x="500" y="0" width="80" height="40" rx="20" fill="#FFFFFF" stroke="#7C3AED" stroke-width="1.5"/>
+    <text x="540" y="25" text-anchor="middle" font-family="monospace" font-size="12" fill="#5B21B6">&#128203; SCR</text>
+  </g>
+
+  <rect x="300" y="302" width="600" height="52" rx="12" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1"/>
+  <text x="600" y="334" text-anchor="middle" font-family="'Courier New', Courier, monospace" font-size="13" fill="#0891B2">curl -fsSL https://aethos.ai/install | bash</text>
+
+  <circle cx="220" cy="88" r="6" fill="#A855F7">
+    <animate attributeName="opacity" values="0.5;1;0.5" dur="2s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="980" cy="88" r="6" fill="#EC4899">
+    <animate attributeName="opacity" values="1;0.55;1" dur="2.5s" repeatCount="indefinite"/>
+  </circle>
+</svg>
