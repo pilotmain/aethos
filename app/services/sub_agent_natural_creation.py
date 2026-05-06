@@ -47,6 +47,8 @@ def normalize_sub_agent_domain(raw: str) -> str:
             "ceo",
             "support",
             "scrum",
+            "backend",
+            "frontend",
             "general",
         }
     )
@@ -91,6 +93,8 @@ def _infer_domain(name: str, full_text: str) -> str:
             "git",
             "vercel",
             "railway",
+            "backend",
+            "frontend",
         ):
             return prefix if prefix != "test" else "test"
     if n in ("qa", "qa_agent") or n.startswith("qa_"):
@@ -123,6 +127,12 @@ def _infer_domain(name: str, full_text: str) -> str:
     if any(x in blob for x in ("git", "github", "commit", "branch")):
         return "git"
 
+    # Phase 49 — role phrases without strict handle prefixes
+    if any(p in ctx for p in ("api development", "rest api", "graphql")) and "security" not in n:
+        return "backend"
+    if any(p in ctx for p in ("user interface", "react ", "next.js", "nextjs")):
+        return "frontend"
+
     return normalize_sub_agent_domain(n.split("_")[0] if "_" in n else n)
 
 
@@ -133,6 +143,35 @@ def _clean_agent_chunk(chunk: str) -> str | None:
     if c and re.match(r"^[\w-]+$", c):
         return c[:64]
     return None
+
+
+def _dedupe_specs(specs: list[tuple[str, str]]) -> list[tuple[str, str]]:
+    seen: set[str] = set()
+    out: list[tuple[str, str]] = []
+    for nm, dom in specs:
+        key = nm.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append((nm, dom))
+    return out
+
+
+def _extract_role_based_agent_specs(text: str) -> list[tuple[str, str]]:
+    """
+    Match phrases like ``backend_agent for API development, frontend_agent for UI``.
+
+    Each ``*_agent for <role>`` segment yields one spawn spec.
+    """
+    raw = (text or "").strip()
+    if not raw:
+        return []
+    out: list[tuple[str, str]] = []
+    for m in re.finditer(r"(?i)\b([a-z0-9][a-z0-9_]{0,62}_agent)\s+for\s+([^,\n]+)", raw):
+        name = m.group(1).strip()
+        role = (m.group(2) or "").strip()
+        out.append((name, _infer_domain(name, f"{raw} {role}")))
+    return out
 
 
 def _split_agent_phrase_tail(segment: str) -> list[str]:
@@ -154,6 +193,10 @@ def parse_natural_sub_agent_specs(text: str) -> list[tuple[str, str]]:
     raw = (text or "").strip()
     if not raw:
         return []
+
+    role_specs = _extract_role_based_agent_specs(raw)
+    if role_specs:
+        return _dedupe_specs(role_specs)
 
     # Plain-text CLI mimic (optional leading slash)
     m_cli = re.match(
@@ -207,16 +250,7 @@ def parse_natural_sub_agent_specs(text: str) -> list[tuple[str, str]]:
         specs.append((nm, _infer_domain(nm, raw)))
 
     if specs:
-        # Dedupe by name preserving order
-        seen: set[str] = set()
-        out: list[tuple[str, str]] = []
-        for nm, dom in specs:
-            key = nm.lower()
-            if key in seen:
-                continue
-            seen.add(key)
-            out.append((nm, dom))
-        return out
+        return _dedupe_specs(specs)
 
     return []
 

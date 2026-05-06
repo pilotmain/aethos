@@ -67,6 +67,8 @@ def _default_capabilities_for_domain(domain: str) -> list[str]:
         "vercel": ["list", "deploy", "remove", "logs"],
         "railway": ["up", "down", "logs", "status"],
         "ops": ["railway", "status", "projects", "deploy", "logs"],
+        "backend": ["api", "services", "deploy"],
+        "frontend": ["ui", "react", "next"],
         "qa": ["pytest", "lint", "integration", "review"],
         "test": ["pytest", "unit", "integration", "lint"],
         "marketing": ["campaign", "copy", "brand", "brief"],

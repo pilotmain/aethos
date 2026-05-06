@@ -30,6 +30,10 @@ from app.services.host_executor_chat import _validate_enqueue_payload, enqueue_h
 from app.services.host_executor_intent import title_for_payload
 from app.services.host_executor_nl_chain import try_infer_readme_push_chain_nl
 from app.services.agent.activity_tracker import get_activity_tracker
+from app.services.fsmonitor import watch
+from app.services.infra.railway import get_railway_client
+from app.services.infra.vercel import get_vercel_client
+from app.services.qa_agent.file_analysis import run_qa_file_analysis
 from app.services.sub_agent_audit import log_agent_event
 from app.services.sub_agent_auto_approve import get_auto_approve_message, should_auto_approve
 from app.services.sub_agent_autoqueue_guard import (
@@ -204,8 +208,8 @@ class AgentExecutor:
         if domain == "vercel":
             return self._vercel(agent, message, chat_id, db=db, user_id=user_id, web_session_id=web_session_id)
         if domain in {"qa", "test"}:
-            return self._test(agent, message, chat_id, db=db, user_id=user_id, web_session_id=web_session_id)
-        if domain in {"general", "marketing", "ceo", "support", "scrum"}:
+            return self._qa_or_test(agent, message, chat_id, db=db, user_id=user_id, web_session_id=web_session_id)
+        if domain in {"general", "marketing", "ceo", "support", "scrum", "backend", "frontend"}:
             return (
                 f"🤖 **@{agent.name}** ({domain}) is registered for this chat.\n\n"
                 "Send a concrete instruction. For tooling runs, use agents with domains "
@@ -227,6 +231,9 @@ class AgentExecutor:
         low = (message or "").lower()
         domain = (agent.domain or "").strip().lower()
 
+        if re.search(r"(?i)\bmonitor\s+", message or ""):
+            return self._fs_monitor_ack(agent, message, chat_id)
+
         if "vercel" in low:
             if any(k in low for k in ("whoami", "account", "login")):
                 return _cli_vercel_whoami()
@@ -242,6 +249,8 @@ class AgentExecutor:
 
         # Railway — keyword or railway-tagged agent domain
         if "railway" in low or domain == "railway":
+            if any(k in low for k in ("deploy", "ship", "release", "push live")):
+                return self._railway_deploy(message)
             if any(k in low for k in ("whoami", "status", "logged", "account")):
                 return _cli_railway_whoami()
             if any(k in low for k in ("project", "list", "apps", "service")):
@@ -327,8 +336,30 @@ class AgentExecutor:
         web_session_id: str,
     ) -> str:
         low = message.lower()
+        if any(k in low for k in ("deploy", "ship", "--prod", "production deploy")):
+            proj_m = re.search(r"(?i)(?:project|proj)\s+(?:is\s+)?([a-z0-9._-]{1,120})", message or "")
+            proj = proj_m.group(1).strip(" `\"'") if proj_m else None
+            vc = get_vercel_client()
+            r = vc.deploy_prod(project=proj)
+            if r.get("success"):
+                body = (r.get("output") or "").strip()[:4000]
+                return f"✅ **Vercel deploy** (prod)\n\n```\n{body}\n```"
+            err = (r.get("error") or r.get("stderr") or "deploy failed")[:2000]
+            return f"❌ **Vercel deploy failed**\n\n```\n{err}\n```"
         if any(k in low for k in ("whoami", "account")):
             return _cli_vercel_whoami()
+        if any(k in low for k in ("json", "api")) and "project" in low:
+            rows = get_vercel_client().list_projects_json()
+            if rows:
+                names = []
+                for row in rows[:40]:
+                    if isinstance(row, dict) and row.get("name"):
+                        names.append(str(row["name"]))
+                    elif isinstance(row, str):
+                        names.append(row)
+                body = "\n".join(names) if names else str(rows)[:12000]
+                return f"📁 **Vercel projects (json)**\n\n```\n{body[:12000]}\n```"
+            return _cli_vercel_projects()
         wants_list = any(
             k in low for k in ("list", "project", "projects")
         ) or low.strip() in {"ls", "list"}
@@ -350,8 +381,85 @@ class AgentExecutor:
             )
         return (
             "Vercel sub-agent: ask to **list projects** / **list my Vercel projects**, "
-            "or **whoami**. Use `/vercel help` in Telegram for shortcuts."
+            "**deploy** (prod), or **whoami**. Use `/vercel help` in Telegram for shortcuts."
         )
+
+    def _railway_deploy(self, message: str) -> str:
+        kv: dict[str, str] = {}
+        for m in re.finditer(r"\b([A-Z][A-Z0-9_]{1,24})=(\S+)", message or ""):
+            kv[m.group(1)] = m.group(2).strip("`\"'")
+        retry = 3000 if kv.get("PORT") == "8080" else None
+        client = get_railway_client()
+        res = client.deploy(extra_env=kv or None, retry_alt_port=retry)
+        if res.get("success"):
+            head = "✅ **Railway deploy** (`railway up`)"
+            if res.get("retried"):
+                head += f" — retried with PORT={res.get('retry_port')}"
+            out = (res.get("output") or "").strip()[:3500]
+            return f"{head}\n\n```\n{out}\n```"
+        err = (res.get("error") or res.get("stderr") or "unknown error")[:2000]
+        return (
+            f"❌ **Railway deploy failed**\n\n```\n{err}\n```\n\n"
+            "💡 Ensure `railway login` on the worker and the project is linked."
+        )
+
+    def _fs_monitor_ack(self, agent: SubAgent, message: str, chat_id: str) -> str:
+        m = re.search(r"(?i)\bmonitor\s+(\S+)", message or "")
+        if not m:
+            return (
+                "👀 **Monitor** — specify a directory.\n"
+                "Example: `Monitor /Users/you/proj for Python file changes`"
+            )
+        raw_path = m.group(1).strip().strip("`\"'")
+        pattern = "*.py"
+        low = (message or "").lower()
+        if "javascript" in low or ".js" in low:
+            pattern = "*.js"
+        if "*" in raw_path:
+            pattern = raw_path.split("*")[-1] or pattern
+
+        def _on_change(fp: str) -> None:
+            logger.info(
+                "fsmonitor chat=%s agent=%s path=%s",
+                chat_id,
+                agent.name,
+                fp[:500],
+            )
+
+        try:
+            wid = watch(raw_path, pattern, _on_change, duration_seconds=1800.0)
+        except FileNotFoundError:
+            return f"❌ Path not found: `{raw_path}`"
+        except Exception as exc:
+            return f"❌ Could not start watcher: {exc}"
+        return (
+            f"👀 **Watching** `{raw_path}` (pattern `{pattern}`).\n"
+            f"Watcher id: `{wid}` — changes are logged on the worker for ~30 minutes."
+        )
+
+    def _qa_or_test(
+        self,
+        agent: SubAgent,
+        message: str,
+        chat_id: str,
+        *,
+        db: Session | None,
+        user_id: str,
+        web_session_id: str,
+    ) -> str:
+        low = (message or "").lower()
+        dom = (agent.domain or "").strip().lower()
+        wants_pytest = "pytest" in low or re.search(r"\brun\s+tests?\b", low)
+        if wants_pytest:
+            return self._test(agent, message, chat_id, db=db, user_id=user_id, web_session_id=web_session_id)
+        if dom == "qa":
+            path_like = bool(re.search(r"/[\w/.-]+\.\w+", message or ""))
+            wants_scan = any(
+                k in low for k in ("analyze", "review file", "scan file", "lint file", "audit file")
+            )
+            if wants_scan or path_like:
+                return run_qa_file_analysis(message)
+        return self._test(agent, message, chat_id, db=db, user_id=user_id, web_session_id=web_session_id)
 
     def _test(
         self,
