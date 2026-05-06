@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { CreditCard, FolderKanban, LayoutDashboard, Settings, Users } from "lucide-react";
+import { Briefcase, CreditCard, FolderKanban, LayoutDashboard, Settings, Users } from "lucide-react";
 
 export type MissionControlNavItem = {
   name: string;
@@ -14,6 +14,12 @@ export const missionControlNavItems: MissionControlNavItem[] = [
     href: "/mission-control/overview",
     icon: LayoutDashboard,
     description: "Dashboard and key metrics",
+  },
+  {
+    name: "CEO",
+    href: "/mission-control/ceo",
+    icon: Briefcase,
+    description: "Agent oversight and performance",
   },
   {
     name: "Team",

@@ -54,7 +54,6 @@ def get_ceo_dashboard(app_user_id: str = Depends(get_valid_web_user_id)) -> dict
         stats = tracker.get_agent_statistics(agent.id)
         tr = float(stats.get("success_rate", 100.0) or 100.0)
         ta = int(stats.get("total_actions", 0) or 0)
-        rates.append(tr)
         actions_weights.append((tr, ta))
         payload = _agent_payload(agent)
         payload.update(

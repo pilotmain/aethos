@@ -11,11 +11,49 @@ from telegram.ext import ContextTypes
 
 from app.core.db import SessionLocal
 from app.services.agent.activity_tracker import get_activity_tracker
-from app.services.sub_agent_registry import AgentRegistry, AgentStatus
+from app.services.sub_agent_registry import AgentRegistry, AgentStatus, SubAgent
 from app.services.sub_agent_router import telegram_agent_registry_chat_id
 from app.services.telegram_service import TelegramService
 
 telegram_service = TelegramService()
+
+
+def _user_web_registry_scope(app_user_id: str) -> str:
+    """Same ``parent_chat_id`` as :func:`~app.api.routes.agent_spawn._web_chat_scope` (API / Mission Control)."""
+    uid = (app_user_id or "").strip()[:128]
+    return f"web:{uid}:default"
+
+
+def _telegram_subagent_scopes(telegram_chat_id: int, app_user_id: str) -> list[str]:
+    """In-chat registry scope plus the user's web scope so API-created agents are visible in Telegram."""
+    scopes: list[str] = [telegram_agent_registry_chat_id(telegram_chat_id)]
+    uid = (app_user_id or "").strip()
+    if uid:
+        web_scope = _user_web_registry_scope(uid)
+        if web_scope not in scopes:
+            scopes.append(web_scope)
+    return scopes
+
+
+def _merge_agents_by_id(registry: AgentRegistry, scopes: list[str]) -> list[SubAgent]:
+    seen: set[str] = set()
+    out: list[SubAgent] = []
+    for scope in scopes:
+        for a in registry.list_agents(scope):
+            if a.id not in seen:
+                seen.add(a.id)
+                out.append(a)
+    return out
+
+
+def _get_agent_by_name_scoped(
+    registry: AgentRegistry, name: str, scopes: list[str]
+) -> SubAgent | None:
+    for scope in scopes:
+        a = registry.get_agent_by_name(name, scope)
+        if a:
+            return a
+    return None
 
 
 async def subagent_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -31,7 +69,7 @@ async def subagent_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             await update.message.reply_text("Use /start first.")
             return
 
-        chat_scope = telegram_agent_registry_chat_id(update.effective_chat.id)
+        scopes = _telegram_subagent_scopes(update.effective_chat.id, link.app_user_id)
         registry = AgentRegistry()
         tracker = get_activity_tracker()
 
@@ -43,13 +81,14 @@ async def subagent_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
                 "• /subagent pause <name>\n"
                 "• /subagent resume <name>\n"
                 "• /subagent delete <name> confirm — remove permanently\n\n"
+                "Includes agents created via the API / Mission Control (same account).\n"
                 "Also: /agent_status (quick list)."
             )
             return
 
         sub = args[0].lower()
         if sub == "list":
-            agents = registry.list_agents(chat_scope)
+            agents = _merge_agents_by_id(registry, scopes)
             if not agents:
                 await update.message.reply_text(
                     "No orchestration agents in this chat yet. "
@@ -79,9 +118,12 @@ async def subagent_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             return
 
         name = args[1].strip().lstrip("@")
-        agent = registry.get_agent_by_name(name, chat_scope)
+        agent = _get_agent_by_name_scoped(registry, name, scopes)
         if not agent:
-            await update.message.reply_text(f"No orchestration agent named '{name}' in this chat.")
+            await update.message.reply_text(
+                f"No orchestration agent named '{name}' for this chat/account "
+                f"(checked Telegram scope and your API/Mission Control workspace)."
+            )
             return
 
         if sub == "status":
@@ -129,7 +171,7 @@ async def subagent_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
                 agent_id=agent.id,
                 agent_name=agent.name,
                 action_type="deleted",
-                metadata={"via": "telegram", "chat_scope": chat_scope},
+                metadata={"via": "telegram", "scopes": scopes, "parent_chat_id": agent.parent_chat_id},
             )
             if registry.remove_agent(agent.id):
                 await update.message.reply_text(f"✅ Agent @{name} removed.")
