@@ -69,6 +69,7 @@ def _default_capabilities_for_domain(domain: str) -> list[str]:
         "ops": ["railway", "status", "projects", "deploy", "logs"],
         "backend": ["api", "services", "deploy"],
         "frontend": ["ui", "react", "next"],
+        "design": ["ui", "ux", "mockups", "review"],
         "qa": ["pytest", "lint", "integration", "review"],
         "test": ["pytest", "unit", "integration", "lint"],
         "marketing": ["campaign", "copy", "brand", "brief"],
@@ -189,18 +190,21 @@ class AgentRegistry:
             logger.warning("agent orchestration disabled; spawn ignored")
             return None
 
-        max_c = max(1, int(getattr(settings, "nexa_agent_max_per_chat", 5)))
+        max_c = max(1, int(getattr(settings, "nexa_agent_max_per_chat", 20)))
         chat_agents = self.list_agents(chat_id)
-        if len(chat_agents) >= max_c:
+        active = [a for a in chat_agents if a.status != AgentStatus.TERMINATED]
+        if len(active) >= max_c:
             logger.warning(
-                "chat %s at max agents (%s)",
+                "chat %s at max non-terminated agents (%s/%s)",
                 chat_id,
+                len(active),
                 max_c,
             )
             return None
 
-        for a in chat_agents:
-            if a.name == name:
+        nm = (name or "").strip()
+        for a in active:
+            if a.name.lower() == nm.lower():
                 logger.warning("duplicate agent name %r in chat %s", name, chat_id)
                 return None
 

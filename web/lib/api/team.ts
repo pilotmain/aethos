@@ -161,14 +161,52 @@ export function governanceRowsToTeamMembers(
   }));
 }
 
-/** Extract roles + assignments arrays from Mission Control state. */
+export type SubAgentOrchestrationRow = Record<string, unknown>;
+
+/** Registry-backed orchestration agents from ``GET /mission-control/state`` → ``orchestration.sub_agents``."""
+export function parseSubAgents(raw: unknown): SubAgentOrchestrationRow[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((x) => x && typeof x === "object") as SubAgentOrchestrationRow[];
+}
+
+/** Turn registry payloads into the same shape as agent-org ``roles`` rows for Team UI merging."""
+export function subAgentsToAgentRoles(rows: SubAgentOrchestrationRow[]): AgentRoleRow[] {
+  const out: AgentRoleRow[] = [];
+  for (const r of rows) {
+    const name = String(r.name ?? "").trim();
+    if (!name) continue;
+    const domain = String(r.domain ?? "general").trim() || "general";
+    out.push({
+      agent_handle: name,
+      agent_handle_display: name,
+      role: domain,
+      reports_to_handle: null,
+      enabled: true,
+    });
+  }
+  return out;
+}
+
+/** Prefer AgentOrganization assignments when the same handle exists in both sources."""
+export function mergeAgentRoles(orgRoles: AgentRoleRow[], registryRoles: AgentRoleRow[]): AgentRoleRow[] {
+  const by = new Map<string, AgentRoleRow>();
+  for (const r of registryRoles) by.set(r.agent_handle.toLowerCase(), r);
+  for (const r of orgRoles) by.set(r.agent_handle.toLowerCase(), r);
+  return Array.from(by.values());
+}
+
+/** Extract roles, assignments, and registry sub-agents from Mission Control state. */
 export function orchestrationFromState(state: Record<string, unknown> | null): {
   roles: AgentRoleRow[];
   assignments: unknown[];
+  subAgents: SubAgentOrchestrationRow[];
 } {
-  const orch = state?.orchestration as { roles?: unknown[]; assignments?: unknown[] } | undefined;
+  const orch = state?.orchestration as
+    | { roles?: unknown[]; assignments?: unknown[]; sub_agents?: unknown[] }
+    | undefined;
   return {
     roles: parseAgentRoles(orch?.roles),
     assignments: Array.isArray(orch?.assignments) ? orch.assignments : [],
+    subAgents: parseSubAgents(orch?.sub_agents),
   };
 }

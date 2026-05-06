@@ -51,10 +51,25 @@ def normalize_sub_agent_domain(raw: str) -> str:
             "scrum",
             "backend",
             "frontend",
+            "design",
             "general",
         }
     )
     return k if k in known else "general"
+
+
+# Longest keys first — substring hits must prefer specific roles (Phase 54).
+_NAME_DOMAIN_FRAGMENTS: tuple[tuple[str, str], ...] = (
+    ("product_manager_agent", "general"),
+    ("designer_agent", "design"),
+    ("backend_agent", "backend"),
+    ("frontend_agent", "frontend"),
+    ("product_manager", "general"),
+    ("designer", "design"),
+    ("marketing_agent", "marketing"),
+    ("security_agent", "security"),
+    ("qa_agent", "qa"),
+)
 
 
 def prefers_registry_sub_agent(text: str) -> bool:
@@ -78,12 +93,16 @@ def prefers_registry_sub_agent(text: str) -> bool:
 
 
 def _infer_domain(name: str, full_text: str) -> str:
-    """Pick registry domain from handle + message (Phase 47 — qa/marketing are first-class)."""
+    """Pick registry domain from handle + message (Phase 47 / 54 — never guess **qa** without cues)."""
     n = (name or "").lower()
     ctx = (full_text or "").lower()
     blob = f"{n} {ctx}"
 
-    # Name-first (handles like qa_agent, marketing_agent, security_expert)
+    for frag, dom in sorted(_NAME_DOMAIN_FRAGMENTS, key=lambda x: -len(x[0])):
+        if frag in n:
+            return normalize_sub_agent_domain(dom)
+
+    # Name-first (handles like qa_agent, marketing_agent)
     if n.endswith("_agent"):
         prefix = n[: -len("_agent")]
         if prefix in (
@@ -100,7 +119,14 @@ def _infer_domain(name: str, full_text: str) -> str:
             "railway",
             "backend",
             "frontend",
+            "design",
+            "product_manager",
+            "designer",
         ):
+            if prefix == "product_manager":
+                return "general"
+            if prefix == "designer":
+                return normalize_sub_agent_domain("design")
             return prefix if prefix != "test" else "test"
     if n in ("qa", "qa_agent") or n.startswith("qa_"):
         return "qa"
@@ -108,6 +134,12 @@ def _infer_domain(name: str, full_text: str) -> str:
         return "marketing"
     if "security" in n or n.startswith("sec_"):
         return "security"
+
+    # Role phrases (design / product before generic QA heuristics)
+    if re.search(r"\b(ui/ux|ux\s+design|user\s+interface\s+design|figma|mockups?)\b", blob):
+        return normalize_sub_agent_domain("design")
+    if re.search(r"\b(product\s+strategy|product\s+manager|roadmap|prd)\b", blob):
+        return "general"
 
     if re.search(r"\bqa\b", blob) or "quality assurance" in blob or "quality_assurance" in blob:
         return "qa"

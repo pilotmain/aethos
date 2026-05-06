@@ -65,3 +65,11 @@ def test_normalize_security_and_qa() -> None:
     assert normalize_sub_agent_domain("security") == "security"
     assert normalize_sub_agent_domain("qa") == "qa"
     assert normalize_sub_agent_domain("quality") == "qa"
+
+
+def test_infer_domain_phase54_product_and_design() -> None:
+    from app.services.sub_agent_natural_creation import _infer_domain
+
+    assert _infer_domain("product_manager_agent", "product_manager_agent for product strategy") == "general"
+    assert _infer_domain("designer_agent", "designer_agent for UI/UX design") == "design"
+    assert _infer_domain("backend_agent", "backend_agent for API development") == "backend"

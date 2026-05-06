@@ -89,7 +89,7 @@ class Settings(BaseSettings):
     log_json_format: bool = False
     # Week 4 — sub-agent registry (in-memory, single-worker; see docs/AGENT_ORCHESTRATION.md)
     nexa_agent_orchestration_enabled: bool = False
-    nexa_agent_max_per_chat: int = 5
+    nexa_agent_max_per_chat: int = 20
     nexa_agent_idle_timeout_seconds: int = 3600
     # Phase 37 — default trusted flag for API `/agents/create` when request omits explicit approval.
     nexa_agent_auto_approve: bool = False

@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field
 from app.core.security import get_valid_web_user_id
 from app.services.agent.activity_tracker import get_activity_tracker
 from app.services.agent.supervisor import get_supervisor
-from app.services.sub_agent_registry import AgentRegistry
+from app.services.sub_agent_registry import AgentRegistry, AgentStatus
 
 from app.api.routes.agent_spawn import (
     _agent_payload,
@@ -36,7 +36,7 @@ def get_ceo_dashboard(app_user_id: str = Depends(get_valid_web_user_id)) -> dict
     scopes = _api_orchestration_scopes(app_user_id)
     registry = AgentRegistry()
     tracker = get_activity_tracker()
-    agents = registry.list_agents_merged(scopes)
+    agents = [a for a in registry.list_agents_merged(scopes) if a.status != AgentStatus.TERMINATED]
     agent_ids = [a.id for a in agents]
 
     agent_insights: list[dict[str, Any]] = []
@@ -127,7 +127,7 @@ def get_activity_feed(
     app_user_id: str = Depends(get_valid_web_user_id),
 ) -> dict[str, Any]:
     scopes = _api_orchestration_scopes(app_user_id)
-    agents = AgentRegistry().list_agents_merged(scopes)
+    agents = [a for a in AgentRegistry().list_agents_merged(scopes) if a.status != AgentStatus.TERMINATED]
     ids = [a.id for a in agents]
     tracker = get_activity_tracker()
     activities = tracker.get_global_activity(ids, hours=hours, limit=limit)

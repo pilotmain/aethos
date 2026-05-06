@@ -18,7 +18,9 @@ import {
   agentRolesToTeamMembers,
   buildAgentOrgChart,
   governanceRowsToTeamMembers,
+  mergeAgentRoles,
   orchestrationFromState,
+  subAgentsToAgentRoles,
 } from "@/lib/api/team";
 import { readConfig } from "@/lib/config";
 import type { OrgChartNode, TeamMember } from "@/types/mission-control";
@@ -41,9 +43,10 @@ export default function MissionControlTeamPage() {
     setError(null);
     try {
       const [state, me] = await Promise.all([fetchMissionControlState(48), fetchGovernanceMe()]);
-      const { roles, assignments } = orchestrationFromState(state);
-      setAgents(agentRolesToTeamMembers(roles, assignments));
-      setOrgChart(buildAgentOrgChart(roles));
+      const { roles: orgRoles, assignments, subAgents } = orchestrationFromState(state);
+      const mergedRoles = mergeAgentRoles(orgRoles, subAgentsToAgentRoles(subAgents));
+      setAgents(agentRolesToTeamMembers(mergedRoles, assignments));
+      setOrgChart(buildAgentOrgChart(mergedRoles));
 
       setGovEnabled(Boolean(me.governance_enabled));
       const oid =
