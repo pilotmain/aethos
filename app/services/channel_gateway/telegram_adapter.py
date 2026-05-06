@@ -140,6 +140,7 @@ def register_telegram_handlers(application: Application) -> None:
     application.add_handler(CommandHandler("cloud_providers", cloud_cmds.cloud_providers_cmd))
     application.add_handler(CommandHandler("clouds", cloud_cmds.cloud_providers_cmd))
     application.add_handler(CommandHandler("add_provider", cloud_cmds.cloud_add_provider_cmd))
+    application.add_handler(CommandHandler("remove_provider", cloud_cmds.cloud_remove_provider_cmd))
     application.add_handler(CommandHandler("updates", tb.updates_cmd))
     application.add_handler(CommandHandler("usage", tb.usage_cmd))
     application.add_handler(CommandHandler("today", tb.today))

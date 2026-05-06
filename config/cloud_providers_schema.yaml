@@ -1,0 +1,29 @@
+# Cloud provider configuration schema (AethOS Phase 52d)
+#
+# Files merge in order (later overlays earlier):
+#   1. packaged config/cloud_providers_default.yaml
+#   2. /etc/aethos/cloud_providers.yaml (if present)
+#   3. ~/.aethos/cloud_providers.d/*.yaml (sorted)
+#   4. ~/.aethos/cloud_providers.yaml (highest priority)
+#
+# Top-level shape:
+#   providers:
+#     - name: string                    # unique id, lower-case recommended
+#       display_name: string
+#       cli_package: string             # npm/pip package or CLI binary hint (also accepts key: cli)
+#       install_command: string         # human-readable install hint or URL
+#       token_env_var: string           # optional — auth env var name
+#       project_id_env_var: string      # optional
+#       detect_patterns: [string, ...]  # NL routing hints (longer patterns win first)
+#       capabilities: [deploy, logs, status, destroy, list, env, plan]
+#       env_var_priority: [string, ...] # optional — reserved for future env resolution order
+#       commands:
+#         deploy: [argv, ...]
+#         logs: [argv, ...]
+#         status: [argv, ...]
+#         destroy: [argv, ...]          # optional
+#         list: [argv, ...]             # optional
+#         env: [argv, ...]              # optional — maps to env_command
+#         plan: [argv, ...]             # optional — maps to plan_command
+
+providers: []

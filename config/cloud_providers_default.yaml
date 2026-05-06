@@ -1,0 +1,311 @@
+# Built-in cloud providers (shipped with AethOS). Overlay via ~/.aethos or /etc/aethos.
+
+providers:
+  - name: railway
+    display_name: Railway
+    cli_package: "@railway/cli"
+    install_command: npm install -g @railway/cli
+    token_env_var: RAILWAY_TOKEN
+    project_id_env_var: RAILWAY_PROJECT_ID
+    capabilities: [deploy, logs, status]
+    detect_patterns: [railway.app, railway, rail way]
+    commands:
+      deploy: [railway, up, --detach]
+      logs: [railway, logs]
+      status: [railway, status]
+
+  - name: vercel
+    display_name: Vercel
+    cli_package: vercel
+    install_command: npm install -g vercel
+    token_env_var: VERCEL_TOKEN
+    capabilities: [deploy, logs, list, env]
+    detect_patterns: [vercel.com, vercel]
+    commands:
+      deploy: [vercel, deploy, --prod, --yes]
+      logs: [vercel, logs]
+      list: [vercel, projects, list, --output, json]
+      env: [vercel, env]
+
+  - name: aws
+    display_name: AWS
+    cli_package: awscli
+    install_command: pip install awscli
+    token_env_var: AWS_ACCESS_KEY_ID
+    capabilities: [deploy, logs, status]
+    detect_patterns:
+      - amazon web services
+      - cloudformation
+      - aws lambda
+      - amazon
+      - 'aws '
+      - aws/
+      - ' ec2'
+      - lambda
+      - s3 bucket
+      - aws
+    commands:
+      deploy: [aws, cloudformation, deploy]
+      logs: [aws, logs, tail]
+      status: [aws, cloudformation, describe-stacks]
+
+  - name: gcp
+    display_name: Google Cloud
+    cli_package: google-cloud-sdk
+    install_command: https://cloud.google.com/sdk/docs/install
+    token_env_var: GOOGLE_APPLICATION_CREDENTIALS
+    project_id_env_var: GCP_PROJECT_ID
+    capabilities: [deploy, logs, status]
+    detect_patterns: [google cloud platform, cloud run, google cloud, gcloud, gcp]
+    commands:
+      deploy: [gcloud, run, deploy]
+      logs: [gcloud, logging, read]
+      status: [gcloud, run, services, list]
+
+  - name: heroku
+    display_name: Heroku
+    cli_package: heroku-cli
+    install_command: https://devcenter.heroku.com/articles/heroku-cli
+    token_env_var: HEROKU_API_KEY
+    capabilities: [deploy, logs, status, destroy]
+    detect_patterns: [heroku.com, heroku]
+    commands:
+      deploy: [git, push, heroku, main]
+      logs: [heroku, logs, --tail]
+      status: [heroku, ps]
+
+  - name: fly
+    display_name: Fly.io
+    cli_package: flyctl
+    install_command: curl -L https://fly.io/install.sh | sh
+    token_env_var: FLY_API_TOKEN
+    capabilities: [deploy, logs, status]
+    detect_patterns: [fly.io, fly io, flyctl, ' fly ']
+    commands:
+      deploy: [fly, deploy]
+      logs: [fly, logs]
+      status: [fly, status]
+
+  - name: netlify
+    display_name: Netlify
+    cli_package: netlify-cli
+    install_command: npm install -g netlify-cli
+    token_env_var: NETLIFY_AUTH_TOKEN
+    capabilities: [deploy, logs, list]
+    detect_patterns: [netlify.app, netlify]
+    commands:
+      deploy: [netlify, deploy, --prod]
+      logs: [netlify, logs]
+      list: [netlify, sites, list]
+
+  - name: cloudflare
+    display_name: Cloudflare Workers
+    cli_package: wrangler
+    install_command: npm install -g wrangler
+    token_env_var: CLOUDFLARE_API_TOKEN
+    capabilities: [deploy, logs, status]
+    detect_patterns: [cloudflare workers, wrangler, cloudflare]
+    commands:
+      deploy: [wrangler, deploy]
+      logs: [wrangler, tail]
+      status: [wrangler, whoami]
+
+  - name: azure
+    display_name: Azure
+    cli_package: azure-cli
+    install_command: https://learn.microsoft.com/cli/azure/install-azure-cli
+    token_env_var: AZURE_CLIENT_SECRET
+    capabilities: [deploy, logs, status]
+    detect_patterns: ['azure ', microsoft azure, ' az ', azure/cli]
+    commands:
+      deploy: [az, deployment, group, create]
+      logs: [az, monitor, activity-log, list]
+      status: [az, account, show]
+
+  - name: digitalocean
+    display_name: DigitalOcean
+    cli_package: doctl
+    install_command: https://docs.digitalocean.com/reference/doctl/how-to/install/
+    token_env_var: DIGITALOCEAN_TOKEN
+    capabilities: [deploy, logs, status, list]
+    detect_patterns:
+      - digitalocean app platform
+      - digital ocean app
+      - app platform
+      - do app
+      - digitalocean
+      - doctl
+    commands:
+      deploy: [doctl, apps, create-deployment]
+      logs: [doctl, apps, logs]
+      status: [doctl, apps, list]
+      list: [doctl, apps, list]
+
+  - name: kubernetes
+    display_name: Kubernetes
+    cli_package: kubectl
+    install_command: https://kubernetes.io/docs/tasks/tools/
+    token_env_var: KUBECONFIG
+    capabilities: [deploy, logs, status, list]
+    detect_patterns: [kubernetes, kubectl, k8s, kube]
+    commands:
+      deploy: [kubectl, apply, -f, .]
+      logs: [kubectl, logs, --tail=50, --all-containers=true]
+      status: [kubectl, get, pods]
+      list: [kubectl, get, deployments]
+
+  - name: terraform
+    display_name: Terraform
+    cli_package: terraform
+    install_command: https://developer.hashicorp.com/terraform/install
+    capabilities: [deploy, logs, status, plan]
+    detect_patterns: [terraform, tf]
+    commands:
+      deploy: [terraform, apply, -auto-approve]
+      logs: [terraform, show]
+      status: [terraform, show]
+      plan: [terraform, plan]
+
+  - name: pulumi
+    display_name: Pulumi
+    cli_package: pulumi
+    install_command: https://www.pulumi.com/docs/install/
+    token_env_var: PULUMI_ACCESS_TOKEN
+    capabilities: [deploy, logs, status]
+    detect_patterns: [pulumi]
+    commands:
+      deploy: [pulumi, up, --yes]
+      logs: [pulumi, logs]
+      status: [pulumi, stack, output]
+
+  - name: openshift
+    display_name: OpenShift
+    cli_package: oc
+    install_command: https://docs.openshift.com/container-platform/latest/cli_reference/openshift_cli/getting-started-cli.html
+    token_env_var: KUBECONFIG
+    capabilities: [deploy, logs, status]
+    detect_patterns: [openshift, oc]
+    commands:
+      deploy: [oc, apply, -f, .]
+      logs: [oc, logs, --tail=50]
+      status: [oc, get, pods]
+
+  - name: render
+    display_name: Render
+    cli_package: "@renderinc/cli"
+    install_command: npm install -g @renderinc/cli
+    token_env_var: RENDER_API_KEY
+    capabilities: [deploy, logs, status]
+    detect_patterns: [render.com, render]
+    commands:
+      deploy: [render, deploy]
+      logs: [render, logs]
+      status: [render, services]
+
+  - name: koyeb
+    display_name: Koyeb
+    cli_package: koyeb
+    install_command: https://github.com/koyeb/koyeb-cli
+    token_env_var: KOYEB_API_KEY
+    capabilities: [deploy, logs, status]
+    detect_patterns: [koyeb]
+    commands:
+      deploy: [koyeb, services, create]
+      logs: [koyeb, services, logs]
+      status: [koyeb, services, list]
+
+  - name: northflank
+    display_name: Northflank
+    cli_package: "@northflank/cli"
+    install_command: npm install -g @northflank/cli
+    token_env_var: NORTHFLANK_API_KEY
+    capabilities: [deploy, logs, status]
+    detect_patterns: [northflank]
+    commands:
+      deploy: [northflank, deploy]
+      logs: [northflank, logs]
+      status: [northflank, status]
+
+  - name: cycle
+    display_name: Cycle
+    cli_package: cycle
+    install_command: npm install -g @cycle-platform/cli
+    token_env_var: CYCLE_API_KEY
+    capabilities: [deploy, logs, status]
+    detect_patterns: [cycle.io, cycle]
+    commands:
+      deploy: [cycle, deploy]
+      logs: [cycle, logs]
+      status: [cycle, status]
+
+  - name: porter
+    display_name: Porter
+    cli_package: porter
+    install_command: https://docs.porter.run/cli/install/
+    token_env_var: PORTER_API_KEY
+    capabilities: [deploy, logs, status]
+    detect_patterns: [porter.run, porter]
+    commands:
+      deploy: [porter, apply]
+      logs: [porter, logs]
+      status: [porter, status]
+
+  - name: zeabur
+    display_name: Zeabur
+    cli_package: zeabur
+    install_command: npm install -g zeabur
+    token_env_var: ZEABUR_API_KEY
+    capabilities: [deploy, logs, status]
+    detect_patterns: [zeabur]
+    commands:
+      deploy: [zeabur, deploy]
+      logs: [zeabur, logs]
+      status: [zeabur, status]
+
+  - name: adaptable
+    display_name: Adaptable
+    cli_package: adaptable-cli
+    install_command: npm install -g adaptable-cli
+    token_env_var: ADAPTABLE_API_KEY
+    capabilities: [deploy, logs, status]
+    detect_patterns: [adaptable]
+    commands:
+      deploy: [adaptable, deploy]
+      logs: [adaptable, logs]
+      status: [adaptable, status]
+
+  - name: kinsta
+    display_name: Kinsta
+    cli_package: "@kinsta/cli"
+    install_command: npm install -g @kinsta/cli
+    token_env_var: KINSTA_API_KEY
+    capabilities: [deploy, logs, status]
+    detect_patterns: [kinsta]
+    commands:
+      deploy: [kinsta, deploy]
+      logs: [kinsta, logs]
+      status: [kinsta, status]
+
+  - name: platformsh
+    display_name: Platform.sh
+    cli_package: platform
+    install_command: curl -sS https://platform.sh/cli/installer | php
+    token_env_var: PLATFORMSH_CLI_TOKEN
+    capabilities: [deploy, logs, status]
+    detect_patterns: [platform.sh, platformsh]
+    commands:
+      deploy: [platform, push]
+      logs: [platform, log]
+      status: [platform, "environment:info"]
+
+  - name: cleavr
+    display_name: Cleavr
+    cli_package: cleavr-cli
+    install_command: npm install -g cleavr-cli
+    token_env_var: CLEAVR_API_KEY
+    capabilities: [deploy, logs, status]
+    detect_patterns: [cleavr]
+    commands:
+      deploy: [cleavr, deploy]
+      logs: [cleavr, logs]
+      status: [cleavr, status]
