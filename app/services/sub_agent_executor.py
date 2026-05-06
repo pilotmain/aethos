@@ -12,7 +12,10 @@ import re
 import shutil
 import threading
 import time
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from app.services.cloud.registry import CloudProvider
 
 from sqlalchemy.orm import Session
 
@@ -242,6 +245,36 @@ class AgentExecutor:
         if re.search(r"(?i)\bmonitor\s+", message or ""):
             return self._fs_monitor_ack(agent, message, chat_id)
 
+        deploy_intent = any(k in low for k in ("deploy", "ship", "release", "push live"))
+        if deploy_intent:
+            from app.services.cloud.registry import get_provider_registry
+
+            reg = get_provider_registry()
+            prov = reg.detect_from_text(message or "")
+            if prov is None and domain == "railway":
+                prov = reg.get("railway")
+            if prov is None and domain == "vercel":
+                prov = reg.get("vercel")
+            if prov is None and "railway" in low:
+                prov = reg.get("railway")
+            if prov is None and "vercel" in low:
+                prov = reg.get("vercel")
+            if prov:
+                if prov.name == "railway":
+                    return self._railway_deploy(message, chat_id)
+                if prov.name == "vercel":
+                    return self._vercel(
+                        agent,
+                        message,
+                        chat_id,
+                        db=db,
+                        user_id=user_id,
+                        web_session_id=web_session_id,
+                    )
+                return self._universal_cloud_deploy(message, chat_id, prov)
+            if domain not in {"railway", "vercel"} and "railway" not in low and "vercel" not in low:
+                return self._cloud_deploy_provider_prompt()
+
         if "vercel" in low:
             if any(k in low for k in ("whoami", "account", "login")):
                 return _cli_vercel_whoami()
@@ -287,9 +320,55 @@ class AgentExecutor:
 
         return (
             "🤖 **Ops agent** — mention **railway** (`railway whoami`, `railway list`) "
-            "or **vercel** (`vercel projects`, `/vercel projects list`). "
+            "or **vercel** (`vercel projects`, `/vercel projects list`), "
+            "or say **deploy to AWS / GCP / Fly.io / …** for other CLIs. "
             "Spawn a **vercel**-domain agent for deploy-focused flows."
         )
+
+    def _cloud_deploy_provider_prompt(self) -> str:
+        """When the user wants to deploy but did not name a provider."""
+        from app.services.cloud.registry import get_provider_registry
+
+        reg = get_provider_registry()
+        lines = [f"• **{p.display_name}** (`{p.name}`)" for p in reg.list_all()]
+        body = "\n".join(lines[:40])
+        return (
+            "🌩️ **Which cloud provider?** Say e.g. `deploy to Fly.io` or `ship to Google Cloud`.\n\n"
+            f"{body}\n\n"
+            "_Requires the provider CLI on the worker and tokens in `.env` (see each provider’s docs)._"
+        )
+
+    def _universal_cloud_deploy(self, message: str, chat_id: str, prov: "CloudProvider") -> str:
+        """Deploy via registry + universal executor (non-Railway / non-Vercel specialized paths)."""
+        from app.services.cloud.executor import get_universal_cloud_executor
+
+        kv: dict[str, str] = {}
+        for m in re.finditer(r"\b([A-Z][A-Z0-9_]{1,24})=(\S+)", message or ""):
+            kv[m.group(1)] = m.group(2).strip("`\"'")
+
+        meta = {"preview": (message or "")[:400], "provider": prov.name}
+        exe = get_universal_cloud_executor()
+        res = exe.deploy_with_tracking(
+            chat_id=chat_id,
+            provider=prov,
+            extra_env=kv or None,
+            metadata=meta,
+        )
+        label = " ".join(prov.deploy_command or [])[:120]
+        if res.get("success"):
+            body = (res.get("output") or "").strip()[:3500]
+            sid = res.get("deployment_session_id")
+            tail = ""
+            if sid:
+                tail = "\n\n_Session tracked — I’ll send another status with logs shortly._"
+            self._schedule_deploy_status_ping(chat_id)
+            return (
+                f"✅ **{prov.display_name} deploy** (`{label}`)\n\n```\n{body}\n```{tail}"
+            )
+        err = (res.get("error") or res.get("stderr") or "unknown error")[:2000]
+        inst = (prov.install_command or "").strip()
+        hint = f"\n\n💡 {inst}" if inst else ""
+        return f"❌ **{prov.display_name} deploy failed**\n\n```\n{err}\n```{hint}"
 
     def _git(
         self,
@@ -433,7 +512,8 @@ class AgentExecutor:
         if not last:
             return (
                 "📭 No recent deployments recorded for this chat.\n\n"
-                "After you run a Railway deploy from here, I’ll remember the session and can tail logs."
+                "After you run a deploy from here (Railway, Vercel, or another linked provider), "
+                "I’ll remember the session and can tail logs."
             )
         plat = (last.get("platform") or "?").strip()
         status = (last.get("status") or "?").strip()
