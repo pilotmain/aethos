@@ -4,7 +4,12 @@ import { ProjectStatusBanner } from "@/components/aethos/ProjectStatusBanner";
 
 export const metadata: Metadata = {
   title: "AethOS",
-  description: "AethOS — The Agentic Operating System",
+  description:
+    "AethOS — The invisible layer that connects all autonomous agents.",
+  icons: {
+    icon: [{ url: "/aethos-icon.png", type: "image/png", sizes: "512x512" }],
+    shortcut: "/aethos-icon.png",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

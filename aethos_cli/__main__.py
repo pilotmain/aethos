@@ -216,6 +216,11 @@ def main() -> int:
         _prog = "aethos"
     p = argparse.ArgumentParser(prog=_prog, description="AethOS — CLI (HTTP API client)")
     p.add_argument(
+        "--no-banner",
+        action="store_true",
+        help="Skip ASCII banner on stderr (or set AETHOS_CLI_NO_BANNER=1 / NEXA_CLI_NO_BANNER=1)",
+    )
+    p.add_argument(
         "--user-id",
         default=os.environ.get("AETHOS_CLI_USER_ID")
         or os.environ.get("NEXA_CLI_USER_ID")
@@ -352,6 +357,12 @@ def main() -> int:
 
     args = p.parse_args()
     uid = str(args.user_id)
+
+    if not args.no_banner:
+        from aethos_cli.banner import print_banner, should_show_banner
+
+        if should_show_banner():
+            print_banner()
 
     if args.cmd == "state":
         q = f"?user_id={urllib.parse.quote(args.mission_user)}" if args.mission_user else ""

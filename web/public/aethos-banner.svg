@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 320" width="1200" height="320">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4c1d95"/>
+      <stop offset="50%" stop-color="#831843"/>
+      <stop offset="100%" stop-color="#0e7490"/>
+    </linearGradient>
+    <linearGradient id="tx" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#e9d5ff"/>
+      <stop offset="50%" stop-color="#fbcfe8"/>
+      <stop offset="100%" stop-color="#a5f3fc"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="320" rx="24" fill="url(#bg)"/>
+  <text x="80" y="140" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="72"
+        font-weight="bold" fill="url(#tx)">AETHOS</text>
+  <text x="80" y="190" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="22"
+        fill="#c4b5fd" letter-spacing="6">THE AGENTIC OPERATING SYSTEM</text>
+  <text x="80" y="240" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="16"
+        fill="#94a3b8" font-style="italic">The invisible layer that connects all autonomous agents</text>
+</svg>
