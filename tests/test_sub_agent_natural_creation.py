@@ -17,9 +17,24 @@ def test_prefers_registry_vs_custom_product() -> None:
     assert prefers_registry_sub_agent("create custom agent qa_agent for QA") is True
 
 
-def test_numbered_custom_list_not_registry() -> None:
+def test_numbered_roster_prefers_registry() -> None:
     body = "Create me a few agents:\n1. financial advisor\n2. fitness coach"
-    assert prefers_registry_sub_agent(body) is False
+    assert prefers_registry_sub_agent(body) is True
+
+
+def test_parse_numbered_multi_agents() -> None:
+    raw = "create five agents:\n\n1. product_manager\n2. designer\n3. backend\n"
+    spec = parse_natural_sub_agent_specs(raw)
+    assert len(spec) == 3
+    assert spec[0][0] == "product_manager"
+
+
+def test_parse_numbered_freeform_titles() -> None:
+    raw = "Create me five agents:\n\n1. financial advisor\n2. fitness coach\n"
+    spec = parse_natural_sub_agent_specs(raw)
+    assert len(spec) == 2
+    assert spec[0][0] == "financial_advisor"
+    assert spec[1][0] == "fitness_coach"
 
 
 def test_parse_cli_and_pairs() -> None:

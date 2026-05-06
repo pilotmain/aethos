@@ -14,6 +14,8 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.services.agent.activity_tracker import get_activity_tracker
 from app.services.sub_agent_registry import AgentRegistry
+
+
 def normalize_sub_agent_domain(raw: str) -> str:
     """Map user words to registry/executor domain keys (distinct from :func:`~app.services.team.roles.normalize_role_key`)."""
     k = (raw or "").strip().lower().replace(" ", "_").replace("-", "_")
@@ -57,9 +59,10 @@ def normalize_sub_agent_domain(raw: str) -> str:
 
 def prefers_registry_sub_agent(text: str) -> bool:
     """
-    True → route to orchestration sub-agent registry (Phase 48 single-system rule).
+    True → route to orchestration sub-agent registry (Phase 48 / 53).
 
-    Numbered/bullet-first lists stay off registry parsing (avoid greedy multi-line roster spam).
+    Natural-language “create/make/spawn … agent(s)” always targets sub-agents so Mission Control
+    and `/subagent list` stay aligned (numbered rosters included).
     """
     raw = (text or "").strip()
     tl = raw.lower()
@@ -67,7 +70,9 @@ def prefers_registry_sub_agent(text: str) -> bool:
         return False
     if not re.search(r"(?i)\b(create|make|add|build|spawn)\b", raw):
         return False
-    if re.search(r"(?m)^\s*\d+[\).]\s+\S", raw):
+    from app.services.multi_agent_routing import is_multi_agent_capability_question
+
+    if is_multi_agent_capability_question(raw):
         return False
     return True
 
@@ -188,6 +193,31 @@ def _split_agent_phrase_tail(segment: str) -> list[str]:
     return out
 
 
+def _slugify_roster_title(title: str) -> str:
+    """Turn a free-form roster line (e.g. financial advisor) into a handle-like id."""
+    t = (title or "").strip().lstrip("@")
+    if not t:
+        return ""
+    if re.match(r"^[\w-]+$", t) and len(t) <= 64:
+        return t.lower()
+    s = re.sub(r"[^\w\s\-]", "", t.lower())
+    s = re.sub(r"[\s\-]+", "_", s.strip())
+    s = re.sub(r"_+", "_", s).strip("_")
+    return (s[:64] if s else "")
+
+
+def _extract_numbered_agent_specs(segment: str, full_text: str) -> list[tuple[str, str]]:
+    """Parse ``1. foo bar`` / ``2) @handle`` lines under a ``create … agents`` header."""
+    specs: list[tuple[str, str]] = []
+    for m in re.finditer(r"(?m)^\s*\d+[\).]\s*(.+)$", segment):
+        title = (m.group(1) or "").strip()
+        title = re.split(r"\s+[—\-]\s+|,\s+for\s+", title)[0].strip()
+        slug = _slugify_roster_title(title)
+        if slug:
+            specs.append((slug, _infer_domain(slug, full_text)))
+    return specs
+
+
 def parse_natural_sub_agent_specs(text: str) -> list[tuple[str, str]]:
     """Return (name, domain) pairs to spawn."""
     raw = (text or "").strip()
@@ -223,12 +253,18 @@ def parse_natural_sub_agent_specs(text: str) -> list[tuple[str, str]]:
     specs: list[tuple[str, str]] = []
 
     # Multi: create [two] agents … / create agents …
+    # Plural ``agents`` only (avoid matching ``create me an agent …`` single-create lines).
     multi_m = re.search(
-        r"(?is)\b(?:create|make|add|build|spawn)\s+(?:two|three|several|four|five|\d+\s+)?agents?\s*(?:[:,]?\s*)",
+        r"(?is)\b(?:create|make|add|build|spawn)\s+"
+        r"(?:me\s+)?"
+        r"(?:(?:two|three|several|four|five|\d+)\s+)?agents\s*(?:[:,]?\s*)",
         raw,
     )
     if multi_m:
         tail = raw[multi_m.end() :].strip()
+        numbered = _extract_numbered_agent_specs(tail, raw)
+        if numbered:
+            return _dedupe_specs(numbered)
         names = _split_agent_phrase_tail(tail)
         for nm in names:
             specs.append((nm, _infer_domain(nm, raw)))
@@ -311,8 +347,8 @@ def try_spawn_natural_sub_agents(
         return (
             "**Create orchestration agents**\n\n"
             "Examples:\n"
+            "• `create five agents: product_manager, designer, backend, frontend, qa`\n"
             "• `create two agents qa_agent and marketing_agent`\n"
-            "• `create me a custom agent called legal-reviewer` — same registry\n"
             "• `subagent create ops_agent ops`\n"
             "• `create agent security_expert security`\n\n"
             "Domains include **qa**, **marketing**, **git**, **vercel**, **railway**, **ops**, **test**, **security**.\n\n"

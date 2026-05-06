@@ -566,12 +566,16 @@ def get_intent(
 ) -> str:
     t0 = (message or "").strip()
     tl0 = t0.lower()
-    if tl0.startswith("create") and "agent" in tl0:
-        from app.services.sub_agent_natural_creation import prefers_registry_sub_agent
+    if "agent" in tl0 and re.search(r"(?i)\b(create|make|add|build|spawn)\b", t0):
+        from app.services.multi_agent_routing import is_multi_agent_capability_question
 
-        if prefers_registry_sub_agent(t0):
-            return "create_sub_agent"
-        return "create_custom_agent"
+        # Capability questions (“can you create agents that…”) must reach fallback/LLM — not create_* shortcut.
+        if not is_multi_agent_capability_question(t0):
+            from app.services.sub_agent_natural_creation import prefers_registry_sub_agent
+
+            if prefers_registry_sub_agent(t0):
+                return "create_sub_agent"
+            return "create_custom_agent"
 
     if looks_like_orchestrate_system(t0):
         return "orchestrate_system"
@@ -597,6 +601,11 @@ def get_intent(
     )
     intent = result["intent"]
     confidence = result["confidence"]
+
+    from app.services.sub_agent_natural_creation import prefers_registry_sub_agent
+
+    if intent == "create_custom_agent" and prefers_registry_sub_agent(t0):
+        intent = "create_sub_agent"
 
     if intent in ("create_custom_agent", "create_sub_agent") and is_multi_agent_capability_question(t0):
         intent = "capability_question"

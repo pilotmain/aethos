@@ -610,20 +610,24 @@ class NexaGateway:
             channel,
         )
 
-        if intent == "create_sub_agent" and (uid or "").strip():
-            from app.services.sub_agent_natural_creation import try_spawn_natural_sub_agents
+        if intent in ("create_sub_agent", "create_custom_agent") and (uid or "").strip():
+            from app.services.sub_agent_natural_creation import (
+                prefers_registry_sub_agent,
+                try_spawn_natural_sub_agents,
+            )
             from app.services.sub_agent_router import orchestration_chat_key
 
-            orch_key = orchestration_chat_key(gctx)
-            sub_txt = try_spawn_natural_sub_agents(db, uid, raw, parent_chat_id=orch_key)
-            if sub_txt:
-                return {
-                    "mode": "chat",
-                    "text": gateway_finalize_chat_reply(
-                        sub_txt, source="natural_sub_agent_create", user_text=raw
-                    ),
-                    "intent": "create_sub_agent",
-                }
+            if intent == "create_sub_agent" or prefers_registry_sub_agent(raw):
+                orch_key = orchestration_chat_key(gctx)
+                sub_txt = try_spawn_natural_sub_agents(db, uid, raw, parent_chat_id=orch_key)
+                if sub_txt:
+                    return {
+                        "mode": "chat",
+                        "text": gateway_finalize_chat_reply(
+                            sub_txt, source="natural_sub_agent_create", user_text=raw
+                        ),
+                        "intent": "create_sub_agent",
+                    }
 
         user_row = orchestrator.users.get_or_create(db, uid)
 

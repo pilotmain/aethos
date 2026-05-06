@@ -65,7 +65,9 @@ def help_message(has_active_plan: bool, focus_task: str | None) -> str:
     return (
         "AethOS — describe what you want in plain language.\n\n"
         "I can help with brain dumps, planning next steps, when you’re stuck, status updates, "
-        "development work when your workspace is connected, and structured missions — just say what you need."
+        "development work when your workspace is connected, and structured missions — just say what you need.\n\n"
+        "**Team agents (Mission Control):** say e.g. `create two agents qa_agent and marketing_agent`, "
+        "or use `/subagent create <name> <domain>` — then `/subagent list`."
     )
 
 
