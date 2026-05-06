@@ -553,6 +553,48 @@ def process_web_message(
                 return out
             tstrip = (na0.user_text_for_pipeline or tstrip or "").strip()
 
+            from app.services.sub_agent_natural_creation import (
+                prefers_registry_sub_agent,
+                try_spawn_natural_sub_agents,
+            )
+
+            if prefers_registry_sub_agent(tstrip):
+                web_scope = f"web:{app_user_id}:{wid}"
+                ns_web = try_spawn_natural_sub_agents(db, app_user_id, tstrip, parent_chat_id=web_scope)
+                if ns_web:
+                    d0 = build_decision_summary(
+                        agent_key="aethos",
+                        action="sub_agent_create",
+                        tool="local_state",
+                        reason="Orchestration sub-agents created from natural language.",
+                        risk="low",
+                    )
+                    out = _finalize_web_result(
+                        db,
+                        app_user_id,
+                        req_id,
+                        WebChatResult(
+                            _merge_idle_host_jobs(ns_web),
+                            "create_sub_agent",
+                            "aethos",
+                            response_kind="create_sub_agent",
+                            decision_summary=d0,
+                            pending_system_events_seed=_host_drain_seed(),
+                        ),
+                        web_session_id=wid,
+                        user_text=user_text,
+                    )
+                    update_context_after_turn(
+                        db,
+                        cctx,
+                        user_text=user_text,
+                        assistant_text=_merge_idle_host_jobs(ns_web),
+                        intent="create_sub_agent",
+                        agent_key="aethos",
+                        decision_summary=out.decision_summary,
+                    )
+                    return out
+
             cg_msg = try_custom_agent_capability_guidance(db, app_user_id, tstrip)
             if cg_msg is not None:
                 d0 = build_decision_summary(

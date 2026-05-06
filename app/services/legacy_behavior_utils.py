@@ -126,7 +126,7 @@ def build_context(
 
 
 def map_intent_to_behavior(intent: str, _context: Context) -> str:
-    if intent == "create_custom_agent":
+    if intent in ("create_custom_agent", "create_sub_agent"):
         return "clarify"
     if intent in ("orchestrate_system", "external_investigation", "external_execution", "external_execution_continue"):
         return "assist"
@@ -452,6 +452,23 @@ def build_response(
         )
     if is_multi_agent_capability_question((text or "").strip()):
         return _out(reply_multi_agent_capability_clarification())
+    if intent == "create_sub_agent" and db is not None and (app_user_id or "").strip():
+        from app.services.sub_agent_natural_creation import try_spawn_natural_sub_agents
+        from app.services.sub_agent_router import telegram_agent_registry_chat_id
+
+        uid = str(app_user_id).strip()
+        tid = (snap.get("telegram_chat_id") or snap.get("channel_chat_id")) if snap else None
+        ws = str(snap.get("web_session_id") or "default").strip() if snap else "default"
+        if tid:
+            try:
+                pid = telegram_agent_registry_chat_id(int(str(tid)))
+            except (TypeError, ValueError):
+                pid = f"web:{uid}:{ws}"
+        else:
+            pid = f"web:{uid}:{ws}"
+        sub_body = try_spawn_natural_sub_agents(db, uid, (text or "").strip(), parent_chat_id=pid)
+        if sub_body:
+            return _out(sub_body)
     if intent == "create_custom_agent" and db is not None and (app_user_id or "").strip():
         from app.services.custom_agent_creation import parse_creation_spec, run_create_custom_agent_flow
         from app.services.custom_agent_routing import is_create_custom_agent_request

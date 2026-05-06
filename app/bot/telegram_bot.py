@@ -2304,11 +2304,39 @@ async def _handle_incoming_text_impl(
 
                 udata = (context.user_data or {}) if context and context.user_data is not None else {}
                 if not tstrip.startswith("/") and tstrip:
+                    from app.services.sub_agent_natural_creation import (
+                        prefers_registry_sub_agent,
+                        try_spawn_natural_sub_agents,
+                    )
+                    from app.services.sub_agent_router import telegram_agent_registry_chat_id
+
+                    if prefers_registry_sub_agent(tstrip):
+                        _tg_scope = telegram_agent_registry_chat_id(
+                            int(update.effective_chat.id) if update.effective_chat else 0
+                        )
+                        ns_reply = try_spawn_natural_sub_agents(
+                            db, app_user_id, tstrip, parent_chat_id=_tg_scope
+                        )
+                        if ns_reply:
+                            cctx_ns = get_or_create_context(db, app_user_id)
+                            _persist_conversation_turn(
+                                db,
+                                app_user_id,
+                                cctx_ns,
+                                tstrip,
+                                ns_reply,
+                                "create_sub_agent",
+                                "aethos",
+                            )
+                            for piece in _split_telegram_text(ns_reply, max_len=4000):
+                                await update.message.reply_text(piece)
+                            return
+
                     from app.services.custom_agents import (
                         try_conversational_create_custom_agents,
                         try_custom_agent_capability_guidance,
                     )
-    
+
                     cg = try_custom_agent_capability_guidance(db, app_user_id, tstrip)
                     if cg is not None:
                         cctx_g = get_or_create_context(db, app_user_id)

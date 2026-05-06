@@ -20,7 +20,8 @@ Valid intents:
 - external_execution_continue: user is replying to Nexa’s Railway/deploy access or preferences questions (short confirmation, not a new unrelated topic)
 - external_investigation: user is asking about a hosted provider/service (Railway, Render, deploy health, production outage) without necessarily naming local files
 - brain_dump: user is listing tasks, responsibilities, errands, or things they need to organize
-- create_custom_agent: user wants to create a new Nexa custom agent (message starts with "create" and mentions "agent")
+- create_sub_agent: user wants to spawn an orchestration sub-agent (registry; natural language or ``subagent create`` style)
+- create_custom_agent: user wants to create an LLM-only **custom** agent (explicit “custom agent” product phrasing / structured blocks)
 - capability_question: user asks what the assistant can do, cannot do, or whether it can help with a specific domain
 - help_request: user asks for help, but does not provide actual tasks yet
 - followup_reply: user says they did not complete something, or replies to a check-in
@@ -44,7 +45,8 @@ Important rules:
 - If the user asks you to run a full pipeline (check/fix/push/redeploy/verify) against Railway or production — classify as external_execution (not external_investigation).
 - If the user is answering a prior prompt about Railway/CLI auth or deploy preferences — classify as external_execution_continue.
 - If the user focuses on Railway/hosted deploy/service health/production outage without that full execution pipeline or follow-up context — classify as external_investigation unless they only want local repo debugging paths.
-- If the user message (after trimming) starts with "create" and contains the word "agent", classify as create_custom_agent — except vague multi-agent capability questions (e.g. "can you create multi agents that communicate"); those are capability_question.
+- If the user wants orchestration/registry agents (natural “create agents …”, ``*_agent`` handles, ``subagent create``), classify as **create_sub_agent**.
+- If the user explicitly asks for a **custom agent** (LLM-only profile) with no orchestration cues, classify as **create_custom_agent** — except vague multi-agent capability questions; those are capability_question.
 - If uncertain, choose general_chat, not brain_dump.
 
 Return JSON only:
@@ -64,6 +66,7 @@ VALID_INTENTS = {
     "external_execution_continue",
     "external_investigation",
     "brain_dump",
+    "create_sub_agent",
     "create_custom_agent",
     "capability_question",
     "help_request",
@@ -404,7 +407,11 @@ def classify_intent_fallback(
         }
 
     if t.startswith("create") and "agent" in t:
-        return {"intent": "create_custom_agent", "confidence": 0.95, "reason": "create agent phrase"}
+        from app.services.sub_agent_natural_creation import prefers_registry_sub_agent
+
+        if prefers_registry_sub_agent(message):
+            return {"intent": "create_sub_agent", "confidence": 0.94, "reason": "orchestration sub-agent natural language"}
+        return {"intent": "create_custom_agent", "confidence": 0.92, "reason": "custom agent phrase"}
 
     if any(
         x in t
@@ -560,6 +567,10 @@ def get_intent(
     t0 = (message or "").strip()
     tl0 = t0.lower()
     if tl0.startswith("create") and "agent" in tl0:
+        from app.services.sub_agent_natural_creation import prefers_registry_sub_agent
+
+        if prefers_registry_sub_agent(t0):
+            return "create_sub_agent"
         return "create_custom_agent"
 
     if looks_like_orchestrate_system(t0):
@@ -587,7 +598,7 @@ def get_intent(
     intent = result["intent"]
     confidence = result["confidence"]
 
-    if intent == "create_custom_agent" and is_multi_agent_capability_question(t0):
+    if intent in ("create_custom_agent", "create_sub_agent") and is_multi_agent_capability_question(t0):
         intent = "capability_question"
         confidence = max(confidence, 0.9)
 

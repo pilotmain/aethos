@@ -201,6 +201,12 @@ class AgentExecutor:
             return self._vercel(agent, message, chat_id, db=db, user_id=user_id, web_session_id=web_session_id)
         if domain == "test":
             return self._test(agent, message, chat_id, db=db, user_id=user_id, web_session_id=web_session_id)
+        if domain in {"general", "marketing", "ceo", "support", "scrum"}:
+            return (
+                f"🤖 **@{agent.name}** ({domain}) is registered for this chat.\n\n"
+                "Send a concrete instruction. For tooling runs, use agents with domains "
+                "**git**, **vercel**, **railway**, **ops**, **test**, or **security**."
+            )[:4000]
         return f"Unknown sub-agent domain {domain!r}."
 
     def _infra_ops(

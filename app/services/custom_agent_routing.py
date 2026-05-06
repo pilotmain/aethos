@@ -101,6 +101,10 @@ def is_create_custom_agent_request(text: str) -> bool:
     raw = (text or "").strip()
     if not raw or is_multi_agent_capability_question(raw):
         return False
+    from app.services.sub_agent_natural_creation import prefers_registry_sub_agent
+
+    if prefers_registry_sub_agent(raw):
+        return False
     tl = raw.lower()
     if "agent" not in tl:
         return False
