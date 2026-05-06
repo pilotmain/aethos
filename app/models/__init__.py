@@ -9,6 +9,7 @@ from app.models.autonomy import NexaAutonomousTask, NexaAutonomyDecisionLog, Nex
 from app.models.audit_log import AuditLog
 from app.models.audit_retention_policy import AuditRetentionPolicy
 from app.models.brain_dump import BrainDump
+from app.models.cloud_billing import CloudOrgBilling, CloudSaaSCredential
 from app.models.channel_user import ChannelUser
 from app.models.checkin import CheckIn
 from app.models.conversation_context import ConversationContext
@@ -66,6 +67,8 @@ __all__ = [
     "LlmUsageEvent",
     "ResponseTurnEvent",
     "WorkspaceRoot",
+    "CloudOrgBilling",
+    "CloudSaaSCredential",
     "AccessPermission",
     "AuditRetentionPolicy",
     "OrganizationChannelPolicy",

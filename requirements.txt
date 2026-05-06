@@ -30,3 +30,6 @@ reportlab==4.2.5
 markdown==3.7
 PyYAML>=6.0.1
 playwright>=1.40.0
+stripe>=7.0.0
+passlib[bcrypt]>=1.7.4
+email-validator>=2.0.0

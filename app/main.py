@@ -20,6 +20,7 @@ from app.api.routes import (
     apple_messages,
     audit_export,
     auth,
+    billing,
     ceo_dashboard,
     channels,
     checkins,
@@ -50,6 +51,7 @@ from app.api.routes import (
     providers_usage,
     report_watcher,
     scraping,
+    saas_auth,
     slack,
     social,
     sms,
@@ -65,6 +67,7 @@ from app.core.db import ensure_schema
 from app.core.scheduler import scheduler
 from app.middleware.metrics import MetricsMiddleware
 from app.middleware.security_headers import SecurityHeadersMiddleware
+from app.middleware.usage_meter import UsageMeterMiddleware
 from app.models import *  # noqa: F401,F403
 from app.services.logging.logger import configure_logging
 from app.services.startup_config_log import log_sanitized_nexa_config, maybe_log_llm_key_hint
@@ -278,6 +281,7 @@ app.add_middleware(
 )
 app.add_middleware(MetricsMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(UsageMeterMiddleware)
 app.include_router(dashboard.router)
 app.include_router(health.router, prefix=settings.api_v1_prefix)
 app.include_router(system.router, prefix=settings.api_v1_prefix)
@@ -287,6 +291,8 @@ app.include_router(governance_api.router, prefix=settings.api_v1_prefix)
 app.include_router(custom_agents_api.router, prefix=settings.api_v1_prefix)
 app.include_router(audit_export.router, prefix=settings.api_v1_prefix)
 app.include_router(auth.router, prefix=settings.api_v1_prefix)
+app.include_router(saas_auth.router, prefix=settings.api_v1_prefix)
+app.include_router(billing.router, prefix=settings.api_v1_prefix)
 app.include_router(tasks.router, prefix=settings.api_v1_prefix)
 app.include_router(dumps.router, prefix=settings.api_v1_prefix)
 app.include_router(plans.router, prefix=settings.api_v1_prefix)

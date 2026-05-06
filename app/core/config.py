@@ -714,6 +714,20 @@ class Settings(BaseSettings):
         "*.md,*.txt,*.lock,package-lock.json,yarn.lock,*.min.js"
     )
 
+    # Phase 51 — AethOS Cloud (hosted SaaS): Stripe billing + optional JWT registration/login.
+    # JWTs use NEXA_SECRET_KEY (see ensure_nexa_secret_key); set STRIPE_* when enabling billing routes.
+    aethos_cloud_enabled: bool = False
+    stripe_api_key: str | None = None
+    stripe_webhook_secret: str | None = None
+    stripe_price_id_pro: str = ""
+    stripe_price_id_business: str = ""
+    stripe_price_id_enterprise: str = ""
+    # Public URLs for dashboards / redirects (optional documentation defaults).
+    cloud_api_url: str = ""
+    cloud_web_url: str = ""
+    redis_url: str | None = None
+    access_token_expire_days: int = 30
+
     @field_validator("nexa_user_privacy_mode", mode="before")
     @classmethod
     def _normalize_nexa_user_privacy_mode(cls, v: object) -> str:

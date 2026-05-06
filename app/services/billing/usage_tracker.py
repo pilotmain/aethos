@@ -94,4 +94,18 @@ class UsageTracker:
         return [{"day": r[0], "tokens": int(r[1]), "requests": int(r[2])} for r in rows]
 
 
-__all__ = ["UsageTracker"]
+def track_usage(user_id: str, metric: str, quantity: int = 1) -> None:
+    """Record usage for metered billing (SQLite rollup)."""
+    uid = (user_id or "").strip()
+    if not uid:
+        return
+    m = (metric or "api_call").strip().lower()
+    q = max(1, int(quantity))
+    tracker = UsageTracker()
+    if m == "tokens":
+        tracker.record_usage(uid, tokens=q, requests=0)
+    else:
+        tracker.record_usage(uid, tokens=0, requests=q)
+
+
+__all__ = ["UsageTracker", "track_usage"]

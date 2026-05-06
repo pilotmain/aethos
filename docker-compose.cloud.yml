@@ -1,0 +1,63 @@
+# AethOS Cloud — API + Postgres + Redis + Next.js web (Phase 51).
+# Replace NEXT_PUBLIC_* URLs with host-reachable API origins for browser calls (not Docker service names).
+
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: aethos
+      POSTGRES_USER: aethos
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - internal
+
+  redis:
+    image: redis:7-alpine
+    networks:
+      - internal
+
+  api:
+    build: .
+    environment:
+      DATABASE_URL: postgresql://aethos:${DB_PASSWORD}@postgres:5432/aethos
+      REDIS_URL: redis://redis:6379
+      AETHOS_CLOUD_ENABLED: "true"
+      STRIPE_API_KEY: ${STRIPE_API_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      STRIPE_PRICE_ID_PRO: ${STRIPE_PRICE_ID_PRO:-}
+      STRIPE_PRICE_ID_BUSINESS: ${STRIPE_PRICE_ID_BUSINESS:-}
+      STRIPE_PRICE_ID_ENTERPRISE: ${STRIPE_PRICE_ID_ENTERPRISE:-}
+      NEXA_SECRET_KEY: ${NEXA_SECRET_KEY:?set NEXA_SECRET_KEY}
+    depends_on:
+      - postgres
+      - redis
+    ports:
+      - "8000:8000"
+    networks:
+      - internal
+      - public
+
+  web:
+    build:
+      context: ./web
+      args:
+        NEXT_PUBLIC_AETHOS_API_BASE: ${NEXT_PUBLIC_AETHOS_API_BASE:-http://localhost:8000}
+        NEXT_PUBLIC_STRIPE_PRICE_ID_PRO: ${NEXT_PUBLIC_STRIPE_PRICE_ID_PRO:-}
+        NEXT_PUBLIC_STRIPE_PRICE_ID_BUSINESS: ${NEXT_PUBLIC_STRIPE_PRICE_ID_BUSINESS:-}
+    environment:
+      NODE_ENV: production
+    depends_on:
+      - api
+    ports:
+      - "3000:3000"
+    networks:
+      - public
+
+volumes:
+  pgdata:
+
+networks:
+  internal:
+  public:
