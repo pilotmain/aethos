@@ -3,6 +3,7 @@ REST API for orchestration sub-agents (spawn / list / CRUD / CEO lifecycle).
 
 Uses the same web chat scope as the gateway: ``web:{user_id}:default``.
 Requires ``X-User-Id`` (+ optional bearer when ``NEXA_WEB_API_TOKEN`` is set).
+Ids are validated via :func:`~app.services.web_user_id.validate_web_user_id` (e.g. ``telegram_<digits>`` → ``tg_<digits>``).
 """
 
 from __future__ import annotations

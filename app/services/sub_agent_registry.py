@@ -160,6 +160,24 @@ class AgentRegistry:
             agents = [a for a in agents if a.parent_chat_id == chat_id]
         return agents
 
+    def list_agents_merged(self, scopes: list[str]) -> list[SubAgent]:
+        """Return unique agents across ``parent_chat_id`` values (first occurrence wins)."""
+        seen: set[str] = set()
+        out: list[SubAgent] = []
+        for scope in scopes:
+            for a in self.list_agents(scope):
+                if a.id not in seen:
+                    seen.add(a.id)
+                    out.append(a)
+        return out
+
+    def get_agent_by_name_in_scopes(self, name: str, scopes: list[str]) -> SubAgent | None:
+        for scope in scopes:
+            a = self.get_agent_by_name(name, scope)
+            if a:
+                return a
+        return None
+
     def update_status(self, agent_id: str, status: AgentStatus) -> bool:
         agent = self.get_agent(agent_id)
         if not agent:

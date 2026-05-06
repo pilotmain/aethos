@@ -11,7 +11,8 @@ from telegram.ext import ContextTypes
 
 from app.core.db import SessionLocal
 from app.services.agent.activity_tracker import get_activity_tracker
-from app.services.sub_agent_registry import AgentRegistry, AgentStatus, SubAgent
+from app.core.config import get_settings
+from app.services.sub_agent_registry import AgentRegistry, AgentStatus
 from app.services.sub_agent_router import telegram_agent_registry_chat_id
 from app.services.telegram_service import TelegramService
 
@@ -35,27 +36,6 @@ def _telegram_subagent_scopes(telegram_chat_id: int, app_user_id: str) -> list[s
     return scopes
 
 
-def _merge_agents_by_id(registry: AgentRegistry, scopes: list[str]) -> list[SubAgent]:
-    seen: set[str] = set()
-    out: list[SubAgent] = []
-    for scope in scopes:
-        for a in registry.list_agents(scope):
-            if a.id not in seen:
-                seen.add(a.id)
-                out.append(a)
-    return out
-
-
-def _get_agent_by_name_scoped(
-    registry: AgentRegistry, name: str, scopes: list[str]
-) -> SubAgent | None:
-    for scope in scopes:
-        a = registry.get_agent_by_name(name, scope)
-        if a:
-            return a
-    return None
-
-
 async def subagent_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Dispatch: list | delete | pause | resume | status <name> [confirm]."""
     if not update.effective_user or not update.message or not update.effective_chat:
@@ -77,6 +57,7 @@ async def subagent_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             await update.message.reply_text(
                 "Orchestration agents (sub-agents)\n\n"
                 "• /subagent list — roster + success rate\n"
+                "• /subagent create <name> <domain> — spawn in this chat (Telegram scope)\n"
                 "• /subagent status <name> — details\n"
                 "• /subagent pause <name>\n"
                 "• /subagent resume <name>\n"
@@ -87,8 +68,48 @@ async def subagent_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             return
 
         sub = args[0].lower()
+
+        if sub == "create":
+            if len(args) < 3:
+                await update.message.reply_text("Usage: /subagent create <name> <domain>")
+                return
+            settings = get_settings()
+            if not bool(getattr(settings, "nexa_agent_orchestration_enabled", False)):
+                await update.message.reply_text(
+                    "Sub-agent orchestration is off. Set NEXA_AGENT_ORCHESTRATION_ENABLED=true."
+                )
+                return
+            name_new = args[1].strip().lstrip("@")
+            domain_new = args[2].strip().lower()
+            if not name_new or not domain_new:
+                await update.message.reply_text("Name and domain are required.")
+                return
+            if registry.get_agent_by_name_in_scopes(name_new, scopes):
+                await update.message.reply_text(
+                    f"An orchestration agent named @{name_new} already exists in this chat or your workspace."
+                )
+                return
+            tscope = telegram_agent_registry_chat_id(update.effective_chat.id)
+            trusted = bool(getattr(settings, "nexa_agent_auto_approve", False))
+            spawned = registry.spawn_agent(name_new, domain_new, tscope, trusted=trusted)
+            if not spawned:
+                await update.message.reply_text(
+                    "Could not create agent (limit reached, duplicate, or orchestration blocked)."
+                )
+                return
+            get_activity_tracker().log_action(
+                agent_id=spawned.id,
+                agent_name=spawned.name,
+                action_type="created",
+                metadata={"via": "telegram_subagent_create", "parent_chat_id": tscope},
+            )
+            await update.message.reply_text(
+                f"✅ @{spawned.name} created ({spawned.domain}). Scope: this Telegram chat."
+            )
+            return
+
         if sub == "list":
-            agents = _merge_agents_by_id(registry, scopes)
+            agents = registry.list_agents_merged(scopes)
             if not agents:
                 await update.message.reply_text(
                     "No orchestration agents in this chat yet. "
@@ -114,11 +135,14 @@ async def subagent_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             return
 
         if len(args) < 2:
-            await update.message.reply_text("Usage: /subagent <list|status|pause|resume|delete> <name> …")
+            await update.message.reply_text(
+                "Usage: /subagent <list|create|status|pause|resume|delete> … "
+                "(create needs name + domain)"
+            )
             return
 
         name = args[1].strip().lstrip("@")
-        agent = _get_agent_by_name_scoped(registry, name, scopes)
+        agent = registry.get_agent_by_name_in_scopes(name, scopes)
         if not agent:
             await update.message.reply_text(
                 f"No orchestration agent named '{name}' for this chat/account "

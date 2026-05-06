@@ -13,6 +13,9 @@ WEB_USER_ID_INVALID: Final[str] = (
 
 _MAX_LEN: Final[int] = 80
 
+# Legacy / mistaken client alias (curl scripts, docs). Canonical Telegram channel id is tg_<digits>.
+_TELEGRAM_LEGACY: Final[re.Pattern[str]] = re.compile(r"^telegram_[0-9]{3,20}$")
+
 _TG: Final[re.Pattern[str]] = re.compile(r"^tg_[0-9]{3,20}$")
 _WEB: Final[re.Pattern[str]] = re.compile(r"^web_[A-Za-z0-9_-]{1,64}$")
 _LOCAL: Final[re.Pattern[str]] = re.compile(r"^local_[A-Za-z0-9_-]{1,64}$")
@@ -28,11 +31,19 @@ _AM: Final[re.Pattern[str]] = re.compile(r"^am_[a-f0-9]{8,32}$")
 _SLACK: Final[re.Pattern[str]] = re.compile(r"^slack_[A-Za-z0-9]{1,64}$")
 
 
+def _normalize_web_user_id_aliases(s: str) -> str:
+    """Map informal Telegram ids to canonical ``tg_<digits>`` before pattern validation."""
+    if _TELEGRAM_LEGACY.match(s):
+        return "tg_" + s[len("telegram_") :]
+    return s
+
+
 def validate_web_user_id(raw: str) -> str:
     """
     Return a safe web user id or raise :exc:`ValueError`.
 
-    Accepted: ``tg_<3–20 digits>``, ``web_<1–64 safe chars>``, ``local_<1–64 safe chars>``,
+    Accepted: ``tg_<3–20 digits>`` (alias: ``telegram_<digits>`` → normalized to ``tg_…``),
+    ``web_<1–64 safe chars>``, ``local_<1–64 safe chars>``,
     ``em_<8–32 lowercase hex>`` (email channel),
     ``wa_<4–20 digits>`` (WhatsApp), ``sms_<4–20 digits>`` (SMS / Twilio),
     ``am_<8–32 lowercase hex>`` (Apple Messages),
@@ -46,6 +57,7 @@ def validate_web_user_id(raw: str) -> str:
     s = s0.strip()
     if s != s0 or not s:
         raise ValueError
+    s = _normalize_web_user_id_aliases(s)
     if any(c.isspace() for c in s):
         raise ValueError
     if len(s) > _MAX_LEN or ":" in s:
