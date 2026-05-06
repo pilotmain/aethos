@@ -9,8 +9,8 @@ from collections.abc import AsyncIterator
 from typing import Callable
 
 from app.core.config import get_settings
+from app.services.budget.helpers import budget_enabled
 from app.services.budget.hooks import (
-    budget_enabled,
     check_budget_before_llm,
     llm_preflight_estimate,
     record_budget_after_llm,

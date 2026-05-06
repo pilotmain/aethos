@@ -1,7 +1,7 @@
 """Phase 28 — per-member token budgets (work hours)."""
 
+from app.services.budget.helpers import budget_enabled
 from app.services.budget.hooks import (
-    budget_enabled,
     check_budget_before_llm,
     estimate_tokens_from_messages,
     estimate_tokens_from_text,

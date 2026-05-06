@@ -5,7 +5,9 @@ Shared helpers for Phase 28 budget checks and LLM usage recording.
 from __future__ import annotations
 
 import logging
+
 from app.core.config import get_settings
+from app.services.budget.helpers import budget_enabled
 from app.services.budget.models import UsageType
 from app.services.budget.tracker import BudgetTracker
 from app.services.llm.base import Message
@@ -16,11 +18,6 @@ _BLOCKED_REPLY = (
     "⚠️ Budget limit reached for this team member (work hours). "
     "Ask an admin to raise the monthly limit or wait for the next reset."
 )
-
-
-def budget_enabled() -> bool:
-    s = get_settings()
-    return bool(getattr(s, "nexa_budget_enabled", True))
 
 
 def estimate_tokens_from_text(text: str | None) -> int:
