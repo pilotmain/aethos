@@ -5,10 +5,12 @@ from __future__ import annotations
 import uuid
 from pathlib import Path
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.config import REPO_ROOT, get_settings
 from app.models.dev_runtime import NexaDevWorkspace
+from app.services.workspace_registry import list_roots
 
 
 def allowed_workspace_roots() -> list[Path]:
@@ -76,6 +78,49 @@ def get_workspace(db: Session, user_id: str, workspace_id: str) -> NexaDevWorksp
     return row
 
 
+def register_dev_workspace_for_registry_root(
+    db: Session,
+    owner_user_id: str,
+    path_normalized: str,
+) -> NexaDevWorkspace | None:
+    """
+    After ``/workspace add``, mirror the same directory as a **dev workspace** row so
+    automation / Mission Control sees ``dev_workspace_registered`` without NEXA_DEV_WORKSPACE_ROOTS hacks.
+    """
+    uid = (owner_user_id or "").strip()[:128]
+    pn = (path_normalized or "").strip()
+    if not uid or not pn:
+        return None
+    roots = list_roots(db, uid, active_only=True)
+    if not any((r.path_normalized or "") == pn for r in roots):
+        return None
+    p = Path(pn)
+    if not p.is_dir():
+        return None
+    existing = db.scalars(
+        select(NexaDevWorkspace).where(
+            NexaDevWorkspace.user_id == uid,
+            NexaDevWorkspace.repo_path == pn,
+        )
+    ).first()
+    if existing:
+        return existing
+    wid = str(uuid.uuid4())
+    row = NexaDevWorkspace(
+        id=wid,
+        user_id=uid,
+        name=(p.name or "workspace")[:512],
+        repo_path=str(p.resolve()),
+        repo_url=None,
+        branch=None,
+        status="ready",
+    )
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    return row
+
+
 def list_workspaces(db: Session, user_id: str, *, limit: int = 100) -> list[NexaDevWorkspace]:
     from sqlalchemy import select
 
@@ -92,6 +137,7 @@ __all__ = [
     "allowed_workspace_roots",
     "validate_workspace_path",
     "register_workspace",
+    "register_dev_workspace_for_registry_root",
     "get_workspace",
     "list_workspaces",
 ]

@@ -1123,7 +1123,22 @@ async def workspace_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
             except ValueError as e:
                 await update.message.reply_text(str(e)[:3500])
                 return
-            await update.message.reply_text(f"Registered workspace root #{row.id}: {row.path_normalized}")
+            extra = ""
+            try:
+                from app.services.dev_runtime.workspace import register_dev_workspace_for_registry_root
+
+                dw = register_dev_workspace_for_registry_root(db, uid, row.path_normalized)
+                if dw:
+                    short = (dw.id or "")[:10]
+                    extra = (
+                        f"\n\n✅ **Dev workspace** registered for automation (`{short}…`). "
+                        "File monitor and dev flows can use this path."
+                    )
+            except Exception:
+                pass
+            await update.message.reply_text(
+                f"Registered workspace root #{row.id}: {row.path_normalized}{extra}"[:9000]
+            )
             return
 
         if sub == "revoke":

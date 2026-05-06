@@ -1,4 +1,7 @@
-"""Vercel CLI helper — projects list / deploy (fixed argv only)."""
+"""Vercel CLI helper — projects list / deploy (fixed argv only).
+
+Set **`VERCEL_TOKEN`** or **`VERCEL_API_TOKEN`** for non-interactive use (no `vercel login`).
+"""
 
 from __future__ import annotations
 
@@ -7,6 +10,8 @@ import shutil
 import subprocess
 from typing import Any
 
+from app.services.infra.cli_env import cli_auth_env
+
 
 class VercelClient:
     """Thin synchronous wrapper around the Vercel CLI."""
@@ -14,9 +19,11 @@ class VercelClient:
     def list_projects_json(self, *, timeout_sec: int = 45) -> list[dict[str, Any]]:
         if not shutil.which("vercel"):
             return []
+        env = cli_auth_env()
         for argv in (
             ["vercel", "project", "ls", "--output", "json"],
             ["vercel", "projects", "ls", "--output", "json"],
+            ["vercel", "projects", "list", "--output", "json"],
         ):
             try:
                 r = subprocess.run(
@@ -24,6 +31,7 @@ class VercelClient:
                     capture_output=True,
                     text=True,
                     timeout=timeout_sec,
+                    env=env,
                 )
             except (OSError, subprocess.TimeoutExpired):
                 continue
@@ -48,6 +56,7 @@ class VercelClient:
                 capture_output=True,
                 text=True,
                 timeout=timeout_sec,
+                env=cli_auth_env(),
             )
         except subprocess.TimeoutExpired:
             return {"success": False, "error": f"vercel deploy timed out after {timeout_sec}s"}

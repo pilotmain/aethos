@@ -1,4 +1,8 @@
-"""Railway CLI helper — deploy / auth probes (fixed argv only)."""
+"""Railway CLI helper — deploy / auth probes (fixed argv only).
+
+Supports **`RAILWAY_TOKEN`** / **`RAILWAY_API_TOKEN`** so CI-style deploys work without `railway link`.
+Optional: **`RAILWAY_PROJECT_ID`** (CLI selects project when not linked).
+"""
 
 from __future__ import annotations
 
@@ -6,6 +10,8 @@ import os
 import shutil
 import subprocess
 from typing import Any
+
+from app.services.infra.cli_env import cli_auth_env
 
 
 class RailwayClient:
@@ -28,7 +34,7 @@ class RailwayClient:
                 "error": "Railway CLI not found. Install: `npm install -g @railway/cli`",
             }
 
-        env = os.environ.copy()
+        env = cli_auth_env()
         if extra_env:
             for k, v in extra_env.items():
                 if k and v is not None:
@@ -48,28 +54,48 @@ class RailwayClient:
         return first
 
     def _run_up(self, env: dict[str, str], *, timeout_sec: int) -> dict[str, Any]:
-        try:
-            r = subprocess.run(
-                ["railway", "up"],
-                capture_output=True,
-                text=True,
-                timeout=timeout_sec,
-                env=env,
-            )
-        except subprocess.TimeoutExpired:
-            return {"success": False, "error": f"railway up timed out after {timeout_sec}s"}
-        except OSError as exc:
-            return {"success": False, "error": str(exc)}
+        argv_candidates = (
+            ["railway", "up", "--detach"],
+            ["railway", "up"],
+        )
+        last_out = ""
+        last_err = ""
+        last_code = 1
+        for argv in argv_candidates:
+            try:
+                r = subprocess.run(
+                    argv,
+                    capture_output=True,
+                    text=True,
+                    timeout=timeout_sec,
+                    env=env,
+                )
+            except subprocess.TimeoutExpired:
+                return {"success": False, "error": f"railway up timed out after {timeout_sec}s"}
+            except OSError as exc:
+                return {"success": False, "error": str(exc)}
 
-        out = (r.stdout or "").strip()
-        err = (r.stderr or "").strip()
-        if r.returncode == 0:
-            return {"success": True, "output": out or "(no stdout)", "stderr": err}
+            out = (r.stdout or "").strip()
+            err = (r.stderr or "").strip()
+            last_out, last_err, last_code = out, err, r.returncode
+            if r.returncode == 0:
+                return {"success": True, "output": out or "(no stdout)", "stderr": err}
+            blob = (err or out or "").lower()
+            if "--detach" in argv and ("unknown" in blob or "invalid" in blob) and "detach" in blob:
+                continue
+
+        hint = ""
+        b = (last_err or last_out or "").lower()
+        if "link" in b or "no linked" in b or "not linked" in b:
+            hint = (
+                "\n💡 Set **RAILWAY_TOKEN** (and optionally **RAILWAY_PROJECT_ID**) in `.env`, "
+                "or run `railway link` once on the worker."
+            )
         return {
             "success": False,
-            "error": err or out or f"exit {r.returncode}",
-            "stdout": out,
-            "stderr": err,
+            "error": (last_err or last_out or f"exit {last_code}") + hint,
+            "stdout": last_out,
+            "stderr": last_err,
         }
 
     def whoami(self) -> dict[str, Any]:
@@ -81,6 +107,7 @@ class RailwayClient:
                 capture_output=True,
                 text=True,
                 timeout=15,
+                env=cli_auth_env(),
             )
         except (OSError, subprocess.TimeoutExpired) as exc:
             return {"logged_in": False, "error": str(exc)}

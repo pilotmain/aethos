@@ -34,6 +34,7 @@ from app.services.fsmonitor import watch
 from app.services.infra.railway import get_railway_client
 from app.services.infra.vercel import get_vercel_client
 from app.services.qa_agent.file_analysis import run_qa_file_analysis
+from app.services.telegram_outbound import send_telegram_message
 from app.services.sub_agent_audit import log_agent_event
 from app.services.sub_agent_auto_approve import get_auto_approve_message, should_auto_approve
 from app.services.sub_agent_autoqueue_guard import (
@@ -400,23 +401,39 @@ class AgentExecutor:
         err = (res.get("error") or res.get("stderr") or "unknown error")[:2000]
         return (
             f"❌ **Railway deploy failed**\n\n```\n{err}\n```\n\n"
-            "💡 Ensure `railway login` on the worker and the project is linked."
+            "💡 Set **`RAILWAY_TOKEN`** (or `RAILWAY_API_TOKEN`) and optionally **`RAILWAY_PROJECT_ID`** "
+            "in `.env`, or run `railway link` on the worker."
         )
 
     def _fs_monitor_ack(self, agent: SubAgent, message: str, chat_id: str) -> str:
-        m = re.search(r"(?i)\bmonitor\s+(\S+)", message or "")
-        if not m:
+        raw_m = (message or "").strip()
+        raw_path: str | None = None
+        m = re.search(r"(?is)\bmonitor\s+(.+?)(?:\s+for\s+|$)", raw_m)
+        if m:
+            raw_path = m.group(1).strip().strip("`\"'")
+        if not raw_path:
+            m2 = re.search(r"(?i)\bwatch\s+(\S+)", raw_m)
+            raw_path = m2.group(1).strip().strip("`\"'") if m2 else None
+        if not raw_path:
             return (
                 "👀 **Monitor** — specify a directory.\n"
                 "Example: `Monitor /Users/you/proj for Python file changes`"
             )
-        raw_path = m.group(1).strip().strip("`\"'")
         pattern = "*.py"
         low = (message or "").lower()
         if "javascript" in low or ".js" in low:
             pattern = "*.js"
         if "*" in raw_path:
             pattern = raw_path.split("*")[-1] or pattern
+
+        def _telegram_chat_target(scope: str) -> str | None:
+            s = (scope or "").strip()
+            if s.lower().startswith("telegram:"):
+                tail = s.split(":", 1)[1].strip()
+                return tail or None
+            if s.lstrip("-").isdigit():
+                return s
+            return None
 
         def _on_change(fp: str) -> None:
             logger.info(
@@ -425,6 +442,12 @@ class AgentExecutor:
                 agent.name,
                 fp[:500],
             )
+            tid = _telegram_chat_target(chat_id)
+            if tid:
+                send_telegram_message(
+                    tid,
+                    f"📝 **File changed**\n`{fp}`\n\nTip: `@qa_agent analyze {fp}`",
+                )
 
         try:
             wid = watch(raw_path, pattern, _on_change, duration_seconds=1800.0)

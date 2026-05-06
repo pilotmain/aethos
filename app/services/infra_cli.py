@@ -10,6 +10,9 @@ import shutil
 import subprocess
 from typing import Sequence
 
+from app.services.infra.cli_env import cli_auth_env
+
+
 def _run(argv: Sequence[str], *, timeout: int = 45) -> tuple[int, str, str]:
     try:
         r = subprocess.run(
@@ -17,6 +20,7 @@ def _run(argv: Sequence[str], *, timeout: int = 45) -> tuple[int, str, str]:
             capture_output=True,
             text=True,
             timeout=timeout,
+            env=cli_auth_env(),
         )
         return r.returncode, (r.stdout or "").strip(), (r.stderr or "").strip()
     except FileNotFoundError as exc:
@@ -34,7 +38,7 @@ def railway_whoami() -> str:
     detail = err or out or "not logged in"
     return (
         f"❌ **Railway** auth check failed ({detail}).\n"
-        "Run `railway login` on the host that executes this command."
+        "Use **`RAILWAY_TOKEN`** (or `RAILWAY_API_TOKEN`) in `.env`, or run `railway login` on the worker."
     )
 
 
@@ -62,7 +66,7 @@ def vercel_whoami() -> str:
         return f"▲ **Vercel** (whoami unclear; teams):\n```\n{wout[:8000]}\n```"
     return (
         f"❌ **Vercel** login required ({err or out or werr}).\n"
-        "Run `vercel login` on the worker host."
+        "Set **`VERCEL_TOKEN`** / **`VERCEL_API_TOKEN`** in `.env`, or run `vercel login` on the worker."
     )
 
 
@@ -81,7 +85,9 @@ def vercel_projects_list() -> str:
         if code == 0:
             body = (out or "").strip()
             if not body:
-                return "📁 **Vercel projects:** _(empty output — try `vercel login` on the worker)_"
+                return (
+                    "📁 **Vercel projects:** _(empty output — set **VERCEL_TOKEN** or run `vercel login` on the worker)_"
+                )
             return f"📁 **Vercel projects**\n\n```\n{body[:12000]}\n```"
     w = vercel_whoami()
     if w.startswith("❌"):
