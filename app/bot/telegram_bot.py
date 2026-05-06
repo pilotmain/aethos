@@ -3409,7 +3409,14 @@ async def _handle_incoming_text_impl(
                     )
                     return
 
-                _ca_dm = try_deterministic_custom_agent_turn(db, app_user_id, tstrip)
+                _ca_dm = try_deterministic_custom_agent_turn(
+                    db,
+                    app_user_id,
+                    tstrip,
+                    telegram_chat_id=int(update.effective_chat.id)
+                    if update.effective_chat
+                    else None,
+                )
                 if _ca_dm is not None:
                     await update.message.reply_text(_ca_dm)
                     _persist_conversation_turn(

@@ -6,13 +6,14 @@ from app.services.sub_agent_natural_creation import (
     normalize_sub_agent_domain,
     parse_natural_sub_agent_specs,
     prefers_registry_sub_agent,
+    _fallback_registry_specs_from_explicit_nl,
 )
 
 
 def test_prefers_registry_vs_custom_product() -> None:
     assert prefers_registry_sub_agent("create agent qa_agent test") is True
     assert prefers_registry_sub_agent("create two agents qa_agent and marketing_agent") is True
-    assert prefers_registry_sub_agent("create a custom agent called legal-reviewer") is False
+    assert prefers_registry_sub_agent("create a custom agent called legal-reviewer") is True
     assert prefers_registry_sub_agent("create custom agent qa_agent for QA") is True
 
 
@@ -36,6 +37,13 @@ def test_parse_multi_and_handles() -> None:
     assert spec[1][0] == "marketing_agent"
     assert spec[0][1] == "qa"
     assert spec[1][1] == "marketing"
+
+
+def test_fallback_explicit_named_extracts_handle() -> None:
+    specs = _fallback_registry_specs_from_explicit_nl(
+        "Create me a custom agent called @legal-reviewer. It reviews contracts."
+    )
+    assert specs and specs[0][0] == "legal-reviewer"
 
 
 def test_normalize_security_and_qa() -> None:

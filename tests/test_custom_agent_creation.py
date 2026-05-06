@@ -12,7 +12,7 @@ def test_intent_rule_create_agent() -> None:
     assert get_intent("create an agent for legal") == "create_sub_agent"
     assert get_intent("Create agent @foo") == "create_sub_agent"
     assert get_intent("  create agent x") == "create_sub_agent"
-    assert get_intent("create a custom agent called helper") == "create_custom_agent"
+    assert get_intent("create a custom agent called helper") == "create_sub_agent"
 
 
 def test_intent_not_misclassified() -> None:

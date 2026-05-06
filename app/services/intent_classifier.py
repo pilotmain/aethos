@@ -21,7 +21,7 @@ Valid intents:
 - external_investigation: user is asking about a hosted provider/service (Railway, Render, deploy health, production outage) without necessarily naming local files
 - brain_dump: user is listing tasks, responsibilities, errands, or things they need to organize
 - create_sub_agent: user wants to spawn an orchestration sub-agent (registry; natural language or ``subagent create`` style)
-- create_custom_agent: user wants to create an LLM-only **custom** agent (explicit “custom agent” product phrasing / structured blocks)
+- create_custom_agent: legacy LLM-only profile (rare); Phase 48 routes **create … agent** to **create_sub_agent** when orchestration NL matches
 - capability_question: user asks what the assistant can do, cannot do, or whether it can help with a specific domain
 - help_request: user asks for help, but does not provide actual tasks yet
 - followup_reply: user says they did not complete something, or replies to a check-in
@@ -46,7 +46,7 @@ Important rules:
 - If the user is answering a prior prompt about Railway/CLI auth or deploy preferences — classify as external_execution_continue.
 - If the user focuses on Railway/hosted deploy/service health/production outage without that full execution pipeline or follow-up context — classify as external_investigation unless they only want local repo debugging paths.
 - If the user wants orchestration/registry agents (natural “create agents …”, ``*_agent`` handles, ``subagent create``), classify as **create_sub_agent**.
-- If the user explicitly asks for a **custom agent** (LLM-only profile) with no orchestration cues, classify as **create_custom_agent** — except vague multi-agent capability questions; those are capability_question.
+- **create … agent** without orchestration cues may still classify **create_custom_agent** only when registry NL routing is off (e.g. numbered lists); prefer **create_sub_agent** per Phase 48.
 - If uncertain, choose general_chat, not brain_dump.
 
 Return JSON only:

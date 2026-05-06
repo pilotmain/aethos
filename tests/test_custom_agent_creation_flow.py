@@ -111,8 +111,8 @@ def test_regulated_misuse_blocks_creation(mem_db: Session) -> None:
     assert get_custom_agent(mem_db, str(uid), "lawyer") is None
 
 
-def test_is_create_request_phrases() -> None:
-    assert is_create_custom_agent_request(
+def test_is_create_request_deprecated() -> None:
+    assert not is_create_custom_agent_request(
         "Create me a custom agent called @task-bot for tasks."
     )
     assert not is_create_custom_agent_request("What is the weather?")
@@ -127,24 +127,11 @@ def test_multi_agent_question_does_not_create_user_agent(mem_db: Session) -> Non
     assert len(rows) == 0
 
 
-def test_deterministic_turn_create(mem_db: Session) -> None:
+def test_deterministic_turn_no_longer_creates_llm_custom_agent(mem_db: Session) -> None:
+    """Phase 48: NL creation uses orchestration registry (see try_spawn_natural_sub_agents)."""
     uid = mem_db.query(User).first().id
-    # guest users may not create — User row exists; can_user might fail without telegram BYOK
-    # monkeypatch can_user_create to True for test
-    from app.services import custom_agents as ca
-
-    def _always_ok(db: Session, app_uid: str) -> tuple[bool, str | None]:
-        return (True, None)
-
-    mem_db.__class__  # noqa: B018 — keep session valid
-    monkey = pytest.MonkeyPatch()
-    monkey.setattr(ca, "can_user_create_custom_agents", _always_ok)
-    try:
-        out = try_deterministic_custom_agent_turn(mem_db, str(uid), LEGAL_PROMPT)
-        assert out is not None
-        assert "legal-reviewer" in out
-    finally:
-        monkey.undo()
+    out = try_deterministic_custom_agent_turn(mem_db, str(uid), LEGAL_PROMPT)
+    assert out is None
 
 
 def test_describe_custom_agent(mem_db: Session) -> None:

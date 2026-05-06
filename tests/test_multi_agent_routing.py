@@ -32,8 +32,8 @@ def test_explicit_team_for_goal_not_capability_question() -> None:
     )
 
 
-def test_create_custom_agent_request_strict() -> None:
-    assert is_create_custom_agent_request(
+def test_create_custom_agent_request_deprecated() -> None:
+    assert not is_create_custom_agent_request(
         "Create me a custom agent called @legal-reviewer. It reviews contracts."
     )
     assert not is_create_custom_agent_request(MULTI_Q)

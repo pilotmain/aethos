@@ -55,10 +55,9 @@ def normalize_sub_agent_domain(raw: str) -> str:
 
 def prefers_registry_sub_agent(text: str) -> bool:
     """
-    True → route to sub-agent registry instead of the LLM custom-agent primitive.
+    True → route to orchestration sub-agent registry (Phase 48 single-system rule).
 
-    Reserve **custom agent** (exact product phrase) for the legacy LLM-only flow unless the user
-    clearly asked for orchestration-style handles (``*_agent``, multi-agent, plain ``subagent create``).
+    Numbered/bullet-first lists stay off registry parsing (avoid greedy multi-line roster spam).
     """
     raw = (text or "").strip()
     tl = raw.lower()
@@ -66,16 +65,7 @@ def prefers_registry_sub_agent(text: str) -> bool:
         return False
     if not re.search(r"(?i)\b(create|make|add|build|spawn)\b", raw):
         return False
-    # Bulleted / numbered custom-agent lists stay on the conversational UserAgent path.
     if re.search(r"(?m)^\s*\d+[\).]\s+\S", raw):
-        return False
-    if "custom agent" in tl:
-        if re.search(r"[\w-]+_agent\b", text or "", re.I):
-            return True
-        if re.search(r"\b(?:two|three|several|\d+)\s+agents\b", tl):
-            return True
-        if re.match(r"(?i)\s*subagent\s+create\b", tl.strip()):
-            return True
         return False
     return True
 
@@ -231,6 +221,31 @@ def parse_natural_sub_agent_specs(text: str) -> list[tuple[str, str]]:
     return []
 
 
+def _fallback_registry_specs_from_explicit_nl(text: str) -> list[tuple[str, str]]:
+    """Parse explicit legacy NL patterns (``create … agent called X``) into registry specs."""
+    raw = (text or "").strip()
+    if not raw:
+        return []
+    try:
+        from app.services.custom_agent_parser import is_valid_user_agent_handle
+        from app.services.custom_agent_routing import (
+            _RE_ADD_CUSTOM_AGENT_AT,
+            _RE_EXPLICIT_NAMED_AGENT,
+            _RE_SETUP_AGENT_NAMED,
+        )
+    except ImportError:
+        return []
+
+    for rx in (_RE_EXPLICIT_NAMED_AGENT, _RE_ADD_CUSTOM_AGENT_AT, _RE_SETUP_AGENT_NAMED):
+        m = rx.search(raw)
+        if not m:
+            continue
+        nm = (m.group(1) or "").strip().lstrip("@")
+        if nm and is_valid_user_agent_handle(nm):
+            return [(nm, _infer_domain(nm, raw))]
+    return []
+
+
 def try_spawn_natural_sub_agents(
     db: Session | None,
     app_user_id: str,
@@ -257,14 +272,17 @@ def try_spawn_natural_sub_agents(
 
     specs = parse_natural_sub_agent_specs(user_text)
     if not specs:
+        specs = _fallback_registry_specs_from_explicit_nl(user_text)
+    if not specs:
         return (
             "**Create orchestration agents**\n\n"
             "Examples:\n"
             "• `create two agents qa_agent and marketing_agent`\n"
+            "• `create me a custom agent called legal-reviewer` — same registry\n"
             "• `subagent create ops_agent ops`\n"
             "• `create agent security_expert security`\n\n"
             "Domains include **qa**, **marketing**, **git**, **vercel**, **railway**, **ops**, **test**, **security**.\n\n"
-            "View roster: `/subagent list` · Mission Control (web) shows the same team under **orchestration**."
+            "View roster: `/subagent list` · Mission Control → **orchestration.sub_agents**."
         )
 
     registry = AgentRegistry()

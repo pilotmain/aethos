@@ -98,38 +98,8 @@ def custom_agent_message_blocks_folder_heuristics(text: str) -> bool:
 
 
 def is_create_custom_agent_request(text: str) -> bool:
-    raw = (text or "").strip()
-    if not raw or is_multi_agent_capability_question(raw):
-        return False
-    from app.services.sub_agent_natural_creation import prefers_registry_sub_agent
-
-    if prefers_registry_sub_agent(raw):
-        return False
-    tl = raw.lower()
-    if "agent" not in tl:
-        return False
-    if not any(p in tl for p in ("create", "make", "build", "set up", "add")):
-        return False
-    if _RE_EXPLICIT_NAMED_AGENT.search(raw):
-        m = _RE_EXPLICIT_NAMED_AGENT.search(raw)
-        if m and is_valid_user_agent_handle(m.group(1)):
-            return True
-    if _RE_ADD_CUSTOM_AGENT_AT.search(raw):
-        m = _RE_ADD_CUSTOM_AGENT_AT.search(raw)
-        if m and is_valid_user_agent_handle(m.group(1)):
-            return True
-    if _RE_SETUP_AGENT_NAMED.search(raw):
-        m = _RE_SETUP_AGENT_NAMED.search(raw)
-        if m and is_valid_user_agent_handle(m.group(1)):
-            return True
-    # Optional @handle only when paired with create/make/add + agent wording and handle validates.
-    if "@" in raw:
-        if not re.search(r"(?is)\b(create|make|build|add|set\s*up)\b.{0,160}\bagent\b", tl):
-            if not re.search(r"(?is)\b(create|make|build|add)\b.{0,120}@", raw):
-                return False
-        mat = re.search(r"@([a-zA-Z0-9_-]{1,40})\b", raw)
-        if mat and is_valid_user_agent_handle(mat.group(1)):
-            return True
+    """Always False (Phase 48): deterministic creation uses orchestration registry only."""
+    _ = text
     return False
 
 
@@ -153,7 +123,13 @@ _RE_AGENT_MGMT = re.compile(
 )
 
 
-def try_deterministic_custom_agent_turn(db: Session, app_user_id: str, user_text: str) -> str | None:
+def try_deterministic_custom_agent_turn(
+    db: Session,
+    app_user_id: str,
+    user_text: str,
+    *,
+    telegram_chat_id: int | None = None,
+) -> str | None:
     """
     Single entry for Web/Telegram before host/next_action. Returns reply text or None.
     """
@@ -161,7 +137,6 @@ def try_deterministic_custom_agent_turn(db: Session, app_user_id: str, user_text
         can_user_create_custom_agents,
         create_custom_agent_from_prompt,
         format_custom_agent_describe_reply,
-        format_custom_agents_list_reply,
         format_unknown_with_custom,
         get_custom_agent,
         normalize_agent_key,
@@ -237,7 +212,9 @@ def try_deterministic_custom_agent_turn(db: Session, app_user_id: str, user_text
         return format_custom_agent_describe_reply(db, app_user_id, md.group(1))
 
     if is_list_custom_agents_request(raw):
-        return format_custom_agents_list_reply(db, app_user_id)
+        from app.bot.unified_agent_commands import format_unified_agents_list_reply
+
+        return format_unified_agents_list_reply(db, app_user_id, telegram_chat_id=telegram_chat_id)
 
     m = _RE_DISABLE.match(raw)
     if m:

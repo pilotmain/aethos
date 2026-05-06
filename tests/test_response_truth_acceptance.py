@@ -212,4 +212,4 @@ def test_acceptance_6_multi_agent_overnight_not_custom_create() -> None:
     assert is_multi_agent_capability_question(q) is True
     assert is_create_custom_agent_request(q) is False
     clar = reply_multi_agent_capability_clarification().lower()
-    assert "nexa" in clar and ("goal" in clar or "concrete" in clar)
+    assert "aethos" in clar and ("goal" in clar or "concrete" in clar)
