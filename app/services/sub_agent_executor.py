@@ -10,6 +10,7 @@ from __future__ import annotations
 import logging
 import re
 import shutil
+import threading
 import time
 from typing import Any
 
@@ -47,6 +48,9 @@ from app.services.sub_agent_registry import AgentRegistry, AgentStatus, SubAgent
 logger = logging.getLogger(__name__)
 
 _SECURITY_REVIEW_NAMES = frozenset({"security_agent", "security_expert", "sec_agent"})
+_DEPLOY_STATUS_RX = re.compile(
+    r"(?is)\b(status\s+update|deployment\s+status|deploy(?:ment)?\s+status|last\s+deploy(?:ment)?)\b"
+)
 
 
 class AgentExecutor:
@@ -232,6 +236,9 @@ class AgentExecutor:
         low = (message or "").lower()
         domain = (agent.domain or "").strip().lower()
 
+        if _DEPLOY_STATUS_RX.search(message or ""):
+            return self._deployment_status_report(chat_id)
+
         if re.search(r"(?i)\bmonitor\s+", message or ""):
             return self._fs_monitor_ack(agent, message, chat_id)
 
@@ -251,7 +258,7 @@ class AgentExecutor:
         # Railway — keyword or railway-tagged agent domain
         if "railway" in low or domain == "railway":
             if any(k in low for k in ("deploy", "ship", "release", "push live")):
-                return self._railway_deploy(message)
+                return self._railway_deploy(message, chat_id)
             if any(k in low for k in ("whoami", "status", "logged", "account")):
                 return _cli_railway_whoami()
             if any(k in low for k in ("project", "list", "apps", "service")):
@@ -385,25 +392,94 @@ class AgentExecutor:
             "**deploy** (prod), or **whoami**. Use `/vercel help` in Telegram for shortcuts."
         )
 
-    def _railway_deploy(self, message: str) -> str:
+    def _railway_deploy(self, message: str, chat_id: str) -> str:
         kv: dict[str, str] = {}
         for m in re.finditer(r"\b([A-Z][A-Z0-9_]{1,24})=(\S+)", message or ""):
             kv[m.group(1)] = m.group(2).strip("`\"'")
         retry = 3000 if kv.get("PORT") == "8080" else None
         client = get_railway_client()
-        res = client.deploy(extra_env=kv or None, retry_alt_port=retry)
+        meta = {"preview": (message or "")[:400]}
+        res = client.deploy_and_track(
+            chat_id=chat_id,
+            extra_env=kv or None,
+            retry_alt_port=retry,
+            metadata=meta,
+        )
         if res.get("success"):
             head = "✅ **Railway deploy** (`railway up`)"
             if res.get("retried"):
                 head += f" — retried with PORT={res.get('retry_port')}"
             out = (res.get("output") or "").strip()[:3500]
-            return f"{head}\n\n```\n{out}\n```"
+            sid = res.get("deployment_session_id")
+            tail = ""
+            if sid:
+                tail = f"\n\n_Session #{sid} — I’ll send another status with logs shortly._"
+            reply = f"{head}\n\n```\n{out}\n```{tail}"
+            self._schedule_deploy_status_ping(chat_id)
+            return reply
         err = (res.get("error") or res.get("stderr") or "unknown error")[:2000]
         return (
             f"❌ **Railway deploy failed**\n\n```\n{err}\n```\n\n"
             "💡 Set **`RAILWAY_TOKEN`** (or `RAILWAY_API_TOKEN`) and optionally **`RAILWAY_PROJECT_ID`** "
             "in `.env`, or run `railway link` on the worker."
         )
+
+    def _deployment_status_report(self, chat_id: str) -> str:
+        """Summarize last recorded deployment + captured logs (Phase 52)."""
+        from app.services.deployment.session import get_deployment_session
+
+        store = get_deployment_session()
+        last = store.get_last_session(chat_id)
+        if not last:
+            return (
+                "📭 No recent deployments recorded for this chat.\n\n"
+                "After you run a Railway deploy from here, I’ll remember the session and can tail logs."
+            )
+        plat = (last.get("platform") or "?").strip()
+        status = (last.get("status") or "?").strip()
+        ok = status == "success"
+        icon = "✅" if ok else "❌"
+        lines = [
+            f"🚂 **Last deployment** ({plat})",
+            f"{icon} Status: {status}",
+            f"Started: {last.get('started_at') or '—'}",
+        ]
+        if last.get("completed_at"):
+            lines.append(f"Completed: {last['completed_at']}")
+        if last.get("url"):
+            lines.append(f"URL: {last['url']}")
+        if last.get("logs_url"):
+            lines.append(f"Logs (dashboard): {last['logs_url']}")
+        err = last.get("error_message")
+        if err:
+            lines.append(f"Error:\n{(err or '')[:1200]}")
+        logs = last.get("last_logs")
+        if logs:
+            snippet = str(logs)[:2500]
+            lines.append("")
+            lines.append("**Recent logs (CLI tail):**")
+            lines.append(f"```\n{snippet}\n```")
+        else:
+            lines.append("")
+            lines.append("_No log tail captured yet — background fetch may still be running._")
+        return "\n".join(lines)[:12000]
+
+    def _schedule_deploy_status_ping(self, chat_id: str, delay_seconds: int = 30) -> None:
+        """Send a second Telegram message with deployment status + logs after a short delay."""
+
+        cid = (chat_id or "").strip()
+        if not cid:
+            return
+
+        def worker() -> None:
+            time.sleep(max(5, int(delay_seconds)))
+            try:
+                body = self._deployment_status_report(cid)
+                send_telegram_message(cid, body[:3900])
+            except Exception as exc:
+                logger.warning("deploy status ping failed: %s", exc)
+
+        threading.Thread(target=worker, daemon=True, name="deploy-status-ping").start()
 
     def _fs_monitor_ack(self, agent: SubAgent, message: str, chat_id: str) -> str:
         raw_m = (message or "").strip()
