@@ -22,6 +22,7 @@ from app.services.host_executor import execute_payload
 from app.services.host_executor_chat import _validate_enqueue_payload, enqueue_host_job_from_validated_payload
 from app.services.host_executor_intent import title_for_payload
 from app.services.host_executor_nl_chain import try_infer_readme_push_chain_nl
+from app.services.agent.activity_tracker import get_activity_tracker
 from app.services.sub_agent_audit import log_agent_event
 from app.services.sub_agent_auto_approve import get_auto_approve_message, should_auto_approve
 from app.services.sub_agent_autoqueue_guard import (
@@ -103,6 +104,7 @@ class AgentExecutor:
                 )
             record_rate_limited_action(agent.id, agent.domain, chat_id)
             self.registry.touch_agent(agent.id)
+            dur_ms = (time.perf_counter() - t0) * 1000.0
             log_agent_event(
                 "execute",
                 agent_id=agent.id,
@@ -112,10 +114,21 @@ class AgentExecutor:
                 user_id=user_id,
                 action=msg[:500],
                 success=True,
-                duration_ms=(time.perf_counter() - t0) * 1000.0,
+                duration_ms=dur_ms,
+            )
+            get_activity_tracker().log_action(
+                agent_id=agent.id,
+                agent_name=agent.name,
+                action_type="execute",
+                input_data={"message": msg[:2000]},
+                output_data={"preview": (out or "")[:2000]},
+                success=True,
+                duration_ms=dur_ms,
+                metadata={"chat_id": chat_id, "user_id": user_id},
             )
             return out
         except Exception as exc:
+            dur_ms = (time.perf_counter() - t0) * 1000.0
             log_agent_event(
                 "execute",
                 agent_id=agent.id,
@@ -126,12 +139,24 @@ class AgentExecutor:
                 action=msg[:500],
                 success=False,
                 error=str(exc)[:2000],
-                duration_ms=(time.perf_counter() - t0) * 1000.0,
+                duration_ms=dur_ms,
+            )
+            get_activity_tracker().log_action(
+                agent_id=agent.id,
+                agent_name=agent.name,
+                action_type="execute",
+                input_data={"message": msg[:2000]},
+                success=False,
+                error=str(exc)[:2000],
+                duration_ms=dur_ms,
+                metadata={"chat_id": chat_id, "user_id": user_id},
             )
             logger.exception("sub_agent execute failed agent=%s", agent.id)
             return f"Execution failed: {exc}"
         finally:
-            self.registry.update_status(agent.id, AgentStatus.IDLE)
+            cur = self.registry.get_agent(agent.id)
+            if cur is not None and cur.status == AgentStatus.BUSY:
+                self.registry.update_status(agent.id, AgentStatus.IDLE)
 
     def _is_qa_security_agent(self, agent: SubAgent) -> bool:
         n = (agent.name or "").strip().lower()

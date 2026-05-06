@@ -20,6 +20,7 @@ from app.api.routes import (
     apple_messages,
     audit_export,
     auth,
+    ceo_dashboard,
     channels,
     checkins,
     browser_automation,
@@ -202,6 +203,13 @@ async def lifespan(app: FastAPI):
             start_telegram_polling_daemon()
         except Exception as exc:
             logging.getLogger("nexa").warning("telegram bot start failed: %s", exc)
+    if getattr(_boot, "nexa_agent_monitoring_enabled", False):
+        try:
+            from app.services.agent.supervisor import get_supervisor
+
+            await get_supervisor().start_monitoring()
+        except Exception as exc:
+            logging.getLogger("nexa").warning("agent supervisor start failed: %s", exc)
     yield
     try:
         from app.services.browser.session import shutdown_browser_session
@@ -209,6 +217,13 @@ async def lifespan(app: FastAPI):
         await shutdown_browser_session()
     except Exception as exc:
         logging.getLogger("nexa").warning("browser session shutdown failed: %s", exc)
+    if getattr(_boot, "nexa_agent_monitoring_enabled", False):
+        try:
+            from app.services.agent.supervisor import get_supervisor
+
+            await get_supervisor().stop_monitoring()
+        except Exception as exc:
+            logging.getLogger("nexa").warning("agent supervisor shutdown failed: %s", exc)
     try:
         from app.services.cron.scheduler import get_nexa_cron_scheduler
 
@@ -277,6 +292,7 @@ app.include_router(nexa_scheduler_api.router, prefix=settings.api_v1_prefix)
 app.include_router(nexa_skills_api.router, prefix=settings.api_v1_prefix)
 app.include_router(orchestration.router, prefix=settings.api_v1_prefix)
 app.include_router(agent_spawn.router, prefix=settings.api_v1_prefix)
+app.include_router(ceo_dashboard.router, prefix=settings.api_v1_prefix)
 app.include_router(jobs.router, prefix=settings.api_v1_prefix)
 app.include_router(web.router, prefix=settings.api_v1_prefix)
 app.include_router(permissions.router, prefix=settings.api_v1_prefix)

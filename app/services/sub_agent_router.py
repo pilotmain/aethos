@@ -118,11 +118,14 @@ class AgentRouter:
             }
 
         if agent.status != AgentStatus.IDLE:
+            hint = (
+                "Resume it with `/subagent resume` or Mission Control when it is paused."
+                if agent.status == AgentStatus.PAUSED
+                else "Try again when it is idle."
+            )
             return {
                 "handled": True,
-                "response": (
-                    f"Agent '@{agent_name}' is {agent.status.value}. Try again when it is idle."
-                ),
+                "response": (f"Agent '@{agent_name}' is {agent.status.value}. {hint}"),
                 "agent_id": agent.id,
                 "agent_name": agent_name,
                 "clean_message": clean_message,

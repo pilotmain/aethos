@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from telegram import Update
 from telegram.ext import Application, CallbackQueryHandler, CommandHandler, MessageHandler, filters
 
+from app.bot.agent_commands import subagent_command
 from app.services.channel_gateway.base import ChannelAdapter
 from app.services.channel_gateway.identity import resolve_channel_user
 from app.services.telegram_service import TelegramService
@@ -131,6 +132,7 @@ def register_telegram_handlers(application: Application) -> None:
     application.add_handler(CommandHandler("agents", tb.agents_cmd))
     application.add_handler(CommandHandler("agent_count", tb.agent_count_cmd))
     application.add_handler(CommandHandler("agent_status", tb.agent_status_cmd))
+    application.add_handler(CommandHandler("subagent", subagent_command))
     application.add_handler(CommandHandler("agent", tb.user_agent_cmd))
     application.add_handler(CommandHandler("learning", tb.learning_cmd))
     application.add_handler(CommandHandler("access", tb.access_cmd))

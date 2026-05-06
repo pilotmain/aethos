@@ -27,6 +27,7 @@ class AgentStatus(Enum):
 
     IDLE = "idle"
     BUSY = "busy"
+    PAUSED = "paused"
     ERROR = "error"
     TERMINATED = "terminated"
 
@@ -191,6 +192,53 @@ class AgentRegistry:
             success=True,
         )
         return True
+
+    def remove_agent(self, agent_id: str) -> bool:
+        """Permanently drop an agent from this process (hard delete)."""
+        agent = self._agents.pop(agent_id, None)
+        if agent is None:
+            return False
+        logger.info("Removed agent %s (%s) chat=%s", agent_id, agent.name, agent.parent_chat_id)
+        log_agent_event(
+            "remove",
+            agent_id=agent_id,
+            agent_name=agent.name,
+            domain=agent.domain,
+            chat_id=agent.parent_chat_id,
+            success=True,
+        )
+        return True
+
+    def patch_agent(
+        self,
+        agent_id: str,
+        *,
+        name: str | None = None,
+        domain: str | None = None,
+        capabilities: list[str] | None = None,
+        status: AgentStatus | None = None,
+        trusted: bool | None = None,
+        metadata_patch: dict[str, Any] | None = None,
+    ) -> SubAgent | None:
+        agent = self.get_agent(agent_id)
+        if not agent:
+            return None
+        if name is not None:
+            agent.name = name.strip()[:120]
+        if domain is not None:
+            agent.domain = domain.strip().lower()[:64]
+        if capabilities is not None:
+            agent.capabilities = list(capabilities)
+        if status is not None:
+            agent.status = status
+        if trusted is not None:
+            agent.trusted = bool(trusted)
+        if metadata_patch:
+            md = dict(agent.metadata or {})
+            md.update(metadata_patch)
+            agent.metadata = md
+        agent.touch()
+        return agent
 
     def cleanup_idle_agents(self) -> int:
         settings = get_settings()

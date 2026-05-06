@@ -1489,7 +1489,7 @@ async def agent_status_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -
                 "Enable NEXA_AGENT_ORCHESTRATION_ENABLED and add members from Mission Control or spawn via API."
             )
             return
-        emoji = {"idle": "🟢", "busy": "🟡", "error": "🔴", "terminated": "⚫"}
+        emoji = {"idle": "🟢", "busy": "🟡", "paused": "⏸️", "error": "🔴", "terminated": "⚫"}
         lines = ["Agent status (this chat)", ""]
         for agent in agents:
             em = emoji.get(agent.status.value, "⚪")

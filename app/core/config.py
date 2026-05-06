@@ -87,6 +87,11 @@ class Settings(BaseSettings):
     nexa_agent_orchestration_enabled: bool = False
     nexa_agent_max_per_chat: int = 5
     nexa_agent_idle_timeout_seconds: int = 3600
+    # Phase 37 — default trusted flag for API `/agents/create` when request omits explicit approval.
+    nexa_agent_auto_approve: bool = False
+    # Phase 37 — optional asyncio supervisor loop (registry + audit health checks).
+    nexa_agent_monitoring_enabled: bool = False
+    nexa_agent_monitor_interval_seconds: int = 30
     # When true with orchestration, sub-agent host payloads run via execute_payload in-process (audit log).
     nexa_agent_orchestration_autoqueue: bool = False
     # Week 5 — in-process rate limits (single-worker; see sub_agent_rate_limit)
