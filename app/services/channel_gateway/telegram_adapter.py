@@ -5,6 +5,18 @@ from typing import Any
 from sqlalchemy.orm import Session
 from telegram import Update
 from telegram.ext import Application, CallbackQueryHandler, CommandHandler, MessageHandler, filters
+from telegram.ext.filters import MessageFilter
+
+from app.services.system_identity.capabilities import is_capability_identity_question
+
+
+class CapabilityIdentityAskFilter(MessageFilter):
+    """Matches short product capability questions (before the generic text router)."""
+
+    __slots__ = ()
+
+    def filter(self, message):  # type: ignore[override]
+        return bool(message.text and is_capability_identity_question(message.text))
 
 from app.bot.agent_commands import subagent_command
 from app.services.channel_gateway.base import ChannelAdapter
@@ -178,4 +190,10 @@ def register_telegram_handlers(application: Application) -> None:
     application.add_handler(CommandHandler("search_tweets", social_cmds.search_tweets_cmd))
     application.add_handler(MessageHandler(filters.PHOTO, tb.handle_incoming_photo))
     application.add_handler(MessageHandler(filters.VOICE, tb.handle_incoming_voice))
+    application.add_handler(
+        MessageHandler(
+            filters.TEXT & ~filters.COMMAND & CapabilityIdentityAskFilter(),
+            tb.handle_what_can_you_do,
+        )
+    )
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, tb.handle_incoming_text))

@@ -1,6 +1,8 @@
-"""Canonical capability flags and identity strings for Nexa-next (Phase 40)."""
+"""Canonical capability flags and identity strings for AethOS (Phase 40)."""
 
 from __future__ import annotations
+
+import re
 
 CAPABILITIES: dict[str, bool] = {
     "dev_execution": True,
@@ -45,6 +47,32 @@ What do you want to get done?"""
 def narrative_capability_answer() -> str:
     """User-facing answer for “what can you do?” / general capability questions."""
     return NEXA_CAPABILITY_REPLY.strip()
+
+
+_CAPABILITY_IDENTITY_RE = re.compile(
+    r"(?is)\b("
+    r"what can you do|"
+    r"what are you capable of|"
+    r"what are your capabilities|"
+    r"your capabilities|"
+    r"what do you support"
+    r")\b",
+)
+
+
+def is_capability_identity_question(text: str) -> bool:
+    """Short product-capability questions → :func:`narrative_capability_answer` (not domain-specific how-tos)."""
+    t = (text or "").strip()
+    if not t or len(t) > 220:
+        return False
+    if not _CAPABILITY_IDENTITY_RE.search(t):
+        return False
+    low = t.lower()
+    if "what can you do" in low:
+        tail = low.split("what can you do", 1)[-1].lstrip()
+        if tail.startswith("with "):
+            return False
+    return True
 
 
 NEXA_MULTI_AGENT_CLARIFICATION = """Yes — AethOS can coordinate multiple runs and parallel, task-focused work when that fits. I still need a **concrete goal** before setting anything up.

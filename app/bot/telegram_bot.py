@@ -51,6 +51,10 @@ from app.services.general_response import (
     is_simple_greeting,
     simple_greeting_reply,
 )
+from app.services.system_identity.capabilities import (
+    is_capability_identity_question,
+    narrative_capability_answer,
+)
 from app.services.handoff_tracking_service import HandoffTrackingService
 from app.services.idea_intake import (
     build_pending_project_payload,
@@ -571,6 +575,14 @@ async def updates_cmd(update: Update, _context: ContextTypes.DEFAULT_TYPE) -> No
     from app.services.release_updates import format_release_updates_for_chat
 
     await update.message.reply_text(format_release_updates_for_chat())
+
+
+async def handle_what_can_you_do(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Capability overview — registered before general text (matches filter only)."""
+    if not update.message:
+        return
+
+    await update.message.reply_text(narrative_capability_answer())
 
 
 async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -3448,7 +3460,21 @@ async def _handle_incoming_text_impl(
                     return
                 tstrip = (_na.user_text_for_pipeline or tstrip or "").strip()
                 text = tstrip
-    
+
+                if is_capability_identity_question(tstrip):
+                    cap_txt = narrative_capability_answer()
+                    await update.message.reply_text(cap_txt)
+                    _persist_conversation_turn(
+                        db,
+                        app_user_id,
+                        cctx,
+                        tstrip,
+                        cap_txt,
+                        "general_chat",
+                        routed_key,
+                    )
+                    return
+
                 if is_simple_greeting(tstrip):
                     gr = simple_greeting_reply(tstrip)
                     await update.message.reply_text(gr)

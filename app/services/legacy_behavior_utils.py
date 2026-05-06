@@ -29,6 +29,10 @@ from app.services.research_capability_copy import (
     format_research_capability_message,
     is_research_capability_question,
 )
+from app.services.system_identity.capabilities import (
+    is_capability_identity_question,
+    narrative_capability_answer,
+)
 from app.services.telegram_onboarding import capability_response, clarify_general_response
 
 logger = logging.getLogger(__name__)
@@ -361,6 +365,9 @@ def build_response(
         behavior,
         context.has_active_plan,
     )
+    if is_capability_identity_question(text):
+        r = apply_tone(narrative_capability_answer(), context.memory)
+        return _out(r)
     if is_command_question(text):
         r = apply_tone(format_command_help_response(), context.memory)
         return _out(r)

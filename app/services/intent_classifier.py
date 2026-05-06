@@ -620,12 +620,10 @@ def get_intent(
 
 
 def is_command_question(text: str) -> bool:
-    """User is asking for Nexa’s command / capability list, not the agent lens view."""
+    """User is asking for AethOS command / capability guidance, not the agent lens view."""
     t = (text or "").lower()
     patterns = [
         "what commands",
-        "what can you do",
-        "what do you support",
         "list commands",
         "available commands",
         "what are the commands",

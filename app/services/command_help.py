@@ -2,7 +2,7 @@
 
 
 def format_command_help_response() -> str:
-    return """Nexa-Next — describe what you want
+    return """AethOS — describe what you want
 
 You can use normal language for:
 
@@ -14,4 +14,4 @@ You can use normal language for:
 
 Paste a public https:// link for read-only summaries when the host allows web access.
 
-You don’t need special syntax — Nexa routes from what you say."""
+You don’t need special syntax — AethOS routes from what you say."""

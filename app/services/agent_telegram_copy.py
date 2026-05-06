@@ -1,15 +1,15 @@
-"""Nexa-Next strings for Telegram (natural language; no legacy slash roster)."""
+"""AethOS strings for Telegram (natural language; no legacy slash roster)."""
 
 
 WELCOME_NEXA = (
-    "Welcome to **Nexa** — a privacy-first AI assistant for missions, development, and chat. "
+    "Welcome to **AethOS** — a privacy-first AI assistant for missions, development, and chat. "
     "Describe what you want in plain language: fixes, plans, research, or automation."
 )
 
 
 def format_agents_list() -> str:
     return (
-        "Nexa — agents\n\n"
+        "AethOS — agents\n\n"
         "· Default assistant — just talk in this chat\n"
         "· Custom agents — describe one in words, or manage them in the web app\n\n"
         "Examples: “fix the failing test”, “plan the release”, “what should I focus on?”"
@@ -18,7 +18,7 @@ def format_agents_list() -> str:
 
 def format_command_center() -> str:
     return (
-        "Nexa\n\n"
+        "AethOS\n\n"
         "You can:\n"
         "· Work on a connected repository (Mission Control + your workspace)\n"
         "· Run structured missions when you describe the outcome\n"
