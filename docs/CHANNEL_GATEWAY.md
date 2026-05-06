@@ -7,7 +7,7 @@
 
 ## Current state
 
-From [HANDOFF_PLATFORM_OVERVIEW.md](HANDOFF_PLATFORM_OVERVIEW.md) and the codebase today:
+From `~/.aethos/docs/handoffs/HANDOFF_PLATFORM_OVERVIEW.md` (local handoff pack) and the codebase today:
 
 - **Telegram** is tightly integrated with permissions, agents, dev jobs, and access control (`app/bot/telegram_bot.py`).
 - **Slack** — HTTP endpoints under `/api/v1/slack/*` plus optional **Socket Mode** (`app/channels/slack/`, `NEXA_SLACK_ENABLED`).
@@ -162,7 +162,7 @@ Nexa becomes **gateway + governance** for AI agents across **communication chann
 - [VISUAL_ARCHITECTURE.md](VISUAL_ARCHITECTURE.md) — platform framing  
 - [ROADMAP.md](ROADMAP.md) — phased direction  
 - [WORKSPACE_AND_PERMISSIONS.md](WORKSPACE_AND_PERMISSIONS.md) — permission and workspace rules  
-- [HANDOFF_PLATFORM_OVERVIEW.md](HANDOFF_PLATFORM_OVERVIEW.md) — repo map for agents  
+- `~/.aethos/docs/handoffs/HANDOFF_PLATFORM_OVERVIEW.md` — repo map for agents (local handoff pack)
 
 ---
 

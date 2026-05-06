@@ -86,7 +86,7 @@ chmod +x run_everything.sh
 ./run_everything.sh start
 ```
 
-(Equivalent: `./run_everything.sh --detach` or `-d`.) Containers use `restart: unless-stopped` so they come back if they crash. To change code, rebuild/restart, or for local dev with hot-reload, use the foreground command below or see `docs/CURSOR_HANDOFF.md` and Compose Watch.
+(Equivalent: `./run_everything.sh --detach` or `-d`.) Containers use `restart: unless-stopped` so they come back if they crash. To change code, rebuild/restart, or for local dev with hot-reload, use the foreground command below or see `~/.aethos/docs/handoffs/CURSOR_HANDOFF.md` (local handoff pack) and Compose Watch.
 
 **Foreground + file watch (while editing code):**
 
@@ -193,4 +193,4 @@ app/
 - A malformed `.env` line (e.g. a product name with spaces) is loaded safely via `emit_sh_exports_from_dotenv.py` for shell helpers, not with raw `source` where that would break.
 - A `PTBUserWarning` about `create_task` in `post_init` on the bot may appear; it does not block startup.
 
-For architecture, roadmap, and handoff, see [CURSOR_HANDOFF.md](CURSOR_HANDOFF.md). For the dev job pipeline, see [DEV_JOB_FLOW.md](DEV_JOB_FLOW.md) and [DEV_JOBS.md](DEV_JOBS.md).
+For architecture, roadmap, and internal handoff notes, see `~/.aethos/docs/handoffs/CURSOR_HANDOFF.md` if you maintain a local copy. For the dev job pipeline, see [DEV_JOB_FLOW.md](DEV_JOB_FLOW.md) and [DEV_JOBS.md](DEV_JOBS.md).

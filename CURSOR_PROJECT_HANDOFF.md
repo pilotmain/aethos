@@ -1,6 +1,6 @@
 # Moved
 
-The project handoff for maintainers and agents is **[docs/CURSOR_HANDOFF.md](docs/CURSOR_HANDOFF.md)**.
+Internal planning handoffs for maintainers and agents live under **`~/.aethos/docs/handoffs/`** (for example `CURSOR_HANDOFF.md`) — they are **not** tracked in this repository.
 
 This stub stays at the repo root so older links, bookmarks, and file history still resolve. **Do not** duplicate long-form handoff here — that became a second source of truth and drifted from the product.
 

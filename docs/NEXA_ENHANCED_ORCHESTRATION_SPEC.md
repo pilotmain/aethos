@@ -199,6 +199,6 @@ Nexa is “OpenClaw-level magic + better” when:
 
 - Per-command Firecracker/gVisor isolation, OS keychain vault, full Mission Control live UI, NexaForge JSON DAG engine, vector memory + `SOUL.md` productization, true background continuation of the same mission after the chat session closes, and the full §11 integration test matrix beyond existing operator/execution tests.
 
-See `docs/HANDOFF_OPERATOR_EXECUTION_AND_ORCHESTRATION.md` for the baseline handoff architecture.
+See `~/.aethos/docs/handoffs/HANDOFF_OPERATOR_EXECUTION_AND_ORCHESTRATION.md` for the baseline handoff architecture (local handoff pack).
 
 *End of spec.*

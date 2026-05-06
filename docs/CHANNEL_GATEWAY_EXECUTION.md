@@ -318,4 +318,4 @@ Nexa becomes a governed multi-channel AI execution gateway.
 
 - [CHANNEL_GATEWAY.md](CHANNEL_GATEWAY.md)  
 - [WORKSPACE_AND_PERMISSIONS.md](WORKSPACE_AND_PERMISSIONS.md)  
-- [HANDOFF_PLATFORM_OVERVIEW.md](HANDOFF_PLATFORM_OVERVIEW.md)  
+- `~/.aethos/docs/handoffs/HANDOFF_PLATFORM_OVERVIEW.md` (local handoff pack)

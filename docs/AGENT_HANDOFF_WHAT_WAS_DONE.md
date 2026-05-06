@@ -40,7 +40,7 @@
 ## 5. Docs added / linked
 
 - **`docs/DEV_JOB_FLOW.md`** — end-to-end dev job execution and troubleshooting.
-- **`docs/DEVELOPMENT_HANDOFF.md`** — practical onboarding (run, test, where code is). **`docs/CURSOR_HANDOFF.md`** links to it.
+- **`docs/DEVELOPMENT_HANDOFF.md`** — practical onboarding (run, test, where code is). **`~/.aethos/docs/handoffs/CURSOR_HANDOFF.md`** complements it if you keep a local pack.
 - **This file:** **`docs/AGENT_HANDOFF_WHAT_WAS_DONE.md`** — “what we did” for the next agent.
 
 ---

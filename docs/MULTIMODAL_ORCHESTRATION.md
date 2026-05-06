@@ -190,7 +190,7 @@ Add **`tests/test_multimodal*.py`**; keep tests hermetic (no real API keys).
 
 | File | Purpose |
 |------|---------|
-| `docs/PHASE_18_MULTIMODAL.md` | This spec (operator + implementer). |
+| `docs/MULTIMODAL_ORCHESTRATION.md` | This spec (operator + implementer). |
 | Update `docs/SKILLS_SYSTEM.md` / gateway docs only if multimodal hooks surface new tools—otherwise avoid scope creep. |
 
 ---
@@ -216,4 +216,4 @@ Add **`tests/test_multimodal*.py`**; keep tests hermetic (no real API keys).
 
 ## 13. One-liner for implementation
 
-Implement Phase 18 per `docs/PHASE_18_MULTIMODAL.md`: multimodal orchestration module, extend LLM messages/providers for vision, STT/TTS adapters, optional image generation, Telegram/Slack/API upload normalization, config flags, `/api/v1/multimodal/*` routes with Mission Control auth where appropriate, privacy limits, tests, and env/docs sync.
+Implement Phase 18 per `docs/MULTIMODAL_ORCHESTRATION.md`: multimodal orchestration module, extend LLM messages/providers for vision, STT/TTS adapters, optional image generation, Telegram/Slack/API upload normalization, config flags, `/api/v1/multimodal/*` routes with Mission Control auth where appropriate, privacy limits, tests, and env/docs sync.

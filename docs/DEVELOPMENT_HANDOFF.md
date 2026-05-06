@@ -2,7 +2,7 @@
 
 **Purpose:** Give a new developer, contractor, or AI agent a **short path** to run the app, know where the code lives, and **line up more development work** without re-reading the whole repo.
 
-**Deeper product + architecture (north star, gaps, build order):** [CURSOR_HANDOFF.md](./CURSOR_HANDOFF.md) — read that for *what* to build next. **This** file is *how* to work in the repo day to day.
+**Deeper product + architecture (north star, gaps, build order):** `~/.aethos/docs/handoffs/CURSOR_HANDOFF.md` (local handoff pack; not in git) — read that for *what* to build next. **This** file is *how* to work in the repo day to day.
 
 ---
 
@@ -34,9 +34,9 @@
 
 ## 3. How “more work” gets into the codebase
 
-1. **Product/roadmap ideas:** See **“Biggest current gaps”** and **“Concrete build order”** in [CURSOR_HANDOFF.md](./CURSOR_HANDOFF.md) — that is the intentional backlog.
+1. **Product/roadmap ideas:** See **“Biggest current gaps”** and **“Concrete build order”** in `~/.aethos/docs/handoffs/CURSOR_HANDOFF.md` if you maintain that pack — that is the intentional backlog.
 2. **From Telegram (same path as “tell cursor to…”)** — queue a `dev_task` / dev executor job; it produces `dev_job_<id>.md` under **`.agent_tasks/`** and drives review/commit steps. Good for *specific* code tasks once the stack and DB are up.
-3. **From the repo (you / another dev):** open a branch, use issues or a private tracker; keep [CURSOR_HANDOFF.md](./CURSOR_HANDOFF.md) in sync if you add major direction.
+3. **From the repo (you / another dev):** open a branch, use issues or a private tracker; keep `~/.aethos/docs/handoffs/CURSOR_HANDOFF.md` in sync if you add major direction.
 4. **Unattended automation (optional):** `DEV_AGENT_COMMAND` (e.g. Codex CLI on the Mac) + [README](../README.md) “Maximum autonomy” / `env.autonomy.example` if you want jobs to run without opening Cursor for every step.
 
 ---
@@ -57,4 +57,4 @@
 
 ---
 
-**If you only read two docs:** this file + [CURSOR_HANDOFF.md](./CURSOR_HANDOFF.md). Product overview: [README.md](../README.md).
+**If you only read two docs:** this file + `~/.aethos/docs/handoffs/CURSOR_HANDOFF.md` (if present). Product overview: [README.md](../README.md).

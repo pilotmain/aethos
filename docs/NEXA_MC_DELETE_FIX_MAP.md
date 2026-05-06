@@ -67,4 +67,4 @@ Expect **0** when purge ran with defaults clearing those rows.
 
 ---
 
-See also **`docs/HANDOFF_MISSION_CONTROL_DELETE.md`** for stack and operational notes.
+See also **`~/.aethos/docs/handoffs/HANDOFF_MISSION_CONTROL_DELETE.md`** for stack and operational notes (local handoff pack).

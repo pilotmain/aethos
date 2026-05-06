@@ -1,7 +1,7 @@
 """
 Optional UX: when a turn looks like “local git workspace” work, mention host action chains.
 
-See ``docs/WEEK2_HOST_ACTION_CHAINS.md``.
+See ``~/.aethos/docs/handoffs/WEEK2_HOST_ACTION_CHAINS.md`` (local handoff pack).
 """
 
 from __future__ import annotations
@@ -37,7 +37,7 @@ def get_local_git_chain_clarification(repo_hint: str | None = None) -> str:
 
 Enable on the worker: `NEXA_HOST_EXECUTOR_CHAIN_ENABLED=1`
 
-Details: `docs/WEEK2_HOST_ACTION_CHAINS.md`
+Details: `~/.aethos/docs/handoffs/WEEK2_HOST_ACTION_CHAINS.md` (local handoff pack)
 """.strip()
 
 

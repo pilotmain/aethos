@@ -11,7 +11,7 @@ This runbook describes **only** what exists in this repository: allowlisted `hos
 
 Successful **verification does not queue** host-executor jobs. After a green `gh auth status`, you still ask separately for mutations (or enqueue payloads), then **approve** each host job when prompted.
 
-Full architecture note: **`docs/HANDOFF_OPERATOR_EXECUTION_AND_ORCHESTRATION.md` §11.8**.
+Full architecture note: **`~/.aethos/docs/handoffs/HANDOFF_OPERATOR_EXECUTION_AND_ORCHESTRATION.md` §11.8** (local handoff pack).
 
 ### FAQ: Why didn’t Nexa push after verifying GitHub / Vercel?
 
@@ -19,7 +19,7 @@ Because **verify** and **mutate** are **different subsystems**. The gateway may 
 
 ### FAQ: What should I say for mutations?
 
-Prefer **short, explicit** requests that match **`host_executor_intent`** patterns where possible (e.g. “git push”), or describe what you want so the UI/LLM builds **`payload_json`**. Long sentences mixing “check git AND add README AND push” are **not** automatically split into three host actions—use separate asks or queue payloads manually. **Optional:** enable **`host_action: chain`** so one approved job runs multiple allowlisted steps in order — see **`docs/WEEK2_HOST_ACTION_CHAINS.md`**.
+Prefer **short, explicit** requests that match **`host_executor_intent`** patterns where possible (e.g. “git push”), or describe what you want so the UI/LLM builds **`payload_json`**. Long sentences mixing “check git AND add README AND push” are **not** automatically split into three host actions—use separate asks or queue payloads manually. **Optional:** enable **`host_action: chain`** so one approved job runs multiple allowlisted steps in order — see **`~/.aethos/docs/handoffs/WEEK2_HOST_ACTION_CHAINS.md`** (local handoff pack).
 
 ## What does *not* exist (do not document or use)
 
@@ -144,4 +144,4 @@ docker exec -it nexa-api sh -c 'ROOT=$(python -c "from app.core.config import ge
 
 - `git_push` host action: commit `4c35bf0` on `main`.
 - CLI auth volumes in Compose: commit `7ee90ea` and `docs/GUIDED_CLI_LOGIN_FOR_OPERATORS.md`.
-- Operator vs host executor: `docs/HANDOFF_OPERATOR_EXECUTION_AND_ORCHESTRATION.md`.
+- Operator vs host executor: `~/.aethos/docs/handoffs/HANDOFF_OPERATOR_EXECUTION_AND_ORCHESTRATION.md` (local handoff pack).

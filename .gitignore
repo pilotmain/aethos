@@ -142,3 +142,9 @@ coverage/
 /data/nexa_skills/
 /data/aethos_memory/
 /data/aethos_skills/
+
+# Local-only handoff / planning packs (install under ~/.aethos/docs/handoffs/; do not commit)
+docs/HANDOFF_*.md
+docs/CURSOR_HANDOFF.md
+docs/PHASE_*.md
+docs/WEEK*.md

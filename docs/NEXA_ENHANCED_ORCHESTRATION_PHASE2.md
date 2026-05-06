@@ -1,7 +1,7 @@
 # Nexa enhanced orchestration — Phase 2 (OpenClaw-style chat magic)
 
 **Status:** Implemented in-repo (chat-only slice; no Mission Control streaming).  
-**Related:** `docs/NEXA_ENHANCED_ORCHESTRATION_SPEC.md`, `docs/HANDOFF_OPERATOR_EXECUTION_AND_ORCHESTRATION.md`.
+**Related:** `docs/NEXA_ENHANCED_ORCHESTRATION_SPEC.md`, `~/.aethos/docs/handoffs/HANDOFF_OPERATOR_EXECUTION_AND_ORCHESTRATION.md` (local handoff pack).
 
 ---
 

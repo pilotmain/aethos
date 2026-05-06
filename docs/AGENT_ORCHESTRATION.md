@@ -4,7 +4,7 @@ This document is the **implementation-aligned** architecture for making **AethOS
 
 **Scope control:** “Loose approval” is **explicitly opt-in** via configuration and must remain **auditable**. It is **not** the default in production.
 
-**Related:** `docs/HANDOFF_OPERATOR_EXECUTION_AND_ORCHESTRATION.md` (operator vs host executor vs gateway).
+**Related:** `~/.aethos/docs/handoffs/HANDOFF_OPERATOR_EXECUTION_AND_ORCHESTRATION.md` (operator vs host executor vs gateway; local handoff pack).
 
 ---
 

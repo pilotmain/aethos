@@ -16,7 +16,7 @@
 | Proactive operator intro | `app/services/operator_orchestration_intro.py`, `gateway/runtime.py` |
 | `PULSE.md` full-section read (no cache) | `app/services/operator_pulse.py`, merged in operator loop |
 
-See also: `docs/NEXA_ENHANCED_ORCHESTRATION_SPEC.md`, `docs/NEXA_ENHANCED_ORCHESTRATION_PHASE2.md`, `docs/NEXA_PROVIDER_ROUTING_HANOFF.md`, `docs/HANDOFF_OPERATOR_EXECUTION_AND_ORCHESTRATION.md`.
+See also: `docs/NEXA_ENHANCED_ORCHESTRATION_SPEC.md`, `docs/NEXA_ENHANCED_ORCHESTRATION_PHASE2.md`, `docs/NEXA_PROVIDER_ROUTING_HANOFF.md`, `~/.aethos/docs/handoffs/HANDOFF_OPERATOR_EXECUTION_AND_ORCHESTRATION.md` (local handoff pack).
 
 ---
 

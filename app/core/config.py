@@ -462,7 +462,7 @@ class Settings(BaseSettings):
     # Host executor: allowlisted local actions via local_tool jobs + user approval (local_tool_worker).
     # When false, host-executor jobs fail fast on the worker. No effect on the API process unless it enqueues jobs.
     nexa_host_executor_enabled: bool = False
-    # Batch allowlisted host steps in one job (``host_action: chain``); see docs/WEEK2_HOST_ACTION_CHAINS.md
+    # Batch allowlisted host steps in one job (``host_action: chain``); see ~/.aethos/docs/handoffs/WEEK2_HOST_ACTION_CHAINS.md (local handoff pack)
     nexa_host_executor_chain_enabled: bool = False
     nexa_host_executor_chain_max_steps: int = 10
     # Comma-separated inner host_action names; empty → default set in host_executor_chain.DEFAULT_CHAIN_INNER_ALLOWED

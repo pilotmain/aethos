@@ -1,10 +1,11 @@
-# AethOS (repository: `nexa-next`)
+# AethOS
 
-> **Pronunciation:** “EE-thos” · **Tagline:** *The Agentic Operating System* · From **Aether** (the classical element) + **OS** — the invisible layer that connects autonomous agents.
->
-> **This GitHub repository remains [`nexa-next`](https://github.com/pilotmain/nexa-next)** until the remote is renamed; clone URLs and CI may still say `nexa-next`. Product branding in the app, CLI, and docs is **AethOS**.
+> **Pronunciation:** “EE-thos” · **Tagline:** *The Agentic Operating System* — the invisible layer that connects autonomous agents.  
+> **Repository:** [github.com/pilotmain/aethos](https://github.com/pilotmain/aethos)
 
-**Docs:** product vision and phased plan → [docs/NEXA_NEXT_PRIVACY_FIRST_GATEWAY_PLAN.md](docs/NEXA_NEXT_PRIVACY_FIRST_GATEWAY_PLAN.md). **Phase 36 rebrand playbook:** [docs/PHASE_36_REBRAND_AETHOS.md](docs/PHASE_36_REBRAND_AETHOS.md).
+**Docs:** product vision and phased plan → [docs/NEXA_NEXT_PRIVACY_FIRST_GATEWAY_PLAN.md](docs/NEXA_NEXT_PRIVACY_FIRST_GATEWAY_PLAN.md). LLM provider setup → [docs/LLM_PROVIDERS.md](docs/LLM_PROVIDERS.md).
+
+Backward compatibility: many runtime flags still use the **`NEXA_*`** env prefix alongside **`AETHOS_*`** aliases (see `.env.example` and `app/core/config.py`).
 
 ---
 
@@ -16,7 +17,7 @@ curl -fsSL https://raw.githubusercontent.com/pilotmain/aethos/main/scripts/insta
 
 Then: `aethos setup` → `aethos serve`. Deeper bootstrap: [docs/SETUP.md](docs/SETUP.md). Short guides: [docs/API.md](docs/API.md) · [docs/AGENTS.md](docs/AGENTS.md) · [docs/SECURITY_SCAN.md](docs/SECURITY_SCAN.md).
 
-# AethOS
+## What is AethOS?
 
 **AethOS** is an **agentic operating system**: it helps you think, plan, research, create documents, manage projects, and **execute** work through chat, a **web** workspace, **Telegram**, and automation. It **creates task-focused agents dynamically** when work needs them. It is a **platform**: custom agents, dedicated Dev and Ops surfaces, public web research and **web search**, **BYOK** multi-tenant key handling, a **usage / cost** dashboard, and durable **memory**—not a single “chat only” app.
 
@@ -24,14 +25,62 @@ AethOS is **not** just a chatbot. It is an **execution layer** that uses **LLMs*
 
 **New here?** Plain-language overview and first workflow story: [docs/USERGUID.md](docs/USERGUID.md) · [docs/WORKFLOW_DEMO.md](docs/WORKFLOW_DEMO.md).
 
-**Maintainers and agents:** full **platform overview** (for the next agent or planner): [docs/HANDOFF_PLATFORM_OVERVIEW.md](docs/HANDOFF_PLATFORM_OVERVIEW.md). **Architecture** and **roadmap:** [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/ROADMAP.md](docs/ROADMAP.md). **Implementation guardrails:** [docs/CURSOR_HANDOFF.md](docs/CURSOR_HANDOFF.md).
+**Maintainers and agents:** internal handoff packs (planning slices, Cursor guardrails, week notes, phase audits) live under **`~/.aethos/docs/handoffs/`** on your machine — they are **not** shipped in this repository. For the picture of the codebase in-repo, start with [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/ROADMAP.md](docs/ROADMAP.md). Day-to-day workflow: [docs/DEVELOPMENT_HANDOFF.md](docs/DEVELOPMENT_HANDOFF.md).
+
+## Architecture
+
+```text
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ AethOS Core                                                                 │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐                 │
+│  │ Gateway      │    │ Agent        │    │ Mission      │                 │
+│  │ Router       │◄──►│ Registry     │◄──►│ Control      │                 │
+│  └──────────────┘    └──────────────┘    └──────────────┘                 │
+│         │                   │                   │                         │
+│         ▼                   ▼                   ▼                         │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐                 │
+│  │ Channel      │    │ Agent        │    │ Project      │                 │
+│  │ Adapters     │    │ Executor     │    │ Manager      │                 │
+│  │              │    │              │    │              │                 │
+│  │ • Telegram   │    │ • QA Agent   │    │ • Projects   │                 │
+│  │ • Slack      │    │ • Security   │    │ • Tasks      │                 │
+│  │ • Web UI     │    │ • CEO Agent  │    │ • Kanban     │                 │
+│  │ • Mobile     │    │ • Marketing  │    │ • Budget     │                 │
+│  └──────────────┘    └──────────────┘    └──────────────┘                 │
+│                                                                             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ Services Layer                                                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐                 │
+│  │ LLM          │    │ Browser      │    │ Cron         │                 │
+│  │ Providers    │    │ Automation   │    │ Scheduler    │                 │
+│  └──────────────┘    └──────────────┘    └──────────────┘                 │
+│                                                                             │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐                 │
+│  │ Social       │    │ PR           │    │ Memory       │                 │
+│  │ Automation   │    │ Reviews      │    │ Store        │                 │
+│  └──────────────┘    └──────────────┘    └──────────────┘                 │
+│                                                                             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ Data Layer                                                                  │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐                 │
+│  │ SQLite       │    │ PostgreSQL   │    │ Redis        │                 │
+│  │ (default)    │    │ (optional)   │    │ (optional)   │                 │
+│  └──────────────┘    └──────────────┘    └──────────────┘                 │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
 ## Docs
 
 - **Frozen public HTTP API** → [docs/API_CONTRACT.md](docs/API_CONTRACT.md) — paths and change rule for contributors
-- **Platform handoff (agents / planning)** → [docs/HANDOFF_PLATFORM_OVERVIEW.md](docs/HANDOFF_PLATFORM_OVERVIEW.md) — full-picture map and where to go deeper
 - **Architecture** → [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — how AethOS is built (Arcturus)
-- **Phase 11 (multi-provider LLM)** → [docs/PHASE_11_LLM_PROVIDERS.md](docs/PHASE_11_LLM_PROVIDERS.md) — planned DeepSeek/Ollama/OpenRouter layer, diagram, env vars
+- **Multi-provider LLM** → [docs/LLM_PROVIDERS.md](docs/LLM_PROVIDERS.md) — backends, diagram, env checklist (DeepSeek, Ollama, fallbacks)
 - **Roadmap** → [docs/ROADMAP.md](docs/ROADMAP.md) — where AethOS is going (phases)
 - **Channel Gateway (design)** → [docs/CHANNEL_GATEWAY.md](docs/CHANNEL_GATEWAY.md) — Slack, email, WhatsApp, etc. on a shared adapter layer
 - **Channel Gateway (execution plan)** → [docs/CHANNEL_GATEWAY_EXECUTION.md](docs/CHANNEL_GATEWAY_EXECUTION.md) — phases, ground rules, effort
@@ -73,11 +122,7 @@ Options and environment variables: [docs/SETUP.md](docs/SETUP.md#one-line-instal
 
 ---
 
-**From the project root** (creates / fills `.env`, venv, optional Docker, health check):
-
-```bash
-python scripts/nexa_bootstrap.py
-```
+**From the project root** — create or refresh `.env`, Python venv, optional Docker, and health checks using the steps in [docs/SETUP.md](docs/SETUP.md) (bootstrap script entry points are documented there).
 
 Then: open Telegram, `/start`, and (to use your own model keys) `/key set openai` or set keys in `.env` and `USE_REAL_LLM=true`.
 
@@ -96,11 +141,9 @@ Then: open Telegram, `/start`, and (to use your own model keys) `/key set openai
 
 | Doc | What |
 | --- | ---- |
-| [docs/HANDOFF_PLATFORM_OVERVIEW.md](docs/HANDOFF_PLATFORM_OVERVIEW.md) | **Start here for agents:** whole-product map, stack, modules, roadmap hooks, doc index |
-| [docs/PHASE_11_LLM_PROVIDERS.md](docs/PHASE_11_LLM_PROVIDERS.md) | **Phase 11 plan:** multi-provider LLM, architecture diagram, env checklist (DeepSeek, Ollama, fallbacks) |
+| [docs/LLM_PROVIDERS.md](docs/LLM_PROVIDERS.md) | **Multi-provider LLM:** architecture diagram, env checklist (DeepSeek, Ollama, fallbacks) |
 | [docs/CHANNEL_GATEWAY.md](docs/CHANNEL_GATEWAY.md) | **Design:** multi-channel gateway (Slack, WhatsApp, email…) without weakening governance |
 | [docs/CHANNEL_GATEWAY_EXECUTION.md](docs/CHANNEL_GATEWAY_EXECUTION.md) | **Execution plan:** phased adapter extract, router, identity, Slack/email, tests |
-| [docs/HANDOFF_RECENT_WORK.md](docs/HANDOFF_RECENT_WORK.md) | Narrow slice: recent install path, web session delete, pilotmain.com redirect notes |
 | [docs/SETUP.md](docs/SETUP.md) | Bootstrap, local dev, Docker, LLM options, test flow, API surface |
 | [docs/WEB_UI.md](docs/WEB_UI.md) | Web app behavior and local URLs |
 | [docs/MULTI_USER.md](docs/MULTI_USER.md) | BYOK, roles, `/access` |
@@ -121,4 +164,4 @@ Then: open Telegram, `/start`, and (to use your own model keys) `/key set openai
 
 ---
 
-This is an **actively evolving** system: production hardening, scaling, and compliance are deployment-specific—see `docs/CURSOR_HANDOFF.md` and the developer notes under `docs/` for how we ship and verify.
+This is an **actively evolving** system: production hardening, scaling, and compliance are deployment-specific—see [docs/DEVELOPMENT_HANDOFF.md](docs/DEVELOPMENT_HANDOFF.md) and the developer notes under `docs/` for how we ship and verify.

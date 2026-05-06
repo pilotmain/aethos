@@ -358,7 +358,10 @@ def main() -> int:
     args = p.parse_args()
     uid = str(args.user_id)
 
-    if not args.no_banner:
+    if (
+        not args.no_banner
+        and args.cmd in ("serve", "setup")
+    ):
         from aethos_cli.banner import print_banner, should_show_banner
 
         if should_show_banner():

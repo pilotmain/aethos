@@ -8,7 +8,7 @@ Registered agents (QA, security, git, etc.), Telegram `@mentions`, REST `/api/v1
 
 ## Custom LLM agents
 
-User-defined agents and catalog keys are separate from the orchestration registry. See **custom agents** sections in [HANDOFF_PLATFORM_OVERVIEW.md](HANDOFF_PLATFORM_OVERVIEW.md) and the web UI docs.
+User-defined agents and catalog keys are separate from the orchestration registry. See **custom agents** sections in `~/.aethos/docs/handoffs/HANDOFF_PLATFORM_OVERVIEW.md` (local handoff pack; not in git) and the web UI docs.
 
 ## Quick Telegram usage
 
