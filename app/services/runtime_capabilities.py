@@ -62,7 +62,7 @@ def audit_permission_bypassed(
     audit(
         db,
         event_type=ACCESS_PERMISSION_BYPASSED,
-        actor="nexa",
+        actor="aethos",
         user_id=user_id,
         message=f"Approval bypass ({tool}) scope={scope}",
         metadata=md,

@@ -102,7 +102,7 @@ def get_or_create_default_organization(db: Session, user_id: str) -> AgentOrgani
     audit(
         db,
         event_type="agent_org.created",
-        actor="nexa",
+        actor="aethos",
         user_id=uid,
         message=f"Created default agent organization #{org.id}",
         metadata={"organization_id": org.id},
@@ -130,7 +130,7 @@ def create_agent_organization(
     audit(
         db,
         event_type="agent_org.created",
-        actor="nexa",
+        actor="aethos",
         user_id=uid,
         message=f"Created agent organization #{org.id} {org.name!r}",
         metadata={"organization_id": org.id},
@@ -166,7 +166,7 @@ def assign_agent_to_org(
     audit(
         db,
         event_type="agent_role.assigned",
-        actor="nexa",
+        actor="aethos",
         user_id=(org.user_id if org else None),
         message=f"Role for @{h} in org #{organization_id}",
         metadata={
@@ -235,7 +235,7 @@ def create_assignment(
     audit(
         db,
         event_type="agent_assignment.created",
-        actor="nexa",
+        actor="aethos",
         user_id=uid,
         message=f"Assignment #{row.id} → @{h}: {title[:120]}",
         metadata={
@@ -264,7 +264,7 @@ def _assignment_audit(
     audit(
         db,
         event_type=event_type,
-        actor="nexa",
+        actor="aethos",
         user_id=user_id,
         message=message[:4000],
         metadata=md,

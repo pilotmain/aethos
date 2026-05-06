@@ -44,5 +44,9 @@ def apply_aethos_env_aliases() -> None:
     if web_tok:
         os.environ["NEXA_WEB_API_TOKEN"] = web_tok
 
+    cron_tok = (os.environ.get("AETHOS_CRON_API_TOKEN") or "").strip()
+    if cron_tok:
+        os.environ["NEXA_CRON_API_TOKEN"] = cron_tok
+
 
 __all__ = ["apply_aethos_env_aliases"]

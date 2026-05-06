@@ -78,7 +78,7 @@ def _retention_sweep() -> None:
     from app.core.db import SessionLocal
     from app.services.cleanup.retention import run_retention_cleanup
 
-    log = logging.getLogger("nexa")
+    log = logging.getLogger("aethos")
     with SessionLocal() as db:
         try:
             out = run_retention_cleanup(db)
@@ -119,7 +119,7 @@ async def lifespan(app: FastAPI):
 
         register_builtin_plugin_skills()
     except Exception as exc:
-        logging.getLogger("nexa").warning("builtin plugin skills register failed: %s", exc)
+        logging.getLogger("aethos").warning("builtin plugin skills register failed: %s", exc)
     s = get_settings()
     log_sanitized_nexa_config("api")
     print_env_validation_at_startup("api")
@@ -169,15 +169,15 @@ async def lifespan(app: FastAPI):
 
         with SessionLocal() as db:
             n = register_apscheduler_jobs_from_db(db)
-            logging.getLogger("nexa").info("nexa.scheduler.restored count=%s", n)
+            logging.getLogger("aethos").info("nexa.scheduler.restored count=%s", n)
     except Exception as exc:
-        logging.getLogger("nexa").warning("nexa.scheduler.restore_failed %s", exc)
+        logging.getLogger("aethos").warning("nexa.scheduler.restore_failed %s", exc)
     try:
         from app.services.cron.scheduler import get_nexa_cron_scheduler
 
         get_nexa_cron_scheduler().start()
     except Exception as exc:
-        logging.getLogger("nexa").warning("nexa.cron.start_failed %s", exc)
+        logging.getLogger("aethos").warning("nexa.cron.start_failed %s", exc)
     discord_bg: asyncio.Task[None] | None = None
     if getattr(_boot, "nexa_discord_enabled", False) and (getattr(_boot, "nexa_discord_bot_token", None) or "").strip():
         try:
@@ -185,7 +185,7 @@ async def lifespan(app: FastAPI):
 
             discord_bg = asyncio.create_task(run_discord_bot_forever())
         except Exception as exc:
-            logging.getLogger("nexa").warning("discord bot start failed: %s", exc)
+            logging.getLogger("aethos").warning("discord bot start failed: %s", exc)
     slack_bg: asyncio.Task[None] | None = None
     if getattr(_boot, "nexa_slack_enabled", False) and (getattr(_boot, "slack_app_token", None) or "").strip():
         try:
@@ -193,7 +193,7 @@ async def lifespan(app: FastAPI):
 
             slack_bg = asyncio.create_task(run_slack_socket_bot_forever())
         except Exception as exc:
-            logging.getLogger("nexa").warning("slack socket bot start failed: %s", exc)
+            logging.getLogger("aethos").warning("slack socket bot start failed: %s", exc)
     if getattr(_boot, "nexa_telegram_embed_with_api", True) and (
         getattr(_boot, "telegram_bot_token", None) or ""
     ).strip():
@@ -202,34 +202,34 @@ async def lifespan(app: FastAPI):
 
             start_telegram_polling_daemon()
         except Exception as exc:
-            logging.getLogger("nexa").warning("telegram bot start failed: %s", exc)
+            logging.getLogger("aethos").warning("telegram bot start failed: %s", exc)
     if getattr(_boot, "nexa_agent_monitoring_enabled", False):
         try:
             from app.services.agent.supervisor import get_supervisor
 
             await get_supervisor().start_monitoring()
         except Exception as exc:
-            logging.getLogger("nexa").warning("agent supervisor start failed: %s", exc)
+            logging.getLogger("aethos").warning("agent supervisor start failed: %s", exc)
     yield
     try:
         from app.services.browser.session import shutdown_browser_session
 
         await shutdown_browser_session()
     except Exception as exc:
-        logging.getLogger("nexa").warning("browser session shutdown failed: %s", exc)
+        logging.getLogger("aethos").warning("browser session shutdown failed: %s", exc)
     if getattr(_boot, "nexa_agent_monitoring_enabled", False):
         try:
             from app.services.agent.supervisor import get_supervisor
 
             await get_supervisor().stop_monitoring()
         except Exception as exc:
-            logging.getLogger("nexa").warning("agent supervisor shutdown failed: %s", exc)
+            logging.getLogger("aethos").warning("agent supervisor shutdown failed: %s", exc)
     try:
         from app.services.cron.scheduler import get_nexa_cron_scheduler
 
         get_nexa_cron_scheduler().shutdown()
     except Exception as exc:
-        logging.getLogger("nexa").warning("nexa.cron.shutdown_failed %s", exc)
+        logging.getLogger("aethos").warning("nexa.cron.shutdown_failed %s", exc)
     if slack_bg is not None:
         slack_bg.cancel()
         try:
@@ -237,7 +237,7 @@ async def lifespan(app: FastAPI):
         except asyncio.CancelledError:
             pass
         except Exception as exc:
-            logging.getLogger("nexa").warning("slack socket bot shutdown: %s", exc)
+            logging.getLogger("aethos").warning("slack socket bot shutdown: %s", exc)
     if discord_bg is not None:
         discord_bg.cancel()
         try:
@@ -245,7 +245,7 @@ async def lifespan(app: FastAPI):
         except asyncio.CancelledError:
             pass
         except Exception as exc:
-            logging.getLogger("nexa").warning("discord bot shutdown: %s", exc)
+            logging.getLogger("aethos").warning("discord bot shutdown: %s", exc)
     if scheduler.running:
         scheduler.shutdown(wait=False)
 
@@ -363,7 +363,7 @@ async def _http_exception_handler(request: Request, exc: StarletteHTTPException)
 
 @app.exception_handler(Exception)
 async def _unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
-    logging.getLogger("nexa").exception("unhandled error path=%s", request.url.path)
+    logging.getLogger("aethos").exception("unhandled error path=%s", request.url.path)
     return JSONResponse(
         status_code=500,
         content={"ok": False, "error": "Internal server error", "code": "INTERNAL_ERROR"},

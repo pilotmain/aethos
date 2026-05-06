@@ -12,7 +12,7 @@ from app.core.config import REPO_ROOT, get_settings
 
 
 def _workspace_cap_root(user_id: str) -> Path:
-    base = (get_settings().nexa_workspace_root or "").strip() or str(REPO_ROOT / "nexa_workspace")
+    base = (get_settings().nexa_workspace_root or "").strip() or str(REPO_ROOT / "aethos_workspace")
     safe = "".join(c if c.isalnum() or c in "._-" else "_" for c in user_id)[:64]
     root = Path(base) / "users" / safe
     root.mkdir(parents=True, exist_ok=True)

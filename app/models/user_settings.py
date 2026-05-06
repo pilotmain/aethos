@@ -17,7 +17,7 @@ def _utc_now() -> datetime:
 class NexaUserSettings(Base):
     """One row per authenticated web user (``user_id`` matches Mission Control / gateway)."""
 
-    __tablename__ = "nexa_user_settings"
+    __tablename__ = "aethos_user_settings"
 
     user_id: Mapped[str] = mapped_column(String(64), primary_key=True)
     privacy_mode: Mapped[str | None] = mapped_column(String(16), nullable=True)

@@ -29,7 +29,7 @@ class ConversationContext(Base, TimestampMixin):
     # Nexa workspace project (labeled folder); distinct from Ops ``active_project`` key above.
     active_project_id: Mapped[int | None] = mapped_column(
         Integer,
-        ForeignKey("nexa_workspace_projects.id", ondelete="SET NULL"),
+        ForeignKey("aethos_workspace_projects.id", ondelete="SET NULL"),
         nullable=True,
         index=True,
     )

@@ -193,6 +193,7 @@ def _all_reserved_mention_keys() -> set[str]:
             s.add(str(b).lower().strip())
     s.update(
         {
+            "aethos",
             "nexa",
             "general",
             "g",
@@ -509,7 +510,7 @@ def run_custom_user_agent(
     _audit_custom_agent_event(
         db,
         event_type="custom_agent.used",
-        actor="nexa",
+        actor="aethos",
         message=f"Custom agent @{agent.agent_key} reply",
         user_id=app_user_id,
         metadata={"handle": agent.agent_key, "source": source[:32]},
@@ -674,7 +675,7 @@ def create_custom_agent_from_prompt(
         _audit_custom_agent_event(
             db,
             event_type="custom_agent.rejected_regulated_misuse",
-            actor="nexa",
+            actor="aethos",
             message="Rejected regulated-professional misuse framing for custom agent create.",
             user_id=user_id,
             metadata={"prompt_preview": raw[:500]},
@@ -716,7 +717,7 @@ def create_custom_agent_from_prompt(
             _audit_custom_agent_event(
                 db,
                 event_type="custom_agent.created",
-                actor="nexa",
+                actor="aethos",
                 message=f"Created custom agent @{agent.agent_key} (explicit list)",
                 user_id=user_id,
                 metadata={"handle": agent.agent_key, "source": "explicit_list"},
@@ -761,7 +762,7 @@ def create_custom_agent_from_prompt(
     _audit_custom_agent_event(
         db,
         event_type="custom_agent.created",
-        actor="nexa",
+        actor="aethos",
         message=f"Created custom agent @{agent.agent_key}",
         user_id=user_id,
         metadata={"handle": agent.agent_key, "safety_level": spec.safety_level},
@@ -876,7 +877,7 @@ def resolve_disable_enable_delete(
         _audit_custom_agent_event(
             db,
             event_type="custom_agent.deleted",
-            actor="nexa",
+            actor="aethos",
             message=f"Deleted {dh}",
             user_id=user_id,
             metadata={"handle": k},
@@ -889,7 +890,7 @@ def resolve_disable_enable_delete(
         _audit_custom_agent_event(
             db,
             event_type="custom_agent.disabled",
-            actor="nexa",
+            actor="aethos",
             message=f"Disabled {dh}",
             user_id=user_id,
             metadata={"handle": k},
@@ -902,7 +903,7 @@ def resolve_disable_enable_delete(
         _audit_custom_agent_event(
             db,
             event_type="custom_agent.enabled",
-            actor="nexa",
+            actor="aethos",
             message=f"Enabled {dh}",
             user_id=user_id,
             metadata={"handle": k},
@@ -931,7 +932,7 @@ def resolve_update_custom_agent(db: Session, user_id: str, text: str) -> str:
     _audit_custom_agent_event(
         db,
         event_type="custom_agent.updated",
-        actor="nexa",
+        actor="aethos",
         message=f"Updated @{k}",
         user_id=user_id,
         metadata={"handle": k},

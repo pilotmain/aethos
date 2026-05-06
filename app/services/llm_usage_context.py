@@ -15,7 +15,7 @@ from app.services.llm_request_context import get_llm_telegram_context
 @dataclass
 class LlmUsageState:
     source: str = "unknown"
-    agent_key: str | None = "nexa"
+    agent_key: str | None = "aethos"
     action_type: str = "chat_response"
     user_id: str | None = None
     telegram_user_id: str | None = None
@@ -115,7 +115,7 @@ def bind_llm_usage_telegram(
         telegram_user_id=str(int(telegram_user_id)),
         session_id="default",
         action_type="chat_response",
-        agent_key="nexa",
+        agent_key="aethos",
         db=db,
         request_id=str(uuid4()),
     )

@@ -93,7 +93,7 @@ def apply_memory_aware_route_adjustment(
         return out
     if reason == "conversation continuity":
         return out
-    if ak not in ("nexa", "general", "ceo", "cto"):
+    if ak not in ("aethos", "nexa", "general", "ceo", "cto"):
         return out
 
     if not pk:

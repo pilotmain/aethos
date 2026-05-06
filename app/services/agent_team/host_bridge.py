@@ -185,7 +185,7 @@ def try_assignment_host_dispatch(
             audit(
                 db,
                 event_type="agent_assignment.waiting_approval",
-                actor="nexa",
+                actor="aethos",
                 user_id=uid,
                 message=f"Assignment #{row.id} waiting for permission #{row_pr.id}",
                 metadata={
@@ -259,7 +259,7 @@ def try_assignment_host_dispatch(
     audit(
         db,
         event_type="agent_assignment.dispatched",
-        actor="nexa",
+        actor="aethos",
         user_id=uid,
         message=f"Assignment #{row.id} host job #{job.id}",
         metadata={

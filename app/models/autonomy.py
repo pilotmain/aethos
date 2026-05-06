@@ -17,7 +17,7 @@ def _utc_now() -> datetime:
 class NexaAutonomousTask(Base):
     """User-visible autonomous work queue (interruptible)."""
 
-    __tablename__ = "nexa_autonomous_tasks"
+    __tablename__ = "aethos_autonomous_tasks"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     user_id: Mapped[str] = mapped_column(String(128), index=True)
@@ -35,7 +35,7 @@ class NexaAutonomousTask(Base):
 class NexaTaskFeedback(Base):
     """Outcome log for learning loops (Phase 44F)."""
 
-    __tablename__ = "nexa_task_feedback"
+    __tablename__ = "aethos_task_feedback"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     user_id: Mapped[str] = mapped_column(String(128), index=True)
@@ -49,7 +49,7 @@ class NexaTaskFeedback(Base):
 class NexaAutonomyDecisionLog(Base):
     """Summaries of autonomous decision cycles for Mission Control."""
 
-    __tablename__ = "nexa_autonomy_decisions"
+    __tablename__ = "aethos_autonomy_decisions"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     user_id: Mapped[str] = mapped_column(String(128), index=True)

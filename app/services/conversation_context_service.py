@@ -318,7 +318,7 @@ def append_message(db: Session, ctx: ConversationContext, role: str, text: str) 
 
 def infer_lightweight_topic(text: str, existing_topic: str | None) -> str | None:
     t = (text or "").lower()
-    if any(x in t for x in ("nexa", "this app", "the app", "product", "platform")):
+    if any(x in t for x in ("aethos", "nexa", "this app", "the app", "product", "platform")):
         return "Nexa product"
     if any(
         x in t
@@ -487,11 +487,13 @@ def build_context_snapshot(ctx: ConversationContext, db: Session | None = None) 
 
         row = db.get(NexaWorkspaceProject, int(apid))
         if row and row.owner_user_id == ctx.user_id:
-            snap["nexa_workspace_project"] = {
+            _wp = {
                 "id": row.id,
                 "name": row.name,
                 "path": row.path_normalized,
             }
+            snap["aethos_workspace_project"] = _wp
+            snap["nexa_workspace_project"] = _wp  # legacy snapshot key
     return snap
 
 

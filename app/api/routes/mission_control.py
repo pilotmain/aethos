@@ -180,7 +180,7 @@ def mission_control_interrupt_autonomous_task(
     audit(
         db,
         event_type="mission_control.autonomy.task.interrupted",
-        actor="nexa",
+        actor="aethos",
         user_id=app_user_id,
         message=f"Interrupted autonomous task {tid}",
         metadata={"task_id": tid},
@@ -514,7 +514,7 @@ def mc_dismiss_attention(
     audit(
         db,
         event_type="mission_control.attention.dismissed",
-        actor="nexa",
+        actor="aethos",
         user_id=app_user_id,
         message=f"Dismissed attention item {iid}",
         metadata={"attention_id": iid},

@@ -1,4 +1,4 @@
-"""Nexa brand voice, agent display names, and mode selection for the composer."""
+"""AethOS brand voice, agent display names, and mode selection for the composer."""
 
 from __future__ import annotations
 
@@ -11,28 +11,30 @@ AGENT_KEYS: dict[str, str] = {
     "marketing": "Marketing",
     "research": "Research",
     "ops": "Operations",
-    "nexa": "Nexa",
+    "nexa": "AethOS",
+    "aethos": "AethOS",
     "developer": "Development focus",
     "ceo": "Product direction",
     "cto": "Product direction",
     "personal_admin": "Operations",
-    "general": "Nexa",
+    "general": "AethOS",
 }
 
 AGENT_DESCRIPTIONS: dict[str, str] = {
     "reset": "Turns mental chaos into calm next steps.",
-    "dev": "Runs code and workspace tasks through Nexa’s local dev loop.",
+    "dev": "Runs code and workspace tasks through AethOS’s local dev loop.",
     "qa": "Reviews failures, tests, and regressions.",
     "strategy": "Helps with product direction, tradeoffs, and roadmap.",
     "marketing": "Helps with positioning, copy, campaigns, and launch planning.",
     "research": "Finds and summarizes information with sources.",
     "ops": "Handles system checks, reminders, and operational tasks.",
-    "nexa": "One system for context, memory, and execution — Nexa scales effort when the work needs it.",
+    "nexa": "One system for context, memory, and execution — AethOS scales effort when the work needs it.",
+    "aethos": "One system for context, memory, and execution — AethOS scales effort when the work needs it.",
 }
 
 NEXA_VOICE: dict[str, str | list[str]] = {
     "identity": (
-        "Nexa is a calm, capable execution system. It helps you move from idea to action in one place — "
+        "AethOS is a calm, capable execution system. It helps you move from idea to action in one place — "
         "locally and with clear permissions."
     ),
     "personality": [
@@ -64,8 +66,8 @@ VOICE_MODES: dict[str, str] = {
     "reviewer": "Critical, careful, quality-focused.",
 }
 
-NEXA_BRAND_PROMPT = """You are Nexa.
-Nexa is one intelligent system: it understands goals, breaks them into tasks, and runs work through the same surface —
+NEXA_BRAND_PROMPT = """You are AethOS.
+AethOS is one intelligent system: it understands goals, breaks them into tasks, and runs work through the same surface —
 permission-controlled and observable in Mission Control.
 
 Respect: do not infer a person’s gender or pronouns from their name. Use what is in soul.md / memory, or stay neutral (name or they) when it is not explicit.
@@ -95,14 +97,14 @@ Always:
 
 
 def choose_voice_mode(agent_key: str | None, intent: str | None) -> str:  # noqa: ARG001
-    k = (agent_key or "").lower() or "nexa"
+    k = (agent_key or "").lower() or "aethos"
     if k in ("developer", "dev"):
         return "engineer"
     if k in ("qa", "test"):
         return "reviewer"
     if k in ("strategy", "ceo", "cto"):
         return "strategist"
-    if k in ("reset", "nexa", "general", "overwhelm_reset") or (intent in ("stuck", "brain_dump")):
+    if k in ("reset", "aethos", "nexa", "general", "overwhelm_reset") or (intent in ("stuck", "brain_dump")):
         return "coach"
     if k in ("ops", "personal_admin"):
         return "operator"

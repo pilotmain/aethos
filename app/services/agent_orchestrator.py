@@ -48,7 +48,7 @@ def _public_url_read_response(
         audit(
             db,
             event_type="safety.orchestrator.boundary",
-            actor="nexa",
+            actor="aethos",
             user_id=app_user_id,
             message="public_url_read",
             metadata={
@@ -90,7 +90,7 @@ def _public_url_read_response(
                 "If the data says the request failed, timed out, or was blocked, do not invent what is on the site. "
             )
             with push_llm_action(
-                action_type="public_url_summary", agent_key="research" if is_research else "nexa"
+                action_type="public_url_summary", agent_key="research" if is_research else "aethos"
             ):
                 out = safe_llm_text_call(
                     system_prompt=prologue,
@@ -189,7 +189,7 @@ def _synthesize_from_search(user_question: str, sr, *, is_research: bool) -> str
             from app.services.llm_usage_context import push_llm_action
 
             with push_llm_action(
-                action_type="web_search_summary", agent_key="research" if is_research else "nexa"
+                action_type="web_search_summary", agent_key="research" if is_research else "aethos"
             ):
                 body = (
                     safe_llm_text_call(
@@ -1026,7 +1026,7 @@ def handle_agent_request(
     r = route_agent(text, context_snapshot=context_snapshot)
     r = apply_memory_aware_route_adjustment(r, text, context_snapshot, db)
     key = str(r.get("agent_key") or "general")
-    if key in ("nexa", "overwhelm_reset"):
+    if key in ("aethos", "nexa", "overwhelm_reset"):
         raw = handle_nexa_request(
             db,
             app_user_id,
@@ -1034,7 +1034,7 @@ def handle_agent_request(
             memory_service=memory_service,
             orchestrator=orchestrator,
             conversation_snapshot=context_snapshot,
-            routing_agent_key=str(r.get("agent_key") or "nexa"),
+            routing_agent_key=str(r.get("agent_key") or "aethos"),
         )
     elif key == "ops":
         raw = handle_ops_agent_request(db, app_user_id, text)
@@ -1095,7 +1095,7 @@ def handle_agent_mention(
     """@mention explicit routing. `developer` is usually handled in the bot to queue a dev job."""
     from app.services.response_formatter import finalize_user_facing_text
 
-    if agent_key in ("nexa", "overwhelm_reset"):
+    if agent_key in ("aethos", "nexa", "overwhelm_reset"):
         raw = handle_nexa_request(
             db,
             app_user_id,

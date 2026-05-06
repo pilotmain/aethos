@@ -370,7 +370,7 @@ def _audit_tool_chat(db: Session, *, user_id: str, tool: str) -> None:
     audit(
         db,
         event_type="agent_runtime.tool_invoked",
-        actor="nexa",
+        actor="aethos",
         user_id=user_id,
         message=f"Chat invoked {tool}",
         metadata={"tool": tool, "agent_handle": "boss", "source": "chat"},

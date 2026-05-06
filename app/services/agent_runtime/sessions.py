@@ -163,7 +163,7 @@ def sessions_spawn(db: Session, *, user_id: str, payload: dict[str, Any]) -> dic
     audit(
         db,
         event_type="agent_session.spawn_requested",
-        actor="nexa",
+        actor="aethos",
         user_id=uid,
         message=f"Spawn requested {spawn_group_id}",
         metadata={"spawn_group_id": spawn_group_id, "goal": goal[:500], "approval_mode": mode},
@@ -288,7 +288,7 @@ def sessions_spawn(db: Session, *, user_id: str, payload: dict[str, Any]) -> dic
     audit(
         db,
         event_type="agent_session.spawn_created",
-        actor="nexa",
+        actor="aethos",
         user_id=uid,
         message=f"Spawn created {spawn_group_id} assignments={ids}",
         metadata={"spawn_group_id": spawn_group_id, "assignment_ids": ids},

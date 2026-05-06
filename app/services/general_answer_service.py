@@ -110,7 +110,7 @@ def answer_general_question(
         from app.services.llm_usage_context import push_llm_action
 
         with push_llm_action(
-            source="general_answer", action_type="chat_response", agent_key="nexa"
+            source="general_answer", action_type="chat_response", agent_key="aethos"
         ):
             result = safe_llm_text_call(
                 system_prompt=system_prompt,

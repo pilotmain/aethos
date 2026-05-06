@@ -390,7 +390,7 @@ def post_chat(
     if env.get("decision_summary"):
         d = env["decision_summary"]
         dsum = DecisionSummaryOut(
-            agent=str(d.get("agent") or "nexa")[:64],
+            agent=str(d.get("agent") or "aethos")[:64],
             action=str(d.get("action") or "chat_response")[:64],
             tool=(str(d["tool"])[:64] if d.get("tool") is not None else None),
             reason=(str(d.get("reason") or ""))[:2000],
@@ -585,7 +585,7 @@ def web_release_notes() -> WebReleaseNotesOut:
     return WebReleaseNotesOut(
         release_id=rid,
         date=d,
-        title=(data.get("headline") or "Nexa")[:200],
+        title=(data.get("headline") or "AethOS")[:200],
         items=[str(x)[:500] for x in (data.get("bullets") or []) if str(x).strip()][:20],
         full_text=(data.get("raw_section") or "")[:50_000],
     )
@@ -619,7 +619,7 @@ def system_doctor(
     except Exception as exc:  # noqa: BLE001
         logger.exception("web system doctor failed: user=%r", app_user_id)
         body = (
-            f"Nexa Doctor (partial: build failed)\n\n"
+            f"AethOS Doctor (partial: build failed)\n\n"
             f"Error: {type(exc).__name__}: {exc!s}\n"
             f"Check API logs for a full traceback. /api/v1/web/system/status may still be OK."
         )[:20_000]
@@ -691,7 +691,7 @@ def system_status_compact(
             id="api",
             label="API",
             level="ok",
-            detail=(s.app_name or "nexa")[:64],
+            detail=(s.app_name or "aethos")[:64],
         )
     ]
     try:

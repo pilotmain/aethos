@@ -282,7 +282,7 @@ class Settings(BaseSettings):
     nexa_elevenlabs_voice_id: str = "21m00Tcm4TlvDq8ikWAM"
 
     nexa_plugin_skills_root: str = Field(
-        default_factory=lambda: str(REPO_ROOT / "data" / "nexa_plugin_skills")
+        default_factory=lambda: str(REPO_ROOT / "data" / "aethos_plugin_skills")
     )
     nexa_credential_vault_provider: str = "local"
     nexa_network_egress_mode: str = "allowlist"
@@ -641,7 +641,7 @@ class Settings(BaseSettings):
     nexa_cron_enabled: bool = True
     nexa_cron_default_timezone: str = "UTC"
     nexa_cron_job_store: str = Field(
-        default_factory=lambda: f"sqlite:///{REPO_ROOT}/data/nexa_cron_jobs.sqlite",
+        default_factory=lambda: f"sqlite:///{REPO_ROOT}/data/aethos_cron_jobs.sqlite",
     )
     # Bearer token for Telegram/Slack/CLI → POST /api/v1/cron/* (set in production).
     nexa_cron_api_token: str | None = None

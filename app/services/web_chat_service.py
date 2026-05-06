@@ -278,7 +278,7 @@ def process_web_message(
             session_id=wid,
             request_id=req_id,
             action_type="chat_response",
-            agent_key="nexa",
+            agent_key="aethos",
             db=db,
         ), tctx:
             from app.services.host_executor_chat import drain_host_executor_web_notifications
@@ -341,7 +341,7 @@ def process_web_message(
 
             if is_multi_agent_capability_question(tstrip):
                 d_ma = build_decision_summary(
-                    agent_key="nexa",
+                    agent_key="aethos",
                     action="multi_agent_capability",
                     tool="local_state",
                     reason="Multi-agent capability question; route to agent-team guidance (no custom-agent create).",
@@ -354,7 +354,7 @@ def process_web_message(
                     WebChatResult(
                         _merge_idle_host_jobs(reply_multi_agent_capability_clarification()),
                         "multi_agent_capability",
-                        "nexa",
+                        "aethos",
                         response_kind="multi_agent_capability",
                         decision_summary=d_ma,
                         pending_system_events_seed=_host_drain_seed(),
@@ -368,7 +368,7 @@ def process_web_message(
                     user_text=user_text,
                     assistant_text=_merge_idle_host_jobs(reply_multi_agent_capability_clarification()),
                     intent="capability_question",
-                    agent_key="nexa",
+                    agent_key="aethos",
                     decision_summary=out.decision_summary,
                 )
                 return out
@@ -376,7 +376,7 @@ def process_web_message(
             _ca_turn = try_deterministic_custom_agent_turn(db, app_user_id, tstrip)
             if _ca_turn is not None:
                 d_ca = build_decision_summary(
-                    agent_key="nexa",
+                    agent_key="aethos",
                     action="custom_agent_deterministic",
                     tool="local_state",
                     reason="Deterministic custom-agent lifecycle (runs before host/next-action).",
@@ -389,7 +389,7 @@ def process_web_message(
                     WebChatResult(
                         _merge_idle_host_jobs(_ca_turn),
                         "custom_agent",
-                        "nexa",
+                        "aethos",
                         response_kind="custom_agent",
                         decision_summary=d_ca,
                         pending_system_events_seed=_host_drain_seed(),
@@ -403,7 +403,7 @@ def process_web_message(
                     user_text=user_text,
                     assistant_text=_merge_idle_host_jobs(_ca_turn),
                     intent="custom_agent",
-                    agent_key="nexa",
+                    agent_key="aethos",
                     decision_summary=out.decision_summary,
                 )
                 return out
@@ -413,7 +413,7 @@ def process_web_message(
             )
             if _team_turn is not None:
                 d_team = build_decision_summary(
-                    agent_key="nexa",
+                    agent_key="aethos",
                     action="agent_team",
                     tool="local_state",
                     reason="Deterministic agent organization / assignment turn.",
@@ -428,7 +428,7 @@ def process_web_message(
                     WebChatResult(
                         team_reply,
                         "agent_team",
-                        "nexa",
+                        "aethos",
                         response_kind="agent_team",
                         decision_summary=d_team,
                         pending_system_events_seed=_host_drain_seed(),
@@ -444,7 +444,7 @@ def process_web_message(
                     user_text=user_text,
                     assistant_text=team_reply,
                     intent="agent_team",
-                    agent_key="nexa",
+                    agent_key="aethos",
                     decision_summary=out.decision_summary,
                 )
                 return out
@@ -475,7 +475,7 @@ def process_web_message(
                     user_text=user_text,
                     assistant_text=out.reply,
                     intent=out.intent or "host_job_status",
-                    agent_key=out.agent_key or "nexa",
+                    agent_key=out.agent_key or "aethos",
                     decision_summary=out.decision_summary,
                 )
                 return out
@@ -498,7 +498,7 @@ def process_web_message(
                     {"kind": k, "text": t} for k, t in na0.pending_system_events
                 ]
                 d0 = build_decision_summary(
-                    agent_key="nexa",
+                    agent_key="aethos",
                     action="co_pilot_next",
                     tool="co_pilot",
                     reason="Nexa applied a co-pilot next-step confirmation (no new UI).",
@@ -531,7 +531,7 @@ def process_web_message(
                     WebChatResult(
                         _merge_idle_host_jobs(na0.early_assistant),
                         "next_action",
-                        "nexa",
+                        "aethos",
                         related_job_ids=list(na0.related_job_ids),
                         response_kind=rk_na,
                         decision_summary=d0,
@@ -547,7 +547,7 @@ def process_web_message(
                     user_text=user_text,
                     assistant_text=_merge_idle_host_jobs(na0.early_assistant),
                     intent="next_action",
-                    agent_key="nexa",
+                    agent_key="aethos",
                     decision_summary=out.decision_summary,
                 )
                 return out
@@ -556,7 +556,7 @@ def process_web_message(
             cg_msg = try_custom_agent_capability_guidance(db, app_user_id, tstrip)
             if cg_msg is not None:
                 d0 = build_decision_summary(
-                    agent_key="nexa",
+                    agent_key="aethos",
                     action="custom_agent_guidance",
                     tool="local_state",
                     reason="Deterministic custom-agent capability guidance.",
@@ -569,7 +569,7 @@ def process_web_message(
                     WebChatResult(
                         _merge_idle_host_jobs(cg_msg),
                         "custom_agent_guidance",
-                        "nexa",
+                        "aethos",
                         response_kind="custom_agent_guidance",
                         decision_summary=d0,
                         pending_system_events_seed=_host_drain_seed(),
@@ -583,14 +583,14 @@ def process_web_message(
                     user_text=user_text,
                     assistant_text=_merge_idle_host_jobs(cg_msg),
                     intent="custom_agent_guidance",
-                    agent_key="nexa",
+                    agent_key="aethos",
                     decision_summary=out.decision_summary,
                 )
                 return out
             c_msg = try_conversational_create_custom_agents(db, app_user_id, tstrip)
             if c_msg is not None:
                 d0 = build_decision_summary(
-                    agent_key="nexa",
+                    agent_key="aethos",
                     action="custom_agent_create",
                     tool="local_state",
                     reason="Nexa added custom agents from your message (LLM-only, no special tools by default).",
@@ -603,7 +603,7 @@ def process_web_message(
                     WebChatResult(
                         _merge_idle_host_jobs(c_msg),
                         "custom_agent_create",
-                        "nexa",
+                        "aethos",
                         response_kind="custom_agent_create",
                         decision_summary=d0,
                         pending_system_events_seed=_host_drain_seed(),
@@ -617,7 +617,7 @@ def process_web_message(
                     user_text=user_text,
                     assistant_text=_merge_idle_host_jobs(c_msg),
                     intent="custom_agent_create",
-                    agent_key="nexa",
+                    agent_key="aethos",
                     decision_summary=out.decision_summary,
                 )
                 return out
@@ -626,7 +626,7 @@ def process_web_message(
             )
             if t_clarify is not None:
                 d0 = build_decision_summary(
-                    agent_key="nexa",
+                    agent_key="aethos",
                     action="document",
                     tool="clarify",
                     reason="Nexa needs more content before generating a templated document.",
@@ -639,7 +639,7 @@ def process_web_message(
                     WebChatResult(
                         _merge_idle_host_jobs(t_clarify),
                         "document_template_clarify",
-                        "nexa",
+                        "aethos",
                         decision_summary=d0,
                         pending_system_events_seed=_host_drain_seed(),
                     ),
@@ -652,7 +652,7 @@ def process_web_message(
                     user_text=user_text,
                     assistant_text=_merge_idle_host_jobs(t_clarify),
                     intent="document_template_clarify",
-                    agent_key="nexa",
+                    agent_key="aethos",
                     decision_summary=out.decision_summary,
                 )
                 return out
@@ -670,7 +670,7 @@ def process_web_message(
                 except DocumentGenerationError as e:
                     err = str(e) or getattr(e, "code", "failed")
                     d0 = build_decision_summary(
-                        agent_key="nexa",
+                        agent_key="aethos",
                         action="document",
                         tool="document_export",
                         reason="Document generation failed for this request.",
@@ -683,7 +683,7 @@ def process_web_message(
                         WebChatResult(
                             _merge_idle_host_jobs(err),
                             "document_error",
-                            "nexa",
+                            "aethos",
                             decision_summary=d0,
                             pending_system_events_seed=_host_drain_seed(),
                         ),
@@ -696,12 +696,12 @@ def process_web_message(
                         user_text=user_text,
                         assistant_text=_merge_idle_host_jobs(err),
                         intent="document_error",
-                        agent_key="nexa",
+                        agent_key="aethos",
                         decision_summary=out.decision_summary,
                     )
                     return out
                 d_ok = build_decision_summary(
-                    agent_key="nexa",
+                    agent_key="aethos",
                     action="document_create",
                     tool="document_export",
                     reason="Nexa created a document from a template-style request (Docs tab to download).",
@@ -719,7 +719,7 @@ def process_web_message(
                     WebChatResult(
                         success_msg,
                         "document_create",
-                        "nexa",
+                        "aethos",
                         response_kind="document_artifact",
                         decision_summary=d_ok,
                         pending_system_events_seed=_host_drain_seed(),
@@ -733,7 +733,7 @@ def process_web_message(
                     user_text=user_text,
                     assistant_text=success_msg,
                     intent="document_create",
-                    agent_key="nexa",
+                    agent_key="aethos",
                     decision_summary=out.decision_summary,
                 )
                 return out
@@ -806,7 +806,7 @@ def process_web_message(
             intent = get_intent(tstrip, conversation_snapshot=snap)
             rt = route_agent(tstrip, context_snapshot=snap)
             rt = apply_memory_aware_route_adjustment(rt, tstrip, snap, db)
-            rkey = str(rt.get("agent_key") or "nexa")
+            rkey = str(rt.get("agent_key") or "aethos")
 
             from app.services.gateway.context import GatewayContext
             from app.services.gateway.runtime import NexaGateway

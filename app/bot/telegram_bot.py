@@ -165,7 +165,7 @@ def _persist_conversation_turn(
         dec = build_decision_for_telegram_turn(
             user_text=user_text,
             intent=intent,
-            agent_key=agent_key or "nexa",
+            agent_key=agent_key or "aethos",
             extras=decision_extras or {},
         )
         update_context_after_turn(
@@ -622,7 +622,7 @@ async def overwhelmed(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             cctx = get_or_create_context(db, app_user_id)
             snap = build_context_snapshot(cctx, db)
             rt = route_agent(msg, context_snapshot=snap)
-            rkey = str(rt.get("agent_key") or "nexa")
+            rkey = str(rt.get("agent_key") or "aethos")
             intent = get_intent(msg, conversation_snapshot=snap)
             logger.info("classified_intent=%s", intent)
             logger.info("plan_triggered=%s", intent == "brain_dump")
@@ -2182,7 +2182,7 @@ async def _handle_incoming_text_impl(
                             tstrip,
                             reply_gw,
                             "gateway",
-                            "nexa",
+                            "aethos",
                         )
                         return
 
@@ -2223,7 +2223,7 @@ async def _handle_incoming_text_impl(
                             tstrip,
                             reply_ap,
                             str(gw_appr.get("intent") or "approval"),
-                            "nexa",
+                            "aethos",
                         )
                         return
 
@@ -2244,7 +2244,7 @@ async def _handle_incoming_text_impl(
                             tstrip,
                             cg,
                             "custom_agent_guidance",
-                            "nexa",
+                            "aethos",
                         )
                         for gp in _split_telegram_text(cg, max_len=4000):
                             await update.message.reply_text(gp)
@@ -2261,7 +2261,7 @@ async def _handle_incoming_text_impl(
                             tstrip,
                             cr,
                             "custom_agent_create",
-                            "nexa",
+                            "aethos",
                         )
                         for cp in _split_telegram_text(cr, max_len=4000):
                             await update.message.reply_text(cp)
@@ -2287,7 +2287,7 @@ async def _handle_incoming_text_impl(
                             await update.message.reply_text(t_clarify[:2000])
                             cctx = get_or_create_context(db, app_user_id)
                             _persist_conversation_turn(
-                                db, app_user_id, cctx, tstrip, t_clarify, "document_clarify", "nexa"
+                                db, app_user_id, cctx, tstrip, t_clarify, "document_clarify", "aethos"
                             )
                             return
                         if tr and t_body:
@@ -2309,7 +2309,7 @@ async def _handle_incoming_text_impl(
                                 with path.open("rb") as f:
                                     await update.message.reply_document(
                                         document=InputFile(f, filename=path.name),
-                                        caption=f"{tr.label} — created as {tr.format.upper()} in Nexa (document #{art.id})",
+                                        caption=f"{tr.label} — created as {tr.format.upper()} in AethOS (document #{art.id})",
                                     )
                             else:
                                 await update.message.reply_text(
@@ -2323,7 +2323,7 @@ async def _handle_incoming_text_impl(
                                 tstrip,
                                 f"Created {tr.label} as {tr.format} (id {art.id}).",
                                 "document_create",
-                                "nexa",
+                                "aethos",
                             )
                             return
                 if not tstrip.startswith("/") and tstrip:
@@ -3218,7 +3218,7 @@ async def _handle_incoming_text_impl(
                     rt_topic = apply_memory_aware_route_adjustment(
                         rt_topic, tstrip, snap_topic, db
                     )
-                    rkey_topic = str(rt_topic.get("agent_key") or "nexa")
+                    rkey_topic = str(rt_topic.get("agent_key") or "aethos")
                     await update.message.reply_text(short)
                     _persist_conversation_turn(
                         db, app_user_id, cctx, tstrip, short, "topic_control", rkey_topic
@@ -3272,7 +3272,7 @@ async def _handle_incoming_text_impl(
                 snap = build_context_snapshot(cctx, db)
                 rt = route_agent(tstrip, context_snapshot=snap)
                 rt = apply_memory_aware_route_adjustment(rt, tstrip, snap, db)
-                routed_key = str(rt.get("agent_key") or "nexa")
+                routed_key = str(rt.get("agent_key") or "aethos")
     
                 from app.services.custom_agent_routing import try_deterministic_custom_agent_turn
                 from app.services.multi_agent_routing import (
@@ -3725,7 +3725,7 @@ def start_telegram_polling_daemon() -> threading.Thread | None:
         daemon=True,
     )
     t.start()
-    logging.getLogger("nexa").info("telegram bot polling thread started")
+    logging.getLogger("aethos").info("telegram bot polling thread started")
     return t
 
 

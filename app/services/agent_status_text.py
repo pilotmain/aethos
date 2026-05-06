@@ -12,7 +12,7 @@ from app.services.agent_run_service import format_time_ago
 _TERMINAL = {"completed", "failed", "cancelled", "rejected", "blocked"}
 
 _STATUS_LIST: tuple[str, str] = (
-    ("reset", "nexa"),
+    ("reset", "aethos"),
     ("dev", "developer"),
     ("qa", "qa"),
     ("ops", "ops"),

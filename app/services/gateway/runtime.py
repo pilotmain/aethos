@@ -597,7 +597,7 @@ class NexaGateway:
 
         rt = route_agent(raw, context_snapshot=snap)
         rt = apply_memory_aware_route_adjustment(rt, raw, snap, db)
-        routing_agent_key = str(gctx.extras.get("routing_agent_key") or rt.get("agent_key") or "nexa")
+        routing_agent_key = str(gctx.extras.get("routing_agent_key") or rt.get("agent_key") or "aethos")
 
         _mem_for_intent = None
         if isinstance(gctx.memory, dict):

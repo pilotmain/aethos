@@ -35,7 +35,7 @@ MENTION_ALIASES: dict[str, str] = {
 
 # Catalog key → internal key used by handle_agent_mention and routing
 CATALOG_KEY_TO_INTERNAL: dict[str, str] = {
-    "reset": "nexa",
+    "reset": "aethos",
     "dev": "developer",
     "qa": "qa",
     "ops": "ops",

@@ -128,7 +128,7 @@ def patch_custom_agent_api(
     _audit_custom_agent_event(
         db,
         event_type="custom_agent.updated",
-        actor="nexa",
+        actor="aethos",
         message=f"REST PATCH @{k}",
         user_id=app_user_id,
         metadata={"handle": k, "source": "api"},

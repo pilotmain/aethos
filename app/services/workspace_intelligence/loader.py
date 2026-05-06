@@ -16,7 +16,7 @@ def resolve_workspace_root(raw: str | None, *, repo_root: Path) -> Path | None:
         if not p.is_absolute():
             p = repo_root / p
     else:
-        p = repo_root / "data" / "nexa_workspace"
+        p = repo_root / "data" / "aethos_workspace"
     try:
         p = p.resolve()
     except OSError:

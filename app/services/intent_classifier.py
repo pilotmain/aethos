@@ -532,7 +532,7 @@ def classify_intent_llm(
         from app.services.llm_usage_context import push_llm_action
 
         with push_llm_action(
-            source="intent_classifier", action_type="intent_classification", agent_key="nexa"
+            source="intent_classifier", action_type="intent_classification", agent_key="aethos"
         ):
             data = safe_llm_json_call(
                 system_prompt=INTENT_CLASSIFIER_SYSTEM,

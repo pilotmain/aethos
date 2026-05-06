@@ -951,7 +951,7 @@ def _composer_user_payload_json(ctx: ResponseContext) -> str:
 def _run_strategy(ctx: ResponseContext, strategy_body: str) -> ComposedResponse:
     from app.services.llm_usage_context import push_llm_action
 
-    with push_llm_action(source="response_composer", action_type="chat_response", agent_key="nexa"):
+    with push_llm_action(source="response_composer", action_type="chat_response", agent_key="aethos"):
         system = _build_system_prompt(ctx, strategy_body)
         user_content = _composer_user_payload_json(ctx) + JSON_SUFFIX
         try:

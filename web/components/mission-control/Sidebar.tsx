@@ -31,7 +31,7 @@ export function Sidebar({ variant = "desktop" }: SidebarProps) {
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-600 text-xs font-bold text-white">
               N
             </span>
-            <span>Nexa Mission</span>
+            <span>AethOS Mission</span>
           </Link>
         </div>
 
@@ -66,7 +66,7 @@ export function Sidebar({ variant = "desktop" }: SidebarProps) {
 
         <div className="shrink-0 border-t border-zinc-800 p-4">
           <MissionControlApiStatus />
-          <p className="mt-2 text-xs text-zinc-600">nexa-web v{pkg.version}</p>
+          <p className="mt-2 text-xs text-zinc-600">aethos-web v{pkg.version}</p>
         </div>
       </div>
     </aside>

@@ -64,7 +64,7 @@ def build_decision_summary(
     intent: str | None = None,
 ) -> dict[str, Any]:
     """Build a user-facing decision dict. No prompts, no private reasoning."""
-    a = (agent_key or "nexa").strip().lower()[:64] or "nexa"
+    a = (agent_key or "aethos").strip().lower()[:64] or "aethos"
     act = (action or "chat_response").strip()[:64] or "chat_response"
     t = (tool or "").strip()[:64] or None
     r = _sanitize_reason(reason or R_GENERAL)
@@ -89,14 +89,14 @@ def merge_no_llm_path(
             d["reason"] = _sanitize_reason(d.get("reason") or R_CHAT)
             return d
         return build_decision_summary(
-            agent_key="nexa",
+            agent_key="aethos",
             action="chat_response",
             tool="llm",
             reason=R_CHAT,
             risk="low",
         )
     d = dict(decision) if decision else {}
-    d.setdefault("agent", "nexa")
+    d.setdefault("agent", "aethos")
     d["action"] = "tool_only"
     th = (tool_hint or "local_state").strip()[:64] or "local_state"
     d["tool"] = th
@@ -121,7 +121,7 @@ def infer_decision_for_web_main(
 ) -> dict[str, Any]:
     t = (user_text or "").strip()
     rkind = (response_kind or "").strip() or None
-    rk = (routed_agent_key or "nexa").lower().strip() or "nexa"
+    rk = (routed_agent_key or "aethos").lower().strip() or "aethos"
 
     if rkind == "marketing_web_analysis":
         return build_decision_summary(
@@ -139,9 +139,9 @@ def infer_decision_for_web_main(
             reason=R_CURRENT_PUBLIC,
             risk="low",
         )
-    if rkind == "public_web" or (_has_url(t) and rk in ("nexa", "research") and "browser" not in t.lower()):
+    if rkind == "public_web" or (_has_url(t) and rk in ("aethos", "nexa", "research") and "browser" not in t.lower()):
         return build_decision_summary(
-            agent_key="research" if rk == "research" else "nexa",
+            agent_key="research" if rk == "research" else "aethos",
             action="public_url_summary",
             tool="public_web_reader",
             reason=R_PUBLIC_URL,
@@ -237,7 +237,7 @@ def decision_for_web_explicit(
     """
     `mention_intent` = ExplicitMentionResult.intent (e.g. dev_command, ops_mention).
     """
-    mk = (agent_key or "nexa").lower().strip() or "nexa"
+    mk = (agent_key or "aethos").lower().strip() or "aethos"
     mi = (mention_intent or "").strip() or "general_chat"
     if mi == "dev_command" and job is not None:
         return decision_for_dev_job(job=job)
@@ -321,7 +321,7 @@ def format_decision_for_telegram_why(decision: dict[str, Any] | None) -> str:
     """Multi-line /why (plain text, no HTML)."""
     if not decision:
         return "I don’t have a recent decision to explain yet."
-    a = (decision.get("agent") or "nexa").title()
+    a = (decision.get("agent") or "aethos").title()
     tool = decision.get("tool") or "—"
     tlabel = (tool or "—").replace("_", " ").title() if (tool and tool != "—") else "—"
     r = (decision.get("reason") or "—")[:2000]
@@ -329,7 +329,7 @@ def format_decision_for_telegram_why(decision: dict[str, Any] | None) -> str:
     ap = bool(decision.get("approval_required", False))
     al = "Required" if ap else "Not required"
     lines = [
-        "Last Nexa decision:",
+        "Last AethOS decision:",
         f"• Agent: {a}",
         f"• Tool: {tlabel}",
         f"• Reason: {r}",
@@ -343,7 +343,7 @@ def collapsed_summary_line(d: dict[str, Any] | None) -> str:
     """One line for web collapsed row."""
     if not d:
         return ""
-    a = (d.get("agent") or "nexa").title()
+    a = (d.get("agent") or "aethos").title()
     t = (d.get("tool") or "").replace("_", " ") or "—"
     rsk = (d.get("risk") or "low").title()
     return f"{a} · {t} · {rsk} risk"

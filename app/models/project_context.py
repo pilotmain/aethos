@@ -21,10 +21,10 @@ class NexaWorkspaceProject(Base, TimestampMixin):
     configured host executor work root (validated at insert).
     """
 
-    __tablename__ = "nexa_workspace_projects"
+    __tablename__ = "aethos_workspace_projects"
     __table_args__ = (
-        UniqueConstraint("owner_user_id", "path_normalized", name="uq_nexa_ws_proj_owner_path"),
-        Index("ix_nexa_ws_proj_owner", "owner_user_id"),
+        UniqueConstraint("owner_user_id", "path_normalized", name="uq_aethos_ws_proj_owner_path"),
+        Index("ix_aethos_ws_proj_owner", "owner_user_id"),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)

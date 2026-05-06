@@ -48,7 +48,7 @@ def compute_web_message_metadata(
     t = (user_text or "").strip()
     r = reply or ""
     rlower = r.lower()
-    key = (agent_key or "").strip() or "nexa"
+    key = (agent_key or "").strip() or "aethos"
     is_research = key == "research"
 
     preview_ask = extract_url_for_browser_preview(t)
@@ -72,7 +72,7 @@ def compute_web_message_metadata(
         is_research
         and is_research_block
         and ("public read-only" in rlower or "public read only" in rlower)
-    ) or (key == "nexa" and "public read-only" in rlower):
+    ) or (key in ("aethos", "nexa") and "public read-only" in rlower):
         return WebMessageMetadata(
             "public_web",
             [WebResponseSourceItem(url=u, title=None) for u in urls],

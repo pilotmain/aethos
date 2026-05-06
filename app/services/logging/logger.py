@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 
-_LOG = logging.getLogger("nexa")
+_LOG = logging.getLogger("aethos")
 _LOG.setLevel(logging.INFO)
 
 _TEXT_FMT = "%(asctime)s %(levelname)s [%(name)s] %(message)s"

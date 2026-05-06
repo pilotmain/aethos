@@ -104,7 +104,7 @@ def cancel_assignment(db: Session, *, user_id: str, assignment_id: int) -> dict[
     audit(
         db,
         event_type="mission_control.assignment.cancelled",
-        actor="nexa",
+        actor="aethos",
         user_id=uid,
         message=f"Cancelled assignment #{assignment_id}",
         metadata={"assignment_id": assignment_id},
@@ -130,7 +130,7 @@ def delete_or_hide_assignment(
         audit(
             db,
             event_type="mission_control.assignment.hidden",
-            actor="nexa",
+            actor="aethos",
             user_id=uid,
             message=f"Hard-deleted assignment #{assignment_id}",
             metadata={"assignment_id": assignment_id, "hard_delete": True},
@@ -150,7 +150,7 @@ def delete_or_hide_assignment(
     audit(
         db,
         event_type="mission_control.assignment.hidden",
-        actor="nexa",
+        actor="aethos",
         user_id=uid,
         message=f"Hidden assignment #{assignment_id}",
         metadata={"assignment_id": assignment_id, "hard_delete": False},
@@ -229,7 +229,7 @@ def clear_spawn_group(
     audit(
         db,
         event_type="mission_control.spawn_group.cleared",
-        actor="nexa",
+        actor="aethos",
         user_id=uid,
         message=f"Cleared spawn group {sg}",
         metadata={"spawn_group_id": sg, "assignment_ids": cleared_ids},
@@ -260,7 +260,7 @@ def clear_workspace_reports(db: Session, *, user_id: str) -> dict[str, Any]:
     audit(
         db,
         event_type="mission_control.report.cleared",
-        actor="nexa",
+        actor="aethos",
         user_id=uid,
         message="Cleared workspace report files",
         metadata={"cleared": cleared},
@@ -284,7 +284,7 @@ def dismiss_agent_job(db: Session, *, user_id: str, job_id: int) -> dict[str, An
     audit(
         db,
         event_type="mission_control.job.dismissed",
-        actor="nexa",
+        actor="aethos",
         user_id=uid,
         job_id=job_id,
         message=f"Dismissed job #{job_id} from Mission Control",
@@ -311,7 +311,7 @@ def delete_or_hide_agent_job(
         audit(
             db,
             event_type="mission_control.job.dismissed",
-            actor="nexa",
+            actor="aethos",
             user_id=uid,
             job_id=job_id,
             message=f"Hard-deleted job #{job_id}",
@@ -343,7 +343,7 @@ def mission_control_delete_custom_agent(db: Session, *, user_id: str, handle: st
     audit(
         db,
         event_type="mission_control.custom_agent.deleted",
-        actor="nexa",
+        actor="aethos",
         user_id=uid,
         message=f"Disabled custom agent @{k} from Mission Control",
         metadata={"handle": k},
@@ -413,7 +413,7 @@ def reset_mission_control(
     audit(
         db,
         event_type="mission_control.reset",
-        actor="nexa",
+        actor="aethos",
         user_id=uid,
         message="Mission Control reset",
         metadata={

@@ -135,7 +135,7 @@ def background_heartbeat(db: Session, *, user_id: str, payload: dict[str, Any]) 
     audit(
         db,
         event_type="agent_session.heartbeat",
-        actor="nexa",
+        actor="aethos",
         user_id=uid,
         message=f"Heartbeat @{handle} assignment={aid}",
         metadata={

@@ -16,7 +16,7 @@ def _utc_now() -> datetime:
 
 
 class NexaMission(Base):
-    __tablename__ = "nexa_missions"
+    __tablename__ = "aethos_missions"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     user_id: Mapped[str] = mapped_column(String(64), index=True)
@@ -27,7 +27,7 @@ class NexaMission(Base):
 
 
 class NexaMissionTask(Base):
-    __tablename__ = "nexa_tasks"
+    __tablename__ = "aethos_tasks"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     mission_id: Mapped[str] = mapped_column(String(64), index=True)
@@ -44,7 +44,7 @@ class NexaMissionTask(Base):
 class NexaExternalCall(Base):
     """Audit log for every outbound provider attempt (blocked or allowed)."""
 
-    __tablename__ = "nexa_external_calls"
+    __tablename__ = "aethos_external_calls"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     provider: Mapped[str] = mapped_column(String(64), index=True)
@@ -58,7 +58,7 @@ class NexaExternalCall(Base):
 
 
 class NexaArtifact(Base):
-    __tablename__ = "nexa_artifacts"
+    __tablename__ = "aethos_artifacts"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     mission_id: Mapped[str] = mapped_column(String(64), index=True)

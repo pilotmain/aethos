@@ -121,7 +121,7 @@ def write_aider_task_file(job) -> Path:
     p = AGENT_TASKS_DIR / f"dev_job_{job.id}.md"
     body = (job.instruction or "").strip() or (job.title or "").strip() or "No instruction."
     pl0 = dict(getattr(job, "payload_json", None) or {})
-    p_label = (pl0.get("project_key") or "nexa").strip() or "Nexa"
+    p_label = (pl0.get("project_key") or "aethos").strip() or "AethOS"
     text = f"""# Dev job #{job.id}: {job.title}
 
 {body}

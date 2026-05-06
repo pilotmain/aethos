@@ -16,7 +16,7 @@ def _utc_now() -> datetime:
 
 
 class NexaDevWorkspace(Base):
-    __tablename__ = "nexa_dev_workspaces"
+    __tablename__ = "aethos_dev_workspaces"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     user_id: Mapped[str] = mapped_column(String(128), index=True)
@@ -30,7 +30,7 @@ class NexaDevWorkspace(Base):
 
 
 class NexaDevRun(Base):
-    __tablename__ = "nexa_dev_runs"
+    __tablename__ = "aethos_dev_runs"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     user_id: Mapped[str] = mapped_column(String(128), index=True)
@@ -47,7 +47,7 @@ class NexaDevRun(Base):
 
 
 class NexaDevStep(Base):
-    __tablename__ = "nexa_dev_steps"
+    __tablename__ = "aethos_dev_steps"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     run_id: Mapped[str] = mapped_column(String(64), index=True)

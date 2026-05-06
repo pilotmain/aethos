@@ -21,24 +21,26 @@ _MENTION_ALIASES: dict[str, str] = {
     "research": "research",
     "ops": "ops",
     "nexa": "nexa",
+    "aethos": "aethos",
     "person": "ops",
     "admin": "ops",
 }
 
 # Route key → internal agent_key
 ROUTE_KEY_TO_INTERNAL: dict[str, str] = {
-    "reset": "nexa",
+    "reset": "aethos",
     "dev": "developer",
     "qa": "qa",
     "strategy": "strategy",
     "marketing": "marketing",
     "research": "research",
     "ops": "ops",
-    "nexa": "nexa",
+    "nexa": "aethos",
+    "aethos": "aethos",
     "mkt": "marketing",
     "strat": "strategy",
-    "overwhelm": "nexa",
-    "overwhelm_reset": "nexa",
+    "overwhelm": "aethos",
+    "overwhelm_reset": "aethos",
     "person": "ops",
     "dev_legacy": "developer",  # unused
 }
@@ -55,6 +57,7 @@ def _registry_to_route(mention_key: str) -> str | None:
     m = {
         "developer": "dev",
         "nexa": "nexa",
+        "aethos": "aethos",
         "overwhelm_reset": "reset",
         "qa": "qa",
         "marketing": "marketing",
@@ -181,19 +184,20 @@ def route_agent(
     if re.search(
         r"\b(overwhelmed|brain dump|too much|my brain|can\'?t focus|stuck|panic|drowning|anxious|freeze)\b", t
     ):
-        return _out("nexa", 0.9, "reset phrase", text=t_raw)
+        return _out("aethos", 0.9, "reset phrase", text=t_raw)
 
     if context_snapshot and not context_snapshot.get("manual_topic_override"):
         act = context_snapshot.get("active_agent")
         if act:
             ak = str(act)
             if ak in ("overwhelm_reset", "reset", "overwhelm"):
-                ak2 = "nexa"
+                ak2 = "aethos"
             else:
                 ak2 = ak
             if ak2 in {
                 "developer",
                 "qa",
+                "aethos",
                 "nexa",
                 "strategy",
                 "marketing",
@@ -206,7 +210,7 @@ def route_agent(
             }:
                 return _out(ak2, 0.65, "conversation continuity", text=t_raw)
 
-    return _out("nexa", 0.5, "default", text=t_raw)
+    return _out("aethos", 0.5, "default", text=t_raw)
 
 
 def parse_leading_mention(text: str) -> tuple[str | None, str]:

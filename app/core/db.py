@@ -113,9 +113,44 @@ def _migrate_users_v7_focus_and_interaction() -> None:
 
 logger = logging.getLogger(__name__)
 
+# Phase 38 — physical DB table names (legacy ``nexa_*`` → ``aethos_*``).
+_LEGACY_NEXA_TABLE_RENAMES: tuple[tuple[str, str], ...] = (
+    ("nexa_workspace_projects", "aethos_workspace_projects"),
+    ("nexa_missions", "aethos_missions"),
+    ("nexa_tasks", "aethos_tasks"),
+    ("nexa_external_calls", "aethos_external_calls"),
+    ("nexa_artifacts", "aethos_artifacts"),
+    ("nexa_autonomous_tasks", "aethos_autonomous_tasks"),
+    ("nexa_task_feedback", "aethos_task_feedback"),
+    ("nexa_autonomy_decisions", "aethos_autonomy_decisions"),
+    ("nexa_scheduler_jobs", "aethos_scheduler_jobs"),
+    ("nexa_dev_workspaces", "aethos_dev_workspaces"),
+    ("nexa_dev_runs", "aethos_dev_runs"),
+    ("nexa_dev_steps", "aethos_dev_steps"),
+    ("nexa_long_running_sessions", "aethos_long_running_sessions"),
+    ("nexa_user_settings", "aethos_user_settings"),
+)
+
+
+def _migrate_rename_legacy_nexa_tables_to_aethos() -> None:
+    """Rename legacy ``nexa_*`` tables to ``aethos_*`` before ORM ``create_all``. Idempotent."""
+    insp = inspect(engine)
+    tables = set(insp.get_table_names())
+    for old, new in _LEGACY_NEXA_TABLE_RENAMES:
+        if old not in tables:
+            continue
+        if new in tables:
+            logger.info("skip table rename %s → %s (target already exists)", old, new)
+            continue
+        with engine.begin() as conn:
+            conn.execute(text(f'ALTER TABLE "{old}" RENAME TO "{new}"'))
+        logger.info("renamed table %s → %s", old, new)
+        tables.discard(old)
+        tables.add(new)
+
 
 def _migrate_agent_key_overwhelm_reset_to_nexa() -> None:
-    """Rename internal agent key overwhelm_reset -> nexa (Nexa product rebrand). Idempotent."""
+    """Rename internal agent key overwhelm_reset / legacy ``nexa`` -> ``aethos`` (AethOS rebrand). Idempotent."""
     from sqlalchemy import inspect, text
 
     insp = inspect(engine)
@@ -129,26 +164,39 @@ def _migrate_agent_key_overwhelm_reset_to_nexa() -> None:
         with engine.begin() as conn:
             conn.execute(
                 text(
-                    f"UPDATE {t} SET agent_key = 'nexa' "
-                    f"WHERE agent_key = 'overwhelm_reset'"
+                    f"UPDATE {t} SET agent_key = 'aethos' "
+                    f"WHERE agent_key IN ('overwhelm_reset', 'nexa')"
                 )
             )
     if "agent_definitions" in table_names:
         with engine.begin() as conn:
             desc = "Your personal execution system — think clearly and get things done."
+            has_aethos = conn.execute(
+                text("SELECT 1 FROM agent_definitions WHERE key = 'aethos' LIMIT 1")
+            ).first()
             has_nexa = conn.execute(
                 text("SELECT 1 FROM agent_definitions WHERE key = 'nexa' LIMIT 1")
             ).first()
             has_old = conn.execute(
                 text("SELECT 1 FROM agent_definitions WHERE key = 'overwhelm_reset' LIMIT 1")
             ).first()
-            if has_old and has_nexa:
-                # Both keys present (e.g. partial prior seed) — drop stale row, keep `nexa`.
+            if has_nexa and has_aethos:
+                conn.execute(text("DELETE FROM agent_definitions WHERE key = 'nexa'"))
+            elif has_nexa:
+                conn.execute(
+                    text(
+                        "UPDATE agent_definitions SET key = 'aethos', display_name = 'AethOS', "
+                        "description = :d "
+                        "WHERE key = 'nexa'"
+                    ),
+                    {"d": desc},
+                )
+            elif has_old and has_aethos:
                 conn.execute(text("DELETE FROM agent_definitions WHERE key = 'overwhelm_reset'"))
             elif has_old:
                 conn.execute(
                     text(
-                        "UPDATE agent_definitions SET key = 'nexa', display_name = 'Nexa', "
+                        "UPDATE agent_definitions SET key = 'aethos', display_name = 'AethOS', "
                         "description = :d "
                         "WHERE key = 'overwhelm_reset'"
                     ),
@@ -196,7 +244,7 @@ def _migrate_conversation_context_topic_authority() -> None:
 
 
 def _seed_default_project() -> None:
-    """Idempotent: ensure at least one Project row; seed `nexa` as default if table is empty."""
+    """Idempotent: ensure at least one Project row; seed ``aethos`` as default if table is empty."""
     from app.models.project import Project
     from app.services.handoff_paths import PROJECT_ROOT
 
@@ -211,8 +259,8 @@ def _seed_default_project() -> None:
         repo = str(Path(PROJECT_ROOT).resolve())
         s.add(
             Project(
-                key="nexa",
-                display_name="Nexa",
+                key="aethos",
+                display_name="AethOS",
                 repo_path=repo,
                 provider_key=provider,
                 default_environment=default_env,
@@ -285,8 +333,25 @@ def _migrate_projects_idea_workflow() -> None:
             conn.execute(text(f"ALTER TABLE projects ADD COLUMN workflow_step_index {d0}"))
 
 
+def _migrate_projects_key_nexa_to_aethos() -> None:
+    """Rename default project key ``nexa`` → ``aethos`` if present."""
+    insp = inspect(engine)
+    if "projects" not in insp.get_table_names():
+        return
+    cols = {c["name"] for c in insp.get_columns("projects")}
+    if "key" not in cols:
+        return
+    with engine.begin() as conn:
+        conn.execute(
+            text(
+                "UPDATE projects SET key = 'aethos', display_name = 'AethOS' "
+                "WHERE key = 'nexa'"
+            )
+        )
+
+
 def _migrate_projects_dev_tool_columns() -> None:
-    """Add preferred_dev_tool, dev_execution_mode; backfill nexa defaults."""
+    """Add preferred_dev_tool, dev_execution_mode; backfill default project."""
     insp = inspect(engine)
     if "projects" not in insp.get_table_names():
         return
@@ -306,13 +371,13 @@ def _migrate_projects_dev_tool_columns() -> None:
         conn.execute(
             text(
                 "UPDATE projects SET preferred_dev_tool = 'aider' "
-                "WHERE key = 'nexa' AND (preferred_dev_tool IS NULL OR TRIM(COALESCE(preferred_dev_tool, '')) = '')"
+                "WHERE key = 'aethos' AND (preferred_dev_tool IS NULL OR TRIM(COALESCE(preferred_dev_tool, '')) = '')"
             )
         )
         conn.execute(
             text(
                 "UPDATE projects SET dev_execution_mode = 'autonomous_cli' "
-                "WHERE key = 'nexa' AND (dev_execution_mode IS NULL OR TRIM(COALESCE(dev_execution_mode, '')) = '')"
+                "WHERE key = 'aethos' AND (dev_execution_mode IS NULL OR TRIM(COALESCE(dev_execution_mode, '')) = '')"
             )
         )
 
@@ -496,20 +561,20 @@ def _migrate_conversation_context_blocked_host() -> None:
         )
 
 
-def _migrate_nexa_workspace_projects() -> None:
-    """Create nexa_workspace_projects + conversation_contexts.active_project_id."""
+def _migrate_aethos_workspace_projects() -> None:
+    """Create aethos_workspace_projects + conversation_contexts.active_project_id."""
     insp = inspect(engine)
     tables = list(insp.get_table_names())
     dialect = engine.dialect.name
     int_t = "INTEGER"
     txt = "TEXT"
-    if "nexa_workspace_projects" not in tables:
+    if "aethos_workspace_projects" not in tables:
         with engine.begin() as conn:
             if dialect == "postgresql":
                 conn.execute(
                     text(
                         f"""
-                        CREATE TABLE nexa_workspace_projects (
+                        CREATE TABLE aethos_workspace_projects (
                             id SERIAL PRIMARY KEY,
                             owner_user_id VARCHAR(64) NOT NULL,
                             name VARCHAR(256) NOT NULL,
@@ -517,21 +582,21 @@ def _migrate_nexa_workspace_projects() -> None:
                             description {txt} NULL,
                             created_at TIMESTAMP NULL,
                             updated_at TIMESTAMP NULL,
-                            CONSTRAINT uq_nexa_ws_proj_owner_path UNIQUE (owner_user_id, path_normalized)
+                            CONSTRAINT uq_aethos_ws_proj_owner_path UNIQUE (owner_user_id, path_normalized)
                         )
                         """
                     )
                 )
                 conn.execute(
                     text(
-                        "CREATE INDEX ix_nexa_ws_proj_owner ON nexa_workspace_projects (owner_user_id)"
+                        "CREATE INDEX ix_aethos_ws_proj_owner ON aethos_workspace_projects (owner_user_id)"
                     )
                 )
             else:
                 conn.execute(
                     text(
                         f"""
-                        CREATE TABLE nexa_workspace_projects (
+                        CREATE TABLE aethos_workspace_projects (
                             id {int_t} PRIMARY KEY AUTOINCREMENT,
                             owner_user_id VARCHAR(64) NOT NULL,
                             name VARCHAR(256) NOT NULL,
@@ -539,14 +604,14 @@ def _migrate_nexa_workspace_projects() -> None:
                             description {txt} NULL,
                             created_at DATETIME NULL,
                             updated_at DATETIME NULL,
-                            CONSTRAINT uq_nexa_ws_proj_owner_path UNIQUE (owner_user_id, path_normalized)
+                            CONSTRAINT uq_aethos_ws_proj_owner_path UNIQUE (owner_user_id, path_normalized)
                         )
                         """
                     )
                 )
                 conn.execute(
                     text(
-                        "CREATE INDEX ix_nexa_ws_proj_owner ON nexa_workspace_projects (owner_user_id)"
+                        "CREATE INDEX ix_aethos_ws_proj_owner ON aethos_workspace_projects (owner_user_id)"
                     )
                 )
     insp_cc = inspect(engine)
@@ -559,7 +624,7 @@ def _migrate_nexa_workspace_projects() -> None:
         conn.execute(
             text(
                 f"ALTER TABLE conversation_contexts ADD COLUMN active_project_id {int_t} NULL "
-                "REFERENCES nexa_workspace_projects(id) ON DELETE SET NULL"
+                "REFERENCES aethos_workspace_projects(id) ON DELETE SET NULL"
             )
         )
 
@@ -618,32 +683,32 @@ def _migrate_agent_organizations_governance_org() -> None:
             pass
 
 
-def _migrate_nexa_missions_input_text() -> None:
+def _migrate_aethos_missions_input_text() -> None:
     insp = inspect(engine)
-    if "nexa_missions" not in insp.get_table_names():
+    if "aethos_missions" not in insp.get_table_names():
         return
-    cols = {c["name"] for c in insp.get_columns("nexa_missions")}
+    cols = {c["name"] for c in insp.get_columns("aethos_missions")}
     if "input_text" in cols:
         return
     tt = "TEXT"
     with engine.begin() as conn:
-        conn.execute(text(f"ALTER TABLE nexa_missions ADD COLUMN input_text {tt} NULL"))
+        conn.execute(text(f"ALTER TABLE aethos_missions ADD COLUMN input_text {tt} NULL"))
 
 
-def _migrate_nexa_tasks_timing() -> None:
+def _migrate_aethos_tasks_timing() -> None:
     """Phase 13 — task-level latency for reliability metrics."""
     insp = inspect(engine)
-    if "nexa_tasks" not in insp.get_table_names():
+    if "aethos_tasks" not in insp.get_table_names():
         return
-    cols = {c["name"] for c in insp.get_columns("nexa_tasks")}
+    cols = {c["name"] for c in insp.get_columns("aethos_tasks")}
     dialect = engine.dialect.name
     dt = "TIMESTAMP WITH TIME ZONE" if dialect == "postgresql" else "DATETIME"
     fl = "DOUBLE PRECISION" if dialect == "postgresql" else "REAL"
     with engine.begin() as conn:
         if "started_at" not in cols:
-            conn.execute(text(f"ALTER TABLE nexa_tasks ADD COLUMN started_at {dt} NULL"))
+            conn.execute(text(f"ALTER TABLE aethos_tasks ADD COLUMN started_at {dt} NULL"))
         if "duration_ms" not in cols:
-            conn.execute(text(f"ALTER TABLE nexa_tasks ADD COLUMN duration_ms {fl} NULL"))
+            conn.execute(text(f"ALTER TABLE aethos_tasks ADD COLUMN duration_ms {fl} NULL"))
 
 
 def _migrate_agent_jobs_phase38_approval_persistence() -> None:
@@ -667,56 +732,57 @@ def _migrate_agent_jobs_phase38_approval_persistence() -> None:
 def _migrate_nexa_long_running_phase44() -> None:
     """Phase 44 — autonomy metadata on long-running sessions."""
     insp = inspect(engine)
-    if "nexa_long_running_sessions" not in insp.get_table_names():
+    if "aethos_long_running_sessions" not in insp.get_table_names():
         return
-    cols = {c["name"] for c in insp.get_columns("nexa_long_running_sessions")}
+    cols = {c["name"] for c in insp.get_columns("aethos_long_running_sessions")}
     dialect = engine.dialect.name
     df_false = "BOOLEAN NOT NULL DEFAULT FALSE" if dialect == "postgresql" else "BOOLEAN NOT NULL DEFAULT 0"
     with engine.begin() as conn:
         if "auto_generated" not in cols:
-            conn.execute(text(f"ALTER TABLE nexa_long_running_sessions ADD COLUMN auto_generated {df_false}"))
+            conn.execute(text(f"ALTER TABLE aethos_long_running_sessions ADD COLUMN auto_generated {df_false}"))
         if "priority" not in cols:
-            conn.execute(text("ALTER TABLE nexa_long_running_sessions ADD COLUMN priority INTEGER NOT NULL DEFAULT 0"))
+            conn.execute(text("ALTER TABLE aethos_long_running_sessions ADD COLUMN priority INTEGER NOT NULL DEFAULT 0"))
         if "origin" not in cols:
             t = "VARCHAR(64) NOT NULL DEFAULT 'user'" if dialect == "postgresql" else "VARCHAR(64) NOT NULL DEFAULT 'user'"
-            conn.execute(text(f"ALTER TABLE nexa_long_running_sessions ADD COLUMN origin {t}"))
+            conn.execute(text(f"ALTER TABLE aethos_long_running_sessions ADD COLUMN origin {t}"))
 
 
 def _migrate_nexa_autonomous_goal_id() -> None:
     """Phase 47 — link spawned tasks to parent goal rows."""
     insp = inspect(engine)
-    if "nexa_autonomous_tasks" not in insp.get_table_names():
+    if "aethos_autonomous_tasks" not in insp.get_table_names():
         return
-    cols = {c["name"] for c in insp.get_columns("nexa_autonomous_tasks")}
+    cols = {c["name"] for c in insp.get_columns("aethos_autonomous_tasks")}
     with engine.begin() as conn:
         if "goal_id" not in cols:
-            conn.execute(text("ALTER TABLE nexa_autonomous_tasks ADD COLUMN goal_id VARCHAR(64) NULL"))
+            conn.execute(text("ALTER TABLE aethos_autonomous_tasks ADD COLUMN goal_id VARCHAR(64) NULL"))
 
 
-def _migrate_nexa_dev_steps_phase25() -> None:
+def _migrate_aethos_dev_steps_phase25() -> None:
     """Phase 25 — iteration + structured JSON on dev steps."""
     insp = inspect(engine)
-    if "nexa_dev_steps" not in insp.get_table_names():
+    if "aethos_dev_steps" not in insp.get_table_names():
         return
-    cols = {c["name"] for c in insp.get_columns("nexa_dev_steps")}
+    cols = {c["name"] for c in insp.get_columns("aethos_dev_steps")}
     dialect = engine.dialect.name
     jt = "JSONB" if dialect == "postgresql" else "TEXT"
     with engine.begin() as conn:
         if "iteration" not in cols:
-            conn.execute(text("ALTER TABLE nexa_dev_steps ADD COLUMN iteration INTEGER NULL"))
+            conn.execute(text("ALTER TABLE aethos_dev_steps ADD COLUMN iteration INTEGER NULL"))
         if "adapter" not in cols:
-            conn.execute(text("ALTER TABLE nexa_dev_steps ADD COLUMN adapter VARCHAR(64) NULL"))
+            conn.execute(text("ALTER TABLE aethos_dev_steps ADD COLUMN adapter VARCHAR(64) NULL"))
         if "input_json" not in cols:
-            conn.execute(text(f"ALTER TABLE nexa_dev_steps ADD COLUMN input_json {jt} NULL"))
+            conn.execute(text(f"ALTER TABLE aethos_dev_steps ADD COLUMN input_json {jt} NULL"))
         if "output_json" not in cols:
-            conn.execute(text(f"ALTER TABLE nexa_dev_steps ADD COLUMN output_json {jt} NULL"))
+            conn.execute(text(f"ALTER TABLE aethos_dev_steps ADD COLUMN output_json {jt} NULL"))
         if "test_result" not in cols:
-            conn.execute(text(f"ALTER TABLE nexa_dev_steps ADD COLUMN test_result {jt} NULL"))
+            conn.execute(text(f"ALTER TABLE aethos_dev_steps ADD COLUMN test_result {jt} NULL"))
 
 
 def ensure_schema() -> None:
     import app.models  # noqa: F401 — register all models (incl. TaskPattern) on Base.metadata
 
+    _migrate_rename_legacy_nexa_tables_to_aethos()
     Base.metadata.create_all(bind=engine)
     _seed_default_project()
     _migrate_agent_key_overwhelm_reset_to_nexa()
@@ -731,16 +797,17 @@ def ensure_schema() -> None:
     _migrate_conversation_context_suggested_actions()
     _migrate_conversation_context_session_multiplex()
     _migrate_projects_idea_workflow()
+    _migrate_projects_key_nexa_to_aethos()
     _migrate_projects_dev_tool_columns()
     _migrate_learning_event_status()
     _migrate_access_permissions_last_used()
     _migrate_users_governance()
     _migrate_agent_organizations_governance_org()
-    _migrate_nexa_workspace_projects()
+    _migrate_aethos_workspace_projects()
     _migrate_conversation_context_blocked_host()
-    _migrate_nexa_missions_input_text()
-    _migrate_nexa_tasks_timing()
-    _migrate_nexa_dev_steps_phase25()
+    _migrate_aethos_missions_input_text()
+    _migrate_aethos_tasks_timing()
+    _migrate_aethos_dev_steps_phase25()
     _migrate_nexa_long_running_phase44()
     _migrate_nexa_autonomous_goal_id()
     _migrate_agent_jobs_phase38_approval_persistence()

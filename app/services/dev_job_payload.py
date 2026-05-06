@@ -13,7 +13,7 @@ def build_dev_job_payload_extras(
 ) -> dict[str, Any]:
     if not project:
         return {
-            "project_key": "nexa",
+            "project_key": "aethos",
             "repo_path": None,
             "preferred_dev_tool": "aider",
             "dev_execution_mode": "autonomous_cli",

@@ -558,7 +558,7 @@ def _snapshot_hints_railway_or_deploy(snap: dict[str, Any] | None) -> bool:
         "external_execution",
         "hosted",
         "production",
-        "nexa_missions",
+        "aethos_missions",
     )
     return any(k in raw for k in keys)
 

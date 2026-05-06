@@ -15,7 +15,7 @@ def _utc_now() -> datetime:
 
 
 class NexaLongRunningSession(Base):
-    __tablename__ = "nexa_long_running_sessions"
+    __tablename__ = "aethos_long_running_sessions"
     __table_args__ = (UniqueConstraint("user_id", "session_key", name="uq_lr_user_session"),)
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)

@@ -158,7 +158,7 @@ def try_cursor_dispatch(db: Session, *, row: AgentAssignment, uid: str) -> dict[
         audit(
             db,
             event_type=CURSOR_RUN_FAILED,
-            actor="nexa",
+            actor="aethos",
             user_id=uid,
             message=f"Cursor parse failed for assignment #{row.id}",
             metadata={"assignment_id": row.id},
@@ -174,7 +174,7 @@ def try_cursor_dispatch(db: Session, *, row: AgentAssignment, uid: str) -> dict[
     audit(
         db,
         event_type=CURSOR_RUN_STARTED,
-        actor="nexa",
+        actor="aethos",
         user_id=uid,
         message=f"Cursor run started for assignment #{row.id}",
         metadata={
@@ -188,7 +188,7 @@ def try_cursor_dispatch(db: Session, *, row: AgentAssignment, uid: str) -> dict[
     audit(
         db,
         event_type=CURSOR_RUN_CREATED,
-        actor="nexa",
+        actor="aethos",
         user_id=uid,
         message=f"Cursor agent/run created for assignment #{row.id}",
         metadata={
@@ -250,7 +250,7 @@ def try_cursor_dispatch(db: Session, *, row: AgentAssignment, uid: str) -> dict[
     audit(
         db,
         event_type=completed_audit,
-        actor="nexa",
+        actor="aethos",
         user_id=uid,
         message=f"Cursor run {status} for assignment #{row.id}",
         metadata={
@@ -281,7 +281,7 @@ def _fail_assignment(
     audit(
         db,
         event_type=CURSOR_RUN_FAILED,
-        actor="nexa",
+        actor="aethos",
         user_id=uid,
         message=f"Assignment #{row.id} failed (Cursor)",
         metadata=md,

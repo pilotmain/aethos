@@ -81,7 +81,7 @@ def try_web_host_job_status_reply(
         matched.append(j)
 
     base_dec = {
-        "agent": "nexa",
+        "agent": "aethos",
         "action": "host_job_status",
         "tool": "host_executor",
         "reason": "Deterministic status for this Web chat session (no LLM).",
@@ -90,7 +90,7 @@ def try_web_host_job_status_reply(
         "intent": "host_job_status",
     }
     team_dec = {
-        "agent": "nexa",
+        "agent": "aethos",
         "action": "assignment_activity",
         "tool": "agent_team",
         "reason": "Recent assignments for this account (no LLM).",
@@ -104,7 +104,7 @@ def try_web_host_job_status_reply(
             return WebChatResult(
                 reply=assignment_block,
                 intent="team_progress",
-                agent_key="nexa",
+                agent_key="aethos",
                 response_kind="team_progress",
                 related_job_ids=[],
                 decision_summary=team_dec,
@@ -115,7 +115,7 @@ def try_web_host_job_status_reply(
                 "If you expected one, start a tracked job or assignment first."
             ),
             intent="host_job_status",
-            agent_key="nexa",
+            agent_key="aethos",
             response_kind="host_job_status",
             related_job_ids=[],
         )
@@ -142,7 +142,7 @@ def try_web_host_job_status_reply(
         return WebChatResult(
             reply=f"{assignment_block}\n\n---\n\n{host_reply}",
             intent="mixed_progress",
-            agent_key="nexa",
+            agent_key="aethos",
             response_kind="mixed_progress",
             related_job_ids=[j.id],
             decision_summary=base_dec,
@@ -151,7 +151,7 @@ def try_web_host_job_status_reply(
     return WebChatResult(
         reply=host_reply,
         intent="host_job_status",
-        agent_key="nexa",
+        agent_key="aethos",
         response_kind="host_job_status",
         related_job_ids=[j.id],
         decision_summary=base_dec,

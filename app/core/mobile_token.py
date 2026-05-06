@@ -28,7 +28,7 @@ def create_mobile_access_token(user_id: str, display_name: str | None = None) ->
         "name": display_name,
         "iat": int(now.timestamp()),
         "exp": int((now + timedelta(hours=hours)).timestamp()),
-        "typ": "nexa_mobile",
+        "typ": "aethos_mobile",
     }
     return jwt.encode(payload, secret, algorithm="HS256")
 
@@ -47,7 +47,7 @@ def decode_mobile_access_token(token: str) -> dict[str, Any]:
         )
     except jwt.PyJWTError as exc:
         raise MobileTokenError(str(exc)) from exc
-    if payload.get("typ") != "nexa_mobile":
+    if payload.get("typ") not in ("aethos_mobile", "nexa_mobile"):
         raise MobileTokenError("wrong token type")
     return payload
 

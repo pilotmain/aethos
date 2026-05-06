@@ -59,7 +59,7 @@ def handle_nexa_ops_mention(
     if not p_raw and active:
         p_raw = str(active).strip().lower() or None
     if not p_raw and dp:
-        p_raw = (dp.key or "nexa").lower()
+        p_raw = (dp.key or "aethos").lower()
     if p_raw is not None:
         payload["project_key"] = p_raw
     if not orig_project:

@@ -1,7 +1,12 @@
 """In-memory agent catalog; rows in `agent_definitions` are synced on startup."""
 
+# Canonical primary assistant handle (Phase 38 — AethOS rebrand).
+PRIMARY_AGENT_KEY = "aethos"
+LEGACY_PRIMARY_AGENT_KEYS = frozenset({"nexa", "overwhelm_reset"})
+
 AGENT_EMOJIS: dict[str, str] = {
-    "nexa": "🧠",
+    PRIMARY_AGENT_KEY: "🧠",
+    "nexa": "🧠",  # legacy alias for logs/UI
     "developer": "💻",
     "qa": "🧪",
     "marketing": "📣",
@@ -16,14 +21,14 @@ AGENT_EMOJIS: dict[str, str] = {
 
 # Keys align with vNext `AGENT_TYPES` + `general` for unclassified routing.
 DEFAULT_AGENTS: dict[str, dict[str, object]] = {
-    "nexa": {
-        "display_name": "Nexa",
+    PRIMARY_AGENT_KEY: {
+        "display_name": "AethOS",
         "description": "Your personal execution system — think clearly and get things done.",
         "allowed_tools": ["memory", "tasks", "telegram"],
     },
     "developer": {
         "display_name": "Development",
-        "description": "Runs code changes through Nexa’s autonomous dev loop.",
+        "description": "Runs code changes through AethOS’s autonomous dev loop.",
         "allowed_tools": ["git", "tests", "aider", "safe_file_read"],
     },
     "qa": {
@@ -68,16 +73,17 @@ DEFAULT_AGENTS: dict[str, dict[str, object]] = {
     },
     "general": {
         "display_name": "General",
-        "description": "Falls back to Nexa routing when no prior agent handle matches.",
+        "description": "Falls back to AethOS routing when no prior agent handle matches.",
         "allowed_tools": ["safe_llm", "memory", "tasks", "telegram"],
     },
 }
 
 MENTION_ALIASES: dict[str, str] = {
     "dev": "developer",
-    "reset": "nexa",
-    "overwhelm": "nexa",
-    "overwhelm_reset": "nexa",
+    "nexa": PRIMARY_AGENT_KEY,
+    "reset": PRIMARY_AGENT_KEY,
+    "overwhelm": PRIMARY_AGENT_KEY,
+    "overwhelm_reset": PRIMARY_AGENT_KEY,
     "mkt": "marketing",
     "strat": "strategy",
     "test": "qa",
@@ -95,3 +101,22 @@ def resolve_mention_key(raw: str) -> str | None:
     if k in DEFAULT_AGENTS:
         return k
     return None
+
+
+def normalize_primary_agent_key(key: str | None) -> str:
+    """Map legacy primary handles to :data:`PRIMARY_AGENT_KEY`."""
+    k = (key or "").strip().lower()
+    if k in LEGACY_PRIMARY_AGENT_KEYS or k == "":
+        return PRIMARY_AGENT_KEY
+    return k
+
+
+__all__ = [
+    "AGENT_EMOJIS",
+    "DEFAULT_AGENTS",
+    "LEGACY_PRIMARY_AGENT_KEYS",
+    "MENTION_ALIASES",
+    "PRIMARY_AGENT_KEY",
+    "normalize_primary_agent_key",
+    "resolve_mention_key",
+]

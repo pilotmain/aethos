@@ -220,11 +220,11 @@ def try_gateway_approval_route(
             ed = pl.get("execution_decision") or {}
             tool = ed.get("tool_key") or pl.get("preferred_dev_tool") or "—"
             mode = ed.get("mode") or pl.get("dev_execution_mode") or "—"
-            pk = (pl.get("project_key") or "nexa") or "nexa"
+            pk = (pl.get("project_key") or "aethos") or "aethos"
             base = {
                 "mode": "chat",
                 "text": (
-                    f"Nexa accepted dev task #{job.id}.\n\n"
+                    f"AethOS accepted dev task #{job.id}.\n\n"
                     f"Project: `{pk}`\n"
                     f"Tool: `{tool}`\n"
                     f"Mode: `{mode}`\n"

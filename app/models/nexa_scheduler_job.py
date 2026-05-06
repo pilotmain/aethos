@@ -15,7 +15,7 @@ def _utc_now() -> datetime:
 
 
 class NexaSchedulerJob(Base):
-    __tablename__ = "nexa_scheduler_jobs"
+    __tablename__ = "aethos_scheduler_jobs"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     user_id: Mapped[str] = mapped_column(String(128), index=True)

@@ -268,7 +268,7 @@ class LLMService:
 
     def _extract_tasks_openai_with_client(self, text: str, now: datetime, oai) -> dict:
         m = get_merged_api_keys()
-        with push_llm_action(action_type=PLAN_REFINEMENT, agent_key="nexa"):
+        with push_llm_action(action_type=PLAN_REFINEMENT, agent_key="aethos"):
             prompt = EXTRACTION_PROMPT.format(input=text)
             response = oai.chat.completions.create(
                 model=self.settings.openai_model,
@@ -289,7 +289,7 @@ class LLMService:
 
     def _extract_tasks_anthropic_with_client(self, text: str, now: datetime, client) -> dict:  # noqa: ARG002
         m = get_merged_api_keys()
-        with push_llm_action(action_type=PLAN_REFINEMENT, agent_key="nexa"):
+        with push_llm_action(action_type=PLAN_REFINEMENT, agent_key="aethos"):
             prompt = EXTRACTION_PROMPT.format(input=text)
             message = client.messages.create(
                 model=self.settings.anthropic_model,
@@ -323,7 +323,7 @@ class LLMService:
         body: str | None = None
         anth_c, oai_c = self._clients_from_merge()
         m = get_merged_api_keys()
-        with push_llm_action(action_type=PLAN_REFINEMENT, agent_key="nexa"):
+        with push_llm_action(action_type=PLAN_REFINEMENT, agent_key="aethos"):
             if anth_c:
                 try:
                     message = anth_c.messages.create(
