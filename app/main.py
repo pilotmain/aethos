@@ -198,9 +198,17 @@ async def lifespan(app: FastAPI):
         getattr(_boot, "telegram_bot_token", None) or ""
     ).strip():
         try:
-            from app.bot.telegram_bot import start_telegram_polling_daemon
+            from app.services.telegram_polling_lock import try_acquire_telegram_polling_lock
 
-            start_telegram_polling_daemon()
+            if not try_acquire_telegram_polling_lock():
+                logging.getLogger("aethos").info(
+                    "skipping embedded Telegram bot — polling lock held by another process "
+                    "(run only one of: API embedded bot or python -m app.bot.telegram_bot)"
+                )
+            else:
+                from app.bot.telegram_bot import start_telegram_polling_daemon
+
+                start_telegram_polling_daemon()
         except Exception as exc:
             logging.getLogger("aethos").warning("telegram bot start failed: %s", exc)
     if getattr(_boot, "nexa_agent_monitoring_enabled", False):

@@ -1,3 +1,4 @@
+from app.models.aethos_orchestration_sub_agent import AethosOrchestrationSubAgent
 from app.models.access_permission import AccessPermission
 from app.models.agent_definition import AgentDefinition
 from app.models.agent_heartbeat import AgentHeartbeat
@@ -37,6 +38,7 @@ from app.models.user_settings import NexaUserSettings
 from app.models.workspace_root import WorkspaceRoot
 
 __all__ = [
+    "AethosOrchestrationSubAgent",
     "User",
     "UserAgent",
     "UserApiKey",

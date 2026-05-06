@@ -12,10 +12,13 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
+from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
+from app.core.db import get_db
 from app.core.security import get_valid_web_user_id
 from app.services.agent.activity_tracker import get_activity_tracker
+from app.services.sub_agent_executor import AgentExecutor
 from app.services.sub_agent_registry import AgentRegistry, AgentStatus
 
 router = APIRouter(prefix="/agents", tags=["agents"])
@@ -48,6 +51,12 @@ class UpdateAgentRequest(BaseModel):
     skills: list[str] | None = None
     status: str | None = None
     auto_approve: bool | None = None
+
+
+class ExecuteAgentRequest(BaseModel):
+    """Body for ``POST /agents/execute/{agent_name}`` (run sync executor)."""
+
+    task: str = Field(..., min_length=1, max_length=50_000)
 
 
 def _agent_payload(agent: Any, *, include_stats: bool = False) -> dict[str, Any]:
@@ -347,6 +356,33 @@ def get_agent_named_status(
     if not agent:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Agent '{agent_name}' not found")
     return {"ok": True, "agent": _agent_payload(agent, include_stats=True)}
+
+
+@router.post("/execute/{agent_name}")
+def post_execute_agent(
+    agent_name: str,
+    body: ExecuteAgentRequest,
+    app_user_id: str = Depends(get_valid_web_user_id),
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    """Run the sync sub-agent executor for this user's workspace scope (same as @mention routing)."""
+    _orch_enabled()
+    chat_id = _web_chat_scope(app_user_id)
+    registry = AgentRegistry()
+    agent = registry.get_agent_by_name(agent_name.strip(), chat_id)
+    if not agent:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Agent '{agent_name}' not found")
+
+    executor = AgentExecutor()
+    result = executor.execute(
+        agent,
+        body.task,
+        chat_id,
+        db=db,
+        user_id=app_user_id,
+        web_session_id="default",
+    )
+    return {"ok": True, "agent_id": agent.id, "result": result}
 
 
 __all__ = ["router", "_agent_payload", "_web_chat_scope"]

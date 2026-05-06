@@ -1,25 +1,35 @@
 """
-In-memory **orchestration** sub-agent registry (Week 4 Phase 1).
+Orchestration sub-agent registry (Week 4 Phase 1).
 
 Distinct from :mod:`app.services.agent_registry` (platform `DEFAULT_AGENTS` catalog).
 
-Suitable for single-worker API processes. For multi-replica / HA, use a
-persistent backend (DB/Redis) — see docs/AGENT_ORCHESTRATION.md.
+Loads/saves rows to ``aethos_orchestration_sub_agents`` so agents survive API restarts.
+Persistence is skipped while ``pytest`` is imported so unit tests stay in-memory only.
+Multi-replica APIs still need a shared store or sticky routing — see docs/AGENT_ORCHESTRATION.md.
 """
 
 from __future__ import annotations
 
 import logging
+import sys
 import time
 import uuid
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
+from sqlalchemy import delete as sql_delete
+from sqlalchemy import select
+
 from app.core.config import get_settings
 from app.services.sub_agent_audit import log_agent_event
 
 logger = logging.getLogger(__name__)
+
+
+def _orch_registry_db_enabled() -> bool:
+    """Avoid SQLite / DB writes during pytest (unit tests expect pure in-memory state)."""
+    return "pytest" not in sys.modules
 
 
 class AgentStatus(Enum):
@@ -61,6 +71,25 @@ def _default_capabilities_for_domain(domain: str) -> list[str]:
     return list(domain_capabilities.get(domain, []))
 
 
+def _row_to_subagent(row: Any) -> SubAgent:
+    try:
+        st = AgentStatus(row.status)
+    except Exception:
+        st = AgentStatus.IDLE
+    return SubAgent(
+        id=row.id,
+        name=row.name,
+        domain=row.domain,
+        capabilities=list(row.capabilities or []),
+        parent_chat_id=row.parent_chat_id,
+        trusted=bool(row.trusted),
+        status=st,
+        created_at=float(row.created_at),
+        last_active=float(row.last_active),
+        metadata=dict(row.agent_metadata or {}),
+    )
+
+
 class AgentRegistry:
     """
     Process-wide registry (singleton). For tests, call :meth:`reset`.
@@ -72,6 +101,7 @@ class AgentRegistry:
         if cls._instance is None:
             inst = super().__new__(cls)
             inst._agents: dict[str, SubAgent] = {}
+            inst._orch_hydrated = False
             cls._instance = inst
         return cls._instance
 
@@ -79,6 +109,64 @@ class AgentRegistry:
     def reset(cls) -> None:
         """Clear singleton state (testing only)."""
         cls._instance = None
+
+    def _ensure_loaded(self) -> None:
+        if self._orch_hydrated:
+            return
+        self._orch_hydrated = True
+        if not _orch_registry_db_enabled():
+            return
+        try:
+            from app.core.db import SessionLocal
+            from app.models.aethos_orchestration_sub_agent import AethosOrchestrationSubAgent
+
+            with SessionLocal() as db:
+                rows = db.execute(select(AethosOrchestrationSubAgent)).scalars().all()
+                for row in rows:
+                    try:
+                        self._agents[row.id] = _row_to_subagent(row)
+                    except Exception as exc:
+                        logger.warning("skip bad orchestration agent row id=%s: %s", row.id, exc)
+        except Exception as exc:
+            logger.warning("orchestration registry DB load failed (continuing in-memory): %s", exc)
+
+    def _persist_agent(self, agent: SubAgent) -> None:
+        if not _orch_registry_db_enabled():
+            return
+        try:
+            from app.core.db import SessionLocal
+            from app.models.aethos_orchestration_sub_agent import AethosOrchestrationSubAgent
+
+            with SessionLocal() as db:
+                row = db.get(AethosOrchestrationSubAgent, agent.id)
+                if row is None:
+                    row = AethosOrchestrationSubAgent(id=agent.id)
+                    db.add(row)
+                row.name = agent.name
+                row.domain = agent.domain
+                row.parent_chat_id = agent.parent_chat_id
+                row.capabilities = list(agent.capabilities or [])
+                row.trusted = bool(agent.trusted)
+                row.status = agent.status.value
+                row.created_at = float(agent.created_at)
+                row.last_active = float(agent.last_active)
+                row.agent_metadata = dict(agent.metadata or {})
+                db.commit()
+        except Exception as exc:
+            logger.warning("orchestration agent persist failed id=%s: %s", agent.id, exc)
+
+    def _delete_persisted(self, agent_id: str) -> None:
+        if not _orch_registry_db_enabled():
+            return
+        try:
+            from app.core.db import SessionLocal
+            from app.models.aethos_orchestration_sub_agent import AethosOrchestrationSubAgent
+
+            with SessionLocal() as db:
+                db.execute(sql_delete(AethosOrchestrationSubAgent).where(AethosOrchestrationSubAgent.id == agent_id))
+                db.commit()
+        except Exception as exc:
+            logger.warning("orchestration agent delete failed id=%s: %s", agent_id, exc)
 
     def spawn_agent(
         self,
@@ -89,6 +177,7 @@ class AgentRegistry:
         *,
         trusted: bool = False,
     ) -> SubAgent | None:
+        self._ensure_loaded()
         settings = get_settings()
         if not bool(getattr(settings, "nexa_agent_orchestration_enabled", False)):
             logger.warning("agent orchestration disabled; spawn ignored")
@@ -120,6 +209,7 @@ class AgentRegistry:
             trusted=bool(trusted),
         )
         self._agents[agent_id] = agent
+        self._persist_agent(agent)
         logger.info(
             "Spawned agent %s (%s) domain=%s chat=%s",
             name,
@@ -146,6 +236,7 @@ class AgentRegistry:
         return agent
 
     def get_agent(self, agent_id: str) -> SubAgent | None:
+        self._ensure_loaded()
         return self._agents.get(agent_id)
 
     def get_agent_by_name(self, name: str, chat_id: str) -> SubAgent | None:
@@ -155,6 +246,7 @@ class AgentRegistry:
         return None
 
     def list_agents(self, chat_id: str | None = None) -> list[SubAgent]:
+        self._ensure_loaded()
         agents = list(self._agents.values())
         if chat_id is not None:
             agents = [a for a in agents if a.parent_chat_id == chat_id]
@@ -179,27 +271,33 @@ class AgentRegistry:
         return None
 
     def update_status(self, agent_id: str, status: AgentStatus) -> bool:
-        agent = self.get_agent(agent_id)
+        self._ensure_loaded()
+        agent = self._agents.get(agent_id)
         if not agent:
             return False
         agent.status = status
         if status == AgentStatus.IDLE:
             agent.touch()
         logger.debug("agent %s status -> %s", agent_id, status.value)
+        self._persist_agent(agent)
         return True
 
     def touch_agent(self, agent_id: str) -> bool:
-        agent = self.get_agent(agent_id)
+        self._ensure_loaded()
+        agent = self._agents.get(agent_id)
         if not agent:
             return False
         agent.touch()
+        self._persist_agent(agent)
         return True
 
     def terminate_agent(self, agent_id: str) -> bool:
-        agent = self.get_agent(agent_id)
+        self._ensure_loaded()
+        agent = self._agents.get(agent_id)
         if not agent:
             return False
         agent.status = AgentStatus.TERMINATED
+        self._persist_agent(agent)
         logger.info("Terminated agent %s (%s)", agent_id, agent.name)
         log_agent_event(
             "terminate",
@@ -213,9 +311,11 @@ class AgentRegistry:
 
     def remove_agent(self, agent_id: str) -> bool:
         """Permanently drop an agent from this process (hard delete)."""
+        self._ensure_loaded()
         agent = self._agents.pop(agent_id, None)
         if agent is None:
             return False
+        self._delete_persisted(agent_id)
         logger.info("Removed agent %s (%s) chat=%s", agent_id, agent.name, agent.parent_chat_id)
         log_agent_event(
             "remove",
@@ -238,7 +338,8 @@ class AgentRegistry:
         trusted: bool | None = None,
         metadata_patch: dict[str, Any] | None = None,
     ) -> SubAgent | None:
-        agent = self.get_agent(agent_id)
+        self._ensure_loaded()
+        agent = self._agents.get(agent_id)
         if not agent:
             return None
         if name is not None:
@@ -256,9 +357,11 @@ class AgentRegistry:
             md.update(metadata_patch)
             agent.metadata = md
         agent.touch()
+        self._persist_agent(agent)
         return agent
 
     def cleanup_idle_agents(self) -> int:
+        self._ensure_loaded()
         settings = get_settings()
         now = time.time()
         timeout_seconds = max(1, int(getattr(settings, "nexa_agent_idle_timeout_seconds", 3600)))
@@ -272,6 +375,7 @@ class AgentRegistry:
         return terminated
 
     def get_stats(self, chat_id: str | None = None) -> dict[str, Any]:
+        self._ensure_loaded()
         agents = self.list_agents(chat_id) if chat_id is not None else list(self._agents.values())
         status_counts: dict[str, int] = {s.value: 0 for s in AgentStatus}
         for a in agents:

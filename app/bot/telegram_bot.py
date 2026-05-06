@@ -3754,6 +3754,15 @@ def main() -> None:
     print_missing_python_modules_hint()
     print_llm_debug_banner()
     maybe_log_llm_key_hint()
+    from app.services.telegram_polling_lock import try_acquire_telegram_polling_lock
+
+    if not try_acquire_telegram_polling_lock():
+        print(
+            "Another process already holds the Telegram polling lock (embedded API bot or another bot instance).\n"
+            "Stop the other process or disable NEXA_TELEGRAM_EMBED_WITH_API=false and use only this standalone bot.\n",
+            flush=True,
+        )
+        raise RuntimeError("Telegram getUpdates conflict: polling lock not acquired")
     ensure_schema()
     application = Application.builder().token(settings.telegram_bot_token).post_init(post_init).build()
     register_telegram_handlers(application)
