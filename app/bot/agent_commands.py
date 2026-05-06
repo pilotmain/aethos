@@ -25,7 +25,7 @@ def _user_web_registry_scope(app_user_id: str) -> str:
     return f"web:{uid}:default"
 
 
-def _telegram_subagent_scopes(telegram_chat_id: int, app_user_id: str) -> list[str]:
+def telegram_subagent_scopes(telegram_chat_id: int, app_user_id: str) -> list[str]:
     """In-chat registry scope plus the user's web scope so API-created agents are visible in Telegram."""
     scopes: list[str] = [telegram_agent_registry_chat_id(telegram_chat_id)]
     uid = (app_user_id or "").strip()
@@ -49,7 +49,7 @@ async def subagent_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             await update.message.reply_text("Use /start first.")
             return
 
-        scopes = _telegram_subagent_scopes(update.effective_chat.id, link.app_user_id)
+        scopes = telegram_subagent_scopes(update.effective_chat.id, link.app_user_id)
         registry = AgentRegistry()
         tracker = get_activity_tracker()
 
@@ -208,4 +208,4 @@ async def subagent_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         db.close()
 
 
-__all__ = ["subagent_command"]
+__all__ = ["subagent_command", "telegram_subagent_scopes"]

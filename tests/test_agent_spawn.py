@@ -50,6 +50,15 @@ def test_agent_spawn_list_status(monkeypatch: pytest.MonkeyPatch) -> None:
 
         missing = c.get("/api/v1/agents/status/nope_nope", headers={"X-User-Id": uid})
         assert missing.status_code == 404
+
+        ex = c.post(
+            "/api/v1/agents/execute/qa_agent",
+            headers={"X-User-Id": uid},
+            json={"task": "security scan ."},
+        )
+        assert ex.status_code == 200, ex.text
+        assert ex.json().get("ok") is True
+        assert "result" in ex.json()
     finally:
         app.dependency_overrides.clear()
         AgentRegistry.reset()

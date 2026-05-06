@@ -180,6 +180,71 @@ def _persist_conversation_turn(
     except Exception as exc:  # noqa: BLE001
         logger.warning("conversation persist: %s", exc)
 
+
+# Phase 40 — leading @orchestration_agent … (AgentRegistry) before catalog / custom @mention routing.
+_ORCH_SUB_AGENT_LEADING = re.compile(r"^\s*@([a-zA-Z0-9_-]{1,120})\s*(.*)$", re.DOTALL)
+
+
+async def _try_handle_orchestration_sub_agent_mention(
+    update: Update,
+    db,
+    app_user_id: str,
+    tstrip: str,
+    telegram_chat_id: int,
+) -> bool:
+    """If text targets a registered orchestration sub-agent, run AgentExecutor and return True."""
+    if telegram_chat_id <= 0 or not tstrip or tstrip.startswith("/"):
+        return False
+    m = _ORCH_SUB_AGENT_LEADING.match(tstrip)
+    if not m:
+        return False
+    agent_name = (m.group(1) or "").strip().lstrip("@")
+    body = (m.group(2) or "").strip()
+    if not agent_name:
+        return False
+    if not bool(getattr(get_settings(), "nexa_agent_orchestration_enabled", False)):
+        return False
+
+    from app.bot.agent_commands import telegram_subagent_scopes
+    from app.services.sub_agent_executor import AgentExecutor
+    from app.services.sub_agent_registry import AgentRegistry
+
+    scopes = telegram_subagent_scopes(telegram_chat_id, app_user_id)
+    agent = AgentRegistry().get_agent_by_name_in_scopes(agent_name, scopes)
+    if agent is None:
+        return False
+    if not body:
+        await update.message.reply_text(
+            f"Add instructions after `@{agent_name}` (orchestration agent)."
+        )
+        return True
+
+    executor = AgentExecutor()
+    out = executor.execute(
+        agent,
+        body,
+        agent.parent_chat_id,
+        db=db,
+        user_id=app_user_id,
+        web_session_id="default",
+    )
+    from app.services.conversation_context_service import get_or_create_context
+
+    cctx = get_or_create_context(db, app_user_id)
+    _persist_conversation_turn(
+        db,
+        app_user_id,
+        cctx,
+        tstrip,
+        (out or "")[:12000],
+        "orchestration_sub_agent",
+        agent.name,
+    )
+    for piece in _split_telegram_text(out or "", max_len=4000):
+        await update.message.reply_text(piece)
+    return True
+
+
 settings = get_settings()
 telegram_service = TelegramService()
 orchestrator = OrchestratorService()
@@ -2154,6 +2219,16 @@ async def _handle_incoming_text_impl(
                     for piece in _split_telegram_text(twhy, max_len=4000):
                         await update.message.reply_text(piece)
                     return
+
+                if not tstrip.startswith("/") and tstrip:
+                    if await _try_handle_orchestration_sub_agent_mention(
+                        update,
+                        db,
+                        app_user_id,
+                        tstrip,
+                        int(update.effective_chat.id) if update.effective_chat else 0,
+                    ):
+                        return
 
                 # Phase 35 — missions/dev first (structured gateway only); chat brain lives in gateway too.
                 if not tstrip.startswith("/") and tstrip:
