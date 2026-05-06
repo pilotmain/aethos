@@ -66,6 +66,30 @@ def test_agent_spawn_list_status(monkeypatch: pytest.MonkeyPatch) -> None:
         get_settings.cache_clear()
 
 
+def test_agent_list_includes_telegram_scoped_agents(monkeypatch: pytest.MonkeyPatch) -> None:
+    """API tg_<digits> merges telegram:<digits> registry scope (Telegram-created agents)."""
+    uid = "tg_999888777"
+    app.dependency_overrides[get_valid_web_user_id] = lambda: uid
+    monkeypatch.setenv("NEXA_AGENT_ORCHESTRATION_ENABLED", "true")
+    monkeypatch.delenv("NEXA_WEB_API_TOKEN", raising=False)
+    get_settings.cache_clear()
+    AgentRegistry.reset()
+    reg = AgentRegistry()
+    spawned = reg.spawn_agent("tg_only", "qa", "telegram:999888777", trusted=False)
+    assert spawned is not None
+    c = TestClient(app)
+    try:
+        lst = c.get("/api/v1/agents/list", headers={"X-User-Id": uid})
+        assert lst.status_code == 200
+        names = [a.get("name") for a in lst.json().get("agents") or []]
+        assert "tg_only" in names
+    finally:
+        app.dependency_overrides.clear()
+        AgentRegistry.reset()
+        monkeypatch.delenv("NEXA_AGENT_ORCHESTRATION_ENABLED", raising=False)
+        get_settings.cache_clear()
+
+
 def test_agent_spawn_disabled(monkeypatch: pytest.MonkeyPatch) -> None:
     uid = "web_agent_spawn_off"
     app.dependency_overrides[get_valid_web_user_id] = lambda: uid

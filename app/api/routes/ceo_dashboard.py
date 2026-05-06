@@ -14,21 +14,13 @@ from app.services.agent.activity_tracker import get_activity_tracker
 from app.services.agent.supervisor import get_supervisor
 from app.services.sub_agent_registry import AgentRegistry
 
-from app.api.routes.agent_spawn import _agent_payload, _web_chat_scope
+from app.api.routes.agent_spawn import (
+    _agent_payload,
+    _api_orchestration_scopes,
+    _ensure_agent_in_scopes,
+)
 
 router = APIRouter(prefix="/ceo", tags=["ceo"])
-
-
-def _scope_chat(app_user_id: str) -> str:
-    return _web_chat_scope(app_user_id)
-
-
-def _ensure_agent(agent_id: str, chat_id: str):
-    registry = AgentRegistry()
-    agent = registry.get_agent(agent_id)
-    if not agent or agent.parent_chat_id != chat_id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found")
-    return registry, agent
 
 
 class InterveneRequest(BaseModel):
@@ -41,10 +33,10 @@ class RedirectRequest(BaseModel):
 
 @router.get("/dashboard")
 def get_ceo_dashboard(app_user_id: str = Depends(get_valid_web_user_id)) -> dict[str, Any]:
-    chat_id = _scope_chat(app_user_id)
+    scopes = _api_orchestration_scopes(app_user_id)
     registry = AgentRegistry()
     tracker = get_activity_tracker()
-    agents = registry.list_agents(chat_id)
+    agents = registry.list_agents_merged(scopes)
     agent_ids = [a.id for a in agents]
 
     agent_insights: list[dict[str, Any]] = []
@@ -89,8 +81,8 @@ async def get_agent_insights_route(
     agent_id: str,
     app_user_id: str = Depends(get_valid_web_user_id),
 ) -> dict[str, Any]:
-    chat_id = _scope_chat(app_user_id)
-    _ensure_agent(agent_id, chat_id)
+    scopes = _api_orchestration_scopes(app_user_id)
+    _ensure_agent_in_scopes(agent_id, scopes)
     supervisor = get_supervisor()
     insights = await supervisor.get_agent_insights(agent_id)
     if "error" in insights:
@@ -104,8 +96,8 @@ async def intervene_route(
     body: InterveneRequest,
     app_user_id: str = Depends(get_valid_web_user_id),
 ) -> dict[str, Any]:
-    chat_id = _scope_chat(app_user_id)
-    _ensure_agent(agent_id, chat_id)
+    scopes = _api_orchestration_scopes(app_user_id)
+    _ensure_agent_in_scopes(agent_id, scopes)
     supervisor = get_supervisor()
     result = await supervisor.intervene(agent_id, body.correction)
     if "error" in result:
@@ -119,8 +111,8 @@ async def redirect_route(
     body: RedirectRequest,
     app_user_id: str = Depends(get_valid_web_user_id),
 ) -> dict[str, Any]:
-    chat_id = _scope_chat(app_user_id)
-    _ensure_agent(agent_id, chat_id)
+    scopes = _api_orchestration_scopes(app_user_id)
+    _ensure_agent_in_scopes(agent_id, scopes)
     supervisor = get_supervisor()
     result = await supervisor.redirect_agent(agent_id, body.new_task)
     if "error" in result:
@@ -134,8 +126,8 @@ def get_activity_feed(
     limit: int = Query(50, ge=1, le=500),
     app_user_id: str = Depends(get_valid_web_user_id),
 ) -> dict[str, Any]:
-    chat_id = _scope_chat(app_user_id)
-    agents = AgentRegistry().list_agents(chat_id)
+    scopes = _api_orchestration_scopes(app_user_id)
+    agents = AgentRegistry().list_agents_merged(scopes)
     ids = [a.id for a in agents]
     tracker = get_activity_tracker()
     activities = tracker.get_global_activity(ids, hours=hours, limit=limit)

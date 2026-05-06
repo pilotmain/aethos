@@ -1,9 +1,13 @@
 """
 REST API for orchestration sub-agents (spawn / list / CRUD / CEO lifecycle).
 
-Uses the same web chat scope as the gateway: ``web:{user_id}:default``.
+Uses the same web chat scope as the gateway: ``web:{user_id}:default``, merged with
+``telegram:<digits>`` when ``X-User-Id`` is ``tg_<digits>`` so agents created in Telegram
+(``parent_chat_id`` = ``telegram:…``) appear in API lists and execute calls.
+
 Requires ``X-User-Id`` (+ optional bearer when ``NEXA_WEB_API_TOKEN`` is set).
-Ids are validated via :func:`~app.services.web_user_id.validate_web_user_id` (e.g. ``telegram_<digits>`` → ``tg_<digits>``).
+Ids are validated via :func:`~app.services.web_user_id.validate_web_user_id`
+(e.g. ``telegram_<digits>`` / ``telegram:<digits>`` → ``tg_<digits>``).
 """
 
 from __future__ import annotations
@@ -28,6 +32,32 @@ def _web_chat_scope(app_user_id: str, session_id: str = "default") -> str:
     uid = (app_user_id or "").strip()[:128]
     sid = (session_id or "default").strip()[:64]
     return f"web:{uid}:{sid}"
+
+
+def _api_orchestration_scopes(app_user_id: str, session_id: str = "default") -> list[str]:
+    """
+    Registry scopes for API auth user — mirrors Telegram ``telegram_subagent_scopes`` merge.
+
+    Always includes ``web:{user}:session``; for ``tg_<digits>`` also includes ``telegram:{digits}``
+    so orchestration agents stored from Telegram chats are visible.
+    """
+    uid = (app_user_id or "").strip()[:128]
+    scopes: list[str] = [_web_chat_scope(uid, session_id)]
+    if uid.startswith("tg_"):
+        digits = uid[3:]
+        if digits.isdigit():
+            tscope = f"telegram:{digits}"
+            if tscope not in scopes:
+                scopes.append(tscope)
+    return scopes
+
+
+def _ensure_agent_in_scopes(agent_id: str, scopes: list[str]):
+    registry = AgentRegistry()
+    agent = registry.get_agent(agent_id)
+    if not agent or agent.parent_chat_id not in scopes:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found")
+    return registry, agent
 
 
 class SpawnAgentRequest(BaseModel):
@@ -101,14 +131,6 @@ def _agent_payload(agent: Any, *, include_stats: bool = False) -> dict[str, Any]
     return out
 
 
-def _ensure_agent(agent_id: str, chat_id: str):
-    registry = AgentRegistry()
-    agent = registry.get_agent(agent_id)
-    if not agent or agent.parent_chat_id != chat_id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found")
-    return registry, agent
-
-
 def _orch_enabled() -> None:
     if not bool(getattr(get_settings(), "nexa_agent_orchestration_enabled", False)):
         raise HTTPException(
@@ -125,9 +147,10 @@ def post_spawn_agent(
     """Spawn (register) a sub-agent for the authenticated user's web orchestration scope."""
     _orch_enabled()
 
+    scopes = _api_orchestration_scopes(app_user_id)
     chat_id = _web_chat_scope(app_user_id)
     registry = AgentRegistry()
-    existing = registry.get_agent_by_name(body.name.strip(), chat_id)
+    existing = registry.get_agent_by_name_in_scopes(body.name.strip(), scopes)
     if existing:
         return {
             "ok": True,
@@ -159,10 +182,11 @@ def post_create_agent(
     """Create an orchestration sub-agent (trusted flag follows ``auto_approve`` + defaults)."""
     _orch_enabled()
     settings = get_settings()
+    scopes = _api_orchestration_scopes(app_user_id)
     chat_id = _web_chat_scope(app_user_id)
     registry = AgentRegistry()
     name_key = body.name.strip()
-    if registry.get_agent_by_name(name_key, chat_id):
+    if registry.get_agent_by_name_in_scopes(name_key, scopes):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=f"Agent '{name_key}' already exists for this workspace.",
@@ -209,8 +233,8 @@ def post_create_agent(
 def get_agents_list(
     app_user_id: str = Depends(get_valid_web_user_id),
 ) -> dict[str, Any]:
-    chat_id = _web_chat_scope(app_user_id)
-    agents = AgentRegistry().list_agents(chat_id)
+    scopes = _api_orchestration_scopes(app_user_id)
+    agents = AgentRegistry().list_agents_merged(scopes)
     return {"ok": True, "agents": [_agent_payload(a, include_stats=True) for a in agents], "count": len(agents)}
 
 
@@ -219,8 +243,8 @@ def get_agent_by_id(
     agent_id: str,
     app_user_id: str = Depends(get_valid_web_user_id),
 ) -> dict[str, Any]:
-    chat_id = _web_chat_scope(app_user_id)
-    _, agent = _ensure_agent(agent_id, chat_id)
+    scopes = _api_orchestration_scopes(app_user_id)
+    _, agent = _ensure_agent_in_scopes(agent_id, scopes)
     return {"ok": True, "agent": _agent_payload(agent, include_stats=True)}
 
 
@@ -231,12 +255,12 @@ def patch_agent_by_id(
     app_user_id: str = Depends(get_valid_web_user_id),
 ) -> dict[str, Any]:
     _orch_enabled()
-    chat_id = _web_chat_scope(app_user_id)
-    registry, agent = _ensure_agent(agent_id, chat_id)
+    scopes = _api_orchestration_scopes(app_user_id)
+    registry, agent = _ensure_agent_in_scopes(agent_id, scopes)
 
     changes = body.model_dump(exclude_unset=True)
     if body.name is not None:
-        other = registry.get_agent_by_name(body.name.strip(), chat_id)
+        other = registry.get_agent_by_name_in_scopes(body.name.strip(), scopes)
         if other and other.id != agent_id:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Name already in use")
 
@@ -302,8 +326,9 @@ def delete_agent_by_id(
     app_user_id: str = Depends(get_valid_web_user_id),
 ) -> dict[str, Any]:
     _orch_enabled()
+    scopes = _api_orchestration_scopes(app_user_id)
     chat_id = _web_chat_scope(app_user_id)
-    registry, agent = _ensure_agent(agent_id, chat_id)
+    registry, agent = _ensure_agent_in_scopes(agent_id, scopes)
 
     get_activity_tracker().log_action(
         agent_id=agent.id,
@@ -324,8 +349,8 @@ def pause_agent_by_id(
     app_user_id: str = Depends(get_valid_web_user_id),
 ) -> dict[str, Any]:
     _orch_enabled()
-    chat_id = _web_chat_scope(app_user_id)
-    registry, agent = _ensure_agent(agent_id, chat_id)
+    scopes = _api_orchestration_scopes(app_user_id)
+    registry, agent = _ensure_agent_in_scopes(agent_id, scopes)
     registry.patch_agent(agent_id, status=AgentStatus.PAUSED)
     get_activity_tracker().log_action(agent_id=agent.id, agent_name=agent.name, action_type="paused")
     return {"ok": True, "message": f"Agent '{agent.name}' paused"}
@@ -337,8 +362,8 @@ def resume_agent_by_id(
     app_user_id: str = Depends(get_valid_web_user_id),
 ) -> dict[str, Any]:
     _orch_enabled()
-    chat_id = _web_chat_scope(app_user_id)
-    registry, agent = _ensure_agent(agent_id, chat_id)
+    scopes = _api_orchestration_scopes(app_user_id)
+    registry, agent = _ensure_agent_in_scopes(agent_id, scopes)
     if agent.status == AgentStatus.TERMINATED:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot resume a terminated agent")
     registry.patch_agent(agent_id, status=AgentStatus.IDLE)
@@ -351,8 +376,8 @@ def get_agent_named_status(
     agent_name: str,
     app_user_id: str = Depends(get_valid_web_user_id),
 ) -> dict[str, Any]:
-    chat_id = _web_chat_scope(app_user_id)
-    agent = AgentRegistry().get_agent_by_name(agent_name.strip(), chat_id)
+    scopes = _api_orchestration_scopes(app_user_id)
+    agent = AgentRegistry().get_agent_by_name_in_scopes(agent_name.strip(), scopes)
     if not agent:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Agent '{agent_name}' not found")
     return {"ok": True, "agent": _agent_payload(agent, include_stats=True)}
@@ -367,9 +392,9 @@ def post_execute_agent(
 ) -> dict[str, Any]:
     """Run the sync sub-agent executor for this user's workspace scope (same as @mention routing)."""
     _orch_enabled()
-    chat_id = _web_chat_scope(app_user_id)
+    scopes = _api_orchestration_scopes(app_user_id)
     registry = AgentRegistry()
-    agent = registry.get_agent_by_name(agent_name.strip(), chat_id)
+    agent = registry.get_agent_by_name_in_scopes(agent_name.strip(), scopes)
     if not agent:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Agent '{agent_name}' not found")
 
@@ -377,7 +402,7 @@ def post_execute_agent(
     result = executor.execute(
         agent,
         body.task,
-        chat_id,
+        agent.parent_chat_id,
         db=db,
         user_id=app_user_id,
         web_session_id="default",
@@ -385,4 +410,10 @@ def post_execute_agent(
     return {"ok": True, "agent_id": agent.id, "result": result}
 
 
-__all__ = ["router", "_agent_payload", "_web_chat_scope"]
+__all__ = [
+    "router",
+    "_agent_payload",
+    "_api_orchestration_scopes",
+    "_ensure_agent_in_scopes",
+    "_web_chat_scope",
+]

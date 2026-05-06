@@ -35,6 +35,11 @@ def _normalize_web_user_id_aliases(s: str) -> str:
     """Map informal Telegram ids to canonical ``tg_<digits>`` before pattern validation."""
     if _TELEGRAM_LEGACY.match(s):
         return "tg_" + s[len("telegram_") :]
+    # Internal registry scope alias: telegram:<digits> (same digits as tg_<digits> in typical DM flows)
+    if s.startswith("telegram:"):
+        tail = s[len("telegram:") :]
+        if tail.isdigit() and 3 <= len(tail) <= 20:
+            return "tg_" + tail
     return s
 
 
@@ -42,7 +47,7 @@ def validate_web_user_id(raw: str) -> str:
     """
     Return a safe web user id or raise :exc:`ValueError`.
 
-    Accepted: ``tg_<3–20 digits>`` (alias: ``telegram_<digits>`` → normalized to ``tg_…``),
+    Accepted: ``tg_<3–20 digits>`` (aliases: ``telegram_<digits>`` or ``telegram:<digits>`` → ``tg_…``),
     ``web_<1–64 safe chars>``, ``local_<1–64 safe chars>``,
     ``em_<8–32 lowercase hex>`` (email channel),
     ``wa_<4–20 digits>`` (WhatsApp), ``sms_<4–20 digits>`` (SMS / Twilio),

@@ -9,6 +9,14 @@ def test_tg_valid() -> None:
     assert validate_web_user_id("tg_123456789") == "tg_123456789"
 
 
+def test_telegram_legacy_alias_normalized() -> None:
+    assert validate_web_user_id("telegram_8666826080") == "tg_8666826080"
+
+
+def test_telegram_colon_alias_normalized() -> None:
+    assert validate_web_user_id("telegram:8666826080") == "tg_8666826080"
+
+
 def test_web_demo_valid() -> None:
     assert validate_web_user_id("web_demo") == "web_demo"
 
