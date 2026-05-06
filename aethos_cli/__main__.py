@@ -362,10 +362,11 @@ def main() -> int:
         not args.no_banner
         and args.cmd in ("serve", "setup")
     ):
-        from aethos_cli.banner import print_banner, should_show_banner
+        from aethos_cli.banner import maybe_print_sponsor_hint, print_banner, should_show_banner
 
         if should_show_banner():
             print_banner()
+            maybe_print_sponsor_hint()
 
     if args.cmd == "state":
         q = f"?user_id={urllib.parse.quote(args.mission_user)}" if args.mission_user else ""

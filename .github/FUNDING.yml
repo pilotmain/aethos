@@ -1,0 +1,7 @@
+# Funding links — enable GitHub Sponsors on the pilotmain account (GitHub → Settings → Sponsors).
+# Optional: add Open Collective / Patreon when those profiles exist.
+github: pilotmain
+# patreon: # your-patreon-slug
+# open_collective: # your-collective-slug
+custom:
+  - https://github.com/sponsors/pilotmain

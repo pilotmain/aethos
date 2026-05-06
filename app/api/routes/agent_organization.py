@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.core.config import get_settings
 from app.core.db import get_db
+from app.core.feature_flags import is_enterprise_feature_enabled
 from app.core.security import get_valid_web_user_id
 from app.models.agent_team import AgentOrganization
 from app.schemas.agent_organization import (
@@ -62,6 +64,20 @@ def create_org_api(
     db: Session = Depends(get_db),
     app_user_id: str = Depends(get_valid_web_user_id),
 ) -> AgentOrganizationOut:
+    s = get_settings()
+    if bool(getattr(s, "nexa_enforce_enterprise_gates", False)):
+        uid = (app_user_id or "").strip()
+        n_existing = db.scalar(
+            select(func.count()).select_from(AgentOrganization).where(AgentOrganization.user_id == uid)
+        )
+        if int(n_existing or 0) >= 1 and not is_enterprise_feature_enabled("rbac_multi_tenant", uid):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=(
+                    "Multiple agent organizations require an enterprise entitlement "
+                    "(open-core). Contact your admin or set NEXA_ENTERPRISE_GRANTED_FEATURES / license."
+                ),
+            )
     org = create_agent_organization(
         db,
         user_id=app_user_id,

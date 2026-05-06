@@ -311,6 +311,13 @@ class Settings(BaseSettings):
     # Without NEXA_LICENSE_PUBLIC_KEY_PEM, license strings are ignored (OSS default).
     nexa_license_key: str | None = None
     nexa_license_public_key_pem: str | None = None
+    # Comma-separated enterprise capability keys (same names as app.core.feature_flags.ENTERPRISE_FEATURES)
+    # or raw license feature IDs — grants without a signed token (pilots / contract installs).
+    nexa_enterprise_granted_features: str = ""
+    # When true with app_env=development, enterprise gates unlock for integration testing (never use in prod).
+    nexa_open_core_dev_unlock: bool = False
+    # When true, selected APIs enforce enterprise flags (e.g. second agent-org). Default false preserves OSS UX.
+    nexa_enforce_enterprise_gates: bool = False
 
     # Web UI: optional shared secret for `Authorization: Bearer` (in addition to X-User-Id). Unset = bearer not required.
     nexa_web_api_token: str | None = None

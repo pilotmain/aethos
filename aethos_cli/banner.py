@@ -36,6 +36,15 @@ def should_show_banner() -> bool:
     return True
 
 
+def maybe_print_sponsor_hint(*, stream=sys.stderr) -> None:
+    """Optional one-line GitHub Sponsors hint (set ``AETHOS_SPONSOR_HINT=1``)."""
+    if (os.environ.get("AETHOS_SPONSOR_HINT") or "").strip().lower() not in ("1", "true", "yes"):
+        return
+    if not stream.isatty():
+        return
+    print("Support AethOS on GitHub Sponsors: https://github.com/sponsors/pilotmain", file=stream)
+
+
 def print_banner(*, stream=sys.stderr) -> None:
     """Print banner to stderr so JSON stdout pipelines stay clean."""
     print(BANNER, file=stream)

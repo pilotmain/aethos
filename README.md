@@ -19,6 +19,9 @@
   <a href="https://github.com/pilotmain/aethos/blob/main/LICENSE">
     <img src="https://img.shields.io/github/license/pilotmain/aethos" alt="License">
   </a>
+  <a href="https://github.com/sponsors/pilotmain">
+    <img src="https://img.shields.io/badge/Sponsor-GitHub-%23EA4AAA" alt="Sponsor on GitHub">
+  </a>
 </p>
 
 # AethOS

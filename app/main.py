@@ -35,6 +35,7 @@ from app.api.routes import (
     health,
     internal,
     jobs,
+    license,
     memory,
     mission_control,
     mobile,
@@ -303,6 +304,7 @@ app.include_router(orchestration.router, prefix=settings.api_v1_prefix)
 app.include_router(agent_spawn.router, prefix=settings.api_v1_prefix)
 app.include_router(ceo_dashboard.router, prefix=settings.api_v1_prefix)
 app.include_router(jobs.router, prefix=settings.api_v1_prefix)
+app.include_router(license.router, prefix=settings.api_v1_prefix)
 app.include_router(web.router, prefix=settings.api_v1_prefix)
 app.include_router(permissions.router, prefix=settings.api_v1_prefix)
 app.include_router(pr_review.router, prefix=settings.api_v1_prefix)
