@@ -124,6 +124,7 @@ def register_telegram_handlers(application: Application) -> None:
     lines through :func:`route_telegram_text_through_gateway` / :func:`~app.services.channels.router.route_inbound`.
     """
     from app.bot import budget_commands as budget_cmds
+    from app.bot import cloud_commands as cloud_cmds
     from app.bot import org_commands as org_cmds
     from app.bot import project_commands as mission_ctrl
     from app.bot import social_commands as social_cmds
@@ -136,6 +137,9 @@ def register_telegram_handlers(application: Application) -> None:
     application.add_handler(CommandHandler("subagent", subagent_command))
     application.add_handler(CommandHandler("subagents", subagent_command))
     application.add_handler(CommandHandler("vercel", vercel_command))
+    application.add_handler(CommandHandler("cloud_providers", cloud_cmds.cloud_providers_cmd))
+    application.add_handler(CommandHandler("clouds", cloud_cmds.cloud_providers_cmd))
+    application.add_handler(CommandHandler("add_provider", cloud_cmds.cloud_add_provider_cmd))
     application.add_handler(CommandHandler("updates", tb.updates_cmd))
     application.add_handler(CommandHandler("usage", tb.usage_cmd))
     application.add_handler(CommandHandler("today", tb.today))

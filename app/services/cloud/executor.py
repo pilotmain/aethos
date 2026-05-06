@@ -21,6 +21,25 @@ from app.services.infra.railway import RailwayClient
 
 logger = logging.getLogger(__name__)
 
+# CLIs whose logs commands must not receive a stray numeric tail from the generic fallback.
+_CLI_LOGS_BASE_ONLY = frozenset({
+    "kubectl",
+    "oc",
+    "terraform",
+    "pulumi",
+    "doctl",
+    "render",
+    "koyeb",
+    "northflank",
+    "cycle",
+    "porter",
+    "zeabur",
+    "adaptable",
+    "kinsta",
+    "platform",
+    "cleavr",
+})
+
 
 class UniversalCloudExecutor:
     """Run provider CLI commands with merged auth env (tokens from process environment)."""
@@ -119,6 +138,8 @@ class UniversalCloudExecutor:
             variants.append(base)
         elif base[0] == "vercel":
             variants.append(base + ["--limit", str(tail)])
+            variants.append(base)
+        elif base[0] in _CLI_LOGS_BASE_ONLY:
             variants.append(base)
         else:
             variants.append(base + [str(tail)])
