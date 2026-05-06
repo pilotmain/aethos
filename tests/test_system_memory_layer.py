@@ -26,10 +26,10 @@ def test_ensure_system_memory_files_creates_soul_and_memory(mem_root) -> None:
     assert (mem_root / "memory.md").is_file()
 
 
-def test_default_soul_includes_nexa_identity_and_creator(mem_root) -> None:
+def test_default_soul_includes_aethos_identity_and_creator(mem_root) -> None:
     smf.ensure_system_memory_files()
     soul = (mem_root / "soul.md").read_text(encoding="utf-8")
-    assert "Nexa Soul" in soul or "Nexa" in soul
+    assert "AethOS Soul" in soul or "AethOS" in soul
     assert "## Creator" in soul
     assert "Raya Ameha Meresa" in soul
 
@@ -66,7 +66,7 @@ def test_append_memory_entry_rejects_secret_like(mem_root) -> None:
 def test_read_system_memory_snapshot_returns_both(mem_root) -> None:
     smf.ensure_system_memory_files()
     snap = smf.read_system_memory_snapshot(max_chars_each=10_000)
-    assert "Nexa" in snap.soul
+    assert "AethOS" in snap.soul
     assert "Memories" in snap.memory or "memory" in snap.memory.lower()
 
 
@@ -86,7 +86,7 @@ def test_memory_add_writes_and_secret_rejected(mem_root) -> None:
 
 
 def test_normalize_memory_command_text() -> None:
-    assert normalize_memory_command_text("/memory@NexaBot soul") == "/memory soul"
+    assert normalize_memory_command_text("/memory@TestBot soul") == "/memory soul"
 
 
 def test_build_system_prompt_includes_memory_block(mem_root, monkeypatch) -> None:
@@ -94,7 +94,7 @@ def test_build_system_prompt_includes_memory_block(mem_root, monkeypatch) -> Non
 
     smf.ensure_system_memory_files()
     (mem_root / "soul.md").write_text(
-        "# Nexa Soul\n\nCreator: Raya Ameha Meresa\n", encoding="utf-8"
+        "# AethOS Soul\n\nCreator: Raya Ameha Meresa\n", encoding="utf-8"
     )
 
     def _root():
@@ -149,7 +149,7 @@ def test_general_answer_system_includes_memory_block(mem_root, monkeypatch) -> N
         _fake_safe,
     )
 
-    out = answer_general_question("Who created Nexa?")
+    out = answer_general_question("Who created AethOS?")
     assert out == "stubbed"
-    assert "Persistent Nexa context" in captured["system"]
+    assert "Persistent AethOS context" in captured["system"]
     assert "Raya Ameha Meresa" in captured["system"]

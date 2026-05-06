@@ -93,7 +93,7 @@ def test_ambiguous_what_next_uses_active_project() -> None:
     db.commit()
 
     r0 = route_agent("what next?", context_snapshot={})
-    assert r0["agent_key"] == "nexa"
+    assert r0["agent_key"] == "aethos"
     r = apply_memory_aware_route_adjustment(
         r0,
         "what next?",

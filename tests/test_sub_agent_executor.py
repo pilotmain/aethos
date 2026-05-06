@@ -162,6 +162,7 @@ def test_vercel_list_queues(executor: AgentExecutor) -> None:
     mock_db = MagicMock()
     with (
         patch("app.services.sub_agent_executor.get_settings", return_value=_S()),
+        patch("app.services.sub_agent_executor.shutil.which", return_value=None),
         patch("app.services.sub_agent_executor._validate_enqueue_payload") as val,
         patch("app.services.sub_agent_executor.enqueue_host_job_from_validated_payload") as enq,
     ):

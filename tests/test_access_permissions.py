@@ -361,7 +361,15 @@ def test_finalize_updates_last_used_and_audits(
 
         before_audit = db.scalar(select(func.count()).select_from(AuditLog)) or 0
         with patch.object(host_executor, "get_settings", return_value=S()):
-            host_executor.execute_payload({"host_action": "git_status"}, db=db, job=job)
+            host_executor.execute_payload(
+                {
+                    "host_action": "git_status",
+                    "nexa_permission_abs_targets": [root],
+                },
+                db=db,
+                job=job,
+            )
+        db.expire_all()
         row = db.get(AccessPermission, pend.id)
         assert row is not None and row.last_used_at is not None
         after_audit = db.scalar(select(func.count()).select_from(AuditLog)) or 0

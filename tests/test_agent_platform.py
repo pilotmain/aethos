@@ -3,11 +3,11 @@ from app.services.agent_router import parse_leading_mention, route_agent
 from app.services.mention_control import parse_mention
 
 
-def test_route_agent_dev_and_nexa():
+def test_route_agent_dev_and_aethos():
     assert route_agent("ask cursor to fix the tests")["agent_key"] == "developer"
-    assert route_agent("I feel totally overwhelmed with tasks")["agent_key"] == "nexa"
+    assert route_agent("I feel totally overwhelmed with tasks")["agent_key"] == "aethos"
     r = route_agent("random hello")
-    assert r["agent_key"] == "nexa"
+    assert r["agent_key"] == "aethos"
     assert float(r["confidence"]) <= 0.6
 
 
@@ -27,5 +27,5 @@ def test_parse_mention() -> None:
 
 
 def test_resolve_mention_key():
-    assert resolve_mention_key("reset") == "nexa"
+    assert resolve_mention_key("reset") == "aethos"
     assert resolve_mention_key("developer") == "developer"

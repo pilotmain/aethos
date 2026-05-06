@@ -12,7 +12,7 @@ from app.services.workspace_intelligence.loader import (
 
 
 def test_resolve_workspace_root_default_under_repo(tmp_path: Path) -> None:
-    expected = tmp_path / "data" / "nexa_workspace"
+    expected = tmp_path / "data" / "aethos_workspace"
     expected.mkdir(parents=True)
     root = resolve_workspace_root("", repo_root=tmp_path)
     assert root == expected

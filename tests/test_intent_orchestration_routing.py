@@ -65,7 +65,7 @@ def test_build_response_external_execution_gates_without_access() -> None:
         app_user_id=None,
     )
     assert "coordinate" in r.lower() or "access" in r.lower()
-    assert "Nexa" in r
+    assert "AethOS" in r
 
 
 def test_build_response_external_execution_runs_read_only_probe_when_not_gated(
