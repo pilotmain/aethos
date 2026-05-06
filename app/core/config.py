@@ -79,6 +79,10 @@ _EnvFile: str | None = str(_ENV_FILE) if _ENV_FILE.is_file() else None
 
 class Settings(BaseSettings):
     app_name: str = "AethOS"
+    # User-facing branding (optional overrides via AETHOS_BRAND_* env).
+    aethos_brand_name: str = "AethOS"
+    aethos_brand_tagline: str = "The Agentic Operating System"
+    aethos_brand_prompt: str | None = None
     app_env: str = "development"
     debug: bool = True
     # When true, API boot uses JSON log lines (one object per line) for aggregation; see app.services.logging
@@ -326,7 +330,7 @@ class Settings(BaseSettings):
     nexa_web_max_bytes: int = 1_500_000
     nexa_web_max_redirects: int = 5
     nexa_web_respect_robots: bool = True
-    nexa_web_user_agent: str = "Nexa/1.0; +https://github.com (public fetch, contact owner)"
+    nexa_web_user_agent: str = "AethOS/1.0; +https://github.com (public fetch, contact owner)"
 
     # Phase 21 — HTTP scraping (httpx + BeautifulSoup + lxml; API uses NEXA_CRON_API_TOKEN)
     nexa_scraping_enabled: bool = True
@@ -708,6 +712,14 @@ class Settings(BaseSettings):
     def _normalize_nexa_user_privacy_mode(cls, v: object) -> str:
         x = (str(v) if v is not None else "standard").strip().lower()
         return x if x in ("standard", "strict", "paranoid") else "standard"
+
+    @field_validator("aethos_brand_prompt", mode="before")
+    @classmethod
+    def _normalize_aethos_brand_prompt(cls, v: object) -> str | None:
+        if v is None:
+            return None
+        s = str(v).strip()
+        return s if s else None
 
     @field_validator("nexa_budget_reset_day", mode="before")
     @classmethod

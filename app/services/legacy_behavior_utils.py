@@ -427,7 +427,7 @@ def build_response(
             if probe_md.strip():
                 parts.append("### Read-only probe (this worker)\n\n" + probe_md.strip())
             if mc_part.strip():
-                parts.append("### Nexa-side activity snapshot\n\n" + mc_part.strip())
+                parts.append("### AethOS-side activity snapshot\n\n" + mc_part.strip())
             body = "\n\n---\n\n".join(parts) if len(parts) > 1 else parts[0]
         out = _out(body)
         mark_external_execution_awaiting_followup(db, app_user_id, None, gated=gated)
@@ -438,7 +438,7 @@ def build_response(
         intro = (
             "Hosted dashboards aren’t available from chat alone — **read-only CLI checks** run on the worker "
             "after you connect `RAILWAY_TOKEN` / CLI on that host (see access reply if gated).\n\n"
-            "Below is **Nexa-side** activity (missions/dev runs) — it may not reflect the provider UI.\n\n"
+            "Below is **AethOS-side** activity (missions/dev runs) — it may not reflect the provider UI.\n\n"
             "**Try:** **retry external execution** once access is configured — you’ll get progress plus real command output, "
             "or an exact blocker.\n\n"
         )

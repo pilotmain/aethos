@@ -63,8 +63,8 @@ def _public_url_read_response(
     if not s.nexa_web_access_enabled:
         msg = "Public web read is off on this server (NEXA_WEB_ACCESS_ENABLED=false)."
         if is_research:
-            return f"🔎 **Research** (Nexa)\n\n{msg}"
-        return f"**Nexa** — {msg}"
+            return f"🔎 **Research** (AethOS)\n\n{msg}"
+        return f"**AethOS** — {msg}"
     allow_in = app_user_allows_internal_fetch(db, app_user_id)
     tool_parts: list[str] = []
     summaries: list[PublicPageSummary] = []
@@ -82,8 +82,8 @@ def _public_url_read_response(
             from app.services.safe_llm_gateway import safe_llm_text_call
 
             prologue = (
-                "You are Nexa. The user asked about one or more public web pages. "
-                "Nexa already fetched each URL with a read-only HTTP(s) request (not a real browser, no logins, no form submission in this build). "
+                "You are AethOS. The user asked about one or more public web pages. "
+                "AethOS already fetched each URL with a read-only HTTP(s) request (not a real browser, no logins, no form submission in this build). "
                 "Summarize products, services, or other concrete facts you can see in the excerpt. Always cite the Source: URL. "
                 "If the tool output says the request failed, explain using: I could not access the public page because … (copy the reason) and keep the paste-text hint lines. "
                 "Do not say you cannot browse or that you cannot open public URLs — the tool already ran. "
@@ -140,15 +140,15 @@ def _public_url_read_response(
 
     if is_research and body:
         return (
-            "🔎 **Research** (Nexa)\n\n"
-            f"I used Nexa’s public read-only page fetch. Here is what to take from the visible text:\n\n{body[:9000]}"
+            "🔎 **Research** (AethOS)\n\n"
+            f"I used AethOS’s public read-only page fetch. Here is what to take from the visible text:\n\n{body[:9000]}"
         )
     if is_research and not body:
-        return f"🔎 **Research** (Nexa)\n\nI could not get any text from the URL(s) you shared."
+        return f"🔎 **Research** (AethOS)\n\nI could not get any text from the URL(s) you shared."
     if not body:
         return None
     return (
-        f"**Nexa** — I used a public read-only fetch. Here is what the page(s) returned:\n\n{body[:9000]}"
+        f"**AethOS** — I used a public read-only fetch. Here is what the page(s) returned:\n\n{body[:9000]}"
     )
 
 
@@ -175,13 +175,13 @@ def _synthesize_from_search(user_question: str, sr, *, is_research: bool) -> str
             "You can try a more specific question, or paste a direct public `https://` link and ask me to check that page."
         )
         if is_research:
-            return f"🔎 **Research** (Nexa)\n\n{msg}"
-        return f"**Nexa** — {msg}"
+            return f"🔎 **Research** (AethOS)\n\n{msg}"
+        return f"**AethOS** — {msg}"
     prologue = (
-        "You are Nexa. The user asked a question that was answered using a read-only web search tool. "
+        "You are AethOS. The user asked a question that was answered using a read-only web search tool. "
         "Base factual claims on the search snippets and Source URLs only. Cite the Source: lines. "
         "If snippets are off-topic or too thin, say that clearly. Do not claim you fully read entire pages; "
-        "Nexa only has titles and short snippets (Phase 2)."
+        "AethOS only has titles and short snippets (Phase 2)."
     )
     body: str
     if s.use_real_llm and (s.anthropic_api_key or s.openai_api_key):
@@ -211,11 +211,11 @@ def _synthesize_from_search(user_question: str, sr, *, is_research: bool) -> str
     pshow = sr.provider
     if is_research:
         return (
-            "🔎 **Research** (Nexa)\n\n"
+            "🔎 **Research** (AethOS)\n\n"
             f"I used a web search ({pshow}) for up-to-date public information. Here is a concise read:\n\n{body}\n"
         )[:10_000]
     return (
-        f"**Nexa** — I used a web search ({pshow}) to answer. Here is a concise read:\n\n{body}\n"
+        f"**AethOS** — I used a web search ({pshow}) to answer. Here is a concise read:\n\n{body}\n"
     )[:10_000]
 
 
@@ -246,7 +246,7 @@ def _run_search_or_none(
     s = get_settings()
     if not s.nexa_web_search_enabled:
         if is_research:
-            return f"🔎 **Research** (Nexa)\n\n{_WEB_SEARCH_OFF_MSG}"
+            return f"🔎 **Research** (AethOS)\n\n{_WEB_SEARCH_OFF_MSG}"
         return _WEB_SEARCH_OFF_MSG
     q = extract_user_search_query_for_intent(t, is_research_mention=is_research)
     if not (q or "").strip():
@@ -255,7 +255,7 @@ def _run_search_or_none(
         sr = search_web((q or t).strip(), requester_role=None)
     except WebSearchDisabled:
         if is_research:
-            return f"🔎 **Research** (Nexa)\n\n{_WEB_SEARCH_OFF_MSG}"
+            return f"🔎 **Research** (AethOS)\n\n{_WEB_SEARCH_OFF_MSG}"
         return _WEB_SEARCH_OFF_MSG
     except MissingWebSearchKey:
         m = (
@@ -263,8 +263,8 @@ def _run_search_or_none(
             "The host should set `NEXA_WEB_SEARCH_PROVIDER` to brave, tavily, or serpapi and set `NEXA_WEB_SEARCH_API_KEY` (see doctor)."
         )
         if is_research:
-            return f"🔎 **Research** (Nexa)\n\n{m}"
-        return f"**Nexa** — {m}"
+            return f"🔎 **Research** (AethOS)\n\n{m}"
+        return f"**AethOS** — {m}"
     except Exception as e:  # noqa: BLE001
         # Do not block the whole turn on provider/network failure — fall through to normal LLM routing.
         logger.warning(
@@ -511,7 +511,7 @@ def _run_marketing_search_block_for_prompt(
 
 
 _MARKETING_SYS_WITH_TOOLS = (
-    "You are the Marketing agent for Nexa, a personal AI execution system. "
+    "You are the Marketing agent for AethOS, a personal AI execution system. "
     "You may receive a **Public page read (tool, read-only)** section and/or a **Web search (tool, read-only)** section. "
     "If Source: lines appear, those tools already ran — do not say you cannot browse, perform live web searches, or open public https links. "
     "If the tool text shows a failed fetch, timeout, or block, say once: I could not access the page because {reason} — you can paste the text here and I can still help. Do not invent page contents. "
@@ -558,7 +558,7 @@ _MARKETING_SYS_WITH_TOOLS = (
 )
 
 _MARKETING_SYS_OFFLINE = (
-    "You are the Marketing agent for Nexa (a personal AI execution system). "
+    "You are the Marketing agent for AethOS (a personal AI execution system). "
     "Help with positioning, taglines, landing copy, user personas, or a launch post. "
     "Be concrete and concise. Do not create development tasks or mention code repos."
 )
@@ -577,7 +577,7 @@ def handle_ops_agent_request(
 
     body = (build_dev_health_report() or "").strip() or "No local worker heartbeat file yet. On the host, run the dev executor or use `/dev health`."
     return (
-        f"⚙️ **Ops Agent** (Nexa) — local / worker check (read-only, best-effort):\n\n"
+        f"⚙️ **Ops Agent** (AethOS) — local / worker check (read-only, best-effort):\n\n"
         f"{body[:8000]}\n\n_Your message: {text[:500]}_"
     )
 
@@ -696,7 +696,7 @@ def _qa_mvp_for_job(
     if ts == "failed" or (st or "").lower() == "failed":
         interpret = "This job is in a failed or failing-tests posture — inspect logs and diffs before retrying or approving."
     lines = [
-        f"🧪 **QA Agent** (Nexa) — job #{job.id}",
+        f"🧪 **QA Agent** (AethOS) — job #{job.id}",
         f"- Status: {st}",
     ]
     if wtype:
@@ -727,7 +727,7 @@ def handle_qa_agent_request(
     if block:
         return block
     return (
-        "🧪 **Quality review** (Nexa) — I can help with test plans, failures, and regressions. "
+        "🧪 **Quality review** (AethOS) — I can help with test plans, failures, and regressions. "
         "Describe a failure or ask me to review a job by number. I can also **run a dev task** to propose a code fix on the same path.\n\n"
         f"Your request: {text[:1200]}"
     )
@@ -760,7 +760,7 @@ def handle_marketing_agent_request(
             conversation_snapshot=conversation_snapshot,
             research_mode=False,
         )
-        return f"📣 **Marketing Agent** (Nexa)\n\n{body}"[:10_000]
+        return f"📣 **Marketing Agent** (AethOS)\n\n{body}"[:10_000]
 
     resolved = extract_urls_from_text(t, max_urls=2)
     has_url = bool(resolved)
@@ -827,29 +827,29 @@ def handle_marketing_agent_request(
             if has_url and page_summaries:
                 out = _append_marketing_thin_page_note(db, app_user_id, page_summaries, out)
             _emit_mkt_meta()
-            return f"📣 **Marketing Agent** (Nexa)\n\n{out[:8_200]}"
+            return f"📣 **Marketing Agent** (AethOS)\n\n{out[:8_200]}"
         except Exception as exc:  # noqa: BLE001
             logger.exception("marketing llm: %s", exc)
             if use_tool_prompt and ((url_block or "").strip() or (search_block or "").strip()):
                 tool_fallback = f"{(url_block or '')}\n{search_block or ''}".strip()[:6_000]
                 _emit_mkt_meta()
                 return (
-                    "📣 **Marketing Agent** (Nexa)\n\n"
+                    "📣 **Marketing Agent** (AethOS)\n\n"
                     "I had trouble turning the fetch/search into a full draft. "
                     "If you paste any page text, I can still work from it. Tool context (excerpts; cite sources):\n\n"
                     f"{tool_fallback}"
                 )
     if not t:
-        return "📣 **Marketing Agent** (Nexa) — Send a request (e.g. tagline, launch post, user persona for Nexa)."
+        return "📣 **Marketing Agent** (AethOS) — Send a request (e.g. tagline, launch post, user persona for AethOS)."
     if use_tool_prompt and f"{(url_block or '')}\n{search_block or ''}".strip():
         _emit_mkt_meta()
         tool_blob = f"{(url_block or '')}\n{search_block or ''}".strip()
         return (
-            "📣 **Marketing Agent** (Nexa) — I pulled read-only public tool output (or policy notes) below. "
+            "📣 **Marketing Agent** (AethOS) — I pulled read-only public tool output (or policy notes) below. "
             "For a full strategy draft, enable `USE_REAL_LLM` and a provider key.\n\n" + str(tool_blob)[:7_200]
         )
     return (
-        "📣 **Marketing Agent** (Nexa) — Positioning, taglines, landing copy, and launch copy.\n\n"
+        "📣 **Marketing Agent** (AethOS) — Positioning, taglines, landing copy, and launch copy.\n\n"
         f"**Draft (offline):** respond to: {t[:800]!r}\n"
         f"\n(Enable a configured LLM for full drafts. This path never creates dev jobs.)\n"
     )
@@ -874,7 +874,7 @@ def handle_strategy_agent_request(
             from app.services.structured_response_style import structured_style_guidance_for
 
             strat = (
-                "You are the Strategy agent for Nexa, a personal AI execution system. "
+                "You are the Strategy agent for AethOS, a personal AI execution system. "
                 "Answer with: (1) a clear recommendation, (2) 2–4 short bullets on tradeoffs, (3) one next step. "
                 "Be concise. Do not name other products."
             )
@@ -882,12 +882,12 @@ def handle_strategy_agent_request(
                 system_prompt=f"{strat}\n\n{structured_style_guidance_for('strategy', None)}",
                 user_request=t[:4000] + extra,
             )
-            return f"🧭 **Strategy Agent** (Nexa)\n\n{out[:4000]}"
+            return f"🧭 **Strategy Agent** (AethOS)\n\n{out[:4000]}"
         except Exception as exc:  # noqa: BLE001
             logger.exception("strategy llm: %s", exc)
     head = f"**Context topic:** {topic}\n\n" if topic else ""
     return (
-        f"🧭 **Strategy Agent** (Nexa)\n\n{head}"
+        f"🧭 **Strategy Agent** (AethOS)\n\n{head}"
         f"**Question:** {t[:600]!r}\n"
         f"- **Recommendation:** Pick one bet for the next 1–2 weeks; measure one outcome.\n"
         f"- **Tradeoffs:** time vs. scope, B2B depth vs. B2C reach, build vs. partner.\n"
@@ -899,7 +899,7 @@ def handle_cto_agent_request(
     _db: Session, _app_user_id: str, text: str
 ) -> str:
     return (
-        "🏗️ Architecture / CTO Agent (Nexa) — Checklist: SLO/scale, data path, security boundary, "
+        "🏗️ Architecture / CTO Agent (AethOS) — Checklist: SLO/scale, data path, security boundary, "
         f"ops / rollback, vendor risk.\n\nContext: {text[:1200]}"
     )
 
@@ -914,7 +914,7 @@ def handle_research_agent_request(
     t = (text or "").strip()
     if not t or len(t) < 2:
         return (
-            "🔎 **Research** (Nexa) — add a topic, e.g. "
+            "🔎 **Research** (AethOS) — add a topic, e.g. "
             "e.g. **Ethiopian economy update** or a specific question."
         )
     from app.services.browser_preview import format_preview_for_chat, preview_public_page
@@ -932,7 +932,7 @@ def handle_research_agent_request(
     if preview_u and not suppress_web:
         role = get_telegram_role_for_app_user(db, app_user_id)
         bpr = preview_public_page(preview_u, role)
-        block = f"🔎 **Research** (Nexa)\n\n{format_preview_for_chat(bpr)}"
+        block = f"🔎 **Research** (AethOS)\n\n{format_preview_for_chat(bpr)}"
         return block[:10_000]
 
     if extract_urls_from_text(t, max_urls=1) and not suppress_web:
@@ -952,18 +952,18 @@ def handle_research_agent_request(
     body = answer_general_question(
         f"Research-style answer for: {t}. If a live or proprietary source is not available, "
         "say that once, then be useful: structure, and what the user can verify. "
-        "Nexa can also fetch a **public** http(s) page when you include a resolvable link.",
+        "AethOS can also fetch a **public** http(s) page when you include a resolvable link.",
         conversation_snapshot=conversation_snapshot,
         research_mode=True,
     )
-    return f"🔎 **Research** (Nexa)\n\n{body}"[:10_000]
+    return f"🔎 **Research** (AethOS)\n\n{body}"[:10_000]
 
 
 def handle_personal_admin_request(
     _db: Session, _app_user_id: str, text: str
 ) -> str:
     return (
-        "📋 Personal admin (Nexa) — I can work with your saved memory and plan/tasks. "
+        "📋 Personal admin (AethOS) — I can work with your saved memory and plan/tasks. "
         f"Reminders and errands: {text[:1200]}"
     )
 
@@ -1006,7 +1006,7 @@ def handle_ceo_request(
     _db: Session, _app_user_id: str, text: str
 ) -> str:
     return (
-        "👤 CEO / focus agent (Nexa) — I can help decide what matters first; "
+        "👤 CEO / focus agent (AethOS) — I can help decide what matters first; "
         f"share constraints, timeline, and risk.\n\nYour message: {text[:1200]}"
     )
 
@@ -1041,7 +1041,7 @@ def handle_agent_request(
     elif key == "developer":
         raw = (
             "💻 **Development** — describe what to fix or ask me to run a dev task. "
-            "Nexa runs it through the same autonomous dev path you already use."
+            "AethOS runs it through the same autonomous dev path you already use."
         )
     elif key == "qa":
         raw = handle_qa_agent_request(db, app_user_id, text)
@@ -1129,7 +1129,7 @@ def handle_agent_mention(
         raw = handle_personal_admin_request(db, app_user_id, text)
     elif agent_key == "developer":
         raw = (
-            "💻 Describe the coding task in natural language — Nexa runs it on the same autonomous dev path "
+            "💻 Describe the coding task in natural language — AethOS runs it on the same autonomous dev path "
             "and can inspect your workspace or prepare a focused repair plan."
         )
     else:

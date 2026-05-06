@@ -80,7 +80,7 @@ def build_smart_export_title(
     words = plain.split()[:10] if plain else []
     if len(words) >= 3:
         return " ".join(words)[:500]
-    return f"Nexa export — {source_type} — {date.today().isoformat()}"[:500]
+    return f"AethOS export — {source_type} — {date.today().isoformat()}"[:500]
 
 
 def export_stem_for_filename(

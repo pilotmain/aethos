@@ -111,7 +111,7 @@ def format_grouped_dev_queue(jobs) -> str:
         return f"**{title}**\n{body}{more}"
 
     out_lines = [
-        "Nexa **development** activity (recent, grouped; not full history).",
+        "AethOS **development** activity (recent, grouped; not full history).",
         "",
         _sub(act, "Active (pipeline / worker)", "— (none)"),
         "",
@@ -180,7 +180,7 @@ def format_dev_agent_status_telegram(db, app_user_id: str) -> str:
     js = AgentJobService()
     j = js.get_latest(db, app_user_id)
     lines: list[str] = [
-        "**Development status (Nexa)**",
+        "**Development status (AethOS)**",
         "",
     ]
     if j:

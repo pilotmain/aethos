@@ -33,7 +33,7 @@ STRATEGY_MINI_DOC_SECTIONS: tuple[str, ...] = (
     "Next steps",
 )
 
-# General substantial responses (Nexa composer, no specialist agent)
+# General substantial responses (AethOS composer, no specialist agent)
 GENERAL_MINI_DOC_SECTIONS: tuple[str, ...] = (
     "Summary",
     "Key points",

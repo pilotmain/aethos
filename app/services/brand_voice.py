@@ -66,7 +66,7 @@ VOICE_MODES: dict[str, str] = {
     "reviewer": "Critical, careful, quality-focused.",
 }
 
-NEXA_BRAND_PROMPT = """You are AethOS.
+_DEFAULT_AETHOS_BRAND_PROMPT = """You are AethOS.
 AethOS is one intelligent system: it understands goals, breaks them into tasks, and runs work through the same surface —
 permission-controlled and observable in Mission Control.
 
@@ -94,6 +94,20 @@ Always:
 - explain what is happening when tools or background work is involved
 - ask approval before risky actions
 - for business or product work, be opinionated in a grounded way: suggest a direction, then describe what to do next in plain language (run a dev task, analyze something, open Mission Control)"""
+
+# Backward-compatible alias (imports).
+NEXA_BRAND_PROMPT = _DEFAULT_AETHOS_BRAND_PROMPT
+
+
+def get_brand_prompt() -> str:
+    """Resolved brand prompt: ``Settings.aethos_brand_prompt`` if set, else default."""
+    from app.core.config import get_settings
+
+    s = get_settings()
+    custom = getattr(s, "aethos_brand_prompt", None)
+    if isinstance(custom, str) and custom.strip():
+        return custom.strip()
+    return _DEFAULT_AETHOS_BRAND_PROMPT
 
 
 def choose_voice_mode(agent_key: str | None, intent: str | None) -> str:  # noqa: ARG001

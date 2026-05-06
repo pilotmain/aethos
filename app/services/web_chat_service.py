@@ -501,7 +501,7 @@ def process_web_message(
                     agent_key="aethos",
                     action="co_pilot_next",
                     tool="co_pilot",
-                    reason="Nexa applied a co-pilot next-step confirmation (no new UI).",
+                    reason="AethOS applied a co-pilot next-step confirmation (no new UI).",
                     risk="low",
                 )
                 rk_na: str | None = None
@@ -510,7 +510,7 @@ def process_web_message(
                     pr = na0.permission_required
                     d0 = {
                         **d0,
-                        "reason": str(pr.get("message") or "Scoped access approval required before Nexa can run this host action."),
+                        "reason": str(pr.get("message") or "Scoped access approval required before AethOS can run this host action."),
                         "approval_required": True,
                         "tool": "host_executor",
                         "risk": str(pr.get("risk_level") or "medium"),
@@ -593,7 +593,7 @@ def process_web_message(
                     agent_key="aethos",
                     action="custom_agent_create",
                     tool="local_state",
-                    reason="Nexa added custom agents from your message (LLM-only, no special tools by default).",
+                    reason="AethOS added custom agents from your message (LLM-only, no special tools by default).",
                     risk="low",
                 )
                 out = _finalize_web_result(
@@ -629,7 +629,7 @@ def process_web_message(
                     agent_key="aethos",
                     action="document",
                     tool="clarify",
-                    reason="Nexa needs more content before generating a templated document.",
+                    reason="AethOS needs more content before generating a templated document.",
                     risk="low",
                 )
                 out = _finalize_web_result(
@@ -704,7 +704,7 @@ def process_web_message(
                     agent_key="aethos",
                     action="document_create",
                     tool="document_export",
-                    reason="Nexa created a document from a template-style request (Docs tab to download).",
+                    reason="AethOS created a document from a template-style request (Docs tab to download).",
                     risk="low",
                 )
                 success_msg = (
@@ -877,7 +877,7 @@ def process_web_message(
                     **pre,
                     "reason": str(
                         perm_guard.get("message")
-                        or "Scoped access approval required before Nexa can run this host action."
+                        or "Scoped access approval required before AethOS can run this host action."
                     ),
                     "approval_required": True,
                     "tool": "host_executor",

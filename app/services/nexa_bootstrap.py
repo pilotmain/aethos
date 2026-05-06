@@ -328,7 +328,7 @@ def main(argv: list[str] | None = None) -> int:
     if r not in (0,):
         print("Nexa: run_everything.sh may still be building. Re-run or check: docker compose ps\n", flush=True)
     if wait_for_health("http://127.0.0.1:8000"):
-        print("Nexa is ready. Open Telegram and message your bot.\n", flush=True)
+        print("AethOS is ready. Open Telegram and message your bot.\n", flush=True)
     else:
         print(
             "Nexa: API not healthy yet. When the stack is up, check http://127.0.0.1:8000/api/v1/health and set TELEGRAM_BOT_TOKEN in .env if needed.\n",

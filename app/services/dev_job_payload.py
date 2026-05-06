@@ -40,7 +40,7 @@ def merge_dev_payload(
 def describe_dev_queue_line(project: Project | None) -> str:
     """User-facing one-liner for how the job will run (tool + mode)."""
     if not project:
-        return "Nexa (autonomous / Aider when configured)"
+        return "AethOS (autonomous / Aider when configured)"
     mode = (project.dev_execution_mode or "autonomous_cli").strip()
     tool = (project.preferred_dev_tool or "aider").strip()
     if mode == "ide_handoff":

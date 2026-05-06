@@ -51,7 +51,7 @@ class RailwayProvider(OpsProvider):
                 env=m,
             )
         except (OSError, subprocess.TimeoutExpired) as e:
-            return f"(Nexa Railway: {e!s})"[:2000]
+            return f"(AethOS Railway: {e!s})"[:2000]
         out = p.stdout or ""
         if p.stderr:
             out = (out + "\nSTDERR:\n" + p.stderr).strip()
@@ -123,11 +123,11 @@ class RailwayProvider(OpsProvider):
         if action_name == "rollback":
             return self._rollback_msg()
         if action_name == "set_env_var":
-            return "Nexa: use your Railway dashboard to change env vars (not executed here)."
-        return f"Nexa: action `{action_name}` is not implemented for the Railway provider."
+            return "AethOS: use your Railway dashboard to change env vars (not executed here)."
+        return f"AethOS: action `{action_name}` is not implemented for the Railway provider."
 
     def _rollback_msg(self) -> str:
         return (
-            "Nexa: Railway has no one-size automated rollback in this path. Use the dashboard "
+            "AethOS: Railway has no one-size automated rollback in this path. Use the dashboard "
             "(Deployments → previous) for this project’s service."
         )

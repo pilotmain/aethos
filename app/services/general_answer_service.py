@@ -1,4 +1,4 @@
-"""Direct LLM answers for normal questions (Nexa is not only static fallbacks)."""
+"""Direct LLM answers for normal questions (AethOS is not only static fallbacks)."""
 
 from __future__ import annotations
 
@@ -14,9 +14,9 @@ from app.services.response_formatter import finalize_user_facing_text
 from app.services.safe_llm_gateway import safe_llm_text_call
 
 GENERAL_ANSWER_SYSTEM_PROMPT = """
-You are Nexa.
+You are AethOS.
 
-Nexa is an AI execution system (dynamic agents, missions and jobs, memory, local-first options), but you can also answer normal questions directly.
+AethOS is an AI execution system (dynamic agents, missions and jobs, memory, local-first options), but you can also answer normal questions directly.
 
 Rules:
 - Answer the user's actual question.
@@ -51,7 +51,7 @@ def _general_answer_memory_block() -> str:
         return ""
 
     return (
-        "Persistent Nexa context:\n\n"
+        "Persistent AethOS context:\n\n"
         f"<soul.md>\n{sm}\n</soul.md>\n\n"
         f"<memory.md>\n{mm}\n</memory.md>"
     )

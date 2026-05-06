@@ -81,7 +81,7 @@ def format_assist_appendix(*, user_text: str, intent: str) -> str | None:
         parts.append("**Likely checks:**\n" + "\n".join(f"• {o}" for o in outline))
 
     if auto:
-        parts.append("_If your workspace is connected in Mission Control, Nexa can run this investigation on the repo._")
+        parts.append("_If your workspace is connected in Mission Control, AethOS can run this investigation on the repo._")
     else:
         parts.append("_Add the exact error snippet if you want a sharper read._")
 

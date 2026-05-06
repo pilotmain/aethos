@@ -43,7 +43,7 @@ def test_gateway_describe_capabilities() -> None:
 def test_narrative_capability_answer_identity_and_execution() -> None:
     text = narrative_capability_answer()
     low = text.lower()
-    assert "i'm nexa" in low or "im nexa" in low.replace("'", "")
+    assert "i'm aethos" in low or "im aethos" in low.replace("'", "")
     assert "execute" in low or "execution" in low
     assert "dynamically" in low
     for banned in _BANNED:
@@ -70,6 +70,6 @@ def test_identity_strings_no_banned_phrases(snippet: str) -> None:
 def test_multi_agent_clarification_not_legacy_team_pitch() -> None:
     clar = reply_multi_agent_capability_clarification().lower()
     assert "route to specialists" not in clar
-    assert "nexa" in clar
+    assert "aethos" in clar
     assert "concrete goal" in clar or "goal" in clar
     assert "dynamically" in clar

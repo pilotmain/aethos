@@ -86,21 +86,21 @@ DANGER_TOOL_KEYWORDS: frozenset[str] = frozenset(
 )
 
 NEXA_BASE = (
-    "Nexa safety: reply helpfully. You may receive governed local file/folder access through Nexa's "
+    "AethOS safety: reply helpfully. You may receive governed local file/folder access through AethOS's "
     "approval flow — do not claim you cannot access the user's filesystem; say approval may be needed. "
     "Do not request or assume unsupervised access to the user's device, dev jobs, repos, or credentials. "
-    "This turn is text-only unless Nexa injects host tool results. "
+    "This turn is text-only unless AethOS injects host tool results. "
 )
 
 # @boss — avoid stale refusals (“no sessions_spawn”) when runtime tools exist; appended manifest lists truth.
 BOSS_LLM_BASE = (
-    "Nexa safety: reply helpfully. You may receive governed local file/folder access through Nexa's "
+    "AethOS safety: reply helpfully. You may receive governed local file/folder access through AethOS's "
     "approval flow. When the user names agents and a goal (bounded supervised work), **sessions_spawn** is "
     "invoked by deterministic chat routes — do not refuse delegation as “I cannot assign sub-agents”; "
-    "confirm results only when the reply already shows spawn_group_id / assignment ids from Nexa. "
+    "confirm results only when the reply already shows spawn_group_id / assignment ids from AethOS. "
     "Do **not** ask “Should I proceed?”, “please confirm”, or “awaiting backend confirmation” when the message "
     "is already a complete bounded supervised mission — deterministic routing executes first; summarize **real** "
-    "IDs returned by Nexa only. "
+    "IDs returned by AethOS only. "
     "You **cannot** create unrestricted autonomous agents or recurring unsupervised loops without approval. "
     "Do not request credentials or unsupervised host access."
 )
@@ -117,7 +117,7 @@ BOSS_LLM_DEVELOPER = (
     "Block only substantive risks: **unbounded** recurring autonomy without oversight, **recursive** unsupervised "
     "agent loops, and **unrestricted** system or credential access. "
     "Do **not** ask for redundant confirmation when the user already issued a complete bounded supervised mission — "
-    "summarize **real** spawn and assignment IDs from Nexa. "
+    "summarize **real** spawn and assignment IDs from AethOS. "
     "Do not request credentials or unsupervised host access."
 )
 
@@ -129,13 +129,13 @@ DEVELOPER_WORKSPACE_HINT = (
 )
 
 BASE_OPERATOR_TEMPLATE = (
-    "You are a Nexa **Base Operator**.\n\n"
+    "You are an AethOS **Base Operator**.\n\n"
     "You operate inside a developer-mode workspace when **`NEXA_WORKSPACE_MODE=developer`**.\n\n"
     "You may use only tools that appear in the runtime tool manifest and capability truth blocks.\n\n"
-    "If a valid bounded runtime tool request applies, execution goes through the **Nexa backend** — do **not** "
+    "If a valid bounded runtime tool request applies, execution goes through the **AethOS backend** — do **not** "
     "simulate tool calls or invent **`spawn_…`** ids.\n\n"
     "When approvals are disabled for local testing (**`NEXA_APPROVALS_ENABLED=false`** with developer mode), do "
-    "not ask for redundant confirmation on turns Nexa already audited — still refuse unbounded autonomy and "
+    "not ask for redundant confirmation on turns AethOS already audited — still refuse unbounded autonomy and "
     "unsafe requests.\n\n"
     "Do **not** claim a tool ran unless the backend returned success.\n\n"
     "Do **not** claim you are read-only when runtime tools are enabled."
@@ -523,11 +523,11 @@ def format_unknown_with_custom(base_message: str, db: Session, app_user_id: str)
     if not act:
         return f"{base_message}\n\nAsk in chat: **Create me a custom agent** to add your own (LLM-only, no builder UI)."
     tail = "\n".join(f"· `@{a.agent_key}`" for a in act[:20])
-    return f"{base_message}\n\nYour custom agents (Nexa LLM-only):\n{tail}"
+    return f"{base_message}\n\nYour custom agents (AethOS LLM-only):\n{tail}"
 
 
 def format_creation_reply(agents: Sequence[UserAgent], *, danger_line: str | None) -> str:
-    lines = [f"Created {len(agents)} custom **Nexa** agent(s) (LLM-only, no dev/ops tools by default):"]
+    lines = [f"Created {len(agents)} custom **AethOS** agent(s) (LLM-only, no dev/ops tools by default):"]
     for a in agents:
         lines.append(
             f"· `@{a.agent_key}` — {a.description[:180] + ('…' if len(a.description) > 180 else '') if a.description else 'See /agent describe'}"
@@ -555,7 +555,7 @@ def try_custom_agent_capability_guidance(
         return (
             "I can’t configure an agent to deliver **final** licensed professional advice or fully replace "
             "a lawyer, doctor, or CPA.\n\n"
-            "What Nexa **does** support is a **regulated-domain assistant profile**: research, summaries, "
+            "What AethOS **does** support is a **regulated-domain assistant profile**: research, summaries, "
             "drafting support, issue spotting, and **explicit human-review** requirements. Final decisions "
             "belong with qualified professionals.\n\n"
             "Say **Create me a custom agent:** … with the role you want, or ask for a legal-style research "
@@ -567,13 +567,13 @@ def try_custom_agent_capability_guidance(
 
     ok, err = can_user_create_custom_agents(db, app_user_id)
     parts = [
-        "**Yes — Nexa supports custom agent profiles.** The built-in specialists (Developer, QA, Ops, Strategy, "
+        "**Yes — AethOS supports custom agent profiles.** The built-in specialists (Developer, QA, Ops, Strategy, "
         "Marketing, Research) are **starter defaults**; you can add your own agents with role, instructions, "
         "tools (when enabled), knowledge hooks, and governance boundaries.",
         "",
         "For a **legal-style** assistant: it is **not** a licensed attorney. It can support legal research, "
         "document review, summarization, drafting assistance, clause comparison, and issue spotting — with "
-        "sensitive materials staying permissioned and auditable through Nexa’s normal approval flows.",
+            "sensitive materials staying permissioned and auditable through AethOS’s normal approval flows.",
         "",
         "Examples:\n"
         "• Create me a custom agent: **senior attorney — legal research & contract review**\n"
@@ -586,7 +586,7 @@ def try_custom_agent_capability_guidance(
             [
                 "",
                 "Some advanced routing features may still be evolving on your workspace, but you can define "
-                "the profile and @mention handle here under Nexa’s governance layer.",
+                "the profile and @mention handle here under AethOS’s governance layer.",
             ]
         )
     return "\n".join(parts).strip()
@@ -609,7 +609,7 @@ def try_conversational_create_custom_agents(
     lines = parse_agent_title_lines_from_message(t)
     if not lines:
         return (
-            "I can add **custom agents** in Nexa (LLM-only; no dev/ops tools by default). "
+            "I can add **custom agents** in AethOS (LLM-only; no dev/ops tools by default). "
             "List them, for example:\n"
             "Create me a few agents:\n"
             "1. financial advisor\n"
@@ -627,7 +627,7 @@ def _build_product_instruction_block(spec: Any) -> str:
 
     assert isinstance(spec, ParsedCustomAgent)
     lines = [
-        f"You are @{spec.handle}, a custom Nexa agent.",
+        f"You are @{spec.handle}, a custom AethOS agent.",
         "",
         "Role:",
         spec.role,
@@ -642,7 +642,7 @@ def _build_product_instruction_block(spec: Any) -> str:
     for g in spec.guardrails:
         lines.append(f"- {g}")
     if not spec.guardrails:
-        lines.append("- Nexa LLM-only — no autonomous host, dev, or file tools unless enabled.")
+        lines.append("- AethOS LLM-only — no autonomous host, dev, or file tools unless enabled.")
     lines += [
         "",
         "Output style: concise, structured, risk-aware; state uncertainty when needed.",
@@ -698,7 +698,7 @@ def create_custom_agent_from_prompt(
                 skip_msgs.append(f"`@{key}` is reserved — skipped.")
                 continue
             sp = (
-                f"You are @{key}, a Nexa custom agent created from an explicit team list.\n\n"
+                f"You are @{key}, an AethOS custom agent created from an explicit team list.\n\n"
                 "Follow the user's instructions; stay within scope."
             )
             agent = create_custom_agent(

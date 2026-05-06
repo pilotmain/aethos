@@ -188,7 +188,7 @@ def can_fetch_robots_txt(
         logger.info("web_robots_parse_skip: %s", type(e).__name__)
         return True, None
     ua = get_settings().nexa_web_user_agent
-    uastr = (ua or "Nexa/1.0")[:200]
+    uastr = (ua or "AethOS/1.0")[:200]
     full = (final_url or "").strip() or p0.geturl()
     if not rp.can_fetch(uastr, full):
         return False, "disallowed by robots.txt for this URL"
@@ -197,7 +197,7 @@ def can_fetch_robots_txt(
 
 def _default_headers() -> dict[str, str]:
     return {
-        "User-Agent": get_settings().nexa_web_user_agent.strip() or "Nexa/1.0 (public fetch)",
+        "User-Agent": get_settings().nexa_web_user_agent.strip() or "AethOS/1.0 (public fetch)",
         "Accept": "text/html, application/xhtml+xml, */*;q=0.8",
         "Accept-Language": "en-US,en;q=0.5",
     }

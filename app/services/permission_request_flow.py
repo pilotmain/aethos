@@ -152,16 +152,16 @@ def card_message_for_host_payload(payload: dict[str, Any]) -> str:
     """Short API `message` for permission_required JSON (no UI narration)."""
     ha = (payload.get("host_action") or "").strip().lower()
     if ha == "list_directory":
-        return "Nexa needs permission to read this folder before continuing."
+        return "AethOS needs permission to read this folder before continuing."
     if ha == "find_files":
-        return "Nexa needs permission to search this folder before continuing."
+        return "AethOS needs permission to search this folder before continuing."
     if ha in ("file_read", "read_multiple_files"):
-        return "Nexa needs permission to read local files before continuing."
+        return "AethOS needs permission to read local files before continuing."
     if ha == "file_write":
-        return "Nexa needs permission to write this file before continuing."
+        return "AethOS needs permission to write this file before continuing."
     if ha == "plugin_skill":
-        return "Nexa needs permission to run this automation skill before continuing."
-    return "Nexa needs permission before continuing."
+        return "AethOS needs permission to run this automation skill before continuing."
+    return "AethOS needs permission before continuing."
 
 
 def permission_fields_for_enqueue_payload(payload: dict[str, Any]) -> tuple[str, str, str]:
@@ -238,7 +238,7 @@ def permission_required_payload(
         "risk_level": risk_level,
         "grant_options": ["once", "session"],
         "message": message
-        or (f"Nexa needs permission ({scope}) for this path before continuing."),
+        or (f"AethOS needs permission ({scope}) for this path before continuing."),
     }
 
 

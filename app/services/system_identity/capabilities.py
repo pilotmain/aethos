@@ -17,7 +17,7 @@ def describe_capabilities() -> dict[str, bool]:
     return dict(CAPABILITIES)
 
 
-NEXA_CAPABILITY_REPLY = """I'm Nexa.
+NEXA_CAPABILITY_REPLY = """I'm AethOS.
 
 I help you execute real work — not just answer questions.
 
@@ -47,11 +47,11 @@ def narrative_capability_answer() -> str:
     return NEXA_CAPABILITY_REPLY.strip()
 
 
-NEXA_MULTI_AGENT_CLARIFICATION = """Yes — Nexa can coordinate multiple runs and parallel, task-focused work when that fits. I still need a **concrete goal** before setting anything up.
+NEXA_MULTI_AGENT_CLARIFICATION = """Yes — AethOS can coordinate multiple runs and parallel, task-focused work when that fits. I still need a **concrete goal** before setting anything up.
 
 Examples:
 • **Describe what you want shipped or fixed** — we'll break it into tracked work
 • **Ask for a multi-step workflow** — missions and jobs can run after approval
-• **Use chat to steer focus** — Nexa creates agents dynamically when the task needs them
+• **Use chat to steer focus** — AethOS creates agents dynamically when the task needs them
 
 What should we tackle first?"""

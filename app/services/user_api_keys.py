@@ -81,7 +81,7 @@ def set_user_api_key(
     if not secret_manager.is_configured():
         return (
             False,
-            "Nexa is not configured to store keys yet (NEXA_SECRET_KEY missing on the server).",
+            "AethOS is not configured to store keys yet (NEXA_SECRET_KEY missing on the server).",
         )
     try:
         enc = secret_manager.encrypt(raw_key.strip())

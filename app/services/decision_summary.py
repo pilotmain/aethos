@@ -13,12 +13,12 @@ R_PUBLIC_URL = "The message included a public URL."
 R_CURRENT_PUBLIC = "The message asked for current public information."
 R_COMMAND = "The message matched a known command or shortcut."
 R_DETERMINISTIC_TOOL = "This was handled by a deterministic tool or fixed rule."
-R_NO_LLM = "This was answered from Nexa state without calling an LLM."
+R_NO_LLM = "This was answered from AethOS state without calling an LLM."
 R_APPROVAL = "This action may modify files, so approval is required before it runs."
-R_RESEARCH = "Nexa routed to Research to read public sources for this request."
-R_OPS = "Nexa routed to Ops to show status or run operational checks."
-R_CHAT = "Nexa used the general chat path for this message."
-R_GENERAL = "Nexa used the general assistant for this request."
+R_RESEARCH = "AethOS routed to Research to read public sources for this request."
+R_OPS = "AethOS routed to Ops to show status or run operational checks."
+R_CHAT = "AethOS used the general chat path for this message."
+R_GENERAL = "AethOS used the general assistant for this request."
 
 # Terms we never ship to the client (safety for tests and future editors).
 _BANNED_SUBSTRINGS = (

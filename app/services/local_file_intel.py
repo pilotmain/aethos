@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 FILE_MARK_RE = re.compile(r"^=== FILE:\s*(.+?)\s*===\s*$", re.MULTILINE)
 
-_INTEL_SYSTEM = """You are Nexa's local file assistant. The user approved a one-time read of files on their machine.
+_INTEL_SYSTEM = """You are AethOS's local file assistant. The user approved a one-time read of files on their machine.
 Nothing here is stored or indexed — answer from the excerpts only.
 
 Always respond with exactly these sections (use ### headings):

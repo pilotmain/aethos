@@ -90,7 +90,7 @@ async def get_browser_page():
             ],
         )
         ctx = await _browser.new_context(
-            user_agent=get_settings().nexa_web_user_agent or "NexaBrowser/1.0",
+            user_agent=get_settings().nexa_web_user_agent or "AethOSBrowser/1.0",
         )
         page = await ctx.new_page()
         page.set_default_timeout(timeout_ms)

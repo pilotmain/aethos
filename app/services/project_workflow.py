@@ -1,4 +1,4 @@
-"""Default stages for turning an idea into execution (Nexa execution system)."""
+"""Default stages for turning an idea into execution (AethOS execution system)."""
 
 from __future__ import annotations
 
@@ -121,7 +121,7 @@ def format_strategy_validate(
 def format_marketing_position(project: Project) -> str:
     name = project.display_name
     return (
-        f"**Positioning draft (Nexa / {name})**:\n\n"
+        f"**Positioning draft (AethOS / {name})**:\n\n"
         f"**For** busy independent operators who lose time on admin,\n"
         f"**{name}** is a focused tool\n"
         f"that **removes** scheduling friction\n"

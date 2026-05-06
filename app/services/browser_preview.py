@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 PREVIEW_DIR = RUNTIME_DIR / "browser_previews"
 PLAYWRIGHT_MISSING_MSG = (
-    "Browser preview is not installed on this host. Ask the Nexa host to run: "
+    "Browser preview is not installed on this host. Ask the AethOS host to run: "
     "`pip install playwright` then `playwright install chromium`."
 )
 

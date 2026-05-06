@@ -198,7 +198,7 @@ def try_agent_team_chat_turn(
                 f"**Goal:** {gshort}\n\n"
                 "You can coordinate with **@orchestrator**, assign concrete tasks with **assign @handle to …**, "
                 "or say **ask my team to …** to queue tracked work.\n\n"
-                "Nexa creates task-focused agents dynamically when the workload needs them."
+                "AethOS creates task-focused agents dynamically when the workload needs them."
             )
         )
 

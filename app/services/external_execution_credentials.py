@@ -85,7 +85,7 @@ def format_secure_external_credential_setup(service: str, *, repo_root: str | No
         "**Key received** — I won’t echo or store it in chat.\n\n"
         "I detected a Railway token in chat. For safety, I won’t echo or store it here.\n\n"
         "**Chat text does not automatically become this worker’s environment.** "
-        "Connected access means the token is on the machine that runs Nexa (for example in `.env`) "
+        "Connected access means the token is on the machine that runs AethOS (for example in `.env`) "
         "and the API/bot process has been restarted.\n\n"
         f"To connect Railway access to this worker, add it locally instead:\n\n"
         f"{cd}\n"
@@ -111,7 +111,7 @@ def format_railway_token_not_loaded_retry_reply() -> str:
     return (
         "I tried to start read-only Railway checks, but **`RAILWAY_TOKEN` is not loaded in this worker** "
         "(and the Railway CLI is not available here either).\n\n"
-        "Add `RAILWAY_TOKEN` or `RAILWAY_API_TOKEN` to `.env` on the host that runs Nexa, "
+        "Add `RAILWAY_TOKEN` or `RAILWAY_API_TOKEN` to `.env` on the host that runs AethOS, "
         "or install/authenticate the `railway` CLI on that host — then **`docker compose restart api bot`** — and retry."
     )
 

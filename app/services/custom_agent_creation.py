@@ -124,7 +124,7 @@ def parse_creation_spec(text: str) -> CreationSpec | None:
 
 def _build_system_prompt(spec: CreationSpec) -> str:
     parts = [
-        "You are a Nexa custom specialist agent. Reply helpfully within your described scope. "
+        "You are an AethOS custom specialist agent. Reply helpfully within your described scope. "
         "You do not have autonomous dev, deployment, or host execution unless separately enabled.",
         "",
         f"Role: {spec.display_title}",
@@ -167,7 +167,7 @@ def format_creation_confirmation(
     if guardrails:
         lines.extend(f"- {g}" for g in guardrails)
     else:
-        lines.append("- Nexa LLM-only profile — no automatic host or dev actions.")
+        lines.append("- AethOS LLM-only profile — no automatic host or dev actions.")
 
     lines.extend(
         [

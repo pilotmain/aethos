@@ -21,7 +21,7 @@ _log = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class ExternalExecutionAccess:
-    """What Nexa can realistically use for an execution-shaped request."""
+    """What AethOS can realistically use for an execution-shaped request."""
 
     dev_workspace_registered: bool
     host_executor_enabled: bool
@@ -140,7 +140,7 @@ def _format_external_execution_access_reply_compact(
     if not miss:
         miss.append("- Bounded runner may still produce evidence on the next attempt.")
     body = (
-        "Nexa on this worker reports **access** gaps for coordinated repo probes:\n" + "\n".join(miss)
+        "AethOS on this worker reports **access** gaps for coordinated repo probes:\n" + "\n".join(miss)
     )
     return (
         f"{body}\n\nI can **coordinate** hosted checks after you fix the items above — say **retry external execution**, "
@@ -161,7 +161,7 @@ def format_external_execution_access_reply(
     except Exception:  # noqa: BLE001
         pass
     lines = [
-        "Yes — Nexa can coordinate that kind of job **once access is in place**.",
+        "Yes — AethOS can coordinate that kind of job **once access is in place**.",
         "",
         "**Right now I don’t have enough to execute it end-to-end:**",
     ]
@@ -170,14 +170,14 @@ def format_external_execution_access_reply(
         miss.append("- **Dev workspace** — register a repo path under Mission Control → Dev / workspace.")
     if not access.host_executor_enabled:
         miss.append(
-            "- **Host executor** — enable `NEXA_HOST_EXECUTOR_ENABLED` on the machine that runs Nexa "
+            "- **Host executor** — enable `NEXA_HOST_EXECUTOR_ENABLED` on the machine that runs AethOS "
             "so repo-local commands can run safely."
         )
     if user_message_mentions_railway(user_text):
         if not access.railway_token_present and not access.railway_cli_on_path:
             miss.append(
                 "- **Railway** — `RAILWAY_TOKEN` / `RAILWAY_API_TOKEN` is **not loaded in this worker**. "
-                "Add it to `.env` on the host that runs Nexa (not in chat), **`docker compose restart api bot`**, "
+                "Add it to `.env` on the host that runs AethOS (not in chat), **`docker compose restart api bot`**, "
                 "or install/authenticate the `railway` CLI on that host."
             )
         elif access.railway_cli_on_path and not access.railway_token_present:
@@ -186,7 +186,7 @@ def format_external_execution_access_reply(
             )
     if not access.github_token_configured:
         miss.append(
-            "- **Git push (optional)** — configure `GITHUB_TOKEN` / repo remotes if pushes should run from Nexa."
+            "- **Git push (optional)** — configure `GITHUB_TOKEN` / repo remotes if pushes should run from AethOS."
         )
     if not miss:
         miss.append(
