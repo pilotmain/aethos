@@ -406,12 +406,10 @@ def classify_intent_fallback(
             "reason": "multi-agent team capability",
         }
 
-    if t.startswith("create") and "agent" in t:
-        from app.services.sub_agent_natural_creation import prefers_registry_sub_agent
+    from app.services.sub_agent_natural_creation import looks_like_registry_agent_creation_nl
 
-        if prefers_registry_sub_agent(message):
-            return {"intent": "create_sub_agent", "confidence": 0.94, "reason": "orchestration sub-agent natural language"}
-        return {"intent": "create_custom_agent", "confidence": 0.92, "reason": "custom agent phrase"}
+    if looks_like_registry_agent_creation_nl(message):
+        return {"intent": "create_sub_agent", "confidence": 0.94, "reason": "orchestration sub-agent natural language"}
 
     if any(
         x in t
@@ -566,16 +564,10 @@ def get_intent(
 ) -> str:
     t0 = (message or "").strip()
     tl0 = t0.lower()
-    if "agent" in tl0 and re.search(r"(?i)\b(create|make|add|build|spawn)\b", t0):
-        from app.services.multi_agent_routing import is_multi_agent_capability_question
+    from app.services.sub_agent_natural_creation import looks_like_registry_agent_creation_nl
 
-        # Capability questions (“can you create agents that…”) must reach fallback/LLM — not create_* shortcut.
-        if not is_multi_agent_capability_question(t0):
-            from app.services.sub_agent_natural_creation import prefers_registry_sub_agent
-
-            if prefers_registry_sub_agent(t0):
-                return "create_sub_agent"
-            return "create_custom_agent"
+    if looks_like_registry_agent_creation_nl(t0):
+        return "create_sub_agent"
 
     if looks_like_orchestrate_system(t0):
         return "orchestrate_system"
@@ -602,9 +594,7 @@ def get_intent(
     intent = result["intent"]
     confidence = result["confidence"]
 
-    from app.services.sub_agent_natural_creation import prefers_registry_sub_agent
-
-    if intent == "create_custom_agent" and prefers_registry_sub_agent(t0):
+    if intent == "create_custom_agent" and looks_like_registry_agent_creation_nl(t0):
         intent = "create_sub_agent"
 
     if intent in ("create_custom_agent", "create_sub_agent") and is_multi_agent_capability_question(t0):

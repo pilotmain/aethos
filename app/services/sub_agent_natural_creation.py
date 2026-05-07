@@ -72,24 +72,68 @@ _NAME_DOMAIN_FRAGMENTS: tuple[tuple[str, str], ...] = (
 )
 
 
-def prefers_registry_sub_agent(text: str) -> bool:
-    """
-    True → route to orchestration sub-agent registry (Phase 48 / 53).
+_CREATION_VERBS = re.compile(r"(?i)\b(create|make|add|build|spawn)\b")
+_CREATION_TEAM_WORDS = re.compile(
+    r"(?i)\b(agents?|sub[- ]?agents?|subagents?|assistants?|teammates?|workers?|bots?)\b"
+)
 
-    Natural-language “create/make/spawn … agent(s)” always targets sub-agents so Mission Control
-    and `/subagent list` stay aligned (numbered rosters included).
+
+def looks_like_registry_agent_creation_nl(text: str) -> bool:
+    """
+    True → user is issuing an imperative **orchestration roster** command (sub-agents), not a
+    vague multi-agent *capability* question.
+
+    Matches ``create … agents / assistants / *_agent``, etc., so NL never falls through to
+    LLM-only custom agents when the user meant Mission Control sub-agents.
     """
     raw = (text or "").strip()
-    tl = raw.lower()
-    if "agent" not in tl:
+    if not raw:
         return False
-    if not re.search(r"(?i)\b(create|make|add|build|spawn)\b", raw):
+    if not _CREATION_VERBS.search(raw):
         return False
     from app.services.multi_agent_routing import is_multi_agent_capability_question
 
     if is_multi_agent_capability_question(raw):
         return False
-    return True
+    tl = raw.lower()
+    # Question-shaped requests ("can you create agents?", "how do I create…") → not imperative NL spawn.
+    if "?" in raw:
+        return False
+    first_w = tl.split()[0] if tl.split() else ""
+    if first_w in (
+        "can",
+        "could",
+        "how",
+        "what",
+        "why",
+        "would",
+        "is",
+        "are",
+        "do",
+        "does",
+        "did",
+        "should",
+        "will",
+        "when",
+        "where",
+    ):
+        return False
+    if _CREATION_TEAM_WORDS.search(raw):
+        return True
+    if "agent" in tl:
+        return True
+    if re.search(r"(?i)\b[a-z0-9][a-z0-9_-]{0,62}_agent\b", raw):
+        return True
+    return False
+
+
+def prefers_registry_sub_agent(text: str) -> bool:
+    """
+    True → route to orchestration sub-agent registry (Phase 48 / 53).
+
+    Alias for :func:`looks_like_registry_agent_creation_nl` (backward-compatible name).
+    """
+    return looks_like_registry_agent_creation_nl(text)
 
 
 def _infer_domain(name: str, full_text: str) -> str:
@@ -420,6 +464,7 @@ def try_spawn_natural_sub_agents(
 
 
 __all__ = [
+    "looks_like_registry_agent_creation_nl",
     "normalize_sub_agent_domain",
     "parse_natural_sub_agent_specs",
     "prefers_registry_sub_agent",

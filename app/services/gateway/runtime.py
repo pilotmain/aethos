@@ -610,6 +610,7 @@ class NexaGateway:
             channel,
         )
 
+        # Orchestration sub-agents (Mission Control): NL "create … agents" maps to create_sub_agent via intent_classifier.
         if intent in ("create_sub_agent", "create_custom_agent") and (uid or "").strip():
             from app.services.sub_agent_natural_creation import (
                 prefers_registry_sub_agent,
