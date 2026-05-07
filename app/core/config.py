@@ -103,6 +103,11 @@ class Settings(BaseSettings):
     # Phase 67 — POST /agent-assignments runs dispatch_assignment immediately when payload omits auto_dispatch.
     # Set false to require an explicit POST /agent-assignments/{id}/dispatch (legacy two-step behavior).
     nexa_assignment_auto_dispatch_default: bool = True
+    # Phase 69 — when true, skip LLM intent classification for clearly interrogative/informational
+    # messages without pain/provider/imperative cues, routing them straight to general_chat /
+    # capability_question. Prevents the dev-execution path from hijacking questions like
+    # "what do you need to deploy to AWS?". Set false to restore prior LLM-only routing.
+    nexa_informational_question_skip_llm: bool = True
     nexa_agent_max_per_chat: int = 20
     nexa_agent_idle_timeout_seconds: int = 3600
     # Phase 37 — default trusted flag for API `/agents/create` when request omits explicit approval.

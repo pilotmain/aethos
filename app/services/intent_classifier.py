@@ -348,6 +348,148 @@ def looks_like_analysis(message: str) -> bool:
     )
 
 
+_INFO_QUESTION_STARTERS: tuple[str, ...] = (
+    "what ",
+    "what's ",
+    "whats ",
+    "how ",
+    "why ",
+    "where ",
+    "when ",
+    "who ",
+    "can you ",
+    "could you ",
+    "would you ",
+    "should i ",
+    "should we ",
+    "do you ",
+    "does it ",
+    "does the ",
+    "is it ",
+    "is there ",
+    "are you ",
+    "am i ",
+    "tell me ",
+    "explain ",
+    "i'm curious",
+    "im curious",
+    "i am curious",
+)
+
+_INFO_QUESTION_IMPERATIVE_HINTS: tuple[str, ...] = (
+    " now",
+    " now.",
+    " now?",
+    " now!",
+    "go ahead",
+    "let's deploy",
+    "let me deploy",
+    "let's push",
+    "let me push",
+    "let's run",
+    "let me run",
+    "do it",
+    "ship it",
+    "kick off",
+    "run it",
+    "please run",
+    "please deploy",
+    "please push",
+    "please commit",
+    "execute it",
+    "execute now",
+    "right now",
+)
+
+_INFO_QUESTION_LEAD_VERBS = re.compile(
+    r"^(deploy|push|commit|run|execute|build|start|stop|migrate|rollback|merge|ship|kick)\b",
+    re.IGNORECASE,
+)
+
+_INFO_QUESTION_PROVIDER_NAMES = re.compile(
+    r"\b(railway|render\.com|fly\.io|flyctl|heroku|vercel|netlify|cloudflare|render\b)\b",
+    re.IGNORECASE,
+)
+
+# ``looks_like_stuck_dev`` keys off any pain word + dev hint, but the bare interrogative
+# starter "why " is also in that pain set, so genuine curiosity questions about dev
+# topics ("Why does Kubernetes ingress exist?") get pulled into stuck_dev. Treat the
+# remaining pain phrases as the real signal that the user is blocked / asking for a fix.
+_INFO_QUESTION_REAL_PAIN: tuple[str, ...] = (
+    "stuck",
+    "blocked",
+    "can't",
+    "cant ",
+    "cannot ",
+    "won't",
+    "wont ",
+    "doesn't work",
+    "doesnt work",
+    "not working",
+    "broken",
+    "fails",
+    "failed",
+    "failing",
+    "error",
+    "help me fix",
+    "figure out",
+    "debug",
+    "how do i fix",
+    "how can i fix",
+)
+
+
+def looks_like_informational_question(
+    text: str,
+    conversation_snapshot: dict | None = None,
+) -> bool:
+    """
+    Phase 69 — clearly interrogative messages with no pain/provider/imperative cues.
+
+    Returns True only when the message is shaped like a question and free of signals
+    that should route it to ``stuck_dev``, ``analysis``, ``external_execution``,
+    ``external_investigation``, ``external_execution_continue``, or
+    ``orchestrate_system``. Used by :func:`get_intent` to short-circuit the LLM
+    classifier and avoid hijacking informational queries into the dev pipeline.
+    """
+    t = (text or "").strip()
+    if not t or len(t) < 2:
+        return False
+    tl = t.lower()
+
+    interrogative_shape = t.endswith("?") or any(tl.startswith(s) for s in _INFO_QUESTION_STARTERS)
+    if not interrogative_shape:
+        return False
+
+    if re.search(r"https?://", tl):
+        return False
+    if _INFO_QUESTION_PROVIDER_NAMES.search(tl):
+        return False
+
+    if any(marker in tl for marker in _INFO_QUESTION_IMPERATIVE_HINTS):
+        return False
+    if _INFO_QUESTION_LEAD_VERBS.match(tl):
+        return False
+
+    # Defer to the existing deterministic intents — they have stronger signals than question-shape.
+    if looks_like_orchestrate_system(text):
+        return False
+    if looks_like_external_execution(text):
+        return False
+    if looks_like_external_execution_continue(text, conversation_snapshot):
+        return False
+    if looks_like_external_investigation(text, conversation_snapshot):
+        return False
+    if looks_like_analysis(text):
+        return False
+    if looks_like_stuck_dev(text):
+        # If the only pain match is the bare "why " starter, keep treating as informational.
+        if any(p in tl for p in _INFO_QUESTION_REAL_PAIN):
+            return False
+
+    return True
+
+
 def looks_like_brain_dump(text: str) -> bool:
     t = text.lower().strip()
 
@@ -585,6 +727,29 @@ def get_intent(
         if hosted_deploy_provider_match(t0):
             return "external_execution"
         return "external_investigation"
+
+    # Phase 69 — interrogative messages with no pain/provider/imperative cues skip the LLM
+    # classifier and route through the deterministic fallback. Action-oriented intents
+    # (stuck_dev / analysis / external_*) are coerced to general_chat because our gate
+    # already verified those patterns aren't a real fit. Prevents the dev pipeline from
+    # hijacking questions like "what do you need to deploy to AWS?".
+    if (
+        get_settings().nexa_informational_question_skip_llm
+        and looks_like_informational_question(t0, conversation_snapshot)
+    ):
+        fb_intent = classify_intent_fallback(t0, conversation_snapshot)["intent"]
+        if fb_intent in {
+            "stuck_dev",
+            "stuck",
+            "analysis",
+            "external_execution",
+            "external_execution_continue",
+            "external_investigation",
+            "orchestrate_system",
+            "brain_dump",
+        }:
+            return "general_chat"
+        return fb_intent
 
     result = classify_intent_llm(
         message,
