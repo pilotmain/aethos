@@ -60,7 +60,12 @@ else:
     load_dotenv(_ENV_FILE, override=True)
     _normalize_term_for_subprocesses()
 
-# Phase 36 — AETHOS_* → NEXA_* before Settings() reads os.environ (see app/core/aethos_env.py).
+# Phase 62 — machine-local overlay (DATABASE_URL, tokens). Loaded after repo `.env`; overrides duplicate keys.
+_HOME_AETHOS_ENV = Path.home() / ".aethos" / ".env"
+if _HOME_AETHOS_ENV.is_file():
+    load_dotenv(_HOME_AETHOS_ENV, override=True)
+
+# Phase 36 — AETHOS_* → NEXA_* before Settings() reads os.environ (see app.core.aethos_env.py).
 from app.core.aethos_env import apply_aethos_env_aliases
 
 apply_aethos_env_aliases()

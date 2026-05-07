@@ -343,6 +343,11 @@ def main() -> int:
     )
 
     sub.add_parser(
+        "configure-bot",
+        help="Phase 62 — write ~/.aethos/.env with canonical DATABASE_URL + orchestration (matches API bot DB)",
+    )
+
+    sub.add_parser(
         "status",
         help="HTTP health checks against AETHOS_API_BASE / NEXA_API_BASE (default :8010)",
     )
@@ -380,7 +385,8 @@ def main() -> int:
 
     if (
         not args.no_banner
-        and args.cmd in ("serve", "setup", "init-db", "unify-db", "migrate-scopes")
+        and args.cmd
+        in ("serve", "setup", "init-db", "unify-db", "migrate-scopes", "configure-bot")
     ):
         from aethos_cli.banner import maybe_print_sponsor_hint, print_banner, should_show_banner
 
@@ -508,6 +514,11 @@ def main() -> int:
         from aethos_cli.agent_commands import run_migrate_scopes
 
         return run_migrate_scopes(apply=bool(getattr(args, "apply", False)))
+
+    if args.cmd == "configure-bot":
+        from aethos_cli.bot_config import configure_bot_env
+
+        return configure_bot_env()
 
     if args.cmd == "status":
         from aethos_cli.cli_status import cmd_status

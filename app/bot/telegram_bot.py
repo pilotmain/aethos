@@ -3810,6 +3810,56 @@ async def post_init(app: Application) -> None:
     app.create_task(poll_due_checkins(app))
 
 
+def _sqlite_path_from_database_url(url: str):
+    """Resolve file path for sqlite URLs; return None for non-file backends."""
+    from pathlib import Path
+
+    from sqlalchemy.engine.url import make_url
+
+    u = (url or "").strip()
+    if not u.lower().startswith("sqlite"):
+        return None
+    try:
+        parsed = make_url(u)
+        db = parsed.database
+        if not db or db == ":memory:":
+            return None
+        p = Path(db)
+        return p.resolve() if p.is_absolute() else (Path.cwd() / p).resolve()
+    except Exception:
+        return None
+
+
+def check_database_consistency() -> None:
+    """Warn when SQLite file differs from the canonical default (Phase 60/62 unified registry)."""
+    from app.core.paths import get_default_database_path
+
+    settings = get_settings()
+    url = settings.database_url
+    expected = get_default_database_path().resolve()
+    current = _sqlite_path_from_database_url(url)
+    if current is None:
+        return
+    if current.resolve() != expected:
+        print(
+            "⚠️ DATABASE_URL does not match the canonical SQLite path.\n"
+            f"   Canonical (API + bot default): {expected}\n"
+            f"   Current DATABASE_URL resolves to: {current.resolve()}\n"
+            "   Mission Control and /subagent list may disagree until DATABASE_URL matches.\n"
+            "   Fix: same DATABASE_URL in repo .env and ~/.aethos/.env, or run: aethos configure-bot",
+            flush=True,
+        )
+
+
+def ensure_bot_database() -> None:
+    """Log DB URL, warn on mismatch, apply schema (same DB file as the API when env matches)."""
+    get_settings.cache_clear()
+    settings = get_settings()
+    print(f"Telegram bot database: {settings.database_url}", flush=True)
+    check_database_consistency()
+    ensure_schema()
+
+
 def _run_telegram_polling_embedded() -> None:
     """Long polling in a daemon thread (PTB ``run_polling`` is blocking). ``stop_signals=None`` avoids
     competing with uvicorn's signal handlers in the API process."""
@@ -3839,7 +3889,7 @@ def _run_telegram_polling_embedded() -> None:
         print_missing_python_modules_hint()
         print_llm_debug_banner()
         maybe_log_llm_key_hint()
-        ensure_schema()
+        ensure_bot_database()
         application = (
             Application.builder().token(settings.telegram_bot_token).post_init(post_init).build()
         )
@@ -3914,7 +3964,7 @@ def main() -> None:
             flush=True,
         )
         raise RuntimeError("Telegram getUpdates conflict: polling lock not acquired")
-    ensure_schema()
+    ensure_bot_database()
     application = Application.builder().token(settings.telegram_bot_token).post_init(post_init).build()
     register_telegram_handlers(application)
     application.run_polling()
