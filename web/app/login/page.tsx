@@ -16,6 +16,9 @@ export default function LoginPage() {
   const [userId, setUserId] = useState(c0.userId);
   const [token, setToken] = useState(c0.token);
   const [submitAttempted, setSubmitAttempted] = useState(false);
+  const [isTesting, setIsTesting] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const trimmedUserId = userId.trim();
   const userIdProblem =
@@ -26,13 +29,80 @@ export default function LoginPage() {
         : null;
   const userIdInvalid = Boolean(userIdProblem);
 
-  function onSubmit(e: FormEvent) {
+  async function readErrorDetail(response: Response): Promise<string> {
+    const text = await response.text();
+    if (!text.trim()) {
+      return response.statusText;
+    }
+    try {
+      const body = JSON.parse(text) as { detail?: unknown };
+      if (typeof body.detail === "string") {
+        return body.detail;
+      }
+    } catch {
+      /* keep text */
+    }
+    return text.length > 220 ? `${text.slice(0, 220)}…` : text;
+  }
+
+  async function testConnection(nextApiBase: string, nextUserId: string, nextToken: string): Promise<void> {
+    const base = (nextApiBase.trim() || defaultConfig.apiBase).replace(/\/$/, "");
+    const headers: Record<string, string> = {
+      Accept: "application/json",
+      "X-User-Id": nextUserId,
+    };
+    if (nextToken) {
+      headers.Authorization = `Bearer ${nextToken}`;
+    }
+
+    let response: Response;
+    try {
+      response = await fetch(`${base}/api/v1/user/settings`, {
+        headers,
+        cache: "no-store",
+      });
+    } catch {
+      throw new Error(`Cannot reach API at ${base}. Make sure the API is running and CORS allows this origin.`);
+    }
+
+    if (response.ok) {
+      return;
+    }
+    const detail = await readErrorDetail(response);
+    if (response.status === 401) {
+      throw new Error(
+        /bearer/i.test(detail)
+          ? "Invalid bearer token. Check that it matches NEXA_WEB_API_TOKEN in the API environment."
+          : `Unauthorized: ${detail}`,
+      );
+    }
+    if (response.status === 403) {
+      throw new Error("Access forbidden. This user may need the required role for this API.");
+    }
+    throw new Error(`API returned ${response.status}: ${detail || response.statusText}`);
+  }
+
+  async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setSubmitAttempted(true);
+    setError(null);
+    setSaved(false);
     if (!trimmedUserId) return;
     if (describeAethosWebUserIdProblem(userId)) return;
-    saveConfig({ apiBase: apiBase.trim(), userId: userId.trim(), token: token.trim() });
-    router.push("/");
+    const nextApiBase = apiBase.trim();
+    const nextUserId = userId.trim();
+    const nextToken = token.trim();
+    setIsTesting(true);
+    try {
+      await testConnection(nextApiBase, nextUserId, nextToken);
+      saveConfig({ apiBase: nextApiBase, userId: nextUserId, token: nextToken });
+      setSaved(true);
+      router.push("/");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Connection test failed.");
+    } finally {
+      setIsTesting(false);
+    }
   }
 
   return (
@@ -94,11 +164,22 @@ export default function LoginPage() {
               placeholder="matches NEXA_WEB_API_TOKEN"
             />
           </label>
+          {error && (
+            <div className="rounded-md border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-200" role="alert">
+              {error}
+            </div>
+          )}
+          {saved && (
+            <div className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200" role="status">
+              Settings saved.
+            </div>
+          )}
           <button
             type="submit"
-            className="mt-2 rounded-md bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-white"
+            disabled={isTesting}
+            className="mt-2 rounded-md bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Save
+            {isTesting ? "Testing..." : "Save & Test Connection"}
           </button>
         </form>
       </div>

@@ -1,7 +1,11 @@
-import { DEFAULT_API_BASE, readConfig } from "./config";
+import { clearSavedBearerToken, DEFAULT_API_BASE, readConfig } from "./config";
 import type { TrustActivityResponse, TrustSummaryResponse, WebReleaseNotes } from "./aethos-types";
 
 const API_PREFIX = "/api/v1";
+
+export interface ApiOptions extends RequestInit {
+  requireAuth?: boolean;
+}
 
 function parseErrorBodyText(t: string): string {
   let detail = t;
@@ -43,15 +47,35 @@ function url(path: string): string {
   return `${base}${API_PREFIX}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
-function headers(): HeadersInit {
+function configuredHeaders(requireAuth = true): Record<string, string> {
   const c = readConfig();
-  const h: Record<string, string> = {
-    "X-User-Id": c.userId,
-  };
-  if (c.token) {
-    h.Authorization = `Bearer ${c.token}`;
+  const h: Record<string, string> = {};
+  const userId = c.userId.trim();
+  const token = c.token.trim();
+  if (userId) {
+    h["X-User-Id"] = userId;
+  }
+  if (requireAuth && token) {
+    h.Authorization = `Bearer ${token}`;
   }
   return h;
+}
+
+function headersToRecord(headers?: HeadersInit): Record<string, string> {
+  if (!headers) {
+    return {};
+  }
+  if (typeof Headers !== "undefined" && headers instanceof Headers) {
+    const out: Record<string, string> = {};
+    headers.forEach((value, key) => {
+      out[key] = value;
+    });
+    return out;
+  }
+  if (Array.isArray(headers)) {
+    return Object.fromEntries(headers);
+  }
+  return headers as Record<string, string>;
 }
 
 /** Maps browser "Failed to fetch" to a message that names API base / CORS / port. */
@@ -70,8 +94,9 @@ async function fetchOrNetworkHint(urlStr: string, init?: RequestInit): Promise<R
   }
 }
 
-export async function webFetch<T = unknown>(path: string, init: RequestInit = {}): Promise<T> {
-  const h = { ...headers(), ...(init.headers as Record<string, string>) } as Record<string, string>;
+export async function webFetch<T = unknown>(path: string, init: ApiOptions = {}): Promise<T> {
+  const { requireAuth = true, headers: initHeaders, ...fetchInit } = init;
+  const h = { ...configuredHeaders(requireAuth), ...headersToRecord(initHeaders) };
   if (init.body && !h["Content-Type"]) {
     h["Content-Type"] = "application/json";
   }
@@ -79,11 +104,14 @@ export async function webFetch<T = unknown>(path: string, init: RequestInit = {}
     h["Accept"] = "application/json";
   }
 
-  const r = await fetchOrNetworkHint(url(path), { ...init, headers: h });
+  const r = await fetchOrNetworkHint(url(path), { ...fetchInit, headers: h });
   const text = await r.text();
   if (r.status === 401) {
     const msg =
       parseErrorBodyText(text) || "Unauthorized (check X-User-Id and optional bearer token)";
+    if (/bearer token|Authorization:\s*Bearer/i.test(msg)) {
+      clearSavedBearerToken();
+    }
     throw new Error(`${r.status}: ${msg}`);
   }
   if (!r.ok) {
@@ -134,20 +162,15 @@ export async function webFetchPublicReleaseNotes(): Promise<WebReleaseNotes> {
 }
 
 export async function webDownloadBlob(path: string, init: RequestInit = {}): Promise<Blob> {
-  const c = readConfig();
-  const h: Record<string, string> = {
-    "X-User-Id": c.userId,
-    ...(init.headers as Record<string, string> | undefined),
-  };
-  if (c.token) {
-    h.Authorization = `Bearer ${c.token}`;
-  }
+  const h = { ...configuredHeaders(true), ...headersToRecord(init.headers) };
   const r = await fetchOrNetworkHint(url(path), { ...init, headers: h, method: init.method || "GET" });
   if (r.status === 401) {
     const t = await r.text();
-    throw new Error(
-      parseErrorBodyText(t) || "Unauthorized (check X-User-Id and optional bearer token)"
-    );
+    const msg = parseErrorBodyText(t) || "Unauthorized (check X-User-Id and optional bearer token)";
+    if (/bearer token|Authorization:\s*Bearer/i.test(msg)) {
+      clearSavedBearerToken();
+    }
+    throw new Error(msg);
   }
   if (!r.ok) {
     const t = await r.text();

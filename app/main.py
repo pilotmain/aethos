@@ -277,7 +277,8 @@ app.add_middleware(
     allow_origins=_cors,
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*"],
+    # Keep "*" for future extension, and name auth headers explicitly for preflight clarity.
+    allow_headers=["*", "Authorization", "X-User-Id", "Content-Type", "Accept"],
 )
 app.add_middleware(MetricsMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)

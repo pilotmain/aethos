@@ -21,6 +21,11 @@ export const WEB_CONFIG_STORAGE_KEY = "aethos_web_v1";
 /** Legacy key — still read on load for migration; new saves use :data:`WEB_CONFIG_STORAGE_KEY`. */
 export const WEB_CONFIG_LEGACY_STORAGE_KEY = "nexa_web_v1";
 
+/** Standalone keys used by Connection settings and manual browser recovery flows. */
+export const WEB_API_BASE_STORAGE_KEY = "aethos_api_base";
+export const WEB_USER_ID_STORAGE_KEY = "aethos_user_id";
+export const WEB_BEARER_TOKEN_STORAGE_KEY = "aethos_bearer_token";
+
 const CONFIG_SCHEMA_VERSION = 2;
 
 /**
@@ -62,26 +67,46 @@ function migrateStoredApiBase(raw: string | undefined): string {
   return raw?.trim() ? raw.trim().replace(/\/$/, "") : "";
 }
 
+function readStandaloneConfig(): Partial<AethosWebConfig> {
+  if (typeof window === "undefined") {
+    return {};
+  }
+  return {
+    apiBase: migrateStoredApiBase(window.localStorage.getItem(WEB_API_BASE_STORAGE_KEY) || undefined),
+    userId: window.localStorage.getItem(WEB_USER_ID_STORAGE_KEY)?.trim() || "",
+    token: window.localStorage.getItem(WEB_BEARER_TOKEN_STORAGE_KEY)?.trim() || "",
+  };
+}
+
 export function readConfig(): AethosWebConfig {
   if (typeof window === "undefined") {
     return { ...defaultConfig };
   }
+  const standalone = readStandaloneConfig();
   const raw =
     window.localStorage.getItem(WEB_CONFIG_STORAGE_KEY) ||
     window.localStorage.getItem(WEB_CONFIG_LEGACY_STORAGE_KEY);
   if (!raw) {
-    return { ...defaultConfig };
+    return {
+      apiBase: standalone.apiBase || DEFAULT_API_BASE,
+      userId: standalone.userId || "",
+      token: standalone.token || "",
+    };
   }
   try {
     const j = JSON.parse(raw) as Partial<AethosWebConfigStored>;
     const apiBase = migrateStoredApiBase(j.apiBase) || DEFAULT_API_BASE;
     return {
-      apiBase,
-      userId: j.userId || "",
-      token: j.token || "",
+      apiBase: standalone.apiBase || apiBase,
+      userId: standalone.userId || j.userId || "",
+      token: standalone.token || j.token || "",
     };
   } catch {
-    return { ...defaultConfig };
+    return {
+      apiBase: standalone.apiBase || DEFAULT_API_BASE,
+      userId: standalone.userId || "",
+      token: standalone.token || "",
+    };
   }
 }
 
@@ -97,6 +122,25 @@ export function saveConfig(c: AethosWebConfig): void {
     token: c.token.trim(),
   };
   window.localStorage.setItem(WEB_CONFIG_STORAGE_KEY, JSON.stringify(payload));
+  window.localStorage.setItem(WEB_API_BASE_STORAGE_KEY, payload.apiBase);
+  if (payload.userId) {
+    window.localStorage.setItem(WEB_USER_ID_STORAGE_KEY, payload.userId);
+  } else {
+    window.localStorage.removeItem(WEB_USER_ID_STORAGE_KEY);
+  }
+  if (payload.token) {
+    window.localStorage.setItem(WEB_BEARER_TOKEN_STORAGE_KEY, payload.token);
+  } else {
+    window.localStorage.removeItem(WEB_BEARER_TOKEN_STORAGE_KEY);
+  }
+}
+
+export function clearSavedBearerToken(): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+  const c = readConfig();
+  saveConfig({ ...c, token: "" });
 }
 
 /** Point the browser at a working API origin and reload (e.g. 8120 → 8010). */
