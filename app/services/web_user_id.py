@@ -43,6 +43,47 @@ def _normalize_web_user_id_aliases(s: str) -> str:
     return s
 
 
+def normalize_to_agent_scope(user_id: str) -> str:
+    """
+    Map canonical web API user id to the primary Telegram **registry** ``parent_chat_id`` prefix.
+
+    Agents created in Telegram DMs use ``telegram:<telegram_chat_id>`` (digits). The web UI sends
+    ``tg_<digits>``; this converts that form so callers can compare or debug scopes consistently.
+
+    ``tg_123456789`` → ``telegram:123456789``. Other ids are returned unchanged.
+    """
+    s = (user_id or "").strip()
+    if s.startswith("tg_"):
+        numeric_id = s[3:]
+        if numeric_id.isdigit() and 3 <= len(numeric_id) <= 20:
+            return f"telegram:{numeric_id}"
+    return s
+
+
+def orchestration_registry_scopes(app_user_id: str, session_id: str = "default") -> list[str]:
+    """
+    All :class:`~app.services.sub_agent_registry.AgentRegistry` scopes visible to this API user.
+
+    Includes the web session scope plus Telegram chat scope(s) when ``X-User-Id`` is ``tg_<digits>``
+    so agents spawned from Telegram (``parent_chat_id`` = ``telegram:…``) appear in
+    ``GET /api/v1/agents/list`` and Mission Control alongside web-spawned agents.
+    """
+    uid = (app_user_id or "").strip()[:128]
+    sid = (session_id or "default").strip()[:64]
+    scopes: list[str] = [f"web:{uid}:{sid}"]
+    if uid.startswith("tg_"):
+        digits = uid[3:]
+        if digits.isdigit() and 3 <= len(digits) <= 20:
+            tscope = f"telegram:{digits}"
+            if tscope not in scopes:
+                scopes.append(tscope)
+            # Gateway fallback when ``telegram_chat_id`` was missing (:func:`orchestration_chat_key`).
+            ufallback = f"telegram:user:{uid}"
+            if ufallback not in scopes:
+                scopes.append(ufallback)
+    return scopes
+
+
 def validate_web_user_id(raw: str) -> str:
     """
     Return a safe web user id or raise :exc:`ValueError`.

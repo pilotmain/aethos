@@ -1,13 +1,14 @@
 """
 REST API for orchestration sub-agents (spawn / list / CRUD / CEO lifecycle).
 
-Uses the same web chat scope as the gateway: ``web:{user_id}:default``, merged with
-``telegram:<digits>`` when ``X-User-Id`` is ``tg_<digits>`` so agents created in Telegram
-(``parent_chat_id`` = ``telegram:…``) appear in API lists and execute calls.
+Uses :func:`~app.services.web_user_id.orchestration_registry_scopes` — ``web:{user}:session``
+plus ``telegram:<digits>`` (and ``telegram:user:tg_<digits>`` when applicable) when
+``X-User-Id`` is ``tg_<digits>``, so Telegram-spawned agents (``parent_chat_id`` = ``telegram:…``)
+match API lists and Mission Control.
 
 Requires ``X-User-Id`` (+ optional bearer when ``NEXA_WEB_API_TOKEN`` is set).
 Ids are validated via :func:`~app.services.web_user_id.validate_web_user_id`
-(e.g. ``telegram_<digits>`` / ``telegram:<digits>`` → ``tg_<digits>``).
+(e.g. ``telegram_<digits>`` / ``telegram:<digits>`` → canonical ``tg_<digits>``).
 """
 
 from __future__ import annotations
@@ -21,6 +22,7 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.core.db import get_db
 from app.core.security import get_valid_web_user_id
+from app.services.web_user_id import orchestration_registry_scopes
 from app.services.agent.activity_stream import recent_activity_for_agents
 from app.services.agent.activity_tracker import get_activity_tracker
 from app.services.sub_agent_executor import AgentExecutor
@@ -36,21 +38,8 @@ def _web_chat_scope(app_user_id: str, session_id: str = "default") -> str:
 
 
 def _api_orchestration_scopes(app_user_id: str, session_id: str = "default") -> list[str]:
-    """
-    Registry scopes for API auth user — mirrors Telegram ``telegram_subagent_scopes`` merge.
-
-    Always includes ``web:{user}:session``; for ``tg_<digits>`` also includes ``telegram:{digits}``
-    so orchestration agents stored from Telegram chats are visible.
-    """
-    uid = (app_user_id or "").strip()[:128]
-    scopes: list[str] = [_web_chat_scope(uid, session_id)]
-    if uid.startswith("tg_"):
-        digits = uid[3:]
-        if digits.isdigit():
-            tscope = f"telegram:{digits}"
-            if tscope not in scopes:
-                scopes.append(tscope)
-    return scopes
+    """Delegate to :func:`~app.services.web_user_id.orchestration_registry_scopes` (single source of truth)."""
+    return orchestration_registry_scopes(app_user_id, session_id=session_id)
 
 
 def _ensure_agent_in_scopes(agent_id: str, scopes: list[str]):
