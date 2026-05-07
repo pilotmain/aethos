@@ -118,6 +118,28 @@ def looks_like_registry_agent_creation_nl(text: str) -> bool:
         "where",
     ):
         return False
+
+    # Phase 59 — explicit roster NL (comma lists, "N agents:", numbered *_agent lines) → sub-agent registry.
+    if (
+        re.search(
+            r"(?is)\b(?:create|make|add|build|spawn)\s+(?:these\s+)?(?:two|three|four|five|six|seven|eight|nine|ten|\d+)\s+agents?\s*[,:]",
+            raw,
+        )
+        or (
+            _CREATION_VERBS.search(raw)
+            and re.search(r"(?im)^\s*\d+[\).]\s*.+_agent\b", raw)
+        )
+        or re.search(
+            r"(?i)\b(?:create|make|add|build|spawn)\s+(?:[a-z0-9][a-z0-9_-]{0,62}_agent\s*,\s*)+[a-z0-9][a-z0-9_-]{0,62}_agent\b",
+            raw,
+        )
+        or re.search(
+            r"(?i)\b(?:create|make|add|build|spawn)\s+[a-z0-9][a-z0-9_-]{0,62}_agent\s+and\s+[a-z0-9][a-z0-9_-]{0,62}_agent\b",
+            raw,
+        )
+    ):
+        return True
+
     if _CREATION_TEAM_WORDS.search(raw):
         return True
     if "agent" in tl:

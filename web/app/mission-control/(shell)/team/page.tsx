@@ -13,7 +13,7 @@ import {
   patchOrgMember,
   postOrgMember,
 } from "@/lib/api/governance";
-import { fetchAgentsList } from "@/lib/api/agents";
+import { fetchOrchestrationAgentsResolved } from "@/lib/api/agents";
 import { fetchMissionControlState } from "@/lib/api/mission-control-state";
 import {
   agentRolesToTeamMembers,
@@ -45,14 +45,12 @@ export default function MissionControlTeamPage() {
     setError(null);
     try {
       const [state, me] = await Promise.all([fetchMissionControlState(48), fetchGovernanceMe()]);
-      const { roles: orgRoles, assignments, subAgents: subFromState } = orchestrationFromState(state);
-      let subAgents: SubAgentOrchestrationRow[] = subFromState;
-      if (!subAgents.length) {
-        try {
-          subAgents = (await fetchAgentsList()) as SubAgentOrchestrationRow[];
-        } catch {
-          /* Mission Control state is authoritative when API list fails */
-        }
+      const { roles: orgRoles, assignments } = orchestrationFromState(state);
+      let subAgents: SubAgentOrchestrationRow[] = [];
+      try {
+        subAgents = (await fetchOrchestrationAgentsResolved(48, state)) as SubAgentOrchestrationRow[];
+      } catch {
+        /* Both state slice and /agents/list can fail independently */
       }
       const mergedRoles = mergeAgentRoles(orgRoles, subAgentsToAgentRoles(subAgents));
       setAgents(agentRolesToTeamMembers(mergedRoles, assignments));

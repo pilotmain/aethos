@@ -219,6 +219,42 @@ def post_create_agent(
     }
 
 
+@router.get("/debug/scopes")
+def get_debug_agent_scopes(app_user_id: str = Depends(get_valid_web_user_id)) -> dict[str, Any]:
+    """List orchestration agents per merged scope (same as Mission Control / ``GET /agents/list``)."""
+    registry = AgentRegistry()
+    scopes = _api_orchestration_scopes(app_user_id)
+    agents_by_scope: dict[str, list[dict[str, Any]]] = {}
+    for scope in scopes:
+        agents = registry.list_agents(scope)
+        agents_by_scope[scope] = [
+            {
+                "id": a.id,
+                "name": a.name,
+                "domain": a.domain,
+                "parent_chat_id": a.parent_chat_id,
+            }
+            for a in agents
+        ]
+    merged = registry.list_agents_merged(scopes)
+    return {
+        "ok": True,
+        "user_id": app_user_id,
+        "scopes": scopes,
+        "agents_by_scope": agents_by_scope,
+        "merged_count": len(merged),
+        "merged_agents": [
+            {
+                "id": a.id,
+                "name": a.name,
+                "domain": a.domain,
+                "parent_chat_id": a.parent_chat_id,
+            }
+            for a in merged
+        ],
+    }
+
+
 @router.get("/list")
 def get_agents_list(
     app_user_id: str = Depends(get_valid_web_user_id),
