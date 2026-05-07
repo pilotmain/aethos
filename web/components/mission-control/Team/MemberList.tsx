@@ -10,6 +10,8 @@ export type MemberListProps = {
   currentUserId: string;
   onRoleChange?: (userId: string, newRole: string) => void;
   onRemove?: (userId: string) => void;
+  /** Called after an agent (kind="agent") receives a new assignment so parent can refresh. */
+  onAgentAssigned?: () => void | Promise<void>;
 };
 
 export function MemberList({
@@ -19,6 +21,7 @@ export function MemberList({
   currentUserId,
   onRoleChange,
   onRemove,
+  onAgentAssigned,
 }: MemberListProps) {
   if (!members.length) return null;
 
@@ -36,6 +39,7 @@ export function MemberList({
             isCurrentUser={m.kind === "human" && m.user_id === currentUserId}
             onRoleChange={m.kind === "human" ? onRoleChange : undefined}
             onRemove={m.kind === "human" ? onRemove : undefined}
+            onAssigned={m.kind === "agent" ? onAgentAssigned : undefined}
           />
         ))}
       </div>

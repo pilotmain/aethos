@@ -2,6 +2,7 @@
 
 import { MoreVertical, Trash2, UserCog } from "lucide-react";
 
+import { AssignTaskDialog } from "@/components/mission-control/Team/AssignTaskDialog";
 import { RoleBadge } from "@/components/mission-control/Team/RoleBadge";
 import { StatusIndicator } from "@/components/mission-control/Team/StatusIndicator";
 import { Button } from "@/components/ui/button";
@@ -20,10 +21,12 @@ export type MemberCardProps = {
   member: TeamMember;
   onRoleChange?: (userId: string, newRole: string) => void;
   onRemove?: (userId: string) => void;
+  /** Called after a successful agent assignment so the parent can refresh. */
+  onAssigned?: () => void | Promise<void>;
   isCurrentUser?: boolean;
 };
 
-export function MemberCard({ member, onRoleChange, onRemove, isCurrentUser }: MemberCardProps) {
+export function MemberCard({ member, onRoleChange, onRemove, onAssigned, isCurrentUser }: MemberCardProps) {
   const initial = (member.name || member.user_id || "?").charAt(0).toUpperCase();
   const showMenu = member.kind === "human" && !isCurrentUser && (onRoleChange || onRemove);
 
@@ -53,6 +56,17 @@ export function MemberCard({ member, onRoleChange, onRemove, isCurrentUser }: Me
           <p className="font-mono text-[11px] text-zinc-600 truncate">{member.user_id}</p>
         </div>
       </div>
+
+      {member.kind === "agent" && member.user_id ? (
+        <AssignTaskDialog
+          agentHandle={member.user_id}
+          agentDisplayName={member.name}
+          agentDomain={member.roleLabel}
+          disabled={member.status === "busy"}
+          disabledReason={member.status === "busy" ? "Agent is busy — try again when idle." : undefined}
+          onAssigned={onAssigned}
+        />
+      ) : null}
 
       {showMenu ? (
         <DropdownMenu>

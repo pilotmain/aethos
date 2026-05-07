@@ -184,9 +184,10 @@ export default function MissionControlTeamPage() {
         <TabsContent value="list" className="space-y-10">
           <MemberList
             title="Agents"
-            description="From Agent Organization role assignments (Mission Control orchestration)."
+            description="From Agent Organization role assignments (Mission Control orchestration). Use 'Assign task' on a card to dispatch via /api/v1/agent-assignments."
             members={agents}
             currentUserId={currentUserId}
+            onAgentAssigned={() => void reload()}
           />
           <MemberList
             title="Organization members"
