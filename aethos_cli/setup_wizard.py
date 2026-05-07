@@ -374,14 +374,26 @@ def run_setup_wizard(*, install_kind: str | None = None) -> int:
 
 def run_database_setup() -> int:
     """
-    Run ``ensure_schema()`` in a fresh interpreter so a just-written ``.env`` is picked up
-    (avoids stale :func:`~app.core.config.get_settings` cache during interactive ``aethos setup``).
+    Unify SQLite location (Phase 60), then run ``ensure_schema()`` in a fresh interpreter
+    so a just-written ``.env`` is picked up (avoids stale :func:`~app.core.config.get_settings`
+    cache during interactive ``aethos setup``).
     """
     import os
     import subprocess
     import sys
 
     root = _repo_root()
+    try:
+        from aethos_cli.db_migration import unify_databases
+
+        print_info("Unifying database (API + Telegram use one SQLite file)…")
+        stats = unify_databases(repo_root=root, extra_env_files=[root / ".env"])
+        print_success(
+            f"Canonical DB: {stats['canonical_path']} ({stats['agents_in_canonical']} agents in registry)"
+        )
+    except Exception as exc:
+        print_warn(f"Database unify skipped: {exc}")
+
     code = "from app.core.db import ensure_schema; ensure_schema()"
     try:
         r = subprocess.run(

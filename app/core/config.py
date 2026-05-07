@@ -12,6 +12,8 @@ from dotenv import dotenv_values, load_dotenv
 from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from app.core.paths import get_default_sqlite_database_url
+
 # Resolve repo root: app/core/config.py -> parents: core, app, project
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 _ENV_FILE = _PROJECT_ROOT / ".env"
@@ -119,7 +121,8 @@ class Settings(BaseSettings):
     nexa_auto_approve_domains: str = "git"
     nexa_auto_approve_log_only: bool = False
     api_v1_prefix: str = "/api/v1"
-    database_url: str = "sqlite:///./data/aethos.db"
+    # Phase 60: default absolute SQLite under ~/.aethos/data (API + bot same file); override with DATABASE_URL.
+    database_url: str = Field(default_factory=get_default_sqlite_database_url)
 
     anthropic_api_key: str | None = None
     # Default: current Haiku (3.5 snapshot `claude-3-5-haiku-20241022` is retired on the API)

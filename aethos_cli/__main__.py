@@ -328,6 +328,11 @@ def main() -> int:
     )
 
     sub.add_parser(
+        "unify-db",
+        help="Phase 60 — merge legacy SQLite files into ~/.aethos/data/aethos.db and align DATABASE_URL",
+    )
+
+    sub.add_parser(
         "status",
         help="HTTP health checks against AETHOS_API_BASE / NEXA_API_BASE (default :8010)",
     )
@@ -365,7 +370,7 @@ def main() -> int:
 
     if (
         not args.no_banner
-        and args.cmd in ("serve", "setup", "init-db")
+        and args.cmd in ("serve", "setup", "init-db", "unify-db")
     ):
         from aethos_cli.banner import maybe_print_sponsor_hint, print_banner, should_show_banner
 
@@ -477,6 +482,17 @@ def main() -> int:
         from aethos_cli.setup_wizard import run_database_setup
 
         return run_database_setup()
+
+    if args.cmd == "unify-db":
+        from aethos_cli.db_migration import unify_databases
+
+        root = _repo_root()
+        stats = unify_databases(repo_root=root, extra_env_files=[root / ".env"])
+        print(f"Canonical database: {stats['canonical_path']}")
+        print(f"Agents (registry table): {stats['agents_in_canonical']}")
+        if stats.get("source_path"):
+            print(f"Source file used: {stats['source_path']}")
+        return 0
 
     if args.cmd == "status":
         from aethos_cli.cli_status import cmd_status

@@ -10,6 +10,13 @@ from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 from app.core.config import get_settings
 
 
+def get_default_database_path() -> Path:
+    """Canonical default SQLite path (``~/.aethos/data/aethos.db``); same as :mod:`app.core.paths`."""
+    from app.core.paths import get_default_database_path as _path
+
+    return _path()
+
+
 def ensure_sqlite_parent_directory(database_url: str) -> None:
     """Create parent directory for file-backed SQLite URLs so API/bot share one DB without mkdir(1)."""
     du = (database_url or "").strip()

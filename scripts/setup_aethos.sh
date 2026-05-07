@@ -22,8 +22,9 @@ if [[ ! -f .env ]]; then
 APP_NAME=AethOS
 APP_ENV=development
 
-# Unified DB file for API + Telegram bot (same process env)
-DATABASE_URL=sqlite:///./data/aethos.db
+# Unified SQLite — API + Telegram bot default to ~/.aethos/data/aethos.db when DATABASE_URL is omitted.
+# Uncomment to pin explicitly (three slashes after sqlite: for absolute host path):
+# DATABASE_URL=sqlite:///${HOME}/.aethos/data/aethos.db
 
 NEXA_AGENT_ORCHESTRATION_ENABLED=true
 NEXA_AGENT_MAX_PER_CHAT=20
@@ -61,7 +62,7 @@ python -c "from app.core.db import ensure_schema; ensure_schema()" || {
   echo -e "${YELLOW}⚠${NC} ensure_schema failed — run from repo root with .venv active: aethos init-db"
   exit 1
 }
-echo -e "${GREEN}✓${NC} Database ready (sqlite:///./data/aethos.db)"
+echo -e "${GREEN}✓${NC} Database ready (default ~/.aethos/data/aethos.db if DATABASE_URL unset)"
 
 echo ""
 echo -e "${GREEN}✅ Setup complete.${NC}"
