@@ -2,7 +2,11 @@ from __future__ import annotations
 
 import pytest
 
-from app.services.web_user_id import WEB_USER_ID_INVALID, validate_web_user_id
+from app.services.web_user_id import (
+    WEB_USER_ID_INVALID,
+    orchestration_registry_scopes,
+    validate_web_user_id,
+)
 
 
 def test_tg_valid() -> None:
@@ -79,3 +83,12 @@ def test_error_message_constant_has_no_injection() -> None:
     assert "AAG" not in WEB_USER_ID_INVALID
     assert ":" not in WEB_USER_ID_INVALID
     # callers must not interpolate client input into HTTP detail
+
+
+def test_orchestration_registry_scopes_includes_bare_tg_phase61() -> None:
+    uid = "tg_8666826080"
+    scopes = orchestration_registry_scopes(uid)
+    assert "tg_8666826080" in scopes
+    assert "web:tg_8666826080:default" in scopes
+    assert "telegram:8666826080" in scopes
+    assert "telegram:user:tg_8666826080" in scopes

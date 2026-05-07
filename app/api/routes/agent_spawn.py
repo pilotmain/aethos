@@ -1,10 +1,10 @@
 """
 REST API for orchestration sub-agents (spawn / list / CRUD / CEO lifecycle).
 
-Uses :func:`~app.services.web_user_id.orchestration_registry_scopes` — ``web:{user}:session``
-plus ``telegram:<digits>`` (and ``telegram:user:tg_<digits>`` when applicable) when
-``X-User-Id`` is ``tg_<digits>``, so Telegram-spawned agents (``parent_chat_id`` = ``telegram:…``)
-match API lists and Mission Control.
+Uses :func:`~app.services.web_user_id.orchestration_registry_scopes` — ``web:{user}:session``,
+``tg_<digits>`` (bare scope), ``telegram:<digits>``, and ``telegram:user:tg_<digits>`` when
+``X-User-Id`` is ``tg_<digits>``, so Telegram-created agents match API lists and Mission Control
+regardless of whether ``parent_chat_id`` was stored as ``telegram:…`` or bare ``tg_…``.
 
 Requires ``X-User-Id`` (+ optional bearer when ``NEXA_WEB_API_TOKEN`` is set).
 Ids are validated via :func:`~app.services.web_user_id.validate_web_user_id`
@@ -221,11 +221,20 @@ def post_create_agent(
 
 @router.get("/debug/scopes")
 def get_debug_agent_scopes(app_user_id: str = Depends(get_valid_web_user_id)) -> dict[str, Any]:
-    """List orchestration agents per merged scope (same as Mission Control / ``GET /agents/list``)."""
+    """List orchestration agents per scope (explicit checklist + same merged result as ``GET /agents/list``)."""
     registry = AgentRegistry()
-    scopes = _api_orchestration_scopes(app_user_id)
+    uid = (app_user_id or "").strip()
+    scopes_to_check: list[str] = [uid, _web_chat_scope(uid)]
+    if uid.startswith("tg_"):
+        tail = uid[3:]
+        if tail.isdigit():
+            scopes_to_check.append(f"telegram:{tail}")
+        scopes_to_check.append(f"telegram:user:{uid}")
+    seen: set[str] = set()
+    scopes_to_check = [s for s in scopes_to_check if not (s in seen or seen.add(s))]
+
     agents_by_scope: dict[str, list[dict[str, Any]]] = {}
-    for scope in scopes:
+    for scope in scopes_to_check:
         agents = registry.list_agents(scope)
         agents_by_scope[scope] = [
             {
@@ -236,11 +245,14 @@ def get_debug_agent_scopes(app_user_id: str = Depends(get_valid_web_user_id)) ->
             }
             for a in agents
         ]
-    merged = registry.list_agents_merged(scopes)
+
+    api_scopes = _api_orchestration_scopes(app_user_id)
+    merged = registry.list_agents_merged(api_scopes)
     return {
         "ok": True,
         "user_id": app_user_id,
-        "scopes": scopes,
+        "scopes": scopes_to_check,
+        "api_scopes": api_scopes,
         "agents_by_scope": agents_by_scope,
         "merged_count": len(merged),
         "merged_agents": [

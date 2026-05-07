@@ -332,6 +332,16 @@ def main() -> int:
         help="Phase 60 — merge legacy SQLite files into ~/.aethos/data/aethos.db and align DATABASE_URL",
     )
 
+    sp_mscopes = sub.add_parser(
+        "migrate-scopes",
+        help="Phase 61 — optional SQLite rewrite of bare tg_* parent_chat_id to web:tg_*:default (see --apply)",
+    )
+    sp_mscopes.add_argument(
+        "--apply",
+        action="store_true",
+        help="Run UPDATE (default: dry-run listing only)",
+    )
+
     sub.add_parser(
         "status",
         help="HTTP health checks against AETHOS_API_BASE / NEXA_API_BASE (default :8010)",
@@ -370,7 +380,7 @@ def main() -> int:
 
     if (
         not args.no_banner
-        and args.cmd in ("serve", "setup", "init-db", "unify-db")
+        and args.cmd in ("serve", "setup", "init-db", "unify-db", "migrate-scopes")
     ):
         from aethos_cli.banner import maybe_print_sponsor_hint, print_banner, should_show_banner
 
@@ -493,6 +503,11 @@ def main() -> int:
         if stats.get("source_path"):
             print(f"Source file used: {stats['source_path']}")
         return 0
+
+    if args.cmd == "migrate-scopes":
+        from aethos_cli.agent_commands import run_migrate_scopes
+
+        return run_migrate_scopes(apply=bool(getattr(args, "apply", False)))
 
     if args.cmd == "status":
         from aethos_cli.cli_status import cmd_status

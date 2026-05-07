@@ -33,6 +33,9 @@ def telegram_subagent_scopes(telegram_chat_id: int, app_user_id: str) -> list[st
         web_scope = _user_web_registry_scope(uid)
         if web_scope not in scopes:
             scopes.append(web_scope)
+        # Phase 61 — match API / Mission Control: registry rows may use bare tg_<digits>
+        if uid.startswith("tg_") and uid not in scopes:
+            scopes.append(uid)
     return scopes
 
 

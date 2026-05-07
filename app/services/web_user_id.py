@@ -67,6 +67,9 @@ def orchestration_registry_scopes(app_user_id: str, session_id: str = "default")
     Includes the web session scope plus Telegram chat scope(s) when ``X-User-Id`` is ``tg_<digits>``
     so agents spawned from Telegram (``parent_chat_id`` = ``telegram:…``) appear in
     ``GET /api/v1/agents/list`` and Mission Control alongside web-spawned agents.
+
+    Phase 61: some Telegram-created rows use ``parent_chat_id`` = ``tg_<digits>`` (bare user id).
+    The same ``tg_<digits>`` string is included as a scope so those agents match the API.
     """
     uid = (app_user_id or "").strip()[:128]
     sid = (session_id or "default").strip()[:64]
@@ -74,6 +77,9 @@ def orchestration_registry_scopes(app_user_id: str, session_id: str = "default")
     if uid.startswith("tg_"):
         digits = uid[3:]
         if digits.isdigit() and 3 <= len(digits) <= 20:
+            # Bare tg_* scope (legacy / alternate bot paths)
+            if uid not in scopes:
+                scopes.append(uid)
             tscope = f"telegram:{digits}"
             if tscope not in scopes:
                 scopes.append(tscope)
