@@ -6,6 +6,9 @@ Uses /subagent to avoid clashing with /agents (LLM catalog) and /agent (custom a
 
 from __future__ import annotations
 
+from typing import Any
+
+import httpx
 from telegram import Update
 from telegram.ext import ContextTypes
 
@@ -37,6 +40,41 @@ def telegram_subagent_scopes(telegram_chat_id: int, app_user_id: str) -> list[st
         if uid.startswith("tg_") and uid not in scopes:
             scopes.append(uid)
     return scopes
+
+
+async def _fetch_agents_list_via_api(app_user_id: str) -> tuple[bool, list[dict[str, Any]] | None, str | None]:
+    """
+    GET ``/api/v1/agents/list`` — same roster as Mission Control (must match ``X-User-Id`` validation).
+
+    Returns ``(ok, agents, error_hint)``. ``error_hint`` is set when the HTTP call fails or response is invalid.
+    """
+    s = get_settings()
+    base = (s.api_base_url or "http://127.0.0.1:8010").rstrip("/")
+    prefix = (s.api_v1_prefix or "/api/v1").rstrip("/")
+    url = f"{base}{prefix}/agents/list"
+    headers: dict[str, str] = {"X-User-Id": (app_user_id or "").strip()}
+    tok = (s.nexa_web_api_token or "").strip()
+    if tok:
+        headers["Authorization"] = f"Bearer {tok}"
+    try:
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            r = await client.get(url, headers=headers)
+    except httpx.RequestError as exc:
+        return False, None, str(exc) or exc.__class__.__name__
+
+    if r.status_code != 200:
+        return False, None, f"HTTP {r.status_code}"
+
+    try:
+        data = r.json()
+    except ValueError:
+        return False, None, "invalid JSON"
+
+    agents = data.get("agents")
+    if not isinstance(agents, list):
+        return False, None, "bad response shape"
+
+    return True, agents, None
 
 
 async def subagent_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -113,14 +151,7 @@ async def subagent_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             return
 
         if sub == "list":
-            agents = registry.list_agents_merged(scopes)
-            if not agents:
-                await update.message.reply_text(
-                    "No orchestration agents in this chat yet. "
-                    "Enable NEXA_AGENT_ORCHESTRATION_ENABLED and spawn from Mission Control or the API."
-                )
-                return
-            lines = ["Orchestration agents", ""]
+            ok, api_agents, api_err = await _fetch_agents_list_via_api(link.app_user_id)
             emoji = {
                 "idle": "🟢",
                 "busy": "🟡",
@@ -128,6 +159,47 @@ async def subagent_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
                 "error": "🔴",
                 "terminated": "⚫",
             }
+
+            if ok and api_agents is not None:
+                if not api_agents:
+                    await update.message.reply_text(
+                        "No orchestration agents yet. "
+                        "Enable NEXA_AGENT_ORCHESTRATION_ENABLED and create agents from Mission Control or /subagent create."
+                    )
+                    return
+                lines = ["Orchestration agents (same as Mission Control / API)", ""]
+                for row in api_agents:
+                    name = str(row.get("name") or "?").strip()
+                    domain = str(row.get("domain") or "—").strip()
+                    st = str(row.get("status") or "idle").lower()
+                    em = emoji.get(st, "⚪")
+                    sr = float(row.get("success_rate", 100.0) or 100.0)
+                    ta = int(row.get("total_actions", 0) or 0)
+                    lines.append(f"{em} @{name} ({domain})")
+                    lines.append(f"   Success: {sr:.0f}%  ·  actions: {ta}")
+                    lines.append("")
+                lines.append("Delete: /subagent delete <name> confirm")
+                await update.message.reply_text("\n".join(lines).strip()[:9000])
+                return
+
+            agents = registry.list_agents_merged(scopes)
+            header = (
+                f"(API list unavailable{f': {api_err}' if api_err else ''}; showing local registry.)\n\n"
+                if not ok
+                else ""
+            )
+            if not agents:
+                await update.message.reply_text(
+                    header
+                    + "No orchestration agents in this chat yet. "
+                    "Enable NEXA_AGENT_ORCHESTRATION_ENABLED and spawn from Mission Control or the API. "
+                    "If the API runs elsewhere, set API_BASE_URL in .env to the reachable base URL."
+                )
+                return
+            if not header:
+                lines: list[str] = ["Orchestration agents (local registry)", ""]
+            else:
+                lines = [header.rstrip(), "", "Orchestration agents (local registry)", ""]
             for agent in agents:
                 stats = tracker.get_agent_statistics(agent.id)
                 em = emoji.get(agent.status.value, "⚪")
