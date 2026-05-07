@@ -1,7 +1,8 @@
 """
 Week 4 — sub-agent routing (Phase 2) and execution dispatch (Phase 3).
 
-@mentions (leading) → registry lookup → optional :class:`AgentExecutor` for non-empty text.
+Leading ``@mentions`` → registry lookup → :class:`AgentExecutor` (Phase 66 adds optional
+natural-language phrases when the named agent exists in this chat's registry).
 """
 
 from __future__ import annotations
@@ -15,7 +16,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.services.gateway.context import GatewayContext
-from app.services.sub_agent_registry import AgentRegistry, AgentStatus
+from app.services.sub_agent_registry import AgentRegistry, AgentStatus, SubAgent
 
 logger = logging.getLogger(__name__)
 
@@ -75,47 +76,98 @@ def telegram_agent_registry_chat_id(telegram_chat_id: int | str | None) -> str:
     return f"telegram:{tid}" if tid else "telegram:unknown"
 
 
+def try_extract_natural_language_sub_agent(
+    text: str,
+    chat_id: str,
+    registry: AgentRegistry,
+) -> tuple[SubAgent, str] | None:
+    """
+    If ``text`` names a **registered** sub-agent in ``chat_id`` via common NL patterns, return
+    ``(agent, instruction)``. Otherwise ``None`` so the gateway can fall through to Mission Control / chat.
+
+    Intentionally conservative: unknown names never match (no hijack of normal conversation).
+    """
+    raw = (text or "").strip()
+    if not raw or raw.startswith("/"):
+        return None
+
+    def _resolve(nm: str) -> SubAgent | None:
+        return registry.resolve_agent_by_name(nm, chat_id)
+
+    m = re.match(r"^\s*what\s+is\s+([a-zA-Z0-9_-]+)\s+doing\b", raw, re.I)
+    if m:
+        ag = _resolve(m.group(1))
+        if ag is not None:
+            return (ag, "status")
+
+    m = re.match(r"^\s*(?:ask|tell)\s+([a-zA-Z0-9_-]+)\s+to\s+(.+)$", raw, re.I | re.DOTALL)
+    if m:
+        ag = _resolve(m.group(1))
+        if ag is not None:
+            cmd = (m.group(2) or "").strip()
+            if cmd:
+                return (ag, cmd)
+
+    m = re.match(r"^\s*get\s+([a-zA-Z0-9_-]+)\s+to\s+(.+)$", raw, re.I | re.DOTALL)
+    if m:
+        ag = _resolve(m.group(1))
+        if ag is not None:
+            cmd = (m.group(2) or "").strip()
+            if cmd:
+                return (ag, cmd)
+
+    m = re.match(r"^\s*have\s+([a-zA-Z0-9_-]+)\s+(.+)$", raw, re.I | re.DOTALL)
+    if m:
+        ag = _resolve(m.group(1))
+        if ag is not None:
+            cmd = (m.group(2) or "").strip()
+            if cmd:
+                return (ag, cmd)
+
+    m = re.match(r"^\s*make\s+([a-zA-Z0-9_-]+)\s+(.+)$", raw, re.I | re.DOTALL)
+    if m:
+        ag = _resolve(m.group(1))
+        if ag is not None:
+            cmd = (m.group(2) or "").strip()
+            if cmd:
+                return (ag, cmd)
+
+    agents = sorted(registry.list_agents(chat_id), key=lambda a: len(a.name or ""), reverse=True)
+    for ag in agents:
+        name = (ag.name or "").strip()
+        if not name:
+            continue
+        if re.match(rf"^\s*{re.escape(name)}\s*$", raw, re.I):
+            return (ag, "status")
+        m2 = re.match(rf"^\s*{re.escape(name)}\s+(.+)$", raw, re.I | re.DOTALL)
+        if m2:
+            cmd = (m2.group(1) or "").strip()
+            if cmd:
+                return (ag, cmd)
+    return None
+
+
 class AgentRouter:
-    """Routes @mentions to registered sub-agents (sync)."""
+    """Routes ``@mentions`` and (Phase 66) NL phrases to registered sub-agents (sync)."""
 
     @property
     def registry(self) -> AgentRegistry:
         """Always use the current singleton (tests may :meth:`AgentRegistry.reset`)."""
         return AgentRegistry()
 
-    def route(
+    def _dispatch_known_sub_agent(
         self,
-        user_input: str,
-        chat_id: str,
+        agent: SubAgent,
         *,
-        db: Session | None = None,
-        user_id: str | None = None,
-        web_session_id: str = "default",
+        display_name: str,
+        clean_message: str,
+        chat_id: str,
+        db: Session | None,
+        user_id: str | None,
+        web_session_id: str,
+        natural_language: bool = False,
     ) -> dict[str, Any]:
-        """
-        Returns a dict with at least ``handled: bool``.
-        When handled and routed, includes ``response``, ``agent_id``, ``agent_name``, ``clean_message``.
-        """
-        if not bool(getattr(get_settings(), "nexa_agent_orchestration_enabled", False)):
-            return {"handled": False}
-
-        mention = self._parse_mention(user_input)
-        if mention is None:
-            return {"handled": False}
-
-        agent_name, clean_message = mention
-        agent = self.registry.get_agent_by_name(agent_name, chat_id)
-        if agent is None:
-            return {
-                "handled": True,
-                "response": (
-                    f"Sub-agent '@{agent_name}' was not found for this chat. "
-                    "Create a sub-agent for this session first (same chat scope as routing)."
-                ),
-                "agent_id": None,
-                "agent_name": agent_name,
-                "clean_message": clean_message,
-            }
+        agent_name = (display_name or agent.name or "").strip() or agent.name
 
         if agent.status != AgentStatus.IDLE:
             hint = (
@@ -172,6 +224,7 @@ class AgentRouter:
                 "agent_name": agent_name,
                 "domain": agent.domain,
                 "chat_id": chat_id,
+                "natural_language": natural_language,
             },
         )
 
@@ -182,6 +235,65 @@ class AgentRouter:
             "agent_name": agent_name,
             "clean_message": clean_message,
         }
+
+    def route(
+        self,
+        user_input: str,
+        chat_id: str,
+        *,
+        db: Session | None = None,
+        user_id: str | None = None,
+        web_session_id: str = "default",
+    ) -> dict[str, Any]:
+        """
+        Returns a dict with at least ``handled: bool``.
+        When handled and routed, includes ``response``, ``agent_id``, ``agent_name``, ``clean_message``.
+        """
+        if not bool(getattr(get_settings(), "nexa_agent_orchestration_enabled", False)):
+            return {"handled": False}
+
+        mention = self._parse_mention(user_input)
+        if mention is not None:
+            agent_name, clean_message = mention
+            agent = self.registry.get_agent_by_name(agent_name, chat_id)
+            if agent is None:
+                return {
+                    "handled": True,
+                    "response": (
+                        f"Sub-agent '@{agent_name}' was not found for this chat. "
+                        "Create a sub-agent for this session first (same chat scope as routing)."
+                    ),
+                    "agent_id": None,
+                    "agent_name": agent_name,
+                    "clean_message": clean_message,
+                }
+            return self._dispatch_known_sub_agent(
+                agent,
+                display_name=agent_name,
+                clean_message=clean_message,
+                chat_id=chat_id,
+                db=db,
+                user_id=user_id,
+                web_session_id=web_session_id,
+                natural_language=False,
+            )
+
+        if bool(getattr(get_settings(), "nexa_natural_agent_invocation", True)):
+            nl = try_extract_natural_language_sub_agent(user_input, chat_id, self.registry)
+            if nl is not None:
+                agent, instruction = nl
+                return self._dispatch_known_sub_agent(
+                    agent,
+                    display_name=agent.name,
+                    clean_message=instruction,
+                    chat_id=chat_id,
+                    db=db,
+                    user_id=user_id,
+                    web_session_id=web_session_id,
+                    natural_language=True,
+                )
+
+        return {"handled": False}
 
     def _parse_mention(self, text: str) -> tuple[str, str] | None:
         """Leading ``@name`` only (Phase 2). Optional remainder is ``clean_message``."""
@@ -235,5 +347,6 @@ __all__ = [
     "orchestration_chat_key",
     "orchestration_web_session_id",
     "telegram_agent_registry_chat_id",
+    "try_extract_natural_language_sub_agent",
     "try_sub_agent_gateway_turn",
 ]

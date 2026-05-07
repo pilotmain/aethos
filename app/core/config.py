@@ -97,6 +97,9 @@ class Settings(BaseSettings):
     log_json_format: bool = False
     # Week 4 — sub-agent registry (in-memory, single-worker; see docs/AGENT_ORCHESTRATION.md)
     nexa_agent_orchestration_enabled: bool = False
+    # Phase 66 — when true (and orchestration on), route phrases like "ask <registered_agent> to …"
+    # without a leading @. Only names that exist in this chat's registry match (avoids hijacking normal chat).
+    nexa_natural_agent_invocation: bool = True
     nexa_agent_max_per_chat: int = 20
     nexa_agent_idle_timeout_seconds: int = 3600
     # Phase 37 — default trusted flag for API `/agents/create` when request omits explicit approval.

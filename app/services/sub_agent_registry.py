@@ -256,6 +256,17 @@ class AgentRegistry:
                 return a
         return None
 
+    def resolve_agent_by_name(self, name: str, chat_id: str) -> SubAgent | None:
+        """Case-insensitive name match within ``chat_id`` (Phase 66 NL routing)."""
+        nm = (name or "").strip()
+        if not nm:
+            return None
+        self._ensure_loaded()
+        for a in self.list_agents(chat_id):
+            if a.name.lower() == nm.lower():
+                return a
+        return None
+
     def list_agents(self, chat_id: str | None = None) -> list[SubAgent]:
         self._ensure_loaded()
         agents = list(self._agents.values())
