@@ -7,6 +7,7 @@ Uses /subagent to avoid clashing with /agents (LLM catalog) and /agent (custom a
 from __future__ import annotations
 
 from typing import Any
+from urllib.parse import urlparse, urlunparse
 
 import httpx
 from telegram import Update
@@ -42,39 +43,144 @@ def telegram_subagent_scopes(telegram_chat_id: int, app_user_id: str) -> list[st
     return scopes
 
 
-async def _fetch_agents_list_via_api(app_user_id: str) -> tuple[bool, list[dict[str, Any]] | None, str | None]:
-    """
-    GET ``/api/v1/agents/list`` — same roster as Mission Control (must match ``X-User-Id`` validation).
+def _api_x_user_id_header(app_user_id: str) -> str:
+    """Canonical ``tg_…`` / ``web_…`` id for ``X-User-Id`` (API validation)."""
+    raw = (app_user_id or "").strip()
+    if not raw:
+        return raw
+    try:
+        from app.services.web_user_id import validate_web_user_id
 
-    Returns ``(ok, agents, error_hint)``. ``error_hint`` is set when the HTTP call fails or response is invalid.
+        return validate_web_user_id(raw)
+    except ValueError:
+        return raw
+
+
+def _candidate_api_list_urls() -> list[str]:
+    """
+    Try primary ``API_BASE_URL`` plus a loopback alias (``localhost`` ↔ ``127.0.0.1``) for the same port.
+
+    Many "API list unavailable" cases are DNS/IPv6 quirks; a second URL often succeeds with no config change.
     """
     s = get_settings()
-    base = (s.api_base_url or "http://127.0.0.1:8010").rstrip("/")
+    primary = (s.api_base_url or "http://127.0.0.1:8010").strip().rstrip("/")
     prefix = (s.api_v1_prefix or "/api/v1").rstrip("/")
-    url = f"{base}{prefix}/agents/list"
-    headers: dict[str, str] = {"X-User-Id": (app_user_id or "").strip()}
-    tok = (s.nexa_web_api_token or "").strip()
+    path = f"{prefix}/agents/list"
+    bases: list[str] = []
+    seen: set[str] = set()
+
+    def add_base(b: str) -> None:
+        b = b.strip().rstrip("/")
+        if b and b not in seen:
+            seen.add(b)
+            bases.append(b)
+
+    add_base(primary)
+    try:
+        p = urlparse(primary)
+        if p.scheme and p.hostname and p.hostname.lower() in ("localhost", "127.0.0.1"):
+            alt = "127.0.0.1" if p.hostname.lower() == "localhost" else "localhost"
+            port = f":{p.port}" if p.port else ""
+            netloc = f"{alt}{port}"
+            add_base(urlunparse((p.scheme, netloc, p.path or "", p.params, p.query, p.fragment)).rstrip("/"))
+    except Exception:
+        pass
+
+    return [f"{b}{path}" for b in bases]
+
+
+async def _fetch_agents_list_via_api(app_user_id: str) -> tuple[bool, list[dict[str, Any]] | None, str | None]:
+    """
+    GET ``…/agents/list`` — same roster as Mission Control (``X-User-Id`` must pass API validation).
+
+    Returns ``(ok, agents, error_hint)``. Tries each candidate base URL until one succeeds.
+    """
+    uid_hdr = _api_x_user_id_header(app_user_id)
+    headers: dict[str, str] = {"X-User-Id": uid_hdr}
+    tok = (get_settings().nexa_web_api_token or "").strip()
     if tok:
         headers["Authorization"] = f"Bearer {tok}"
+
+    errs: list[str] = []
+    async with httpx.AsyncClient(timeout=20.0) as client:
+        for url in _candidate_api_list_urls():
+            try:
+                r = await client.get(url, headers=headers)
+            except httpx.RequestError as exc:
+                errs.append(f"{url}: {exc!s}")
+                continue
+            if r.status_code != 200:
+                snippet = (r.text or "")[:160].replace("\n", " ")
+                errs.append(f"{url}: HTTP {r.status_code} {snippet}".strip())
+                continue
+            try:
+                data = r.json()
+            except ValueError:
+                errs.append(f"{url}: invalid JSON")
+                continue
+            agents = data.get("agents")
+            if not isinstance(agents, list):
+                errs.append(f"{url}: bad response shape")
+                continue
+            return True, agents, None
+
+    if not errs:
+        hint = "no candidate URL"
+    elif len(errs) == 1:
+        hint = errs[0]
+    else:
+        hint = "; ".join(errs[:3]) + ("…" if len(errs) > 3 else "")
+    return False, None, hint
+
+
+async def agent_diagnostic_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Phase 64 — show API vs registry counts for debugging /subagent list."""
+    if not update.effective_user or not update.message:
+        return
+
+    db = SessionLocal()
     try:
-        async with httpx.AsyncClient(timeout=20.0) as client:
-            r = await client.get(url, headers=headers)
-    except httpx.RequestError as exc:
-        return False, None, str(exc) or exc.__class__.__name__
+        link = telegram_service.get_link(db, update.effective_user.id)
+        if not link:
+            await update.message.reply_text("Use /start first.")
+            return
 
-    if r.status_code != 200:
-        return False, None, f"HTTP {r.status_code}"
+        s = get_settings()
+        chat_id = update.effective_chat.id if update.effective_chat else 0
+        scopes = telegram_subagent_scopes(chat_id, link.app_user_id)
+        registry = AgentRegistry()
+        local_n = len(registry.list_agents_merged(scopes))
 
-    try:
-        data = r.json()
-    except ValueError:
-        return False, None, "invalid JSON"
+        urls = _candidate_api_list_urls()
+        ok, agents, err = await _fetch_agents_list_via_api(link.app_user_id)
 
-    agents = data.get("agents")
-    if not isinstance(agents, list):
-        return False, None, "bad response shape"
+        lines = [
+            "Agent diagnostic (Phase 64)",
+            "",
+            f"link.app_user_id: {link.app_user_id}",
+            f"X-User-Id (validated): {_api_x_user_id_header(link.app_user_id)}",
+            f"API_BASE_URL: {s.api_base_url}",
+            f"Candidate GET URLs: {len(urls)}",
+            "",
+        ]
+        for u in urls[:4]:
+            lines.append(f"  • {u}")
+        lines.append("")
 
-    return True, agents, None
+        if ok and agents is not None:
+            lines.append(f"API GET /agents/list: OK — {len(agents)} agent(s)")
+        else:
+            lines.append(f"API GET /agents/list: FAIL")
+            if err:
+                lines.append(f"  {err[:1500]}")
+
+        lines.append("")
+        lines.append(f"Local registry (merged scopes): {local_n} agent(s)")
+        lines.append("")
+        lines.append("If API fails, set API_BASE_URL to the URL curl can reach from this host.")
+        await update.message.reply_text("\n".join(lines)[:9000])
+    finally:
+        db.close()
 
 
 async def subagent_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -105,7 +211,7 @@ async def subagent_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
                 "• /subagent delete <name> confirm — remove permanently\n\n"
                 "Domains include **qa**, **marketing**, **git**, **vercel**, **railway**, **ops**, **test**, **security**, **general**.\n\n"
                 "Includes agents created via the API / Mission Control (same account).\n"
-                "Also: /agent_status (quick list)."
+                "Also: /agent_status (quick list), /agent_diagnostic (API vs registry)."
             )
             return
 
@@ -284,4 +390,4 @@ async def subagent_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         db.close()
 
 
-__all__ = ["subagent_command", "telegram_subagent_scopes"]
+__all__ = ["agent_diagnostic_command", "subagent_command", "telegram_subagent_scopes"]

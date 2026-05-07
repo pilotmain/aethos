@@ -18,7 +18,7 @@ class CapabilityIdentityAskFilter(MessageFilter):
     def filter(self, message):  # type: ignore[override]
         return bool(message.text and is_capability_identity_question(message.text))
 
-from app.bot.agent_commands import subagent_command
+from app.bot.agent_commands import agent_diagnostic_command, subagent_command
 from app.services.channel_gateway.base import ChannelAdapter
 from app.services.channel_gateway.identity import resolve_channel_user
 from app.services.telegram_service import TelegramService
@@ -136,6 +136,7 @@ def register_telegram_handlers(application: Application) -> None:
     # Orchestration registry — register early so /subagent is never confused with /agent or text routing.
     application.add_handler(CommandHandler("subagent", subagent_command))
     application.add_handler(CommandHandler("subagents", subagent_command))
+    application.add_handler(CommandHandler("agent_diagnostic", agent_diagnostic_command))
     application.add_handler(CommandHandler("vercel", vercel_command))
     application.add_handler(CommandHandler("cloud_providers", cloud_cmds.cloud_providers_cmd))
     application.add_handler(CommandHandler("clouds", cloud_cmds.cloud_providers_cmd))
