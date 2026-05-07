@@ -4,11 +4,41 @@ from collections.abc import Generator
 from pathlib import Path
 
 from sqlalchemy import create_engine, func, inspect, select, text
+from sqlalchemy.engine.url import make_url
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from app.core.config import get_settings
 
+
+def ensure_sqlite_parent_directory(database_url: str) -> None:
+    """Create parent directory for file-backed SQLite URLs so API/bot share one DB without mkdir(1)."""
+    du = (database_url or "").strip()
+    if not du.lower().startswith("sqlite"):
+        return
+    try:
+        u = make_url(du)
+    except Exception:
+        return
+    dbname = u.database
+    if not dbname or dbname == ":memory:":
+        return
+    path = Path(dbname)
+    if not path.is_absolute():
+        path = (Path.cwd() / path).resolve()
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        pass
+
+
+def get_database_url() -> str:
+    """Return ``Settings.database_url`` (SQLite paths are ready after :mod:`app.core.db` import)."""
+    return get_settings().database_url
+
+
 settings = get_settings()
+ensure_sqlite_parent_directory(settings.database_url)
+
 if settings.database_url.startswith("sqlite"):
     _engine_kw: dict = {"connect_args": {"check_same_thread": False}, "future": True}
 else:

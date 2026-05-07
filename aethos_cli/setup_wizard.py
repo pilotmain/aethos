@@ -365,7 +365,42 @@ def run_setup_wizard(*, install_kind: str | None = None) -> int:
     except Exception:
         pass
 
+    rc_db = run_database_setup()
+    if rc_db != 0:
+        print_warn("Database init failed — fix errors above, then run: aethos init-db")
+
     return 0
 
 
-__all__ = ["run_setup_wizard"]
+def run_database_setup() -> int:
+    """
+    Run ``ensure_schema()`` in a fresh interpreter so a just-written ``.env`` is picked up
+    (avoids stale :func:`~app.core.config.get_settings` cache during interactive ``aethos setup``).
+    """
+    import os
+    import subprocess
+    import sys
+
+    root = _repo_root()
+    code = "from app.core.db import ensure_schema; ensure_schema()"
+    try:
+        r = subprocess.run(
+            [sys.executable, "-c", code],
+            cwd=str(root),
+            env=os.environ.copy(),
+            capture_output=True,
+            text=True,
+            timeout=180,
+        )
+    except Exception as exc:
+        print_warn(f"Could not run database init: {exc}")
+        return 1
+    if r.returncode != 0:
+        err = (r.stderr or r.stdout or "").strip()
+        print_warn(f"ensure_schema failed: {err[:800]}")
+        return r.returncode
+    print_success("Database initialized (ensure_schema).")
+    return 0
+
+
+__all__ = ["run_database_setup", "run_setup_wizard"]

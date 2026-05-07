@@ -3,7 +3,8 @@ Orchestration sub-agent registry (Week 4 Phase 1).
 
 Distinct from :mod:`app.services.agent_registry` (platform `DEFAULT_AGENTS` catalog).
 
-Loads/saves rows to ``aethos_orchestration_sub_agents`` so agents survive API restarts.
+Loads/saves rows to ``aethos_orchestration_sub_agents`` (same DB as ``DATABASE_URL``) so agents
+survive API/bot restarts when API and Telegram use the same env file.
 Persistence is skipped while ``pytest`` is imported so unit tests stay in-memory only.
 Multi-replica APIs still need a shared store or sticky routing — see docs/AGENT_ORCHESTRATION.md.
 """

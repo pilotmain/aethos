@@ -26,7 +26,7 @@
 # Database (native mode):
 #   Override: NEXA_NEXT_LOCAL_START_POSTGRES=0 — never start Docker db; force SQLite sidcar.
 #   Override: NEXA_NEXT_LOCAL_START_POSTGRES=1 — always run docker_postgres_up.sh first.
-#   If Docker is missing or db fails, falls back to SQLite at ${ROOT}/overwhelm_reset.db.
+#   If Docker is missing or db fails, falls back to SQLite at ${ROOT}/data/aethos.db.
 #
 # Bot: starts automatically if .env contains a non-empty TELEGRAM_BOT_TOKEN. Opt out with:
 #   NEXA_NEXT_START_BOT=0   (or false / no)
@@ -304,10 +304,10 @@ cmd_start() {
     else
       export NEXA_NEXT_LOCAL_SIDECAR=1
       if _env_database_url_looks_like_postgres; then
-        echo "Local DB: SQLite at ${ROOT}/overwhelm_reset.db (NEXA_NEXT_LOCAL_SIDECAR=1)."
+        echo "Local DB: SQLite at ${ROOT}/data/aethos.db (NEXA_NEXT_LOCAL_SIDECAR=1)."
         echo "  Hint: install Docker or run ./scripts/docker_postgres_up.sh before start." >&2
       else
-        echo "Local DB: SQLite at ${ROOT}/overwhelm_reset.db (NEXA_NEXT_LOCAL_SIDECAR=1)."
+        echo "Local DB: SQLite at ${ROOT}/data/aethos.db (NEXA_NEXT_LOCAL_SIDECAR=1)."
       fi
     fi
 

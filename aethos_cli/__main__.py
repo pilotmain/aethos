@@ -323,6 +323,11 @@ def main() -> int:
     )
 
     sub.add_parser(
+        "init-db",
+        help="Ensure SQLite dir exists and apply schema (ensure_schema); same DB as API + Telegram bot",
+    )
+
+    sub.add_parser(
         "status",
         help="HTTP health checks against AETHOS_API_BASE / NEXA_API_BASE (default :8010)",
     )
@@ -360,7 +365,7 @@ def main() -> int:
 
     if (
         not args.no_banner
-        and args.cmd in ("serve", "setup")
+        and args.cmd in ("serve", "setup", "init-db")
     ):
         from aethos_cli.banner import maybe_print_sponsor_hint, print_banner, should_show_banner
 
@@ -467,6 +472,11 @@ def main() -> int:
         from aethos_cli.setup_wizard import run_setup_wizard
 
         return run_setup_wizard()
+
+    if args.cmd == "init-db":
+        from aethos_cli.setup_wizard import run_database_setup
+
+        return run_database_setup()
 
     if args.cmd == "status":
         from aethos_cli.cli_status import cmd_status

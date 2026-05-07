@@ -66,7 +66,8 @@ apply_aethos_env_aliases()
 # scripts/nexa_next_local_all.sh sets NEXA_NEXT_LOCAL_SIDECAR=1 so the API can boot when .env
 # points at Postgres that is not running locally (override uses repo-root SQLite).
 if (os.environ.get("NEXA_NEXT_LOCAL_SIDECAR") or "").strip().lower() in ("1", "true", "yes"):
-    os.environ["DATABASE_URL"] = f"sqlite:///{(_PROJECT_ROOT / 'overwhelm_reset.db').resolve()}"
+    _side_db = _PROJECT_ROOT / "data" / "aethos.db"
+    os.environ["DATABASE_URL"] = f"sqlite:///{_side_db.resolve()}"
 
 
 def ensure_subprocess_term_env() -> None:
@@ -118,7 +119,7 @@ class Settings(BaseSettings):
     nexa_auto_approve_domains: str = "git"
     nexa_auto_approve_log_only: bool = False
     api_v1_prefix: str = "/api/v1"
-    database_url: str = "sqlite:///./overwhelm_reset.db"
+    database_url: str = "sqlite:///./data/aethos.db"
 
     anthropic_api_key: str | None = None
     # Default: current Haiku (3.5 snapshot `claude-3-5-haiku-20241022` is retired on the API)
