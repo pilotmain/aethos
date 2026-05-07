@@ -14,24 +14,38 @@ type CeoSummary = {
   overall_success_rate: number;
 };
 
+type CeoAgentRow = {
+  id?: string;
+  name?: string;
+  domain?: string;
+  status?: string;
+  total_actions?: number;
+  success_rate?: number;
+};
+
 export default function CEODashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [summary, setSummary] = useState<CeoSummary | null>(null);
+  const [agents, setAgents] = useState<CeoAgentRow[]>([]);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await webFetch<{ ok?: boolean; summary?: CeoSummary }>("/ceo/dashboard");
+      const res = await webFetch<{ ok?: boolean; summary?: CeoSummary; agents?: CeoAgentRow[] }>(
+        "/ceo/dashboard",
+      );
       if (res.summary) {
         setSummary(res.summary);
       } else {
         setSummary(null);
       }
+      setAgents(Array.isArray(res.agents) ? res.agents : []);
     } catch (e) {
       setError(formatMissionControlApiError(e instanceof Error ? e.message : String(e)));
       setSummary(null);
+      setAgents([]);
     } finally {
       setLoading(false);
     }
@@ -98,6 +112,42 @@ export default function CEODashboardPage() {
           </CardContent>
         </Card>
       )}
+
+      {agents.length > 0 ? (
+        <Card className="border-zinc-800 bg-zinc-900/40">
+          <CardHeader>
+            <CardTitle className="text-zinc-100">Agent roster</CardTitle>
+            <CardDescription className="text-zinc-400">
+              From <code className="rounded bg-zinc-950 px-1 text-[11px]">GET /api/v1/ceo/dashboard</code> (
+              same registry as <code className="rounded bg-zinc-950 px-1 text-[11px]">/agents/list</code>).
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            {agents.map((a) => (
+              <div
+                key={String(a.id ?? a.name)}
+                className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-800/80 py-2 last:border-0"
+              >
+                <div className="min-w-0">
+                  <span className="font-medium text-zinc-100">@{String(a.name ?? "agent")}</span>
+                  <span className="ml-2 rounded bg-zinc-800 px-1.5 py-0.5 text-xs text-zinc-400">
+                    {String(a.domain ?? "general")}
+                  </span>
+                </div>
+                <div className="flex shrink-0 items-center gap-3 text-xs text-zinc-500">
+                  {typeof a.total_actions === "number" ? <span>{a.total_actions} actions</span> : null}
+                  {typeof a.success_rate === "number" ? (
+                    <span>{Math.round(a.success_rate)}% success</span>
+                  ) : null}
+                  <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-zinc-300">
+                    {String(a.status ?? "idle")}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card className="border-zinc-800 bg-zinc-900/40">
         <CardHeader>

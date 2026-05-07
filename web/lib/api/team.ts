@@ -14,11 +14,22 @@ export type AgentRoleRow = {
   enabled?: boolean;
 };
 
+export type SubAgentOrchestrationRow = Record<string, unknown>;
+
+/** Registry-backed orchestration agents from ``GET /mission-control/state`` → ``orchestration.sub_agents``. */
+export function parseSubAgents(raw: unknown): SubAgentOrchestrationRow[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((x) => x && typeof x === "object") as SubAgentOrchestrationRow[];
+}
+
 export function teamMetricsFromState(state: Record<string, unknown> | null): TeamMetrics {
   if (!state) return { total: 0, active: 0 };
-  const orch = state.orchestration as { roles?: unknown[]; assignments?: unknown[] } | undefined;
+  const orch = state.orchestration as
+    | { roles?: unknown[]; assignments?: unknown[]; sub_agents?: unknown[] }
+    | undefined;
   const roles = Array.isArray(orch?.roles) ? orch.roles : [];
   const assigns = Array.isArray(orch?.assignments) ? orch.assignments : [];
+  const subAgents = parseSubAgents(orch?.sub_agents);
   const active = assigns.filter((a) => {
     const st = String((a as { status?: string }).status || "").toLowerCase();
     return st && st !== "cancelled";
@@ -26,7 +37,14 @@ export function teamMetricsFromState(state: Record<string, unknown> | null): Tea
   const roleHandles = new Set(
     roles.map((r) => String((r as { agent_handle?: string }).agent_handle || "").trim()).filter(Boolean),
   );
-  const total = Math.max(roleHandles.size, roles.length);
+  const subHandles = new Set(
+    subAgents.map((s: SubAgentOrchestrationRow) => String(s.name ?? "").trim()).filter(Boolean),
+  );
+  const mergedHandles = new Set<string>([
+    ...Array.from(roleHandles),
+    ...Array.from(subHandles),
+  ]);
+  const total = Math.max(mergedHandles.size, roles.length, subAgents.length);
   return { total, active: active || assigns.length };
 }
 
@@ -161,15 +179,7 @@ export function governanceRowsToTeamMembers(
   }));
 }
 
-export type SubAgentOrchestrationRow = Record<string, unknown>;
-
-/** Registry-backed orchestration agents from ``GET /mission-control/state`` → ``orchestration.sub_agents``."""
-export function parseSubAgents(raw: unknown): SubAgentOrchestrationRow[] {
-  if (!Array.isArray(raw)) return [];
-  return raw.filter((x) => x && typeof x === "object") as SubAgentOrchestrationRow[];
-}
-
-/** Turn registry payloads into the same shape as agent-org ``roles`` rows for Team UI merging."""
+/** Turn registry payloads into the same shape as agent-org ``roles`` rows for Team UI merging. */
 export function subAgentsToAgentRoles(rows: SubAgentOrchestrationRow[]): AgentRoleRow[] {
   const out: AgentRoleRow[] = [];
   for (const r of rows) {
@@ -187,11 +197,11 @@ export function subAgentsToAgentRoles(rows: SubAgentOrchestrationRow[]): AgentRo
   return out;
 }
 
-/** Prefer AgentOrganization assignments when the same handle exists in both sources."""
+/** Merge org chart roles with orchestration registry agents; registry rows win on duplicate handles. */
 export function mergeAgentRoles(orgRoles: AgentRoleRow[], registryRoles: AgentRoleRow[]): AgentRoleRow[] {
   const by = new Map<string, AgentRoleRow>();
-  for (const r of registryRoles) by.set(r.agent_handle.toLowerCase(), r);
   for (const r of orgRoles) by.set(r.agent_handle.toLowerCase(), r);
+  for (const r of registryRoles) by.set(r.agent_handle.toLowerCase(), r);
   return Array.from(by.values());
 }
 

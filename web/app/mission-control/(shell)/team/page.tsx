@@ -13,6 +13,7 @@ import {
   patchOrgMember,
   postOrgMember,
 } from "@/lib/api/governance";
+import { fetchAgentsList } from "@/lib/api/agents";
 import { fetchMissionControlState } from "@/lib/api/mission-control-state";
 import {
   agentRolesToTeamMembers,
@@ -21,6 +22,7 @@ import {
   mergeAgentRoles,
   orchestrationFromState,
   subAgentsToAgentRoles,
+  type SubAgentOrchestrationRow,
 } from "@/lib/api/team";
 import { readConfig } from "@/lib/config";
 import type { OrgChartNode, TeamMember } from "@/types/mission-control";
@@ -43,7 +45,15 @@ export default function MissionControlTeamPage() {
     setError(null);
     try {
       const [state, me] = await Promise.all([fetchMissionControlState(48), fetchGovernanceMe()]);
-      const { roles: orgRoles, assignments, subAgents } = orchestrationFromState(state);
+      const { roles: orgRoles, assignments, subAgents: subFromState } = orchestrationFromState(state);
+      let subAgents: SubAgentOrchestrationRow[] = subFromState;
+      if (!subAgents.length) {
+        try {
+          subAgents = (await fetchAgentsList()) as SubAgentOrchestrationRow[];
+        } catch {
+          /* Mission Control state is authoritative when API list fails */
+        }
+      }
       const mergedRoles = mergeAgentRoles(orgRoles, subAgentsToAgentRoles(subAgents));
       setAgents(agentRolesToTeamMembers(mergedRoles, assignments));
       setOrgChart(buildAgentOrgChart(mergedRoles));
