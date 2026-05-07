@@ -8,6 +8,7 @@ import { fetchWorkspaceProjects } from "@/lib/api/projects";
 import { fetchTasksForKanban } from "@/lib/api/tasks";
 import { buildProjectsIndexRows } from "@/lib/mission-control-projects";
 import type { Project } from "@/types/mission-control";
+import { AssignmentsByAgentPanel } from "@/components/mission-control/Projects/AssignmentsByAgentPanel";
 import { CreateProjectDialog } from "@/components/mission-control/Projects/CreateProjectDialog";
 import { ProjectList } from "@/components/mission-control/Projects/ProjectList";
 
@@ -54,6 +55,8 @@ export default function MissionControlProjectsPage() {
       {error ? (
         <div className="rounded-lg border border-red-900/50 bg-red-950/40 px-4 py-3 text-sm text-red-200">{error}</div>
       ) : null}
+
+      <AssignmentsByAgentPanel />
 
       {loading ? (
         <div className="flex h-64 flex-col items-center justify-center gap-2">

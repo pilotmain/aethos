@@ -32,3 +32,7 @@ class AgentAssignmentCreate(BaseModel):
     priority: str = Field(default="normal", max_length=32)
     input_json: dict = Field(default_factory=dict)
     organization_id: int | None = None
+    # Phase 67 — when None, fall back to NEXA_ASSIGNMENT_AUTO_DISPATCH_DEFAULT (default true).
+    # When true, POST /agent-assignments runs dispatch_assignment immediately and merges its result
+    # into the response (still subject to host-tools / approval gates inside dispatch_assignment).
+    auto_dispatch: bool | None = None

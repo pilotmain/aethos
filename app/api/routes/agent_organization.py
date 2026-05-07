@@ -166,7 +166,23 @@ def create_assignment_api(
                 "message": f"Open assignment #{e.existing.id} already matches this task (same agent and title).",
             },
         ) from e
-    return assignment_to_dict(row)
+
+    base = assignment_to_dict(row)
+
+    # Phase 67 — auto-dispatch on create (host tools / approvals still respected inside dispatch_assignment).
+    auto_default = bool(getattr(get_settings(), "nexa_assignment_auto_dispatch_default", True))
+    auto = payload.auto_dispatch if payload.auto_dispatch is not None else auto_default
+    if not auto:
+        return base
+
+    try:
+        dispatch_result = dispatch_assignment(db, assignment_id=row.id, user_id=uid)
+    except Exception:
+        # Surface the persisted row even when the dispatch path explodes; clients can retry via POST .../dispatch.
+        return {**base, "auto_dispatch": {"ok": False, "error": "dispatch_failed"}}
+
+    refreshed = get_assignment_status(db, assignment_id=row.id, user_id=uid) or base
+    return {**refreshed, "auto_dispatch": dispatch_result}
 
 
 @router.get("/agent-assignments/{assignment_id}")

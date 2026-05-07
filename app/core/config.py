@@ -100,6 +100,9 @@ class Settings(BaseSettings):
     # Phase 66 — when true (and orchestration on), route phrases like "ask <registered_agent> to …"
     # without a leading @. Only names that exist in this chat's registry match (avoids hijacking normal chat).
     nexa_natural_agent_invocation: bool = True
+    # Phase 67 — POST /agent-assignments runs dispatch_assignment immediately when payload omits auto_dispatch.
+    # Set false to require an explicit POST /agent-assignments/{id}/dispatch (legacy two-step behavior).
+    nexa_assignment_auto_dispatch_default: bool = True
     nexa_agent_max_per_chat: int = 20
     nexa_agent_idle_timeout_seconds: int = 3600
     # Phase 37 — default trusted flag for API `/agents/create` when request omits explicit approval.
