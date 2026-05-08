@@ -295,6 +295,18 @@ def _format_simulation_plan(
         remote = (payload.get("remote") or "origin").strip()
         ref = (payload.get("ref") or "HEAD").strip()
         lines.append(f"Would run: git push {remote} {ref} (cwd={cwd_display})")
+    elif action == "git_commit":
+        msg = (payload.get("commit_message") or "").strip()
+        preview = msg[:120] + ("…" if len(msg) > 120 else "")
+        lines.append(f"Would run: git add -A && git commit -m {preview!r} (cwd={cwd_display})")
+        gst = _git_status_short_paths(exec_root)
+        paths = gst.get("paths") if isinstance(gst.get("paths"), list) else []
+        if paths:
+            tail = ", ".join(str(p) for p in paths[:12])
+            more = f" … (+{len(paths) - 12} more)" if len(paths) > 12 else ""
+            lines.append(f"Changed paths (status --short): {tail}{more}")
+        elif gst.get("error") and gst.get("error") != "sandbox_probes_disabled":
+            lines.append(f"(Could not list changed files: {gst.get('error')})")
     elif action == "git_status":
         lines.append(f"Would run: git status --short --branch (cwd={cwd_display})")
     elif action == "file_write":
@@ -331,6 +343,408 @@ def _format_simulation_plan(
 
     lines.append("Pass simulate=False to execute.")
     return "\n".join(lines)
+
+
+# ============================================================================
+# Phase 76 — structured simulation plan (Blue-Green safety preview)
+# ============================================================================
+
+# Cloud providers we recognise for the structured "would deploy" preview. The
+# list is intentionally tiny — Phase 76 doesn't call out to any provider API,
+# it just surfaces a structured "would_affect" payload so the UI can render a
+# meaningful confirmation card. Add more providers here as integrations land.
+_SIMULATION_DEPLOY_HINTS: dict[str, list[str]] = {
+    "vercel": ["serverless functions", "static assets", "preview URL"],
+    "vercel_redeploy": ["serverless functions", "static assets", "preview URL"],
+    "vercel_remove": ["project deletion", "all deployments", "DNS detach"],
+    "railway": ["service runtime", "environment variables", "scaling policy"],
+    "aws": ["IAM-bounded resources", "stack outputs", "environment"],
+}
+
+
+def _resolve_simulation_diff_cap() -> int:
+    """Cap returned diff size. ``0`` (or unset) → fall back to a sensible default."""
+    raw = getattr(_host_settings(), "nexa_simulation_max_diff_lines", 500)
+    try:
+        n = int(raw)
+    except (TypeError, ValueError):
+        n = 500
+    return max(50, n)
+
+
+def _build_file_write_diff(
+    *,
+    relative_path: str,
+    proposed_content: str,
+    exec_root: Path,
+    max_lines: int,
+) -> dict[str, Any]:
+    """Compute a unified diff between the on-disk file (if any) and the proposed content.
+
+    Returns a structured payload suitable for the UI:
+
+    .. code-block:: json
+
+        {
+          "kind": "file_write",
+          "path": "<relative path>",
+          "is_new_file": <bool>,
+          "old_size_bytes": <int>,
+          "new_size_bytes": <int>,
+          "unified": "<unified diff text or empty>",
+          "added": <int>,
+          "removed": <int>,
+          "truncated": <bool>,
+          "max_lines": <int>
+        }
+
+    The diff is computed against the resolved on-disk path under ``exec_root``;
+    paths that escape the host work root return ``unified=""`` and the
+    ``error`` field set so the caller can surface a non-fatal warning. The
+    diff is NEVER computed for binary files (UTF-8 decode failure marks
+    ``binary=True`` and skips the unified text).
+    """
+    import difflib
+
+    payload: dict[str, Any] = {
+        "kind": "file_write",
+        "path": relative_path,
+        "is_new_file": False,
+        "old_size_bytes": 0,
+        "new_size_bytes": len(proposed_content.encode("utf-8", errors="replace"))
+        if isinstance(proposed_content, str)
+        else len(proposed_content or b""),
+        "unified": "",
+        "added": 0,
+        "removed": 0,
+        "truncated": False,
+        "max_lines": max_lines,
+        "binary": False,
+    }
+    if not isinstance(proposed_content, str):
+        # We don't try to diff bytes payloads (skill might be uploading a
+        # binary asset). The structured row still surfaces size + path.
+        payload["binary"] = True
+        return payload
+
+    try:
+        target = _safe_join_under_root(exec_root, relative_path)
+    except ValueError as exc:
+        payload["error"] = f"path_resolution_failed: {exc}"
+        return payload
+
+    old_text = ""
+    if target.exists() and target.is_file():
+        try:
+            old_text = target.read_text(encoding="utf-8")
+            payload["old_size_bytes"] = len(old_text.encode("utf-8", errors="replace"))
+        except UnicodeDecodeError:
+            payload["binary"] = True
+            return payload
+        except OSError as exc:
+            payload["error"] = f"read_failed: {exc}"
+            return payload
+    else:
+        payload["is_new_file"] = True
+
+    old_lines = old_text.splitlines(keepends=True)
+    new_lines = proposed_content.splitlines(keepends=True)
+    diff_iter = difflib.unified_diff(
+        old_lines,
+        new_lines,
+        fromfile=f"a/{relative_path}",
+        tofile=f"b/{relative_path}",
+        n=3,
+    )
+    raw_lines: list[str] = []
+    for line in diff_iter:
+        if not line.endswith("\n"):
+            line = line + "\n"
+        raw_lines.append(line)
+        if len(raw_lines) >= max_lines:
+            payload["truncated"] = True
+            break
+    if payload["truncated"]:
+        raw_lines.append(f"... [diff truncated at {max_lines} lines] ...\n")
+    payload["unified"] = "".join(raw_lines)
+    # Count + / - lines, ignoring the file headers (+++ / ---).
+    for line in raw_lines:
+        if line.startswith("+") and not line.startswith("+++"):
+            payload["added"] += 1
+        elif line.startswith("-") and not line.startswith("---"):
+            payload["removed"] += 1
+    return payload
+
+
+def _git_ahead_behind(exec_root: Path, remote: str, ref: str) -> dict[str, Any]:
+    """Best-effort ``git rev-list --left-right --count`` summary for a push preview.
+
+    Returns ``{"ahead": int, "behind": int, "current_branch": str|None}`` or
+    ``{"error": "..."}``. Never raises — git failures degrade to an empty
+    structured payload so the simulation card still renders.
+    """
+    import subprocess  # noqa: PLC0415
+
+    out: dict[str, Any] = {"ahead": None, "behind": None, "current_branch": None}
+    if not exec_root.exists():
+        return {"error": "exec_root_missing"}
+    try:
+        branch = subprocess.run(
+            ["git", "-C", str(exec_root), "rev-parse", "--abbrev-ref", "HEAD"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+        if branch.returncode == 0:
+            out["current_branch"] = branch.stdout.strip() or None
+        target = ref or "HEAD"
+        upstream_ref = f"{remote}/{out['current_branch']}" if out["current_branch"] else remote
+        rev = subprocess.run(
+            [
+                "git", "-C", str(exec_root),
+                "rev-list", "--left-right", "--count",
+                f"{upstream_ref}...{target}",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+        if rev.returncode == 0 and rev.stdout.strip():
+            parts = rev.stdout.strip().split()
+            if len(parts) == 2:
+                out["behind"], out["ahead"] = int(parts[0]), int(parts[1])
+    except Exception as exc:  # noqa: BLE001
+        out["error"] = f"git_probe_failed: {exc!s}"[:200]
+    return out
+
+
+def _git_status_short_paths(exec_root: Path, *, timeout: int = 15) -> dict[str, Any]:
+    """Best-effort paths from ``git status --short`` for simulation previews (no mutations)."""
+    out: dict[str, Any] = {"paths": [], "error": None}
+    if not bool(getattr(_host_settings(), "nexa_simulation_sandbox_mode", True)):
+        out["error"] = "sandbox_probes_disabled"
+        return out
+    if not exec_root.exists():
+        out["error"] = "exec_root_missing"
+        return out
+    try:
+        r = subprocess.run(
+            ["git", "-C", str(exec_root), "status", "--short"],
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            check=False,
+        )
+        if r.returncode != 0:
+            err = (r.stderr or r.stdout or "").strip()
+            out["error"] = f"git_status_failed: {err}"[:200]
+            return out
+        paths: list[str] = []
+        for line in (r.stdout or "").splitlines():
+            line = line.rstrip()
+            if len(line) < 4:
+                continue
+            rest = line[3:].strip()
+            if " -> " in rest:
+                rest = rest.split(" -> ", 1)[-1].strip()
+            rest = rest.strip('"').strip("'")
+            if rest:
+                paths.append(rest)
+        out["paths"] = paths[:500]
+    except Exception as exc:  # noqa: BLE001
+        out["error"] = f"git_status_probe_failed: {exc!s}"[:200]
+    return out
+
+
+def build_simulation_plan(payload: dict[str, Any]) -> dict[str, Any]:
+    """Phase 76 — return a structured "would do …" preview for one host action.
+
+    Mirrors :func:`_format_simulation_plan` but emits a JSON-shaped payload
+    (with an optional ``diff`` key for file_write actions). Designed to be
+    called *after* the caller has run ``execute_payload(simulate=True)`` so
+    validation + permission errors have already surfaced.
+
+    The function NEVER raises on per-action probing failures — anything that
+    can't be derived (missing field, file outside the workspace, git probe
+    failure) is reported as a soft ``error`` field on the relevant block.
+
+    Returned shape:
+
+    .. code-block:: json
+
+        {
+          "action": "file_write",
+          "kind": "mutation" | "read_only" | "deploy" | "skill" | "chain" | "unknown",
+          "fields": {...},          // action-specific structured fields
+          "diff": {...} | null,     // present only for file_write
+          "steps": [...] | null,    // present only for chain (recursive plans)
+          "supports_diff": <bool>
+        }
+    """
+    pl = payload if isinstance(payload, dict) else {}
+    action = (pl.get("host_action") or pl.get("action") or "").strip().lower()
+    base = _base_work_dir()
+    try:
+        exec_root = _resolve_exec_root(pl, base)
+    except ValueError:
+        exec_root = base
+    cap = _resolve_simulation_diff_cap()
+
+    plan: dict[str, Any] = {
+        "action": action or "(missing)",
+        "kind": "unknown",
+        "fields": {},
+        "diff": None,
+        "steps": None,
+        "supports_diff": False,
+    }
+
+    if action in _SIMULATION_READ_ONLY_ACTIONS:
+        plan["kind"] = "read_only"
+
+    if action == "file_write":
+        plan["kind"] = "mutation"
+        plan["supports_diff"] = True
+        rel = (pl.get("relative_path") or "").strip()
+        content = pl.get("content")
+        plan["fields"] = {
+            "relative_path": rel,
+            "exec_root": str(exec_root),
+            "size_bytes_proposed": len(content.encode("utf-8", errors="replace"))
+            if isinstance(content, str)
+            else (len(content) if isinstance(content, (bytes, bytearray)) else 0),
+            "content_preview": (content[:200] if isinstance(content, str) else None),
+        }
+        if rel and isinstance(content, str):
+            plan["diff"] = _build_file_write_diff(
+                relative_path=rel,
+                proposed_content=content,
+                exec_root=exec_root,
+                max_lines=cap,
+            )
+
+    elif action == "file_read":
+        plan["fields"] = {
+            "relative_path": (pl.get("relative_path") or "").strip() or None,
+            "exec_root": str(exec_root),
+        }
+
+    elif action == "list_directory":
+        plan["fields"] = {
+            "relative_path": (pl.get("relative_path") or ".").strip() or ".",
+            "exec_root": str(exec_root),
+        }
+
+    elif action == "find_files":
+        plan["fields"] = {
+            "relative_path": (pl.get("relative_path") or ".").strip() or ".",
+            "pattern": (pl.get("glob") or pl.get("pattern") or "*").strip(),
+            "exec_root": str(exec_root),
+        }
+
+    elif action == "read_multiple_files":
+        explicit = pl.get("relative_paths")
+        plan["fields"] = {
+            "relative_paths": (
+                [str(p) for p in explicit]
+                if isinstance(explicit, list)
+                else None
+            ),
+            "base": pl.get("base") or pl.get("relative_path") or ".",
+            "exec_root": str(exec_root),
+        }
+
+    elif action == "git_status":
+        plan["kind"] = "read_only"
+        plan["fields"] = {
+            "exec_root": str(exec_root),
+            "command_preview": "git status --short --branch",
+        }
+
+    elif action == "git_push":
+        plan["kind"] = "mutation"
+        remote = (pl.get("remote") or "origin").strip()
+        ref = (pl.get("ref") or "HEAD").strip()
+        plan["fields"] = {
+            "remote": remote,
+            "ref": ref,
+            "exec_root": str(exec_root),
+            "command_preview": f"git push {remote} {ref}",
+            "ahead_behind": _git_ahead_behind(exec_root, remote, ref),
+        }
+
+    elif action == "git_commit":
+        plan["kind"] = "mutation"
+        cm = (pl.get("commit_message") or "").strip()
+        gst = _git_status_short_paths(exec_root)
+        plan["fields"] = {
+            "commit_message": cm or None,
+            "exec_root": str(exec_root),
+            "changed_files": gst.get("paths") or [],
+            "git_status_note": gst.get("error"),
+            "command_preview": "git add -A && git commit -m <message>",
+        }
+
+    elif action == "run_command":
+        plan["kind"] = "mutation"
+        name = (pl.get("run_name") or "").strip().lower()
+        argv = ALLOWED_RUN_COMMANDS.get(name)
+        plan["fields"] = {
+            "run_name": name or None,
+            "argv": list(argv) if argv else None,
+            "exec_root": str(exec_root),
+            "command_preview": " ".join(argv) if argv else None,
+        }
+
+    elif action == "plugin_skill":
+        plan["kind"] = "skill"
+        plan["fields"] = {
+            "skill_name": (pl.get("skill_name") or "").strip() or None,
+            "input_preview": pl.get("input")
+            if isinstance(pl.get("input"), dict)
+            else None,
+        }
+
+    elif action in _SIMULATION_DEPLOY_HINTS:
+        plan["kind"] = "deploy"
+        plan["fields"] = {
+            "provider": (pl.get("provider") or action).strip().lower(),
+            "environment": (pl.get("environment") or "production").strip(),
+            "project": pl.get("project") or pl.get("vercel_project_name"),
+            "would_affect": list(_SIMULATION_DEPLOY_HINTS[action]),
+            "note": (
+                "Phase 76 v1 does not call provider APIs during simulation; "
+                "the would_affect list is a static safety hint."
+            ),
+        }
+
+    elif action == "chain":
+        plan["kind"] = "chain"
+        steps_in = pl.get("actions") if isinstance(pl.get("actions"), list) else []
+        substeps: list[dict[str, Any]] = []
+        for i, step in enumerate(steps_in, start=1):
+            if not isinstance(step, dict):
+                substeps.append({"index": i, "error": "invalid_step_entry"})
+                continue
+            substep_plan = build_simulation_plan(step)
+            substep_plan["index"] = i
+            substeps.append(substep_plan)
+        plan["steps"] = substeps
+        plan["fields"] = {"step_count": len(substeps)}
+
+    elif not action:
+        plan["kind"] = "unknown"
+        plan["fields"] = {"error": "missing_host_action"}
+
+    else:
+        plan["fields"] = {
+            "note": f"no specialized simulator defined for {action!r}",
+            "exec_root": str(exec_root),
+        }
+
+    return plan
 
 
 def execute_payload(

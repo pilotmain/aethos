@@ -324,6 +324,26 @@ class Settings(BaseSettings):
     # endpoints for browser users; mutating actions still require Telegram-linked owner).
     nexa_marketplace_panel_enabled: bool = True
 
+    # Phase 76 — Blue-Green safety simulation (read-only "would do …" preview).
+    # The endpoint surface (POST /api/v1/approvals/{job_id}/simulate +
+    # POST /api/v1/approvals/-/simulate-payload + the Telegram /simulate <jobId>
+    # handler) wraps the existing host_executor.execute_payload(simulate=True)
+    # path and returns a structured plan plus an optional unified diff for
+    # file_write actions. Nothing is executed — the simulation reuses the same
+    # validation + permission enforcement as a real run, so the operator sees
+    # the same errors they would get from `simulate=False`. Default ON because
+    # the surface is read-only and owner-gated.
+    nexa_simulation_enabled: bool = True
+    # Hard cap on lines included in the unified diff returned to the UI for
+    # file_write simulations (oldContent vs proposed). Larger diffs are
+    # truncated with a "[diff truncated …]" sentinel and the structured
+    # response carries `diff.truncated=true` so the UI can render the warning.
+    nexa_simulation_max_diff_lines: int = 500
+    # When true (default), git_commit simulations probe ``git status --short`` on disk for a
+    # realistic changed-files preview. When false, simulations omit subprocess git probes
+    # (strict dry-run without touching repo metadata reads beyond validation).
+    nexa_simulation_sandbox_mode: bool = True
+
     # Phase 75 — Marketplace polish (safe-adapt v1).
     # ``_AUTO_UPDATE_SKILLS`` controls the periodic SkillUpdateChecker; even when on,
     # v1 is strictly notify-only — it stamps ``available_version`` + emits an event

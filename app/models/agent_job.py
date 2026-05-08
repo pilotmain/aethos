@@ -62,3 +62,5 @@ class AgentJob(Base, TimestampMixin):
     awaiting_approval: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     approval_context_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     approval_decision: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # Phase 76 — last Blue-Green simulation JSON from POST …/approvals/{id}/simulate (audit / UI)
+    simulation_result: Mapped[dict | None] = mapped_column(JSON, nullable=True)

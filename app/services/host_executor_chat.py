@@ -460,6 +460,8 @@ def evaluate_deterministic_host_permission_turn(
     user_text: str,
     *,
     web_session_id: str | None = None,
+    simulate_mode: bool = False,
+    simulate_execute_text: str | None = None,
 ):
     """
     Stateless host intent → permission check → missing-grant request / confirmation.
@@ -599,6 +601,88 @@ def evaluate_deterministic_host_permission_turn(
             False,
             True,
             None,
+        )
+
+    if simulate_mode:
+        from app.services.host_executor import build_simulation_plan, execute_payload
+
+        if not bool(getattr(get_settings(), "nexa_simulation_enabled", True)):
+            return None
+        stamped_sim = stamp_host_payload(dict(inferred))
+        safe_sim = _validate_enqueue_payload(stamped_sim)
+        if not safe_sim:
+            return NextActionApplicationResult(
+                "Simulation: could not validate that host action payload.",
+                t0,
+                False,
+                True,
+                None,
+            )
+
+        class _StubJob:
+            user_id = uid
+            payload_json: dict[str, Any] = {}
+
+        stub = _StubJob()
+        try:
+            plan_txt = execute_payload(safe_sim, db=db, job=stub, simulate=True)
+        except ValueError as exc:
+            return NextActionApplicationResult(
+                f"Simulation (validation): {exc}",
+                t0,
+                False,
+                True,
+                None,
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("simulate_mode execute_payload failed", exc_info=True)
+            return NextActionApplicationResult(
+                f"Simulation failed: {exc!s}",
+                t0,
+                False,
+                True,
+                None,
+            )
+        try:
+            structured = build_simulation_plan(safe_sim)
+        except Exception as exc:  # noqa: BLE001
+            structured = {"action": "(error)", "fields": {"error": str(exc)[:200]}}
+
+        summary_lines = [
+            "🔍 Simulation (nothing executed yet)",
+            "",
+            (plan_txt or "")[:2800],
+            "",
+            f"action={structured.get('action')} · kind={structured.get('kind')}",
+        ]
+        diff_u = None
+        if isinstance(structured.get("diff"), dict):
+            diff_u = structured["diff"].get("unified")
+        if diff_u:
+            prev_lines = str(diff_u).splitlines()[:24]
+            summary_lines.extend(["", "Diff preview (truncated):", *prev_lines])
+
+        exec_store = (simulate_execute_text or "").strip() or t0
+        cctx.simulate_execute_pending_json = json.dumps(
+            {
+                "execute_text": exec_store,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            },
+            ensure_ascii=False,
+        )
+        db.add(cctx)
+        db.commit()
+
+        kb_rows: tuple[tuple[tuple[str, str], ...], ...] = (
+            (("✅ Approve & Execute", "simtxt:exec"),),
+        )
+        return NextActionApplicationResult(
+            "\n".join(summary_lines)[:3900],
+            t0,
+            False,
+            True,
+            None,
+            telegram_inline_keyboard_rows=kb_rows,
         )
 
     _set_host_pending(cctx, inferred, title)

@@ -748,6 +748,33 @@ def _migrate_aethos_tasks_timing() -> None:
             conn.execute(text(f"ALTER TABLE aethos_tasks ADD COLUMN duration_ms {fl} NULL"))
 
 
+def _migrate_conversation_context_simulate_execute_pending() -> None:
+    """Phase 76 — pending NL text for Telegram Approve & Execute after /simulate preview."""
+    insp = inspect(engine)
+    if "conversation_contexts" not in insp.get_table_names():
+        return
+    cols = {c["name"] for c in insp.get_columns("conversation_contexts")}
+    tt = "TEXT"
+    with engine.begin() as conn:
+        if "simulate_execute_pending_json" not in cols:
+            conn.execute(
+                text(f"ALTER TABLE conversation_contexts ADD COLUMN simulate_execute_pending_json {tt} NULL")
+            )
+
+
+def _migrate_agent_jobs_simulation_result() -> None:
+    """Phase 76 — optional JSON snapshot from approvals simulate endpoint."""
+    insp = inspect(engine)
+    if "agent_jobs" not in insp.get_table_names():
+        return
+    cols = {c["name"] for c in insp.get_columns("agent_jobs")}
+    dialect = engine.dialect.name
+    jt = "JSONB" if dialect == "postgresql" else "TEXT"
+    with engine.begin() as conn:
+        if "simulation_result" not in cols:
+            conn.execute(text(f"ALTER TABLE agent_jobs ADD COLUMN simulation_result {jt} NULL"))
+
+
 def _migrate_agent_jobs_phase38_approval_persistence() -> None:
     """Phase 38 — awaiting_approval + approval_context_json + approval_decision."""
     insp = inspect(engine)
@@ -842,6 +869,8 @@ def ensure_schema() -> None:
     _migrate_agent_organizations_governance_org()
     _migrate_aethos_workspace_projects()
     _migrate_conversation_context_blocked_host()
+    _migrate_conversation_context_simulate_execute_pending()
+    _migrate_agent_jobs_simulation_result()
     _migrate_aethos_missions_input_text()
     _migrate_aethos_tasks_timing()
     _migrate_aethos_dev_steps_phase25()

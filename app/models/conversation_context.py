@@ -60,3 +60,5 @@ class ConversationContext(Base, TimestampMixin):
     current_flow_state_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     # Host action waiting for access grant (JSON: payload, title, permission_id)
     blocked_host_executor_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Phase 76 — pending text to run after “Approve & Execute” from /simulate NL preview
+    simulate_execute_pending_json: Mapped[str | None] = mapped_column(Text, nullable=True)

@@ -47,6 +47,8 @@ class NextActionApplicationResult:
     pending_system_events: tuple[tuple[str, str], ...] = ()
     # Inline permission card for Web (`type: permission_required`); Telegram ignores.
     permission_required: dict[str, Any] | None = None
+    # Telegram only — rows of (button_label, callback_data) for optional inline keyboards
+    telegram_inline_keyboard_rows: tuple[tuple[tuple[str, str], ...], ...] | None = None
 
 
 def clear_next_action_state(cctx: ConversationContext) -> None:
@@ -91,21 +93,48 @@ def apply_next_action_to_user_text(
     """
     Returns updated user line for the normal pipeline, or a short-circuit assistant reply.
     """
+    import re
+
     t0 = (user_text or "").strip()
     if not t0:
         return NextActionApplicationResult(None, t0, False, False, None)
     if depth > _MAX_INJECT_DEPTH:
         return NextActionApplicationResult(None, t0, False, False, None)
 
+    simulate_mode = False
+    simulate_execute_text: str | None = None
+    t_work = t0
+    if bool(getattr(get_settings(), "nexa_simulation_enabled", True)):
+        m_sim = re.match(r"(?is)^/simulate\s+", t0)
+        if m_sim:
+            simulate_mode = True
+            simulate_execute_text = t0[m_sim.end() :].strip()
+            if not simulate_execute_text:
+                return NextActionApplicationResult(
+                    "Usage: `/simulate` followed by a natural-language host request. Example:\n"
+                    "`/simulate run git status`\n\n"
+                    "Or use `/simulate <jobId>` (bot command) for a pending approval.",
+                    t0,
+                    False,
+                    True,
+                    None,
+                )
+            t_work = simulate_execute_text
+
     hx = try_apply_host_executor_turn(
-        db, cctx, t0, web_session_id=web_session_id
+        db, cctx, t_work, web_session_id=web_session_id
     )
     if hx is not None:
         return hx
 
     if get_settings().nexa_host_executor_enabled and may_run_pre_llm_deterministic_host(cctx):
         det = evaluate_deterministic_host_permission_turn(
-            db, cctx, t0, web_session_id=web_session_id
+            db,
+            cctx,
+            t_work,
+            web_session_id=web_session_id,
+            simulate_mode=simulate_mode,
+            simulate_execute_text=simulate_execute_text,
         )
         if det is not None:
             logger.info(
@@ -113,23 +142,43 @@ def apply_next_action_to_user_text(
                 bool(det.permission_required),
             )
             return det
+        if simulate_mode:
+            if not get_settings().nexa_host_executor_enabled:
+                return NextActionApplicationResult(
+                    "Host execution is disabled (`NEXA_HOST_EXECUTOR_ENABLED`). "
+                    "Enable it on the worker host to preview host actions.",
+                    t0,
+                    False,
+                    True,
+                    None,
+                )
+            return NextActionApplicationResult(
+                "No host-executor action could be inferred from that line. "
+                "Try a clearer request (for example git status, commit, or write file), "
+                "or `/simulate <jobId>` for a pending job.",
+                t0,
+                False,
+                True,
+                None,
+            )
 
-    proj_reply = try_workspace_project_nl_turn(db, cctx, t0, owner_user_id=cctx.user_id)
+    t_pipe = t_work if simulate_mode else t0
+    proj_reply = try_workspace_project_nl_turn(db, cctx, t_pipe, owner_user_id=cctx.user_id)
     if proj_reply:
-        return NextActionApplicationResult(proj_reply, t0, False, True, None)
+        return NextActionApplicationResult(proj_reply, t_pipe, False, True, None)
 
     actions = parse_suggested_actions_from_context(cctx.last_suggested_actions_json)
     r = interpret_next_action_user_message(
-        t0,
+        t_pipe,
         actions,
         cctx.next_action_pending_inject_json,
         cctx.last_injected_action_json,
     )
 
     if r.no_match:
-        fr = interpret_flow_user_message(t0, cctx)
+        fr = interpret_flow_user_message(t_pipe, cctx)
         if fr.no_match:
-            return NextActionApplicationResult(None, t0, False, False, None)
+            return NextActionApplicationResult(None, t_pipe, False, False, None)
         if fr.reprocess_user_text:
             clear_next_action_state(cctx)
             cmd0 = (fr.reprocess_user_text or "").strip()
@@ -146,17 +195,17 @@ def apply_next_action_to_user_text(
             set_pending_inject_for_command(cctx, (fr.store_pending_freeform or "").strip())
             _commit(db, cctx)
             return NextActionApplicationResult(
-                fr.immediate_assistant, t0, False, True, None
+                fr.immediate_assistant, t_pipe, False, True, None
             )
         if fr.immediate_assistant:
             if fr.clear_suggestions:
                 clear_next_action_state(cctx)
             _commit(db, cctx)
-            return NextActionApplicationResult(fr.immediate_assistant, t0, False, True, None)
+            return NextActionApplicationResult(fr.immediate_assistant, t_pipe, False, True, None)
         if fr.clear_suggestions:
             clear_next_action_state(cctx)
             _commit(db, cctx)
-        return NextActionApplicationResult(None, t0, False, True, None)
+        return NextActionApplicationResult(None, t_pipe, False, True, None)
 
     if r.reprocess_user_text:
         clear_next_action_state(cctx)
@@ -172,21 +221,21 @@ def apply_next_action_to_user_text(
     if r.immediate_assistant and r.store_pending_command:
         set_pending_inject_for_command(cctx, r.store_pending_command)
         _commit(db, cctx)
-        return NextActionApplicationResult(r.immediate_assistant, t0, False, True, None)
+        return NextActionApplicationResult(r.immediate_assistant, t_pipe, False, True, None)
 
     if r.immediate_assistant and r.clear_suggestions:
         clear_next_action_state(cctx)
         _commit(db, cctx)
-        return NextActionApplicationResult(r.immediate_assistant, t0, False, True, None)
+        return NextActionApplicationResult(r.immediate_assistant, t_pipe, False, True, None)
 
     if r.immediate_assistant:
         _commit(db, cctx)
-        return NextActionApplicationResult(r.immediate_assistant, t0, False, True, None)
+        return NextActionApplicationResult(r.immediate_assistant, t_pipe, False, True, None)
 
     if r.clear_suggestions:
         clear_next_action_state(cctx)
         _commit(db, cctx)
-    return NextActionApplicationResult(None, t0, False, False, None)
+    return NextActionApplicationResult(None, t_pipe, False, False, None)
 
 
 def _commit(db: Session, cctx: ConversationContext) -> None:

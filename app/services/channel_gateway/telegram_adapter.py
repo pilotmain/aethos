@@ -128,6 +128,7 @@ def register_telegram_handlers(application: Application) -> None:
     from app.bot import cloud_commands as cloud_cmds
     from app.bot import org_commands as org_cmds
     from app.bot import project_commands as mission_ctrl
+    from app.bot import simulation_commands as sim_cmds
     from app.bot import social_commands as social_cmds
     from app.bot import telegram_bot as tb
     from app.bot.vercel_commands import vercel_command
@@ -200,6 +201,13 @@ def register_telegram_handlers(application: Application) -> None:
     application.add_handler(CommandHandler("deny", tb.deny_cmd))
     application.add_handler(CommandHandler("cancel", tb.cancel_cmd))
     application.add_handler(CommandHandler("why", tb.why_cmd))
+    application.add_handler(CommandHandler("simulate", sim_cmds.simulate_cmd))
+    application.add_handler(
+        CallbackQueryHandler(sim_cmds.sim_txt_exec_callback, pattern=r"^simtxt:exec$")
+    )
+    application.add_handler(
+        CallbackQueryHandler(sim_cmds.sim_inline_callback, pattern=r"^sim:\d+:")
+    )
     application.add_handler(CommandHandler("imagine", tb.imagine_cmd))
     application.add_handler(CommandHandler("tweet", social_cmds.tweet_cmd))
     application.add_handler(CommandHandler("search_tweets", social_cmds.search_tweets_cmd))

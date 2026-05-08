@@ -16,9 +16,19 @@ import {
   cancelJob,
   decideJob,
   fetchPendingApprovals,
+  simulateApproval,
   type ApprovalDecision,
+  type ApprovalSimulationResponse,
   type PendingApproval,
 } from "@/lib/api/approvals";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { DiffViewer } from "@/components/ui/DiffViewer";
 
 type RowState = {
   busy: boolean;
@@ -52,6 +62,12 @@ export default function MissionControlApprovalsPage() {
   const [error, setError] = useState<string | null>(null);
   const [approvals, setApprovals] = useState<PendingApproval[]>([]);
   const [rowState, setRowState] = useState<Record<number, RowState>>({});
+
+  const [simOpen, setSimOpen] = useState(false);
+  const [simJobId, setSimJobId] = useState<number | null>(null);
+  const [simLoading, setSimLoading] = useState(false);
+  const [simData, setSimData] = useState<ApprovalSimulationResponse | null>(null);
+  const [simError, setSimError] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -92,6 +108,40 @@ export default function MissionControlApprovalsPage() {
     [reload],
   );
 
+  const openSimulation = useCallback(async (id: number) => {
+    setSimJobId(id);
+    setSimOpen(true);
+    setSimLoading(true);
+    setSimError(null);
+    setSimData(null);
+    try {
+      const r = await simulateApproval(id);
+      setSimData(r);
+    } catch (e) {
+      setSimData(null);
+      setSimError(formatMissionControlApiError(e instanceof Error ? e.message : String(e)));
+    } finally {
+      setSimLoading(false);
+    }
+  }, []);
+
+  const handleApproveFromModal = useCallback(async () => {
+    if (simJobId == null) return;
+    setBusy(simJobId, true);
+    try {
+      await decideJob(simJobId, "approved");
+      setSimOpen(false);
+      setBusy(simJobId, false);
+      await reload();
+    } catch (e) {
+      setBusy(
+        simJobId,
+        false,
+        formatMissionControlApiError(e instanceof Error ? e.message : String(e)),
+      );
+    }
+  }, [reload, simJobId]);
+
   const handleCancel = useCallback(
     async (id: number) => {
       setBusy(id, true);
@@ -131,6 +181,71 @@ export default function MissionControlApprovalsPage() {
           {error}
         </div>
       ) : null}
+
+      <Dialog open={simOpen} onOpenChange={setSimOpen}>
+        <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto border-zinc-800 bg-zinc-950">
+          <DialogHeader>
+            <DialogTitle className="text-zinc-50">
+              Simulation
+              {simJobId != null ? ` — job #{simJobId}` : ""}
+            </DialogTitle>
+            <DialogDescription className="text-zinc-400">
+              Read-only preview of host executor validation and planned actions. Nothing runs until you
+              approve.
+            </DialogDescription>
+          </DialogHeader>
+          {simLoading ? (
+            <div className="flex h-32 items-center justify-center text-sm text-zinc-500">
+              Running simulation…
+            </div>
+          ) : simError ? (
+            <div className="rounded-lg border border-red-900/50 bg-red-950/40 px-3 py-2 text-sm text-red-200">
+              {simError}
+            </div>
+          ) : simData ? (
+            <div className="space-y-4">
+              {simData.error ? (
+                <div className="rounded-md border border-amber-900/50 bg-amber-950/30 px-3 py-2 text-sm text-amber-100">
+                  {simData.error}
+                </div>
+              ) : null}
+              {simData.plan_text ? (
+                <div>
+                  <p className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-500">
+                    Plan text
+                  </p>
+                  <pre className="max-h-48 overflow-auto whitespace-pre-wrap break-words rounded-md border border-zinc-800 bg-zinc-950/80 p-3 text-xs text-zinc-300">
+                    {simData.plan_text}
+                  </pre>
+                </div>
+              ) : null}
+              {simData.structured_plan?.diff?.unified ? (
+                <div>
+                  <p className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-500">
+                    Visual diff
+                  </p>
+                  <DiffViewer unified={simData.structured_plan.diff.unified} />
+                  {simData.structured_plan.diff.truncated ? (
+                    <p className="mt-2 text-xs text-amber-200/90">
+                      Diff truncated — increase NEXA_SIMULATION_MAX_DIFF_LINES if needed.
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
+              <div className="flex flex-wrap gap-2 pt-2">
+                <Button size="sm" onClick={() => void handleApproveFromModal()} disabled={simLoading}>
+                  Approve &amp; Execute
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => setSimOpen(false)}>
+                  Close
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-zinc-500">No data.</p>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <div className="flex flex-wrap gap-2 text-xs text-zinc-400">
         <Badge variant="secondary">{summary.total} pending</Badge>
@@ -236,6 +351,14 @@ export default function MissionControlApprovalsPage() {
                   ) : null}
 
                   <div className="flex flex-wrap gap-2 pt-1">
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => void openSimulation(approval.id)}
+                      disabled={state.busy}
+                    >
+                      Simulate
+                    </Button>
                     <Button
                       size="sm"
                       onClick={() => void handleDecision(approval.id, "approved")}

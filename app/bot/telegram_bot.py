@@ -3469,7 +3469,12 @@ async def _handle_incoming_text_impl(
                     db, cctx, tstrip, web_session_id=getattr(cctx, "session_id", None)
                 )
                 if _na.early_assistant is not None:
-                    await update.message.reply_text(_na.early_assistant)
+                    from app.bot.simulation_commands import rows_to_inline_markup
+
+                    await update.message.reply_text(
+                        _na.early_assistant,
+                        reply_markup=rows_to_inline_markup(_na.telegram_inline_keyboard_rows),
+                    )
                     _persist_conversation_turn(
                         db,
                         app_user_id,
