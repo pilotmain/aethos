@@ -124,6 +124,7 @@ def register_telegram_handlers(application: Application) -> None:
     lines through :func:`route_telegram_text_through_gateway` / :func:`~app.services.channels.router.route_inbound`.
     """
     from app.bot import budget_commands as budget_cmds
+    from app.bot import clawhub_commands as clawhub_cmds
     from app.bot import cloud_commands as cloud_cmds
     from app.bot import org_commands as org_cmds
     from app.bot import project_commands as mission_ctrl
@@ -178,6 +179,13 @@ def register_telegram_handlers(application: Application) -> None:
     application.add_handler(CommandHandler("budget", budget_cmds.budget_cmd))
     application.add_handler(CommandHandler("timesheet", budget_cmds.timesheet_cmd))
     application.add_handler(CommandHandler("workhours", budget_cmds.timesheet_cmd))
+    # Phase 71 — ClawHub marketplace commands (mutations require owner role).
+    application.add_handler(CommandHandler("skills_search", clawhub_cmds.skills_search_cmd))
+    application.add_handler(CommandHandler("skills_popular", clawhub_cmds.skills_popular_cmd))
+    application.add_handler(CommandHandler("skills_list", clawhub_cmds.skills_list_cmd))
+    application.add_handler(CommandHandler("skills_install", clawhub_cmds.skills_install_cmd))
+    application.add_handler(CommandHandler("skills_uninstall", clawhub_cmds.skills_uninstall_cmd))
+    application.add_handler(CommandHandler("skills_update", clawhub_cmds.skills_update_cmd))
     # Phase 29 — multi-tenant workspaces (organizations / RBAC)
     application.add_handler(CommandHandler("org", org_cmds.org_cmd))
     application.add_handler(CommandHandler("projects", tb.nexa_projects_list_cmd))

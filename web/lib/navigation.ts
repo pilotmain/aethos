@@ -4,6 +4,7 @@ import {
   CreditCard,
   FolderKanban,
   LayoutDashboard,
+  Package,
   Settings,
   ShieldCheck,
   Users,
@@ -52,6 +53,12 @@ export const missionControlNavItems: MissionControlNavItem[] = [
     href: "/mission-control/approvals",
     icon: ShieldCheck,
     description: "High-risk actions awaiting human sign-off",
+  },
+  {
+    name: "Marketplace",
+    href: "/mission-control/marketplace",
+    icon: Package,
+    description: "Discover and install ClawHub community skills",
   },
   {
     name: "Advanced",

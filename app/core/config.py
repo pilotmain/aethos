@@ -292,6 +292,9 @@ class Settings(BaseSettings):
     nexa_clawhub_require_signature: bool = False
     nexa_clawhub_auto_update: bool = False
     nexa_clawhub_require_install_approval: bool = False
+    # Phase 71 — Mission Control "Marketplace" web panel (proxies the cron-gated /clawhub
+    # endpoints for browser users; mutating actions still require Telegram-linked owner).
+    nexa_marketplace_panel_enabled: bool = True
 
     # Phase 18a — multi-modal (vision / audio / image gen); provider wiring in later sub-phases.
     nexa_multimodal_enabled: bool = False
