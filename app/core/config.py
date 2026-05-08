@@ -133,6 +133,16 @@ class Settings(BaseSettings):
     # Provider name appended to the LLM fallback chain when cost-aware routing is enabled.
     # Defaults to ``ollama`` so a local model becomes the last-resort safety net.
     nexa_cost_aware_fallback_provider: str = "ollama"
+    # Phase 73 — Genesis Loop self-healing agents. Builds on the existing Phase 37 supervisor
+    # loop and ``data/agent_audit.db`` tracker. When the master flag is on and an agent crosses
+    # ``failure_threshold`` failures inside ``failure_window_minutes``, the supervisor runs a
+    # diagnosis → recovery → escalation chain (capped at ``max_auto_recovery_attempts``).
+    # Escalation only sends Telegram alerts when ``escalation_chat_id`` is non-empty.
+    nexa_self_healing_enabled: bool = True
+    nexa_agent_escalation_chat_id: str = ""
+    nexa_agent_max_auto_recovery_attempts: int = 3
+    nexa_agent_failure_threshold: int = 3
+    nexa_agent_failure_window_minutes: int = 60
     # Phase 70 — when true, ``host_executor.execute_payload`` defaults to ``simulate=True``
     # and returns a planned-actions summary instead of running anything. Callers can still
     # pass ``simulate=False`` explicitly. Off by default to preserve current behavior.
@@ -144,6 +154,15 @@ class Settings(BaseSettings):
     # Phase 37 — optional asyncio supervisor loop (registry + audit health checks).
     nexa_agent_monitoring_enabled: bool = False
     nexa_agent_monitor_interval_seconds: int = 30
+    # Phase 73 — self-healing agents (Genesis Loop). When enabled, the supervisor
+    # tick triggers diagnosis + recovery for agents that exceed the failure
+    # threshold within the failure window. Escalation only fires when a Telegram
+    # chat id is set; otherwise alerts go to the application log only.
+    nexa_self_healing_enabled: bool = True
+    nexa_agent_escalation_chat_id: str = ""
+    nexa_agent_max_auto_recovery_attempts: int = 3
+    nexa_agent_failure_threshold: int = 3
+    nexa_agent_failure_window_minutes: int = 60
     # When true with orchestration, sub-agent host payloads run via execute_payload in-process (audit log).
     nexa_agent_orchestration_autoqueue: bool = False
     # Week 5 — in-process rate limits (single-worker; see sub_agent_rate_limit)

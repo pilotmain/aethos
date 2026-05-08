@@ -64,7 +64,8 @@ class AgentSupervisor:
         from app.services.agent.heartbeat import ORCHESTRATION_HEARTBEAT_EVENT
         from app.services.events.bus import publish
 
-        publish_hb = bool(getattr(get_settings(), "nexa_agent_monitoring_enabled", False))
+        s = get_settings()
+        publish_hb = bool(getattr(s, "nexa_agent_monitoring_enabled", False))
 
         agents = self.registry.list_agents(None)
         for agent in agents:
@@ -105,6 +106,134 @@ class AgentSupervisor:
                             stuck_duration,
                         )
                         self.registry.update_status(agent.id, AgentStatus.IDLE)
+
+            # Phase 73 — self-healing pass.
+            if bool(getattr(s, "nexa_self_healing_enabled", False)):
+                try:
+                    self._run_self_healing(agent, stats)
+                except Exception as exc:  # noqa: BLE001
+                    logger.warning(
+                        "self_healing pass failed agent=%s: %s", agent.id, exc
+                    )
+
+    def _run_self_healing(
+        self, agent: Any, stats: dict[str, Any]
+    ) -> dict[str, Any] | None:
+        """
+        Phase 73 — diagnose -> recover -> escalate when failures exceed the
+        configured threshold within the rolling window. Returns the recovery
+        result dict (or None when nothing fired) so callers (tests + the
+        manual-trigger health API) can introspect the outcome.
+        """
+        from app.core.config import get_settings
+        from app.services.agent.recovery import get_recovery_handler
+        from app.services.agent.self_diagnosis import (
+            CAUSE_NO_FAILURES,
+            get_self_diagnosis,
+        )
+
+        s = get_settings()
+        threshold = max(
+            1, int(getattr(s, "nexa_agent_failure_threshold", 3) or 3)
+        )
+        window_min = max(
+            1, int(getattr(s, "nexa_agent_failure_window_minutes", 60) or 60)
+        )
+        window_hours = max(1, (window_min // 60) + (1 if window_min % 60 else 0))
+        history = self.tracker.get_agent_history(agent.id, hours=window_hours, limit=200)
+        recent_fails = sum(1 for h in history if not h.get("success"))
+        if recent_fails < threshold:
+            return None
+
+        diagnosis = get_self_diagnosis().diagnose(agent)
+        if diagnosis.cause_class == CAUSE_NO_FAILURES:
+            return None
+
+        # Tracker breadcrumb for the diagnosis itself (separate from the
+        # recovery row that the handler writes).
+        try:
+            self.tracker.log_action(
+                agent_id=agent.id,
+                agent_name=agent.name,
+                action_type="self_heal_diagnosis",
+                input_data={"window_minutes": diagnosis.window_minutes},
+                output_data={
+                    "cause_class": diagnosis.cause_class,
+                    "summary": diagnosis.summary,
+                    "error_count": diagnosis.error_count,
+                    "fingerprint": diagnosis.fingerprint,
+                    "used_llm": diagnosis.used_llm,
+                },
+                success=True,
+                metadata={"phase": "73", "self_healing": True},
+            )
+        except Exception:  # noqa: BLE001
+            logger.debug("self_heal_diagnosis tracker log suppressed", exc_info=True)
+
+        handler = get_recovery_handler()
+        result = handler.attempt(agent, diagnosis)
+
+        if result.escalate:
+            self._escalate_self_heal(agent, diagnosis.to_dict(), result.to_dict())
+
+        return result.to_dict()
+
+    def _escalate_self_heal(
+        self,
+        agent: Any,
+        diagnosis: dict[str, Any],
+        result: dict[str, Any],
+    ) -> None:
+        """
+        Notify the configured Telegram chat id. Escalation never raises — when
+        the chat id is unset (default) we only log + record. The audit row goes
+        to the existing agent_audit.db so the CEO dashboard surfaces it.
+        """
+        from app.core.config import get_settings
+
+        s = get_settings()
+        chat_id = (getattr(s, "nexa_agent_escalation_chat_id", "") or "").strip()
+        text = (
+            f"⚠️ Agent self-heal escalation\n"
+            f"agent: {agent.name} ({agent.id})\n"
+            f"cause: {diagnosis.get('cause_class')}\n"
+            f"strategy: {result.get('strategy')} (succeeded={result.get('succeeded')})\n"
+            f"attempts_used: {result.get('attempts_used')}\n"
+            f"summary: {diagnosis.get('summary', '')[:600]}"
+        )
+        try:
+            self.tracker.log_action(
+                agent_id=agent.id,
+                agent_name=agent.name,
+                action_type="self_heal_escalation",
+                input_data={"diagnosis": diagnosis, "result": result},
+                output_data={
+                    "telegram_chat_id_set": bool(chat_id),
+                    "text_preview": text[:500],
+                },
+                success=True,
+                metadata={"phase": "73", "self_healing": True},
+            )
+        except Exception:  # noqa: BLE001
+            logger.debug("self_heal_escalation tracker log suppressed", exc_info=True)
+
+        if not chat_id:
+            logger.warning(
+                "Agent '%s' (%s) needs escalation but NEXA_AGENT_ESCALATION_CHAT_ID is unset",
+                agent.name,
+                agent.id,
+            )
+            return
+        try:
+            from app.services.telegram_outbound import send_telegram_message
+
+            send_telegram_message(chat_id, text)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "self_heal_escalation telegram send failed agent=%s: %s",
+                agent.id,
+                exc,
+            )
 
     async def _alert_agent_issue(self, agent: Any, issue: str) -> None:
         logger.warning("Agent '%s' (%s) issue: %s", agent.name, agent.id, issue)

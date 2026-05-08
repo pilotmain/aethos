@@ -39,6 +39,7 @@ from app.api.routes import (
     jobs,
     license,
     marketplace,
+    agent_health,
     memory,
     mission_control,
     mobile,
@@ -315,6 +316,7 @@ app.include_router(ceo_dashboard.router, prefix=settings.api_v1_prefix)
 app.include_router(jobs.router, prefix=settings.api_v1_prefix)
 app.include_router(approvals.router, prefix=settings.api_v1_prefix)
 app.include_router(marketplace.router, prefix=settings.api_v1_prefix)
+app.include_router(agent_health.router, prefix=settings.api_v1_prefix)
 app.include_router(license.router, prefix=settings.api_v1_prefix)
 app.include_router(web.router, prefix=settings.api_v1_prefix)
 app.include_router(permissions.router, prefix=settings.api_v1_prefix)

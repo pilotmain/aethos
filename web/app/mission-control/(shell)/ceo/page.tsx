@@ -41,6 +41,25 @@ type CeoCostToday = {
   scope?: "owner" | "user";
 };
 
+type AgentHealth = {
+  agent: { id: string; name: string; status: string; last_active?: number | null };
+  self_healing: {
+    enabled: boolean;
+    failure_threshold: number;
+    failure_window_minutes: number;
+    max_recovery_attempts: number;
+    recovery_attempts: number;
+    last_recovery_strategy?: string | null;
+    last_recovery_at?: number | null;
+    fallback_llm?: string | null;
+  };
+  failures: {
+    in_window_count: number;
+    in_24h_count: number;
+    recent: Array<{ action_type?: string; error?: string; created_at?: string }>;
+  };
+};
+
 function formatUsd(value: number | null | undefined): string {
   const v = typeof value === "number" && Number.isFinite(value) ? value : 0;
   if (v < 0.01 && v > 0) return `<$0.01`;
@@ -101,6 +120,7 @@ export default function CEODashboardPage() {
   const [summary, setSummary] = useState<CeoSummary | null>(null);
   const [agents, setAgents] = useState<CeoAgentRow[]>([]);
   const [costToday, setCostToday] = useState<CeoCostToday | null>(null);
+  const [healthByAgent, setHealthByAgent] = useState<Record<string, AgentHealth | null>>({});
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -119,6 +139,33 @@ export default function CEODashboardPage() {
       setLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!agents.length) return;
+    (async () => {
+      const out: Record<string, AgentHealth | null> = {};
+      await Promise.all(
+        agents
+          .filter((a) => typeof a.id === "string" && a.id.length > 0)
+          .map(async (a) => {
+            const id = String(a.id);
+            try {
+              const r = await webFetch<{ ok?: boolean } & AgentHealth>(
+                `/agent/health/${encodeURIComponent(id)}`,
+              );
+              out[id] = r as AgentHealth;
+            } catch {
+              out[id] = null; /* self-healing disabled or scoped out */
+            }
+          }),
+      );
+      if (!cancelled) setHealthByAgent(out);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [agents]);
 
   useEffect(() => {
     void load();
@@ -257,26 +304,55 @@ export default function CEODashboardPage() {
           </p>
         </div>
         <div className="divide-y divide-zinc-800">
-          {agents.map((agent) => (
-            <div
-              key={String(agent.id ?? agent.name ?? Math.random())}
-              className="flex items-center justify-between gap-4 p-4"
-            >
-              <div className="min-w-0">
-                <div className="font-medium text-zinc-100">@{String(agent.name ?? "agent")}</div>
-                <div className="text-sm text-zinc-500">Domain: {String(agent.domain ?? "general")}</div>
-              </div>
-              <div className="shrink-0 text-right text-sm text-zinc-400">
-                <div>
-                  Status: <span className="text-zinc-200">{String(agent.status ?? "idle")}</span>
+          {agents.map((agent) => {
+            const id = typeof agent.id === "string" ? agent.id : "";
+            const h = id ? healthByAgent[id] : undefined;
+            const fails24h = h?.failures.in_24h_count ?? 0;
+            const recoveryAttempts = h?.self_healing.recovery_attempts ?? 0;
+            const fallback = h?.self_healing.fallback_llm ?? null;
+            const badgeTone =
+              fails24h === 0
+                ? "border-emerald-700 bg-emerald-950/40 text-emerald-300"
+                : fails24h < (h?.self_healing.failure_threshold ?? 3)
+                  ? "border-amber-700 bg-amber-950/40 text-amber-300"
+                  : "border-rose-700 bg-rose-950/40 text-rose-300";
+            return (
+              <div
+                key={String(agent.id ?? agent.name ?? Math.random())}
+                className="flex items-center justify-between gap-4 p-4"
+              >
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-zinc-100">@{String(agent.name ?? "agent")}</span>
+                    {h ? (
+                      <span
+                        title={`Failures (24h): ${fails24h} · recovery attempts: ${recoveryAttempts}/${h.self_healing.max_recovery_attempts}${
+                          fallback ? ` · fallback LLM: ${fallback}` : ""
+                        }`}
+                        className={`rounded border px-1.5 py-0.5 text-[10px] uppercase tracking-wide ${badgeTone}`}
+                      >
+                        {fails24h === 0
+                          ? "healthy"
+                          : `${fails24h} fail${fails24h === 1 ? "" : "s"}/24h`}
+                        {recoveryAttempts > 0 ? ` · recovered ${recoveryAttempts}×` : ""}
+                        {fallback ? ` · fb:${fallback}` : ""}
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className="text-sm text-zinc-500">Domain: {String(agent.domain ?? "general")}</div>
                 </div>
-                <div>
-                  Success: {typeof agent.success_rate === "number" ? Math.round(agent.success_rate) : 100}% (
-                  {typeof agent.total_actions === "number" ? agent.total_actions : 0} actions)
+                <div className="shrink-0 text-right text-sm text-zinc-400">
+                  <div>
+                    Status: <span className="text-zinc-200">{String(agent.status ?? "idle")}</span>
+                  </div>
+                  <div>
+                    Success: {typeof agent.success_rate === "number" ? Math.round(agent.success_rate) : 100}% (
+                    {typeof agent.total_actions === "number" ? agent.total_actions : 0} actions)
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
           {agents.length === 0 ? (
             <div className="p-8 text-center text-sm text-zinc-500">
               No agents found. Create one from Mission Control or the API.
