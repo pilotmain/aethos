@@ -66,17 +66,28 @@ class _Settings:
     nexa_self_improvement_github_pr_title_prefix = "[self-improvement]"
     nexa_self_improvement_github_branch_prefix = "self-improvement/"
     nexa_self_improvement_github_merge_method = "squash"
+    # Phase 73d added a CI gate to /merge-pr (default WAIT_FOR_CI=true). The
+    # 73c suite predates it and tests the GitHub plumbing in isolation, so
+    # disable the new gate here. The 73d suite covers the gate behaviour.
+    nexa_self_improvement_wait_for_ci = False
+    nexa_self_improvement_ci_poll_interval_seconds = 30
+    nexa_self_improvement_ci_max_age_seconds = 21600
     nexa_self_improvement_auto_restart = False
+    nexa_self_improvement_auto_restart_method = "noop"
     nexa_data_dir = ""
 
 
 @pytest.fixture
 def settings_enabled(monkeypatch) -> _Settings:
     s = _Settings()
+    # Patch every module that resolves Settings at request time. Phase 73d
+    # added `app.core.restart` which the capabilities endpoint reads via
+    # restart_method() — patch it here too so 73c assertions stay stable.
+    import app.core.restart as restart_mod
     monkeypatch.setattr(si_router, "get_settings", lambda: s)
     monkeypatch.setattr(si_proposal, "get_settings", lambda: s)
     monkeypatch.setattr(gh_mod, "get_settings", lambda: s)
-    # Fresh GitHub client singleton so it picks up the test settings.
+    monkeypatch.setattr(restart_mod, "get_settings", lambda: s)
     monkeypatch.setattr(gh_mod, "_github_client", None, raising=False)
     return s
 
@@ -86,9 +97,11 @@ def settings_github_off(monkeypatch) -> _Settings:
     s = _Settings()
     s.nexa_self_improvement_github_enabled = False
     s.nexa_self_improvement_github_token = ""
+    import app.core.restart as restart_mod
     monkeypatch.setattr(si_router, "get_settings", lambda: s)
     monkeypatch.setattr(si_proposal, "get_settings", lambda: s)
     monkeypatch.setattr(gh_mod, "get_settings", lambda: s)
+    monkeypatch.setattr(restart_mod, "get_settings", lambda: s)
     monkeypatch.setattr(gh_mod, "_github_client", None, raising=False)
     return s
 
@@ -345,8 +358,10 @@ def test_capabilities_endpoint_reports_github_state(settings_enabled) -> None:
         assert body["github"]["owner"] == "pilotmain"
         assert body["github"]["repo"] == "aethos"
         assert body["github"]["merge_method"] == "squash"
+        # Phase 73d shape: auto_restart now reports method+valid_methods.
         assert body["auto_restart"]["enabled"] is False
-        assert body["auto_restart"]["deferred"] == "phase73d"
+        assert body["auto_restart"]["method"] == "noop"
+        assert "noop" in body["auto_restart"]["valid_methods"]
     finally:
         app.dependency_overrides.clear()
 

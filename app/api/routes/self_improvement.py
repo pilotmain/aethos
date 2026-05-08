@@ -88,7 +88,13 @@ router = APIRouter(prefix="/self_improvement", tags=["self-improvement"])
 #: Maximum age (seconds) of a passing sandbox run that still counts as
 #: "fresh" for ``/apply``. Short window is intentional — the working tree
 #: changes constantly, so a 10-minute-old sandbox is no longer authoritative.
-APPLY_REQUIRES_FRESH_SANDBOX_S: float = 60.0
+#: Phase 73d: the canonical value lives in
+#: :mod:`app.services.self_improvement.proposal` so non-router callers (the
+#: CI monitor) can import it without pulling in FastAPI; we re-export here
+#: for back-compat.
+from app.services.self_improvement.proposal import (  # noqa: E402
+    APPLY_REQUIRES_FRESH_SANDBOX_S,
+)
 
 
 # --- Auth + enabled gate ---------------------------------------------------
@@ -475,11 +481,15 @@ def capabilities(
     """Tell the UI which sub-features are wired in this deployment.
 
     Open to any authenticated web user (read-only). The UI uses this to
-    decide whether to render the GitHub-flow buttons.
+    decide whether to render the GitHub-flow buttons + 73d CI/restart UI.
     """
     _ensure_enabled()
     s = get_settings()
     gh_client = get_github_client()
+    # Phase 73d additions: surface CI + restart wiring to the UI so the
+    # frontend can show / hide buttons and explain the operator workflow.
+    from app.core.restart import VALID_METHODS as _RESTART_METHODS
+    from app.core.restart import restart_enabled, restart_method
     return {
         "ok": True,
         "self_improvement": {
@@ -497,13 +507,125 @@ def capabilities(
             "branch_prefix": gh_client.branch_prefix if gh_client.enabled else None,
             "merge_method": gh_client.merge_method if gh_client.enabled else None,
         },
-        # Deferred-to-73d note for the UI; we declare the flag here so the
-        # frontend can show a "coming in 73d" hint instead of a broken button.
+        "ci": {
+            "wait_for_ci": bool(getattr(s, "nexa_self_improvement_wait_for_ci", True)),
+            "poll_interval_seconds": int(
+                getattr(s, "nexa_self_improvement_ci_poll_interval_seconds", 30) or 30
+            ),
+            "max_age_seconds": int(
+                getattr(s, "nexa_self_improvement_ci_max_age_seconds", 21600) or 21600
+            ),
+        },
         "auto_restart": {
-            "enabled": False,
-            "deferred": "phase73d",
+            "enabled": restart_enabled(),
+            "method": restart_method(),
+            "valid_methods": sorted(_RESTART_METHODS),
         },
     }
+
+
+@router.post("/{proposal_id}/refresh-ci")
+async def refresh_ci(
+    proposal_id: str,
+    db: Session = Depends(get_db),
+    app_user_id: str = Depends(get_valid_web_user_id),
+) -> dict[str, Any]:
+    """Phase 73d — manually re-poll GitHub CI for a single proposal.
+
+    Owner-only. Returns the freshly-cached ``ci_state`` + ``ci_details``.
+    Available even when the background monitor is off, so an operator can
+    always force a refresh.
+    """
+    _ensure_enabled()
+    _ensure_github_enabled()
+    _require_owner(db, app_user_id)
+    p = _get_or_404(proposal_id)
+    if not p.pr_number:
+        raise HTTPException(status_code=409, detail="proposal_has_no_open_pr")
+
+    gh = get_github_client()
+    try:
+        ci = await gh.get_pr_ci_status(p.pr_number)
+    except GitHubError as exc:
+        raise _github_error_to_http(exc) from exc
+
+    ci_details = {
+        "head_sha": ci.head_sha,
+        "total_count": ci.total_count,
+        "checks": [
+            {"name": c.name, "source": c.source, "state": c.state, "url": c.url}
+            for c in ci.checks
+        ],
+    }
+    refreshed = get_proposal_store().set_ci_state(
+        proposal_id,
+        ci_state=ci.state,
+        ci_details=ci_details,
+        ci_first_seen_pending_at=(
+            __import__("datetime").datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+            if ci.state == "pending"
+            else None
+        ),
+    )
+    return {
+        "ok": True,
+        "proposal": _proposal_to_dict(refreshed) if refreshed else _proposal_to_dict(p),
+        "ci": {
+            "state": ci.state,
+            "head_sha": ci.head_sha,
+            "total_count": ci.total_count,
+            "checks": ci_details["checks"],
+        },
+    }
+
+
+@router.post("/{proposal_id}/auto-merge-on-ci")
+def set_auto_merge_on_ci(
+    proposal_id: str,
+    payload: dict[str, Any] | None = None,
+    db: Session = Depends(get_db),
+    app_user_id: str = Depends(get_valid_web_user_id),
+) -> dict[str, Any]:
+    """Phase 73d — flip the per-proposal ``auto_merge_on_ci_pass`` flag.
+
+    Body: ``{"enabled": true|false}``. Default true. Owner-only.
+    """
+    _ensure_enabled()
+    _ensure_github_enabled()
+    _require_owner(db, app_user_id)
+    p = _get_or_404(proposal_id)
+    enabled = True
+    if isinstance(payload, dict) and "enabled" in payload:
+        enabled = bool(payload.get("enabled"))
+    refreshed = get_proposal_store().set_auto_merge_on_ci(p.id, enabled=enabled)
+    return {
+        "ok": True,
+        "proposal": _proposal_to_dict(refreshed) if refreshed else _proposal_to_dict(p),
+        "auto_merge_on_ci_pass": enabled,
+    }
+
+
+@router.post("/restart")
+async def restart_aethos(
+    db: Session = Depends(get_db),
+    app_user_id: str = Depends(get_valid_web_user_id),
+) -> dict[str, Any]:
+    """Phase 73d — owner-only graceful restart trigger.
+
+    Returns immediately with ``{status: "scheduled"|"disabled"|"noop"}``;
+    the actual restart fires after the response flushes (~1s) so the
+    operator sees the response before the connection drops.
+    """
+    _ensure_enabled()
+    _require_owner(db, app_user_id)
+    from app.core.restart import restart_enabled, schedule_restart
+    if not restart_enabled():
+        raise HTTPException(
+            status_code=403,
+            detail="auto_restart_disabled:set_NEXA_SELF_IMPROVEMENT_AUTO_RESTART_true",
+        )
+    info = await schedule_restart(delay_s=1.0)
+    return {"ok": True, **info}
 
 
 @router.post("/{proposal_id}/open-pr")
@@ -636,9 +758,12 @@ async def merge_pr(
     * Local sandbox passed within :data:`APPLY_REQUIRES_FRESH_SANDBOX_S`
       seconds (matches the 73b apply gate; protects against stale sandboxes
       surviving across long approval queues).
-    * GitHub-side ``mergeable=True`` (PR has no merge conflict). NOTE: this
-      repo currently has no Python/web CI workflow, so ``mergeable`` reflects
-      *only* conflict status — the local sandbox is the actual safety net.
+    * GitHub-side ``mergeable=True`` (PR has no merge conflict).
+    * Phase 73d — when ``NEXA_SELF_IMPROVEMENT_WAIT_FOR_CI=true`` (default
+      now that we ship a Python CI workflow), CI must also be in
+      ``"success"`` (or the post-poll ``"passed_awaiting_sandbox"`` if the
+      operator has since re-run sandbox); otherwise the request is rejected
+      with a 409 ``ci_required_but_state_<state>``.
     """
     _ensure_enabled()
     _ensure_github_enabled()
@@ -658,6 +783,20 @@ async def merge_pr(
                 f">max_{APPLY_REQUIRES_FRESH_SANDBOX_S}s"
             ),
         )
+
+    # Phase 73d — CI gate. When wait_for_ci is on, refuse to merge unless
+    # the latest cached ci_state is "success" or "passed_awaiting_sandbox"
+    # (the latter means the monitor saw a green CI but had to defer the
+    # auto-merge because of a stale sandbox; once the operator re-runs the
+    # sandbox, the manual merge button takes over).
+    s_cfg = get_settings()
+    if bool(getattr(s_cfg, "nexa_self_improvement_wait_for_ci", True)):
+        ci_state = (p.ci_state or "").lower()
+        if ci_state not in {"success", "passed_awaiting_sandbox"}:
+            raise HTTPException(
+                status_code=409,
+                detail=f"ci_required_but_state_{ci_state or 'unknown'}",
+            )
 
     gh = get_github_client()
     try:
@@ -695,14 +834,30 @@ async def merge_pr(
         new_status=STATUS_MERGED,
         merge_commit_sha=merge.merge_commit_sha,
     )
+
+    # Phase 73d — auto-restart handoff (best-effort). If the operator has
+    # opted in via NEXA_SELF_IMPROVEMENT_AUTO_RESTART=true, schedule a
+    # restart that fires AFTER this response flushes (~2s).
+    restart_info: dict[str, Any] | None = None
+    try:
+        from app.core.restart import restart_enabled, schedule_restart
+        if restart_enabled():
+            restart_info = await schedule_restart(delay_s=2.0)
+    except Exception:  # noqa: BLE001
+        logger.exception("schedule_restart raised; merge succeeded but no restart")
+
     return {
         "ok": True,
         "proposal": _proposal_to_dict(refreshed) if refreshed else _proposal_to_dict(p),
         "merge_commit_sha": merge.merge_commit_sha,
+        "restart": restart_info,
         "note": (
-            "Merge committed on the remote. Operator must `git pull` and "
-            "restart the API to deploy the change locally. Auto-restart is "
-            "deferred to Phase 73d."
+            "Merge committed on the remote. "
+            + (
+                "Auto-restart scheduled."
+                if restart_info and restart_info.get("status") == "scheduled"
+                else "Operator must `git pull` and restart the API to deploy the change locally."
+            )
         ),
     }
 

@@ -106,6 +106,37 @@ class MergeResult:
     merged: bool
 
 
+@dataclass
+class CiCheck:
+    """One leaf check on a commit. Source is either a legacy commit-status
+    (Travis-style ``/statuses``) or an Actions check-run."""
+
+    name: str
+    source: str  # "status" | "check_run"
+    state: str   # "pending" | "success" | "failure" | "error" | "neutral" | "skipped" | "cancelled" | "timed_out"
+    url: str | None = None
+
+
+@dataclass
+class CiStatus:
+    """Combined CI state for a PR's head commit.
+
+    ``state`` is the AND of all leaf checks:
+        * ``"pending"`` if any leaf is still running (or no checks exist yet)
+        * ``"success"`` only if every leaf concluded ``success`` / ``neutral`` / ``skipped``
+        * ``"failure"`` if any leaf reports ``failure`` / ``cancelled`` / ``timed_out``
+        * ``"error"`` if any leaf reports ``error``
+
+    ``head_sha`` is the commit the checks ran against (so callers can detect
+    a force-push between polls).
+    """
+
+    state: str
+    head_sha: str
+    checks: list[CiCheck]
+    total_count: int
+
+
 # --- Client ----------------------------------------------------------------
 
 
@@ -417,6 +448,100 @@ class GitHubClient:
             merged=bool(d.get("merged", True)),
         )
 
+    async def get_pr_ci_status(self, pr_number: int) -> CiStatus:
+        """Phase 73d — fetch the combined CI state for a PR's head commit.
+
+        Combines two sources because GitHub Actions surfaces results via
+        the ``check-runs`` API (modern), while older integrations still use
+        legacy commit ``statuses``. We AND them: a green CI requires every
+        leaf check to have concluded successfully (or be neutral/skipped).
+        """
+        if not self.enabled:
+            raise GitHubError("github_disabled", "GitHub auto-merge is disabled.")
+        api = await self._api()
+        slug = self._slug()
+
+        # First we need the head SHA — the PR's ``head.sha`` may have moved
+        # since we opened it, and statuses/check-runs are commit-scoped.
+        try:
+            r = await api.get(f"/repos/{slug}/pulls/{pr_number}")
+        except httpx.HTTPError as exc:
+            raise GitHubError("github_network_error", str(exc)) from exc
+        if r.status_code == 404:
+            raise GitHubError("pr_not_found", f"PR #{pr_number} not found in {slug}.")
+        if r.status_code >= 400:
+            raise GitHubError(
+                f"pr_status_failed_{r.status_code}",
+                _safe_response_message(r),
+            )
+        pr = r.json() or {}
+        head_sha = str((pr.get("head") or {}).get("sha") or "")
+        if not head_sha:
+            raise GitHubError("pr_status_failed_no_head_sha", "PR has no head sha.")
+
+        leaves: list[CiCheck] = []
+
+        # Legacy commit statuses.
+        try:
+            r1 = await api.get(f"/repos/{slug}/commits/{head_sha}/status")
+        except httpx.HTTPError as exc:
+            raise GitHubError("github_network_error", str(exc)) from exc
+        if r1.status_code >= 400:
+            raise GitHubError(
+                f"ci_status_failed_{r1.status_code}",
+                _safe_response_message(r1),
+            )
+        statuses_payload = r1.json() or {}
+        for s in statuses_payload.get("statuses") or []:
+            leaves.append(
+                CiCheck(
+                    name=str(s.get("context") or "status"),
+                    source="status",
+                    state=str(s.get("state") or "pending"),
+                    url=str(s.get("target_url") or "") or None,
+                )
+            )
+
+        # Actions check-runs (paginated; we cap at 100 leaves to keep the
+        # response bounded — proposals with more checks than that are rare,
+        # and the AND result is the same regardless of which 100 we look at).
+        try:
+            r2 = await api.get(
+                f"/repos/{slug}/commits/{head_sha}/check-runs",
+                params={"per_page": 100},
+            )
+        except httpx.HTTPError as exc:
+            raise GitHubError("github_network_error", str(exc)) from exc
+        if r2.status_code >= 400:
+            raise GitHubError(
+                f"ci_status_failed_{r2.status_code}",
+                _safe_response_message(r2),
+            )
+        cr_payload = r2.json() or {}
+        for cr in cr_payload.get("check_runs") or []:
+            status_field = str(cr.get("status") or "")
+            conclusion = str(cr.get("conclusion") or "")
+            if status_field != "completed":
+                leaf_state = "pending"
+            else:
+                leaf_state = conclusion or "success"
+            leaves.append(
+                CiCheck(
+                    name=str(cr.get("name") or "check_run"),
+                    source="check_run",
+                    state=leaf_state,
+                    url=str(cr.get("html_url") or "") or None,
+                )
+            )
+
+        combined_state = _combine_ci_states([leaf.state for leaf in leaves])
+        return CiStatus(
+            state=combined_state,
+            head_sha=head_sha,
+            checks=leaves,
+            total_count=len(leaves),
+        )
+
     async def open_revert_pr(
         self,
         *,
@@ -542,6 +667,48 @@ def _redact_token(text: str, settings: Any) -> str:
     return text
 
 
+def _combine_ci_states(leaf_states: list[str]) -> str:
+    """AND a list of leaf check states into one combined CI state.
+
+    Per Phase 73d's adapted scope:
+
+    * Empty list / no checks       → ``"pending"`` (we deliberately do NOT
+      treat "no CI" as success — that would let proposals through on a repo
+      with no remote CI configured. The operator can always override by
+      flipping ``NEXA_SELF_IMPROVEMENT_WAIT_FOR_CI=false``.)
+    * Any leaf still ``pending`` / non-completed → ``"pending"``
+    * Any leaf ``failure`` / ``cancelled`` / ``timed_out`` → ``"failure"``
+    * Any leaf ``error`` (and no failure) → ``"error"``
+    * Otherwise (every leaf in ``success`` / ``neutral`` / ``skipped``) → ``"success"``
+    """
+    if not leaf_states:
+        return "pending"
+    has_pending = False
+    has_failure = False
+    has_error = False
+    for s in leaf_states:
+        s = (s or "").lower()
+        if s in {"pending", "queued", "in_progress", "waiting", ""}:
+            has_pending = True
+        elif s in {"failure", "cancelled", "timed_out", "action_required", "stale"}:
+            has_failure = True
+        elif s == "error":
+            has_error = True
+        elif s in {"success", "neutral", "skipped"}:
+            continue
+        else:
+            # Unknown / future GitHub conclusion — treat as pending so we
+            # never auto-merge on a state we don't understand.
+            has_pending = True
+    if has_failure:
+        return "failure"
+    if has_error:
+        return "error"
+    if has_pending:
+        return "pending"
+    return "success"
+
+
 def _safe_response_message(r: httpx.Response) -> str:
     """Extract a short human-readable message from a GitHub error response."""
     try:
@@ -577,10 +744,13 @@ _ = time
 
 __all__ = [
     "BranchPushResult",
+    "CiCheck",
+    "CiStatus",
     "GitHubClient",
     "GitHubError",
     "MergeResult",
     "PullRequestInfo",
     "PullRequestStatus",
+    "_combine_ci_states",
     "get_github_client",
 ]

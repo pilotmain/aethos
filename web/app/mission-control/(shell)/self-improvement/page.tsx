@@ -27,11 +27,14 @@ import {
   mergeSelfImprovementPr,
   openSelfImprovementPr,
   proposeSelfImprovement,
+  refreshSelfImprovementCi,
   rejectSelfImprovement,
+  restartSelfImprovement,
   revertSelfImprovement,
   revertSelfImprovementMerge,
   runSelfImprovementSandbox,
   selfImprovementCapabilities,
+  setSelfImprovementAutoMerge,
 } from "@/lib/api/self_improvement";
 
 type Flash = { tone: "ok" | "warn" | "err"; text: string } | null;
@@ -209,7 +212,11 @@ export default function MissionControlImprovementsPage() {
         | "open-pr"
         | "pr-status"
         | "merge-pr"
-        | "revert-merge",
+        | "revert-merge"
+        | "refresh-ci"
+        | "auto-merge-on"
+        | "auto-merge-off"
+        | "restart",
     ) => {
       setBusy({ id, kind });
       setFlash(null);
@@ -267,6 +274,33 @@ export default function MissionControlImprovementsPage() {
           setFlash({
             tone: "ok",
             text: `Revert PR #${r.revert_pr.number} opened on ${r.revert_pr.head_branch}.`,
+          });
+        } else if (kind === "refresh-ci") {
+          const r = await refreshSelfImprovementCi(id);
+          const tone: "ok" | "warn" | "err" =
+            r.ci.state === "success"
+              ? "ok"
+              : r.ci.state === "failure" || r.ci.state === "error"
+                ? "err"
+                : "warn";
+          setFlash({
+            tone,
+            text:
+              `CI for PR head ${r.ci.head_sha.slice(0, 7)}: ` +
+              `state=${r.ci.state} (${r.ci.total_count} check${r.ci.total_count === 1 ? "" : "s"}).`,
+          });
+        } else if (kind === "auto-merge-on" || kind === "auto-merge-off") {
+          const enabled = kind === "auto-merge-on";
+          const r = await setSelfImprovementAutoMerge(id, enabled);
+          setFlash({
+            tone: "ok",
+            text: `Auto-merge on CI pass: ${r.auto_merge_on_ci_pass ? "ENABLED" : "disabled"} for ${id}.`,
+          });
+        } else if (kind === "restart") {
+          const r = await restartSelfImprovement();
+          setFlash({
+            tone: r.status === "scheduled" ? "ok" : "warn",
+            text: `Restart ${r.status} (method=${r.method}${r.delay_s ? `, delay=${r.delay_s}s` : ""}).`,
           });
         }
         await load();
@@ -327,9 +361,27 @@ export default function MissionControlImprovementsPage() {
           </span>
           <span className="text-zinc-500">·</span>
           <span>
-            <strong className="text-zinc-200">Auto-restart:</strong>{" "}
-            {caps.auto_restart.enabled ? "enabled" : `deferred (${caps.auto_restart.deferred})`}
+            <strong className="text-zinc-200">Wait for CI:</strong>{" "}
+            {caps.ci.wait_for_ci
+              ? `on (poll ${caps.ci.poll_interval_seconds}s, max age ${Math.round(caps.ci.max_age_seconds / 60)}m)`
+              : "off"}
           </span>
+          <span className="text-zinc-500">·</span>
+          <span>
+            <strong className="text-zinc-200">Auto-restart:</strong>{" "}
+            {caps.auto_restart.enabled
+              ? `enabled (${caps.auto_restart.method})`
+              : `disabled (method=${caps.auto_restart.method})`}
+          </span>
+          {caps.auto_restart.enabled ? (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => void runAction("__global__", "restart")}
+            >
+              Restart API now
+            </Button>
+          ) : null}
         </div>
       ) : null}
 
@@ -633,25 +685,89 @@ export default function MissionControlImprovementsPage() {
                     </div>
                   ) : null}
                   {p.pr_number ? (
-                    <div className="mt-1 text-xs text-cyan-300">
-                      PR{" "}
-                      {p.pr_url ? (
-                        <a
-                          href={p.pr_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="underline"
+                    <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
+                      <span className="text-cyan-300">
+                        PR{" "}
+                        {p.pr_url ? (
+                          <a
+                            href={p.pr_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="underline"
+                          >
+                            #{p.pr_number}
+                          </a>
+                        ) : (
+                          <code>#{p.pr_number}</code>
+                        )}
+                        {p.github_branch ? (
+                          <>
+                            {" "}on branch <code>{p.github_branch}</code>
+                          </>
+                        ) : null}
+                      </span>
+                      {/* Phase 73d — CI badge. Only render once we have a polled state. */}
+                      {p.ci_state ? (
+                        <span
+                          className={`inline-flex items-center rounded-md border px-1.5 py-0.5 ${
+                            p.ci_state === "success"
+                              ? "border-emerald-700 bg-emerald-950/40 text-emerald-200"
+                              : p.ci_state === "failure" || p.ci_state === "error"
+                                ? "border-rose-700 bg-rose-950/40 text-rose-200"
+                                : p.ci_state === "timed_out"
+                                  ? "border-amber-700 bg-amber-950/40 text-amber-200"
+                                  : p.ci_state === "passed_awaiting_sandbox"
+                                    ? "border-amber-700 bg-amber-950/40 text-amber-200"
+                                    : "border-zinc-700 bg-zinc-900/60 text-zinc-200"
+                          }`}
+                          title={p.ci_checked_at ? `last checked ${p.ci_checked_at}` : undefined}
                         >
-                          #{p.pr_number}
-                        </a>
-                      ) : (
-                        <code>#{p.pr_number}</code>
-                      )}
-                      {p.github_branch ? (
+                          CI: {p.ci_state}
+                        </span>
+                      ) : null}
+                      {/* Phase 73d — auto-merge-on-CI toggle (only meaningful for pr_open + GitHub enabled). */}
+                      {caps?.github.enabled && p.status === "pr_open" ? (
                         <>
-                          {" "}on branch <code>{p.github_branch}</code>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={isBusy}
+                            onClick={() => void runAction(p.id, "refresh-ci")}
+                          >
+                            {isBusy && busy?.kind === "refresh-ci" ? "Polling…" : "Refresh CI"}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={isBusy}
+                            onClick={() =>
+                              void runAction(
+                                p.id,
+                                p.auto_merge_on_ci_pass ? "auto-merge-off" : "auto-merge-on",
+                              )
+                            }
+                            title={
+                              p.auto_merge_on_ci_pass
+                                ? "Stop auto-merging this proposal when CI passes."
+                                : "Auto-merge this PR when CI goes green and the local sandbox is still fresh."
+                            }
+                          >
+                            {p.auto_merge_on_ci_pass
+                              ? "Disable auto-merge"
+                              : "Auto-merge on CI pass"}
+                          </Button>
                         </>
                       ) : null}
+                    </div>
+                  ) : null}
+                  {/* Phase 73d — stale-sandbox banner: CI saw green but the
+                      monitor couldn't auto-merge because the local sandbox
+                      went stale (>60s old). Operator needs to re-run sandbox. */}
+                  {p.ci_state === "passed_awaiting_sandbox" ? (
+                    <div className="mt-2 rounded-md border border-amber-700 bg-amber-950/30 px-3 py-2 text-xs text-amber-200">
+                      CI passed on GitHub, but the local sandbox is older than
+                      60s so auto-merge is paused. Re-run <strong>Sandbox</strong>{" "}
+                      and then click <strong>Merge if mergeable</strong>.
                     </div>
                   ) : null}
                   {p.merge_commit_sha ? (

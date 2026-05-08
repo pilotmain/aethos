@@ -358,9 +358,27 @@ class Settings(BaseSettings):
     nexa_self_improvement_github_branch_prefix: str = "self-improvement/"
     # Merge method passed to PUT /repos/{o}/{r}/pulls/{n}/merge ("squash" | "merge" | "rebase").
     nexa_self_improvement_github_merge_method: str = "squash"
-    # Reserved for Phase 73d (parsed but unused in 73c — graceful in-process
-    # restart needs a process supervisor we don't currently have on this box).
+    # Phase 73d — CI status polling.
+    # When true, /merge-pr also requires GitHub CI (legacy statuses ∪ Actions
+    # check-runs) to be green for the PR's head commit. Defaults true now
+    # that we ship a Python CI workflow as part of 73d.
+    nexa_self_improvement_wait_for_ci: bool = True
+    # How often the in-process CI monitor wakes to refresh the CI state of
+    # every proposal in ``pr_open``.
+    nexa_self_improvement_ci_poll_interval_seconds: int = 30
+    # Hard cut-off after which the monitor stops polling a given PR and
+    # marks ``ci_state="timed_out"``. Default 6 hours.
+    nexa_self_improvement_ci_max_age_seconds: int = 21600
+    # Phase 73d — graceful restart after merge.
+    # Default false; flipping to true without a working _METHOD will just
+    # warn and no-op (see app/core/restart.py).
     nexa_self_improvement_auto_restart: bool = False
+    # systemd | docker | supervisor | uvicorn-reload | noop. Picked at
+    # restart time; see app/core/restart.py for the per-method semantics.
+    # ``uvicorn-reload`` is the dev-friendly default — touches a sentinel
+    # file under ``app/`` so a uvicorn ``--reload`` worker picks the new
+    # code up in-process.
+    nexa_self_improvement_auto_restart_method: str = "uvicorn-reload"
 
     # Phase 18a — multi-modal (vision / audio / image gen); provider wiring in later sub-phases.
     nexa_multimodal_enabled: bool = False

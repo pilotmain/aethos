@@ -47,6 +47,19 @@ export type SandboxResult = {
   steps: SandboxStep[];
 };
 
+export type CiCheckSummary = {
+  name: string;
+  source: string; // "status" | "check_run"
+  state: string;
+  url: string | null;
+};
+
+export type CiDetails = {
+  head_sha: string;
+  total_count: number;
+  checks: CiCheckSummary[];
+};
+
 export type SelfImprovementProposal = {
   id: string;
   title: string;
@@ -66,6 +79,11 @@ export type SelfImprovementProposal = {
   merge_commit_sha: string | null;
   revert_pr_number: number | null;
   revert_pr_url: string | null;
+  ci_state: string | null;
+  ci_details: CiDetails | null;
+  ci_checked_at: string | null;
+  ci_first_seen_pending_at: string | null;
+  auto_merge_on_ci_pass: boolean;
 };
 
 export type SelfImprovementCapabilities = {
@@ -85,9 +103,15 @@ export type SelfImprovementCapabilities = {
     branch_prefix: string | null;
     merge_method: string | null;
   };
+  ci: {
+    wait_for_ci: boolean;
+    poll_interval_seconds: number;
+    max_age_seconds: number;
+  };
   auto_restart: {
     enabled: boolean;
-    deferred: string;
+    method: string;
+    valid_methods: string[];
   };
 };
 
@@ -310,4 +334,50 @@ export async function revertSelfImprovementMerge(
     `/self_improvement/${encodeURIComponent(id)}/revert-merge`,
     { method: "POST" },
   );
+}
+
+// --- Phase 73d: CI polling, auto-merge, restart ----------------------
+
+export type RefreshCiResponse = {
+  ok: boolean;
+  proposal: SelfImprovementProposal;
+  ci: CiDetails & { state: string };
+};
+
+export async function refreshSelfImprovementCi(
+  id: string,
+): Promise<RefreshCiResponse> {
+  return apiFetch<RefreshCiResponse>(
+    `/self_improvement/${encodeURIComponent(id)}/refresh-ci`,
+    { method: "POST" },
+  );
+}
+
+export type SetAutoMergeResponse = {
+  ok: boolean;
+  proposal: SelfImprovementProposal;
+  auto_merge_on_ci_pass: boolean;
+};
+
+export async function setSelfImprovementAutoMerge(
+  id: string,
+  enabled: boolean,
+): Promise<SetAutoMergeResponse> {
+  return apiFetch<SetAutoMergeResponse>(
+    `/self_improvement/${encodeURIComponent(id)}/auto-merge-on-ci`,
+    { method: "POST", body: JSON.stringify({ enabled }) },
+  );
+}
+
+export type RestartResponse = {
+  ok: boolean;
+  status: string;
+  method: string;
+  delay_s?: number;
+};
+
+export async function restartSelfImprovement(): Promise<RestartResponse> {
+  return apiFetch<RestartResponse>(`/self_improvement/restart`, {
+    method: "POST",
+  });
 }

@@ -47,6 +47,14 @@ from app.services.self_improvement.context import (
 logger = logging.getLogger(__name__)
 
 
+# Phase 73b/c/d — sandbox freshness gate. The 60s window is the canonical
+# value used by both the local-apply (73b) and remote-merge (73c) endpoints,
+# and by the Phase 73d CI monitor for auto-merge gating. Defined here (not
+# in the router) so non-router callers can import it without dragging in
+# FastAPI / SQLAlchemy.
+APPLY_REQUIRES_FRESH_SANDBOX_S: float = 60.0
+
+
 # --- Status constants ------------------------------------------------------
 
 STATUS_PENDING = "pending"
@@ -142,6 +150,16 @@ class Proposal:
     merge_commit_sha: str | None = None
     revert_pr_number: int | None = None
     revert_pr_url: str | None = None
+    # Phase 73d — CI status polling + auto-merge flag.
+    # ``ci_state`` is one of:
+    #   None | "pending" | "success" | "failure" | "error" | "timed_out"
+    #   | "passed_awaiting_sandbox" (CI green but local sandbox stale →
+    #   blocks auto-merge per Phase 73d safe policy)
+    ci_state: str | None = None
+    ci_details: dict[str, Any] | None = None  # JSON: {head_sha, checks: [...]}
+    ci_checked_at: str | None = None
+    ci_first_seen_pending_at: str | None = None  # used for the max-age timeout
+    auto_merge_on_ci_pass: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         d = asdict(self)
@@ -456,6 +474,15 @@ class ProposalStore:
         ("revert_pr_url", "TEXT"),
     )
 
+    # Phase 73d additive columns (CI status + auto-merge flag).
+    _PHASE73D_COLUMNS: tuple[tuple[str, str], ...] = (
+        ("ci_state", "TEXT"),
+        ("ci_details", "TEXT"),  # JSON
+        ("ci_checked_at", "TEXT"),
+        ("ci_first_seen_pending_at", "TEXT"),
+        ("auto_merge_on_ci_pass", "INTEGER NOT NULL DEFAULT 0"),
+    )
+
     def __init__(self, db_path: str | Path | None = None) -> None:
         if db_path is None:
             settings = get_settings()
@@ -495,6 +522,17 @@ class ProposalStore:
                     conn.execute(
                         f"ALTER TABLE self_improvement_proposals ADD COLUMN {col} {col_type}"
                     )
+            # Phase 73d lazy migration; same idempotent pattern.
+            existing_after_c = {
+                row[1] for row in conn.execute(
+                    "PRAGMA table_info(self_improvement_proposals)"
+                ).fetchall()
+            }
+            for col, col_type in self._PHASE73D_COLUMNS:
+                if col not in existing_after_c:
+                    conn.execute(
+                        f"ALTER TABLE self_improvement_proposals ADD COLUMN {col} {col_type}"
+                    )
 
     def _row_to_proposal(self, r: sqlite3.Row) -> Proposal:
         try:
@@ -516,6 +554,17 @@ class ProposalStore:
 
         pr_num = _opt("pr_number")
         revert_pr_num = _opt("revert_pr_number")
+        # Phase 73d ci_details may be JSON-string or None.
+        ci_details_raw = _opt("ci_details")
+        ci_details: dict[str, Any] | None = None
+        if ci_details_raw:
+            try:
+                parsed = json.loads(ci_details_raw)
+                if isinstance(parsed, dict):
+                    ci_details = parsed
+            except Exception:
+                ci_details = None
+        auto_merge_raw = _opt("auto_merge_on_ci_pass")
         return Proposal(
             id=str(r["id"]),
             title=r["title"],
@@ -535,6 +584,11 @@ class ProposalStore:
             merge_commit_sha=_opt("merge_commit_sha"),
             revert_pr_number=int(revert_pr_num) if revert_pr_num is not None else None,
             revert_pr_url=_opt("revert_pr_url"),
+            ci_state=_opt("ci_state"),
+            ci_details=ci_details,
+            ci_checked_at=_opt("ci_checked_at"),
+            ci_first_seen_pending_at=_opt("ci_first_seen_pending_at"),
+            auto_merge_on_ci_pass=bool(auto_merge_raw) if auto_merge_raw is not None else False,
         )
 
     def create(
@@ -628,6 +682,77 @@ class ProposalStore:
                 WHERE id = ?
                 """,
                 (new_status, applied_commit_sha, reverted_commit_sha, proposal_id),
+            )
+        return self.get(proposal_id)
+
+    def list_pr_open(self) -> list[Proposal]:
+        """Phase 73d — proposals whose PR is opened but not yet merged.
+
+        Used by the CI monitor to know which PRs to poll. Excludes terminal
+        states ``merged`` / ``rejected`` / ``reverted`` / ``revert_pr_open``.
+        """
+        with self._lock, self._connect() as conn:
+            rows = conn.execute(
+                "SELECT * FROM self_improvement_proposals "
+                "WHERE status = ? "
+                "ORDER BY created_at DESC",
+                (STATUS_PR_OPEN,),
+            ).fetchall()
+            return [self._row_to_proposal(r) for r in rows]
+
+    def set_ci_state(
+        self,
+        proposal_id: str,
+        *,
+        ci_state: str,
+        ci_details: dict[str, Any] | None = None,
+        ci_first_seen_pending_at: str | None = None,
+    ) -> Proposal | None:
+        """Phase 73d — record the latest CI poll result.
+
+        Always bumps ``ci_checked_at``. Sets ``ci_first_seen_pending_at``
+        only when the value is provided AND the column is currently NULL
+        (so the first-seen timestamp doesn't get overwritten on each poll).
+        """
+        with self._lock, self._connect() as conn:
+            details_json = json.dumps(ci_details) if ci_details is not None else None
+            if ci_first_seen_pending_at is not None:
+                conn.execute(
+                    """
+                    UPDATE self_improvement_proposals
+                    SET ci_state = ?,
+                        ci_details = COALESCE(?, ci_details),
+                        ci_checked_at = datetime('now'),
+                        ci_first_seen_pending_at = COALESCE(ci_first_seen_pending_at, ?),
+                        updated_at = datetime('now')
+                    WHERE id = ?
+                    """,
+                    (ci_state, details_json, ci_first_seen_pending_at, proposal_id),
+                )
+            else:
+                conn.execute(
+                    """
+                    UPDATE self_improvement_proposals
+                    SET ci_state = ?,
+                        ci_details = COALESCE(?, ci_details),
+                        ci_checked_at = datetime('now'),
+                        updated_at = datetime('now')
+                    WHERE id = ?
+                    """,
+                    (ci_state, details_json, proposal_id),
+                )
+        return self.get(proposal_id)
+
+    def set_auto_merge_on_ci(self, proposal_id: str, *, enabled: bool) -> Proposal | None:
+        with self._lock, self._connect() as conn:
+            conn.execute(
+                """
+                UPDATE self_improvement_proposals
+                SET auto_merge_on_ci_pass = ?,
+                    updated_at = datetime('now')
+                WHERE id = ?
+                """,
+                (1 if enabled else 0, proposal_id),
             )
         return self.get(proposal_id)
 

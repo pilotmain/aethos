@@ -226,6 +226,15 @@ async def lifespan(app: FastAPI):
             await get_supervisor().start_monitoring()
         except Exception as exc:
             logging.getLogger("aethos").warning("agent supervisor start failed: %s", exc)
+    # Phase 73d — start the self-improvement CI monitor (no-op if any of the
+    # gates inside CiMonitor.start are not satisfied: feature off, github off,
+    # or wait_for_ci=false).
+    try:
+        from app.services.self_improvement.ci_monitor import get_ci_monitor
+
+        get_ci_monitor().start()
+    except Exception as exc:
+        logging.getLogger("aethos").warning("self_improvement ci_monitor start failed: %s", exc)
     yield
     try:
         from app.services.browser.session import shutdown_browser_session
@@ -240,6 +249,13 @@ async def lifespan(app: FastAPI):
             await get_supervisor().stop_monitoring()
         except Exception as exc:
             logging.getLogger("aethos").warning("agent supervisor shutdown failed: %s", exc)
+    # Phase 73d — stop the self-improvement CI monitor (no-op if not running).
+    try:
+        from app.services.self_improvement.ci_monitor import get_ci_monitor
+
+        await get_ci_monitor().stop()
+    except Exception as exc:
+        logging.getLogger("aethos").warning("self_improvement ci_monitor shutdown failed: %s", exc)
     try:
         from app.services.cron.scheduler import get_nexa_cron_scheduler
 
