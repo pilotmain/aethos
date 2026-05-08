@@ -18,6 +18,7 @@ from app.api.routes import (
     agent_spawn,
     agent_runtime_api,
     apple_messages,
+    approvals,
     audit_export,
     auth,
     billing,
@@ -311,6 +312,7 @@ app.include_router(orchestration.router, prefix=settings.api_v1_prefix)
 app.include_router(agent_spawn.router, prefix=settings.api_v1_prefix)
 app.include_router(ceo_dashboard.router, prefix=settings.api_v1_prefix)
 app.include_router(jobs.router, prefix=settings.api_v1_prefix)
+app.include_router(approvals.router, prefix=settings.api_v1_prefix)
 app.include_router(license.router, prefix=settings.api_v1_prefix)
 app.include_router(web.router, prefix=settings.api_v1_prefix)
 app.include_router(permissions.router, prefix=settings.api_v1_prefix)

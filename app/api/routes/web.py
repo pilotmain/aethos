@@ -446,6 +446,18 @@ def decide_web_job(
     return job_service.decide(db, app_user_id, job_id, payload.decision)
 
 
+@router.post("/jobs/{job_id}/cancel", response_model=AgentJobRead)
+def cancel_web_job(
+    job_id: int,
+    db: Session = Depends(get_db),
+    app_user_id: str = Depends(get_valid_web_user_id),
+) -> Any:
+    """Phase 70 — web proxy for ``AgentJobService.cancel`` so the Mission Control
+    Approvals panel can dismiss a pending job from the same auth surface as the
+    decision endpoint."""
+    return job_service.cancel(db, app_user_id, job_id)
+
+
 @router.get("/keys", response_model=list[WebByokKeyRow])
 def list_keys(
     db: Session = Depends(get_db),

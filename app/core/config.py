@@ -108,6 +108,26 @@ class Settings(BaseSettings):
     # capability_question. Prevents the dev-execution path from hijacking questions like
     # "what do you need to deploy to AWS?". Set false to restore prior LLM-only routing.
     nexa_informational_question_skip_llm: bool = True
+    # Phase 70 — Mission Control "Pending Approvals" panel surfaces existing
+    # ``agent_jobs.awaiting_approval`` rows via the approvals API. When false the endpoint
+    # returns 503 and the web nav hides the link. The underlying job-decision flow is
+    # untouched, so Telegram approvals keep working.
+    nexa_approvals_panel_enabled: bool = True
+    # Phase 70 — opt-in cost-aware model selection helper. When true the
+    # ``cost_aware_router`` module is allowed to swap the configured default for the cheap
+    # tier when the estimated per-call cost exceeds the budget. No agent code path is
+    # changed automatically; integration is per call site. Defaults are off so existing
+    # routing is preserved until each call site is migrated.
+    nexa_cost_aware_enabled: bool = False
+    nexa_cost_aware_max_per_task_usd: float = 0.05
+    nexa_cost_aware_default_provider: str = "anthropic"
+    nexa_cost_aware_default_model: str = "claude-sonnet-4-5"
+    nexa_cost_aware_cheap_provider: str = "anthropic"
+    nexa_cost_aware_cheap_model: str = "claude-haiku-4-5"
+    # Phase 70 — when true, ``host_executor.execute_payload`` defaults to ``simulate=True``
+    # and returns a planned-actions summary instead of running anything. Callers can still
+    # pass ``simulate=False`` explicitly. Off by default to preserve current behavior.
+    nexa_host_executor_dry_run_default: bool = False
     nexa_agent_max_per_chat: int = 20
     nexa_agent_idle_timeout_seconds: int = 3600
     # Phase 37 — default trusted flag for API `/agents/create` when request omits explicit approval.

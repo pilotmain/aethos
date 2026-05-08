@@ -225,11 +225,120 @@ def _run_argv(
     return r.returncode, out, err
 
 
+# Phase 70 — host actions whose simulation plan is just "would read" (no side effects).
+_SIMULATION_READ_ONLY_ACTIONS: frozenset[str] = frozenset(
+    {
+        "git_status",
+        "file_read",
+        "list_directory",
+        "find_files",
+        "read_multiple_files",
+    }
+)
+
+
+def _format_simulation_plan(
+    payload: dict[str, Any],
+    *,
+    action: str,
+    exec_root: Path,
+    root: Path,
+) -> str:
+    """
+    Phase 70 — produce a readable "would do …" summary for ``execute_payload(simulate=True)``.
+
+    Runs after validation + permission enforcement, so any error the real call
+    would have raised (invalid path, missing field, blocked permission) has
+    already been raised and the user sees a real failure rather than a fake plan.
+    The summary intentionally uses the real allowlist (``ALLOWED_RUN_COMMANDS``)
+    so what we describe is exactly what would have run.
+    """
+    cwd_display = str(exec_root)
+    header = f"[SIMULATED] action={action or '(missing)'} cwd={cwd_display}"
+    lines: list[str] = [header]
+
+    if action in _SIMULATION_READ_ONLY_ACTIONS:
+        lines.append("Effect: read-only — no files modified, no commands executed.")
+    else:
+        lines.append("Effect: would mutate files / run a process — nothing was executed.")
+
+    if action == "chain":
+        steps = payload.get("actions") or []
+        if isinstance(steps, list) and steps:
+            lines.append(f"Plan: {len(steps)} chained step(s) (none executed)")
+            for i, step in enumerate(steps, start=1):
+                if not isinstance(step, dict):
+                    lines.append(f"  {i}. (invalid step entry)")
+                    continue
+                inner = (step.get("host_action") or "").strip().lower() or "(missing)"
+                target = (
+                    step.get("relative_path")
+                    or step.get("ref")
+                    or step.get("remote")
+                    or step.get("run_name")
+                    or step.get("project")
+                    or step.get("skill_name")
+                    or "—"
+                )
+                lines.append(f"  {i}. host_action={inner} target={target}")
+            lines.append("Pass simulate=False to execute.")
+            return "\n".join(lines)
+
+    if action == "run_command":
+        name = (payload.get("run_name") or "").strip().lower()
+        argv = ALLOWED_RUN_COMMANDS.get(name)
+        if argv:
+            lines.append(f"Would run: {' '.join(argv)} (cwd={cwd_display})")
+        else:
+            lines.append(f"Would resolve run_name={name!r} via ALLOWED_RUN_COMMANDS")
+    elif action == "git_push":
+        remote = (payload.get("remote") or "origin").strip()
+        ref = (payload.get("ref") or "HEAD").strip()
+        lines.append(f"Would run: git push {remote} {ref} (cwd={cwd_display})")
+    elif action == "git_status":
+        lines.append(f"Would run: git status --short --branch (cwd={cwd_display})")
+    elif action == "file_write":
+        rel = (payload.get("relative_path") or "").strip()
+        content = payload.get("content")
+        size = len(content) if isinstance(content, (str, bytes)) else 0
+        lines.append(f"Would write {size} byte(s) to {rel or '(missing relative_path)'}")
+    elif action == "file_read":
+        rel = (payload.get("relative_path") or "").strip()
+        lines.append(f"Would read file: {rel or '(missing relative_path)'}")
+    elif action == "list_directory":
+        rel = (payload.get("relative_path") or ".").strip() or "."
+        lines.append(f"Would list directory: {rel}")
+    elif action == "find_files":
+        rel = (payload.get("relative_path") or ".").strip() or "."
+        pat = (payload.get("glob") or payload.get("pattern") or "*").strip()
+        lines.append(f"Would search for files matching {pat!r} under {rel}")
+    elif action == "read_multiple_files":
+        explicit = payload.get("relative_paths")
+        if isinstance(explicit, list) and explicit:
+            preview = ", ".join(str(p) for p in explicit[:5])
+            tail = " …" if len(explicit) > 5 else ""
+            lines.append(f"Would read up to {len(explicit)} file(s): {preview}{tail}")
+        else:
+            base = payload.get("base") or payload.get("relative_path") or "."
+            lines.append(f"Would read multiple files under base={base}")
+    elif action == "plugin_skill":
+        name = (payload.get("skill_name") or "").strip()
+        lines.append(f"Would invoke plugin skill: {name or '(missing skill_name)'}")
+    elif not action:
+        lines.append("Would dispatch (action missing — would have raised ValueError at runtime).")
+    else:
+        lines.append(f"Would dispatch host_action={action} (no specialized simulator defined).")
+
+    lines.append("Pass simulate=False to execute.")
+    return "\n".join(lines)
+
+
 def execute_payload(
     payload: dict[str, Any],
     *,
     db: Any | None = None,
     job: Any | None = None,
+    simulate: bool | None = None,
 ) -> str:
     """
     Run one host action from an allowlisted payload (used by tests and worker).
@@ -238,7 +347,14 @@ def execute_payload(
     (production worker with ``NEXA_ACCESS_PERMISSIONS_ENFORCED=1``).
     Unit tests call with payload only → checks skipped.
 
-    Returns user-facing text (stdout/stderr summary). Raises ValueError on validation.
+    Phase 70 — when ``simulate=True`` the function runs through validation,
+    permission, and policy enforcement (so dry-runs surface real errors) but
+    returns a planned-actions summary instead of executing the host action.
+    Defaults to :data:`Settings.nexa_host_executor_dry_run_default` (False) so
+    existing call sites are unchanged.
+
+    Returns user-facing text (stdout/stderr summary, or a ``[SIMULATED]`` plan
+    when ``simulate=True``). Raises ValueError on validation.
     """
     s = _host_settings()
     if not getattr(s, "nexa_host_executor_enabled", False):
@@ -319,6 +435,20 @@ def execute_payload(
             db, str(uid), grants, host_action=action, payload=payload
         )
         return f"{prefix}\n\n{text}" if prefix else text
+
+    effective_simulate = (
+        bool(simulate)
+        if simulate is not None
+        else bool(getattr(s, "nexa_host_executor_dry_run_default", False))
+    )
+    if effective_simulate:
+        plan = _format_simulation_plan(payload, action=action, exec_root=exec_root, root=root)
+        logger.info(
+            "host_executor simulate=true action=%s exec_root=%s",
+            action or "(unknown)",
+            str(exec_root)[-128:],
+        )
+        return _finalize_output(plan)
 
     if action == "chain":
         if not bool(getattr(s, "nexa_host_executor_chain_enabled", False)):
