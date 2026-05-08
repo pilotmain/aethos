@@ -73,8 +73,12 @@ async def _gate_owner(update: Update) -> str | None:
         await update.message.reply_text(disabled)
         return None
     db = SessionLocal()
-    try:        from app.services.channel_gateway.telegram_adapter import get_telegram_adapter
-        app_user_id = get_telegram_adapter().resolve_app_user_id(db, update)
+    try:
+        try:
+            from app.services.channel_gateway.telegram_adapter import get_telegram_adapter
+            app_user_id = get_telegram_adapter().resolve_app_user_id(db, update)
+        except Exception:
+            app_user_id = None
         orchestrator.users.get_or_create(db, app_user_id)
         class _Link: app_user_id = app_user_id
         link = _Link()
@@ -286,8 +290,12 @@ async def sim_txt_exec_callback(
         return
 
     db = SessionLocal()
-    try:        from app.services.channel_gateway.telegram_adapter import get_telegram_adapter
-        app_user_id = get_telegram_adapter().resolve_app_user_id(db, q)
+    try:
+        try:
+            from app.services.channel_gateway.telegram_adapter import get_telegram_adapter
+            app_user_id = get_telegram_adapter().resolve_app_user_id(db, q)
+        except Exception:
+            app_user_id = None
         orchestrator.users.get_or_create(db, app_user_id)
         class _Link: app_user_id = app_user_id
         link = _Link()
@@ -365,8 +373,12 @@ async def sim_inline_callback(
     action = m.group(2)
 
     db = SessionLocal()
-    try:        from app.services.channel_gateway.telegram_adapter import get_telegram_adapter
-        app_user_id = get_telegram_adapter().resolve_app_user_id(db, q)
+    try:
+        try:
+            from app.services.channel_gateway.telegram_adapter import get_telegram_adapter
+            app_user_id = get_telegram_adapter().resolve_app_user_id(db, q)
+        except Exception:
+            app_user_id = None
         orchestrator.users.get_or_create(db, app_user_id)
         class _Link: app_user_id = app_user_id
         link = _Link()
