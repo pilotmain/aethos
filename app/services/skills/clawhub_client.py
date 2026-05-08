@@ -49,6 +49,29 @@ class ClawHubClient:
         publisher = str(data.get("publisher") or data.get("namespace") or "community").strip()
         tags = data.get("tags") if isinstance(data.get("tags"), list) else []
         tags_s = [str(t).strip() for t in tags if str(t).strip()]
+        # Phase 75 — single-axis category. Derive from explicit field if present;
+        # otherwise fall back to the first tag so the UI filter chips still work
+        # against registries that only ship tags. Always normalised to lowercase.
+        category_raw = (
+            str(data.get("category") or data.get("section") or "").strip().lower()
+        )
+        if not category_raw and tags_s:
+            category_raw = tags_s[0].lower()
+        # Phase 75 — cross-skill deps live on a separate ``skill_dependencies``
+        # key so the existing ``dependencies`` (pip packages) channel stays
+        # untouched. Permissions follow the same shape as the local SkillManifest.
+        deps_raw = data.get("skill_dependencies")
+        deps_s = (
+            [str(d).strip() for d in deps_raw if str(d).strip()]
+            if isinstance(deps_raw, list)
+            else []
+        )
+        perms_raw = data.get("permissions")
+        perms_s = (
+            [str(p).strip().lower() for p in perms_raw if str(p).strip()]
+            if isinstance(perms_raw, list)
+            else []
+        )
         return ClawHubSkillInfo(
             name=name,
             version=ver,
@@ -62,16 +85,33 @@ class ClawHubClient:
             signature=(str(data["signature"]).strip() if data.get("signature") else None),
             manifest_url=str(data.get("manifest_url") or "").strip(),
             archive_url=str(data.get("archive_url") or data.get("download_url") or "").strip(),
+            category=category_raw,
+            readme_url=str(data.get("readme_url") or data.get("readme") or "").strip(),
+            changelog_url=str(
+                data.get("changelog_url") or data.get("changelog") or ""
+            ).strip(),
+            skill_dependencies=deps_s,
+            permissions=perms_s,
         )
 
-    async def search_skills(self, query: str, limit: int = 20) -> list[ClawHubSkillInfo]:
+    async def search_skills(
+        self,
+        query: str,
+        limit: int = 20,
+        *,
+        category: str | None = None,
+    ) -> list[ClawHubSkillInfo]:
         q = (query or "").strip()
         if not self._enabled() or not q:
             return []
         url = f"{self.base_url}/skills/search"
+        params: dict[str, str | int] = {"q": q, "limit": limit}
+        cat = (category or "").strip().lower()
+        if cat:
+            params["category"] = cat
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
-                r = await client.get(url, params={"q": q, "limit": limit})
+                r = await client.get(url, params=params)
                 if r.status_code != 200:
                     logger.warning("clawhub search HTTP %s", r.status_code)
                     return []
@@ -80,7 +120,12 @@ class ClawHubClient:
             logger.warning("clawhub search failed: %s", exc)
             return []
         items = _coerce_skill_list(data)
-        return [self._parse_skill_info(x) for x in items[: max(1, limit)]]
+        results = [self._parse_skill_info(x) for x in items[: max(1, limit)]]
+        # Defensive client-side filter — registries that ignore the ``category``
+        # query param still get filtered down so the UI behavior is consistent.
+        if cat:
+            results = [r for r in results if r.category == cat]
+        return results
 
     async def get_skill_info(self, name: str) -> ClawHubSkillInfo | None:
         nm = (name or "").strip()
@@ -110,6 +155,30 @@ class ClawHubClient:
                 data = r.json()
         except Exception as exc:  # noqa: BLE001
             logger.warning("clawhub popular failed: %s", exc)
+            return []
+        items = _coerce_skill_list(data)
+        return [self._parse_skill_info(x) for x in items[: max(1, limit)]]
+
+    async def list_featured(self, limit: int = 12) -> list[ClawHubSkillInfo]:
+        """Phase 75 — best-effort fetch of the registry's curated "featured" set.
+
+        Returns ``[]`` on 404 / network failure / disabled flag — operators with
+        a ClawHub registry that doesn't expose ``/skills/featured`` should expect
+        an empty list, not an exception. The marketplace UI hides the row when
+        the response is empty.
+        """
+        if not self._enabled():
+            return []
+        url = f"{self.base_url}/skills/featured"
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                r = await client.get(url, params={"limit": limit})
+                if r.status_code != 200:
+                    logger.info("clawhub featured HTTP %s (skipping)", r.status_code)
+                    return []
+                data = r.json()
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("clawhub featured failed: %s", exc)
             return []
         items = _coerce_skill_list(data)
         return [self._parse_skill_info(x) for x in items[: max(1, limit)]]

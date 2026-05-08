@@ -1,4 +1,16 @@
-"""Phase 17 — install / update / remove ClawHub skill packages (ZIP → skill.yaml → registry)."""
+"""Phase 17 — install / update / remove ClawHub skill packages (ZIP → skill.yaml → registry).
+
+Phase 75 extends this module with:
+
+* cross-skill dependency resolution (via
+  :mod:`app.services.skills.dependency_resolver`) executed *before* the host
+  install so a partial install never leaves a half-registered head skill;
+* persistence of ``available_version`` / ``update_checked_at`` / ``category``
+  on the local ``installed.yaml`` rows so the update checker and Marketplace
+  UI can read fresh state without hitting the registry on every render;
+* a small ``mark_update_checked`` helper used by
+  :mod:`app.services.skills.update_checker`.
+"""
 
 from __future__ import annotations
 
@@ -14,7 +26,12 @@ import yaml
 
 from app.core.config import REPO_ROOT, get_settings
 from app.services.skills.clawhub_client import ClawHubClient
-from app.services.skills.clawhub_models import InstalledSkill, SkillSource, SkillStatus, row_to_installed_skill
+from app.services.skills.clawhub_models import (
+    InstalledSkill,
+    SkillSource,
+    SkillStatus,
+    row_to_installed_skill,
+)
 from app.services.skills.loader import load_skill_manifest
 from app.services.skills.plugin_registry import get_plugin_skill_registry
 
@@ -107,6 +124,30 @@ class SkillInstaller:
         if not self.is_trusted_publisher(remote.publisher):
             return False, "publisher_not_trusted", None
 
+        # Phase 75 — resolve cross-skill deps before downloading the head, so
+        # an unsatisfiable graph fails fast (no half-installed leaves). Pip
+        # deps from ``manifest.dependencies`` are still handled below by the
+        # plugin registry (`ensure_dependencies`) — they're orthogonal.
+        if remote.skill_dependencies:
+            from app.services.skills.dependency_resolver import (
+                SkillDependencyError,
+                SkillDependencyResolver,
+            )
+
+            try:
+                _, newly = await SkillDependencyResolver(
+                    client=self.client, installer=self
+                ).install_dependencies(remote)
+                if newly:
+                    logger.info(
+                        "clawhub install resolved %d cross-skill deps for %s: %s",
+                        len(newly),
+                        nm,
+                        newly,
+                    )
+            except SkillDependencyError as exc:
+                return False, f"skill_dependency_failed:{exc}", None
+
         ver = (version or "latest").strip()
         if ver == "latest":
             ver = remote.version
@@ -155,6 +196,9 @@ class SkillInstaller:
             return False, f"register_failed:{exc}"[:2000], None
 
         now = datetime.now(timezone.utc)
+        # Phase 75 — carry remote category through to the local row so the
+        # Marketplace UI can render the filter chip without a metadata round-trip.
+        cat = (manifest.category or remote.category or "").strip().lower()
         row = InstalledSkill(
             name=manifest.name,
             version=manifest.version,
@@ -165,6 +209,9 @@ class SkillInstaller:
             status=SkillStatus.INSTALLED,
             pinned_version=None if version == "latest" else ver,
             publisher=remote.publisher,
+            available_version=None,
+            update_checked_at=now,
+            category=cat,
         )
         installed.append(row)
         self._save_manifest(installed)
@@ -267,6 +314,52 @@ class SkillInstaller:
 
     def list_installed(self) -> list[InstalledSkill]:
         return self._load_manifest()
+
+    def mark_update_checked(
+        self,
+        name: str,
+        *,
+        available_version: str | None,
+        checked_at: datetime | None = None,
+    ) -> InstalledSkill | None:
+        """Phase 75 — stamp ``available_version`` + ``update_checked_at`` for an installed row.
+
+        Used by :class:`~app.services.skills.update_checker.SkillUpdateChecker`
+        and the ``POST /-/check-updates-now`` endpoint. Setting
+        ``available_version`` to a value that equals the installed
+        ``version`` clears the indicator (we treat "matches installed" as
+        "no update available"). This never auto-installs — apply via
+        :func:`update`.
+
+        Returns the updated :class:`InstalledSkill` row, or ``None`` if the
+        skill isn't in the manifest.
+        """
+        nm = (name or "").strip()
+        if not nm:
+            return None
+        installed = self._load_manifest()
+        target: InstalledSkill | None = None
+        for row in installed:
+            if row.name == nm:
+                row.update_checked_at = checked_at or datetime.now(timezone.utc)
+                if available_version and available_version.strip() == row.version:
+                    row.available_version = None
+                else:
+                    row.available_version = (
+                        available_version.strip() if available_version else None
+                    )
+                # Status surface — flag stale rows as OUTDATED so callers
+                # filtering by status don't have to recompute the comparison.
+                if row.available_version:
+                    row.status = SkillStatus.OUTDATED
+                elif row.status == SkillStatus.OUTDATED:
+                    row.status = SkillStatus.INSTALLED
+                target = row
+                break
+        if target is None:
+            return None
+        self._save_manifest(installed)
+        return target
 
 
 __all__ = ["SkillInstaller"]

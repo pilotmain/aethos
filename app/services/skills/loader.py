@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -11,7 +11,15 @@ import yaml
 
 @dataclass
 class SkillManifest:
-    """Normalized manifest fields used by :mod:`app.services.skills.plugin_registry`."""
+    """Normalized manifest fields used by :mod:`app.services.skills.plugin_registry`.
+
+    Phase 75 added ``skill_dependencies`` (a separate channel from the existing
+    ``dependencies`` pip-package list, processed by
+    :mod:`app.services.skills.dependency_resolver` before install) and
+    ``category`` (single-axis filter, mirrors the upstream
+    :class:`~app.services.skills.clawhub_models.ClawHubSkillInfo` field). Both
+    default to safe empty values so manifests written before 75 keep loading.
+    """
 
     name: str
     version: str
@@ -27,6 +35,8 @@ class SkillManifest:
     permissions: list[str]
     source: str
     base_dir: Path
+    skill_dependencies: list[str] = field(default_factory=list)
+    category: str = ""
 
 
 def load_skill_manifest(path: Path) -> SkillManifest:
@@ -38,6 +48,12 @@ def load_skill_manifest(path: Path) -> SkillManifest:
     ex = data.get("execution") or {}
     if not isinstance(ex, dict):
         raise ValueError(f"Invalid execution block in {path}")
+    skill_deps_raw = data.get("skill_dependencies")
+    skill_deps = (
+        [str(d).strip() for d in skill_deps_raw if str(d).strip()]
+        if isinstance(skill_deps_raw, list)
+        else []
+    )
     return SkillManifest(
         name=str(data["name"]).strip(),
         version=str(data.get("version", "0.0.0")).strip(),
@@ -52,11 +68,13 @@ def load_skill_manifest(path: Path) -> SkillManifest:
         dependencies=list(data.get("dependencies") or [])
         if isinstance(data.get("dependencies"), list)
         else [],
-        permissions=list(data.get("permissions") or [])
+        permissions=[str(p).strip().lower() for p in (data.get("permissions") or []) if str(p).strip()]
         if isinstance(data.get("permissions"), list)
         else [],
         source=str(data.get("source") or "local").strip(),
         base_dir=path.resolve().parent,
+        skill_dependencies=skill_deps,
+        category=str(data.get("category") or "").strip().lower(),
     )
 
 

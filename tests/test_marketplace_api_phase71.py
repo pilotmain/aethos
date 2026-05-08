@@ -97,9 +97,12 @@ def test_search_proxies_clawhub_client(marketplace_client, monkeypatch) -> None:
 
     captured: dict[str, Any] = {}
 
-    async def fake_search(self, query: str, limit: int = 20):  # noqa: ARG001
+    async def fake_search(self, query: str, limit: int = 20, **kwargs):  # noqa: ARG001
+        # Phase 75 added an optional ``category`` kwarg — accept any extras
+        # so this Phase 71 test stays forward-compatible.
         captured["query"] = query
         captured["limit"] = limit
+        captured["extra_kwargs"] = sorted(kwargs.keys())
         return [_fake_skill("alpha"), _fake_skill("beta", "0.2.0")]
 
     monkeypatch.setattr(
@@ -112,7 +115,11 @@ def test_search_proxies_clawhub_client(marketplace_client, monkeypatch) -> None:
     assert body["ok"] is True
     names = [s["name"] for s in body["skills"]]
     assert names == ["alpha", "beta"]
-    assert captured == {"query": "demo", "limit": 5}
+    assert captured["query"] == "demo"
+    assert captured["limit"] == 5
+    # Forward-compat assertion: when no ``category`` query param is set,
+    # the router still passes ``category=None`` (Phase 75).
+    assert "category" in captured["extra_kwargs"]
 
 
 def test_popular_proxies_clawhub_client(marketplace_client, monkeypatch) -> None:

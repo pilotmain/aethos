@@ -84,11 +84,13 @@ def _install_http_error(msg: str) -> HTTPException:
 async def marketplace_search(
     q: str,
     limit: int = 20,
+    category: str | None = None,
     _: str = Depends(get_valid_web_user_id),
 ) -> dict[str, Any]:
     _ensure_enabled()
     safe_limit = max(1, min(int(limit or 0) or 20, 100))
-    results = await ClawHubClient().search_skills(q, safe_limit)
+    cat = (category or "").strip().lower() or None
+    results = await ClawHubClient().search_skills(q, safe_limit, category=cat)
     return {"ok": True, "skills": [r.to_dict() for r in results]}
 
 
@@ -103,6 +105,29 @@ async def marketplace_popular(
     return {"ok": True, "skills": [r.to_dict() for r in results]}
 
 
+@router.get("/featured")
+async def marketplace_featured(
+    limit: int = 12,
+    _: str = Depends(get_valid_web_user_id),
+) -> dict[str, Any]:
+    """Phase 75 — curated "Featured" list. Defensive on 404 (returns []).
+
+    Hidden from the UI when ``NEXA_MARKETPLACE_FEATURED_PANEL_ENABLED=false``
+    (the endpoint still answers — the toggle is presentation-only — so
+    existing automation can poll it without adding a new feature flag).
+    """
+    _ensure_enabled()
+    safe_limit = max(1, min(int(limit or 0) or 12, 50))
+    results = await ClawHubClient().list_featured(safe_limit)
+    return {
+        "ok": True,
+        "panel_enabled": bool(
+            getattr(get_settings(), "nexa_marketplace_featured_panel_enabled", True)
+        ),
+        "skills": [r.to_dict() for r in results],
+    }
+
+
 @router.get("/skill/{name}")
 async def marketplace_skill_info(
     name: str,
@@ -113,6 +138,59 @@ async def marketplace_skill_info(
     if not skill:
         raise HTTPException(status_code=404, detail="skill_not_found")
     return {"ok": True, "skill": skill.to_dict()}
+
+
+@router.get("/skill/{name}/details")
+async def marketplace_skill_details(
+    name: str,
+    _: str = Depends(get_valid_web_user_id),
+) -> dict[str, Any]:
+    """Phase 75 — extended skill payload for the detail modal.
+
+    Same upstream call as ``/skill/{name}``; the response is reshaped to
+    surface the documentation (``readme_url``, ``changelog_url``), the
+    cross-skill ``skill_dependencies`` graph, and the requested
+    ``permissions``. The actual body of the README / changelog is NOT
+    fetched server-side (the modal can render the URLs as links); this
+    keeps the endpoint cheap and CSP-safe.
+    """
+    _ensure_enabled()
+    skill = await ClawHubClient().get_skill_info(name)
+    if not skill:
+        raise HTTPException(status_code=404, detail="skill_not_found")
+    payload = skill.to_dict()
+    return {
+        "ok": True,
+        "skill": payload,
+        "documentation": {
+            "readme_url": payload.get("readme_url", ""),
+            "changelog_url": payload.get("changelog_url", ""),
+            "manifest_url": payload.get("manifest_url", ""),
+        },
+        "dependencies": payload.get("skill_dependencies", []),
+        "permissions": payload.get("permissions", []),
+    }
+
+
+@router.get("/categories")
+async def marketplace_categories(
+    _: str = Depends(get_valid_web_user_id),
+) -> dict[str, Any]:
+    """Phase 75 — derived list of categories (popular ∪ featured tags+category).
+
+    Cheap helper for the UI filter chips. Operators don't need to maintain
+    a hand-curated list — we surface whatever the registry already returns
+    via popular / featured. Empty list when the registry is silent.
+    """
+    _ensure_enabled()
+    client = ClawHubClient()
+    popular = await client.list_popular(limit=50)
+    featured = await client.list_featured(limit=20)
+    bag: set[str] = set()
+    for s in (*popular, *featured):
+        if s.category:
+            bag.add(s.category)
+    return {"ok": True, "categories": sorted(bag)}
 
 
 @router.get("/installed")
@@ -172,3 +250,66 @@ async def marketplace_update(
             raise HTTPException(status_code=404, detail=msg)
         raise HTTPException(status_code=500, detail=msg)
     return {"ok": True, "message": msg}
+
+
+@router.post("/-/check-updates-now")
+async def marketplace_check_updates_now(
+    db: Session = Depends(get_db),
+    app_user_id: str = Depends(get_valid_web_user_id),
+) -> dict[str, Any]:
+    """Phase 75 — owner-triggered immediate update probe.
+
+    Calls :meth:`SkillUpdateChecker.scan_once` directly so the operator
+    doesn't have to wait for the periodic interval (default 1 day). This
+    is **notify-only** — it stamps ``available_version`` on each installed
+    row but never re-installs.
+    """
+    _ensure_enabled()
+    _require_owner(db, app_user_id)
+    from app.services.skills.update_checker import get_update_checker
+
+    counters = await get_update_checker().scan_once()
+    return {"ok": True, "counters": counters}
+
+
+@router.get("/-/capabilities")
+def marketplace_capabilities(
+    _: str = Depends(get_valid_web_user_id),
+) -> dict[str, Any]:
+    """Phase 75 — single-shot snapshot the UI uses for banners/toggles.
+
+    Surfaces the toggles operators care about: clawhub on/off, sandbox
+    mode, the permission allowlist (so the UI can warn about skills that
+    request beyond what's allowed), the auto-update notify-only flag,
+    and the featured panel toggle.
+    """
+    _ensure_enabled()
+    s = get_settings()
+    allow_raw = (
+        getattr(s, "nexa_marketplace_skill_permissions_allowlist", "") or ""
+    )
+    allow = [p.strip().lower() for p in str(allow_raw).split(",") if p.strip()]
+    return {
+        "ok": True,
+        "clawhub_enabled": bool(getattr(s, "nexa_clawhub_enabled", True)),
+        "panel_enabled": bool(getattr(s, "nexa_marketplace_panel_enabled", True)),
+        "featured_panel_enabled": bool(
+            getattr(s, "nexa_marketplace_featured_panel_enabled", True)
+        ),
+        "auto_update_skills": bool(
+            getattr(s, "nexa_marketplace_auto_update_skills", False)
+        ),
+        "update_check_interval_seconds": int(
+            getattr(s, "nexa_marketplace_update_check_interval_seconds", 86400) or 0
+        ),
+        "sandbox_mode": bool(getattr(s, "nexa_marketplace_sandbox_mode", True)),
+        "skill_timeout_seconds": int(
+            getattr(s, "nexa_marketplace_skill_timeout_seconds", 30) or 0
+        ),
+        "permissions_allowlist": allow,
+        "trusted_publishers": [
+            p.strip().lower()
+            for p in str(getattr(s, "nexa_clawhub_trusted_publishers", "") or "").split(",")
+            if p.strip()
+        ],
+    }

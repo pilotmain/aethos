@@ -51,12 +51,56 @@ async def popular_skills(limit: int = 20, _: None = Depends(verify_cron_token)) 
     return {"ok": True, "skills": [r.to_dict() for r in results]}
 
 
+@router.get("/featured")
+async def featured_skills(
+    limit: int = 12, _: None = Depends(verify_cron_token)
+) -> dict[str, Any]:
+    """Phase 75 — cron-token mirror of the marketplace ``/featured`` endpoint."""
+    results = await _client.list_featured(limit)
+    return {"ok": True, "skills": [r.to_dict() for r in results]}
+
+
 @router.get("/skill/{name}")
 async def get_skill(name: str, _: None = Depends(verify_cron_token)) -> dict[str, Any]:
     skill = await _client.get_skill_info(name)
     if not skill:
         raise HTTPException(status_code=404, detail="skill_not_found")
     return {"ok": True, "skill": skill.to_dict()}
+
+
+@router.get("/skill/{name}/details")
+async def get_skill_details(
+    name: str, _: None = Depends(verify_cron_token)
+) -> dict[str, Any]:
+    """Phase 75 — cron-token mirror of marketplace ``/skill/{name}/details``."""
+    skill = await _client.get_skill_info(name)
+    if not skill:
+        raise HTTPException(status_code=404, detail="skill_not_found")
+    payload = skill.to_dict()
+    return {
+        "ok": True,
+        "skill": payload,
+        "documentation": {
+            "readme_url": payload.get("readme_url", ""),
+            "changelog_url": payload.get("changelog_url", ""),
+            "manifest_url": payload.get("manifest_url", ""),
+        },
+        "dependencies": payload.get("skill_dependencies", []),
+        "permissions": payload.get("permissions", []),
+    }
+
+
+@router.post("/-/check-updates-now")
+async def check_updates_now(_: None = Depends(verify_cron_token)) -> dict[str, Any]:
+    """Phase 75 — cron-token mirror of ``/-/check-updates-now``.
+
+    Lets a scheduled cron sweep the installed catalogue without going
+    through the Telegram-owner gate.
+    """
+    from app.services.skills.update_checker import get_update_checker
+
+    counters = await get_update_checker().scan_once()
+    return {"ok": True, "counters": counters}
 
 
 @router.post("/install")

@@ -252,6 +252,15 @@ async def lifespan(app: FastAPI):
         get_revert_monitor().start()
     except Exception as exc:
         logging.getLogger("aethos").warning("self_improvement revert_monitor start failed: %s", exc)
+    # Phase 75 — start the marketplace skill update checker (no-op if
+    # NEXA_CLAWHUB_ENABLED=false, NEXA_MARKETPLACE_PANEL_ENABLED=false, or
+    # the interval is set to 0).
+    try:
+        from app.services.skills.update_checker import get_update_checker
+
+        get_update_checker().start()
+    except Exception as exc:
+        logging.getLogger("aethos").warning("marketplace update_checker start failed: %s", exc)
     yield
     try:
         from app.services.browser.session import shutdown_browser_session
@@ -280,6 +289,13 @@ async def lifespan(app: FastAPI):
         await get_revert_monitor().stop()
     except Exception as exc:
         logging.getLogger("aethos").warning("self_improvement revert_monitor shutdown failed: %s", exc)
+    # Phase 75 — stop the marketplace update checker (no-op if not running).
+    try:
+        from app.services.skills.update_checker import get_update_checker
+
+        await get_update_checker().stop()
+    except Exception as exc:
+        logging.getLogger("aethos").warning("marketplace update_checker shutdown failed: %s", exc)
     try:
         from app.services.cron.scheduler import get_nexa_cron_scheduler
 

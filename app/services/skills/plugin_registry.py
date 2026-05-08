@@ -17,6 +17,7 @@ from typing import Any
 from app.core.config import REPO_ROOT, get_settings
 from app.services.skills.executor import (
     SkillExecutionResult,
+    assert_permissions_allowed,
     execute_python_skill,
     execute_shell_skill,
 )
@@ -140,6 +141,14 @@ class PluginSkillRegistry:
         skill = self.get_skill(name)
         if skill is None:
             return SkillExecutionResult(success=False, output=None, error=f"Skill {name!r} not found")
+
+        # Phase 75 — permission allowlist gate. Runs identically for python
+        # and shell execution_types and short-circuits to a structured
+        # failure (no module import, no subprocess) when sandbox-mode is on
+        # and the skill requested permissions outside the allowlist.
+        deny_reason = assert_permissions_allowed(skill)
+        if deny_reason:
+            return SkillExecutionResult(success=False, output=None, error=deny_reason)
 
         start = time.perf_counter()
 

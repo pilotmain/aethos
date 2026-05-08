@@ -324,6 +324,31 @@ class Settings(BaseSettings):
     # endpoints for browser users; mutating actions still require Telegram-linked owner).
     nexa_marketplace_panel_enabled: bool = True
 
+    # Phase 75 — Marketplace polish (safe-adapt v1).
+    # ``_AUTO_UPDATE_SKILLS`` controls the periodic SkillUpdateChecker; even when on,
+    # v1 is strictly notify-only — it stamps ``available_version`` + emits an event
+    # but never silently re-installs. Apply via the existing /update endpoint.
+    nexa_marketplace_auto_update_skills: bool = False
+    # Periodic interval for the update checker (seconds). 0 disables the loop entirely
+    # even when ``_AUTO_UPDATE_SKILLS`` is true.
+    nexa_marketplace_update_check_interval_seconds: int = 86400  # daily
+    # Sandbox mode toggle. v1 enforces a per-skill timeout and a permission allowlist.
+    # ``true`` activates the timeout/permission gates in execute_python_skill;
+    # ``false`` keeps the legacy unbounded behavior (back-compat for already-trusted
+    # builtin handlers). Docker isolation is deferred (75.5).
+    nexa_marketplace_sandbox_mode: bool = True
+    nexa_marketplace_skill_timeout_seconds: int = 30
+    # Comma-separated list of permission strings a marketplace skill may request and
+    # still execute under sandbox mode. Empty (default) = strict deny: any declared
+    # ``permissions`` entry blocks execution. Common values:
+    #   network,filesystem_write,filesystem_read,subprocess
+    nexa_marketplace_skill_permissions_allowlist: str = ""
+    # Whether to render the "Featured" row on the Marketplace web panel. The
+    # underlying upstream may not expose ``/skills/featured``; the client returns
+    # ``[]`` defensively, so the row simply renders empty when the registry is
+    # silent. Operators can hide the row entirely by setting this to ``false``.
+    nexa_marketplace_featured_panel_enabled: bool = True
+
     # Phase 73b — Self-Improvement (Genesis Loop, safe-adapt v1).
     # Owner-driven: operator submits a problem statement + target file, the LLM
     # produces a unified diff, the diff is validated against an allowlist + size
