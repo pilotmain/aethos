@@ -521,6 +521,46 @@ def capabilities(
             "method": restart_method(),
             "valid_methods": sorted(_RESTART_METHODS),
         },
+        # Phase 73e — auto-revert wiring. The UI uses this to know whether
+        # to render the per-proposal auto-revert badge + disable toggle,
+        # and to surface the cooldown state so the operator can see why a
+        # 73d auto-merge-on-CI flow is currently paused.
+        "auto_revert": _auto_revert_capability_block(s),
+    }
+
+
+def _auto_revert_capability_block(s: Any) -> dict[str, Any]:
+    enabled = bool(getattr(s, "nexa_self_improvement_auto_revert_enabled", False))
+    cooldown_minutes = int(
+        getattr(s, "nexa_self_improvement_revert_cooldown_minutes", 30) or 30
+    )
+    in_cooldown = False
+    last_revert_age: float | None = None
+    try:
+        from app.services.agent.system_state import get_system_state
+
+        sysstate = get_system_state()
+        last_revert_age = sysstate.last_auto_revert_age_seconds()
+        in_cooldown = sysstate.in_auto_revert_cooldown(cooldown_minutes)
+    except Exception:  # noqa: BLE001
+        pass
+    return {
+        "enabled": enabled,
+        "threshold": float(
+            getattr(s, "nexa_self_improvement_revert_error_rate_threshold", 0.3) or 0.3
+        ),
+        "min_sample_size": int(
+            getattr(s, "nexa_self_improvement_revert_min_sample_size", 10) or 10
+        ),
+        "observation_window_seconds": int(
+            getattr(s, "nexa_self_improvement_revert_min_observation_window_seconds", 300) or 300
+        ),
+        "post_restart_grace_seconds": int(
+            getattr(s, "nexa_self_improvement_revert_post_restart_grace_seconds", 60) or 60
+        ),
+        "cooldown_minutes": cooldown_minutes,
+        "in_cooldown": bool(in_cooldown),
+        "last_auto_revert_age_seconds": last_revert_age,
     }
 
 
@@ -919,3 +959,64 @@ async def revert_merge(
             "base_branch": revert_pr.base_branch,
         },
     }
+
+
+# =============================================================================
+# Phase 73e — Auto-revert (post-merge regression watcher)
+# =============================================================================
+#
+# These endpoints are gated by ``NEXA_SELF_IMPROVEMENT_ENABLED`` (the 73b
+# master switch). The auto-revert behaviour itself is gated by
+# ``NEXA_SELF_IMPROVEMENT_AUTO_REVERT_ENABLED``; when off, the per-proposal
+# disable toggle still works (so an operator can pre-disable a risky
+# proposal even with the global feature flag flipped on later) but
+# ``/-/revert-scan-now`` returns ``{"status":"disabled"}``.
+
+
+@router.post("/{proposal_id}/auto-revert")
+def set_auto_revert(
+    proposal_id: str,
+    payload: dict[str, Any] | None = None,
+    db: Session = Depends(get_db),
+    app_user_id: str = Depends(get_valid_web_user_id),
+) -> dict[str, Any]:
+    """Phase 73e — flip the per-proposal ``auto_revert_disabled`` flag.
+
+    Body: ``{"disabled": true|false}``. Default true (i.e. POST with an
+    empty body opts the proposal *out* of auto-revert). Owner-only.
+    """
+    _ensure_enabled()
+    _require_owner(db, app_user_id)
+    p = _get_or_404(proposal_id)
+    disabled = True
+    if isinstance(payload, dict) and "disabled" in payload:
+        disabled = bool(payload.get("disabled"))
+    refreshed = get_proposal_store().set_auto_revert_disabled(p.id, disabled=disabled)
+    return {
+        "ok": True,
+        "proposal": _proposal_to_dict(refreshed) if refreshed else _proposal_to_dict(p),
+        "auto_revert_disabled": disabled,
+    }
+
+
+@router.post("/-/revert-scan-now")
+async def revert_scan_now(
+    db: Session = Depends(get_db),
+    app_user_id: str = Depends(get_valid_web_user_id),
+) -> dict[str, Any]:
+    """Phase 73e — owner-triggered immediate revert-monitor scan.
+
+    Returns the same counters dict the scheduled scans produce. Useful
+    after the operator has knocked over a deploy and wants to check
+    whether the auto-revert would fire *now* without waiting for the
+    periodic interval.
+    """
+    _ensure_enabled()
+    _require_owner(db, app_user_id)
+    s = get_settings()
+    if not bool(getattr(s, "nexa_self_improvement_auto_revert_enabled", False)):
+        return {"ok": True, "status": "disabled", "counters": None}
+    from app.services.self_improvement.revert_monitor import get_revert_monitor
+
+    counters = await get_revert_monitor().scan_once()
+    return {"ok": True, "status": "scanned", "counters": counters}

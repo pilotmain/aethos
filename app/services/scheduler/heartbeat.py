@@ -27,6 +27,15 @@ def run_heartbeat_cycle() -> dict[str, Any]:
             "interval_seconds": int(getattr(s, "nexa_heartbeat_interval_seconds", 300) or 300),
         },
     )
+    # Phase 73e — bump last_heartbeat_at so the detailed health endpoint
+    # and the auto-revert monitor can detect a stale process. Best-effort;
+    # never let a SQLite hiccup break the heartbeat.
+    try:
+        from app.services.agent.system_state import get_system_state
+
+        get_system_state().touch_heartbeat()
+    except Exception:  # noqa: BLE001
+        _log.debug("heartbeat last_heartbeat_at touch suppressed", exc_info=True)
     try:
         from app.services.agents.long_running import tick_all_registered
 

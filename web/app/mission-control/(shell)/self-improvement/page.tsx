@@ -19,10 +19,12 @@ import {
   type SelfImprovementCapabilities,
   type SelfImprovementProposal,
   type SelfImprovementStatus,
+  type SystemHealthDetailed,
   type ValidationSummary,
   applySelfImprovement,
   approveSelfImprovement,
   getSelfImprovementPrStatus,
+  getSystemHealthDetailed,
   listSelfImprovementProposals,
   mergeSelfImprovementPr,
   openSelfImprovementPr,
@@ -30,11 +32,13 @@ import {
   refreshSelfImprovementCi,
   rejectSelfImprovement,
   restartSelfImprovement,
+  revertScanNowSelfImprovement,
   revertSelfImprovement,
   revertSelfImprovementMerge,
   runSelfImprovementSandbox,
   selfImprovementCapabilities,
   setSelfImprovementAutoMerge,
+  setSelfImprovementAutoRevert,
 } from "@/lib/api/self_improvement";
 
 type Flash = { tone: "ok" | "warn" | "err"; text: string } | null;
@@ -90,6 +94,7 @@ export default function MissionControlImprovementsPage() {
   const [busy, setBusy] = useState<{ id: string; kind: string } | null>(null);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [caps, setCaps] = useState<SelfImprovementCapabilities | null>(null);
+  const [health, setHealth] = useState<SystemHealthDetailed | null>(null);
 
   const [title, setTitle] = useState("");
   const [problem, setProblem] = useState("");
@@ -143,6 +148,27 @@ export default function MissionControlImprovementsPage() {
       cancelled = true;
     };
   }, []);
+
+  // Phase 73e — poll the detailed health endpoint so the capabilities
+  // banner can show the rolling error rate + auto-revert cooldown state.
+  // Refreshed alongside proposals so a manual reload picks up the
+  // newest snapshot.
+  const refreshHealth = useCallback(async () => {
+    try {
+      const h = await getSystemHealthDetailed();
+      setHealth(h);
+    } catch {
+      setHealth(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshHealth();
+    const t = window.setInterval(() => {
+      void refreshHealth();
+    }, 30_000);
+    return () => window.clearInterval(t);
+  }, [refreshHealth]);
 
   const onPropose = useCallback(async () => {
     setProposing(true);
@@ -216,6 +242,9 @@ export default function MissionControlImprovementsPage() {
         | "refresh-ci"
         | "auto-merge-on"
         | "auto-merge-off"
+        | "auto-revert-disable"
+        | "auto-revert-enable"
+        | "revert-scan-now"
         | "restart",
     ) => {
       setBusy({ id, kind });
@@ -302,8 +331,35 @@ export default function MissionControlImprovementsPage() {
             tone: r.status === "scheduled" ? "ok" : "warn",
             text: `Restart ${r.status} (method=${r.method}${r.delay_s ? `, delay=${r.delay_s}s` : ""}).`,
           });
+        } else if (kind === "auto-revert-disable" || kind === "auto-revert-enable") {
+          const disable = kind === "auto-revert-disable";
+          const r = await setSelfImprovementAutoRevert(id, disable);
+          setFlash({
+            tone: "ok",
+            text: `Auto-revert: ${r.auto_revert_disabled ? "DISABLED" : "enabled (watching)"} for ${id}.`,
+          });
+        } else if (kind === "revert-scan-now") {
+          const r = await revertScanNowSelfImprovement();
+          if (r.status === "disabled") {
+            setFlash({
+              tone: "warn",
+              text:
+                "Auto-revert is globally disabled. Set NEXA_SELF_IMPROVEMENT_AUTO_REVERT_ENABLED=true to arm.",
+            });
+          } else {
+            const c = r.counters;
+            setFlash({
+              tone: c && c.reverted > 0 ? "warn" : "ok",
+              text:
+                `Revert scan: scanned=${c?.scanned ?? 0}, watched=${c?.watched ?? 0}, ` +
+                `cleared=${c?.cleared ?? 0}, reverted=${c?.reverted ?? 0}` +
+                `${c && c.revert_errors > 0 ? `, revert_errors=${c.revert_errors}` : ""}.`,
+            });
+          }
+          await refreshHealth();
         }
         await load();
+        await refreshHealth();
       } catch (e) {
         setFlash({
           tone: "err",
@@ -313,7 +369,7 @@ export default function MissionControlImprovementsPage() {
         setBusy(null);
       }
     },
-    [load],
+    [load, refreshHealth],
   );
 
   const flashClasses = useMemo(() => {
@@ -381,6 +437,58 @@ export default function MissionControlImprovementsPage() {
             >
               Restart API now
             </Button>
+          ) : null}
+          <span className="text-zinc-500">·</span>
+          <span>
+            <strong className="text-zinc-200">Auto-revert:</strong>{" "}
+            {caps.auto_revert.enabled ? (
+              <>
+                on (≥{caps.auto_revert.min_sample_size} mistakes,{" "}
+                {Math.round(caps.auto_revert.threshold * 100)}% threshold,{" "}
+                {Math.round(caps.auto_revert.observation_window_seconds / 60)}m
+                window)
+                {caps.auto_revert.in_cooldown ? (
+                  <span className="ml-1 rounded border border-amber-700 bg-amber-950/40 px-1.5 py-0.5 text-amber-200">
+                    cooldown active — auto-merge paused
+                  </span>
+                ) : null}
+              </>
+            ) : (
+              "disabled (set NEXA_SELF_IMPROVEMENT_AUTO_REVERT_ENABLED=true)"
+            )}
+          </span>
+          {caps.auto_revert.enabled ? (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => void runAction("__global__", "revert-scan-now")}
+            >
+              Scan now
+            </Button>
+          ) : null}
+          {health ? (
+            <>
+              <span className="text-zinc-500">·</span>
+              <span>
+                <strong className="text-zinc-200">Health:</strong>{" "}
+                {health.errors.errors}/{health.errors.total_actions} errors over
+                last {Math.round(health.errors.window_seconds / 60)}m
+                {" "}({(health.errors.error_rate * 100).toFixed(1)}%)
+                {health.heartbeat.enabled ? (
+                  <>
+                    {" · heartbeat "}
+                    {health.heartbeat.age_seconds == null
+                      ? "unknown"
+                      : `${Math.round(health.heartbeat.age_seconds)}s ago`}
+                    {health.heartbeat.stale ? (
+                      <span className="ml-1 rounded border border-rose-700 bg-rose-950/40 px-1.5 py-0.5 text-rose-200">
+                        stale
+                      </span>
+                    ) : null}
+                  </>
+                ) : null}
+              </span>
+            </>
           ) : null}
         </div>
       ) : null}
@@ -773,6 +881,55 @@ export default function MissionControlImprovementsPage() {
                   {p.merge_commit_sha ? (
                     <div className="mt-1 text-xs text-emerald-300">
                       merged commit: <code>{p.merge_commit_sha.slice(0, 12)}</code>
+                    </div>
+                  ) : null}
+                  {/* Phase 73e — auto-revert badge + per-proposal disable
+                      toggle. Only meaningful for proposals that reached the
+                      ``merged`` state (i.e. have a ``merged_at``). */}
+                  {p.merged_at ? (
+                    <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
+                      <span
+                        className={`inline-flex items-center rounded-md border px-1.5 py-0.5 ${
+                          p.auto_revert_state === "reverted"
+                            ? "border-rose-700 bg-rose-950/40 text-rose-200"
+                            : p.auto_revert_state === "cleared"
+                              ? "border-emerald-700 bg-emerald-950/40 text-emerald-200"
+                              : p.auto_revert_state === "disabled" || p.auto_revert_disabled
+                                ? "border-zinc-700 bg-zinc-900/60 text-zinc-300"
+                                : "border-amber-700 bg-amber-950/40 text-amber-200"
+                        }`}
+                        title={
+                          p.auto_revert_decided_at
+                            ? `last decided ${p.auto_revert_decided_at}`
+                            : undefined
+                        }
+                      >
+                        Auto-revert: {p.auto_revert_state ?? (p.auto_revert_disabled ? "disabled" : "watching")}
+                      </span>
+                      {caps?.auto_revert.enabled && p.status === "merged" ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={isBusy}
+                          onClick={() =>
+                            void runAction(
+                              p.id,
+                              p.auto_revert_disabled
+                                ? "auto-revert-enable"
+                                : "auto-revert-disable",
+                            )
+                          }
+                          title={
+                            p.auto_revert_disabled
+                              ? "Re-arm the watcher for this proposal."
+                              : "Stop the watcher from auto-opening a revert PR for this proposal."
+                          }
+                        >
+                          {p.auto_revert_disabled
+                            ? "Re-arm auto-revert"
+                            : "Disable auto-revert"}
+                        </Button>
+                      ) : null}
                     </div>
                   ) : null}
                   {p.revert_pr_number ? (

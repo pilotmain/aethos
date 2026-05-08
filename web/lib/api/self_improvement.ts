@@ -84,6 +84,15 @@ export type SelfImprovementProposal = {
   ci_checked_at: string | null;
   ci_first_seen_pending_at: string | null;
   auto_merge_on_ci_pass: boolean;
+  // Phase 73e — auto-revert tracking. ``auto_revert_state`` is ``"watching" |
+  // "reverted" | "cleared" | "disabled" | null`` (null when the proposal
+  // never reached merged state). ``auto_revert_disabled`` is the operator
+  // opt-out for this single proposal; the global feature flag overrides it
+  // when set to false.
+  auto_revert_state: string | null;
+  auto_revert_decided_at: string | null;
+  auto_revert_disabled: boolean;
+  merged_at: string | null;
 };
 
 export type SelfImprovementCapabilities = {
@@ -112,6 +121,19 @@ export type SelfImprovementCapabilities = {
     enabled: boolean;
     method: string;
     valid_methods: string[];
+  };
+  // Phase 73e — auto-revert capability block. ``in_cooldown`` is the
+  // single most-actionable flag: when true the 73d auto-merge-on-CI
+  // path is paused but manual operator merges remain available.
+  auto_revert: {
+    enabled: boolean;
+    threshold: number;
+    min_sample_size: number;
+    observation_window_seconds: number;
+    post_restart_grace_seconds: number;
+    cooldown_minutes: number;
+    in_cooldown: boolean;
+    last_auto_revert_age_seconds: number | null;
   };
 };
 
@@ -380,4 +402,99 @@ export async function restartSelfImprovement(): Promise<RestartResponse> {
   return apiFetch<RestartResponse>(`/self_improvement/restart`, {
     method: "POST",
   });
+}
+
+// --- Phase 73e: post-merge auto-revert -------------------------------
+
+export type SetAutoRevertResponse = {
+  ok: boolean;
+  proposal: SelfImprovementProposal;
+  auto_revert_disabled: boolean;
+};
+
+export async function setSelfImprovementAutoRevert(
+  id: string,
+  disabled: boolean,
+): Promise<SetAutoRevertResponse> {
+  return apiFetch<SetAutoRevertResponse>(
+    `/self_improvement/${encodeURIComponent(id)}/auto-revert`,
+    { method: "POST", body: JSON.stringify({ disabled }) },
+  );
+}
+
+export type RevertScanCounters = {
+  scanned: number;
+  watched: number;
+  cleared: number;
+  skipped_disabled: number;
+  skipped_grace: number;
+  skipped_low_sample: number;
+  skipped_below_threshold: number;
+  reverted: number;
+  revert_errors: number;
+};
+
+export type RevertScanNowResponse = {
+  ok: boolean;
+  status: "scanned" | "disabled";
+  counters: RevertScanCounters | null;
+};
+
+export async function revertScanNowSelfImprovement(): Promise<RevertScanNowResponse> {
+  return apiFetch<RevertScanNowResponse>(
+    `/self_improvement/-/revert-scan-now`,
+    { method: "POST" },
+  );
+}
+
+export type SystemHealthDetailed = {
+  ok: boolean;
+  app: string;
+  env: string;
+  process: {
+    started_at: string | null;
+    age_seconds: number | null;
+  };
+  heartbeat: {
+    enabled: boolean;
+    interval_seconds: number;
+    last_at: string | null;
+    age_seconds: number | null;
+    stale: boolean;
+  };
+  errors: {
+    window_seconds: number;
+    total_actions: number;
+    errors: number;
+    error_rate: number;
+  };
+  auto_revert: {
+    enabled: boolean;
+    threshold: number;
+    min_sample_size: number;
+    post_restart_grace_seconds: number;
+    cooldown_minutes: number;
+    in_cooldown: boolean;
+    last_auto_revert_age_seconds: number | null;
+    last_auto_revert_proposal_id: string | null;
+    observation_window_seconds: number;
+  };
+  last_deploy:
+    | {
+        proposal_id: string;
+        title: string;
+        pr_number: number | null;
+        merge_commit_sha: string | null;
+        merged_at: string | null;
+        age_seconds: number | null;
+        observation_window_seconds: number;
+        observation_window_remaining_seconds: number;
+        auto_revert_state: string | null;
+        auto_revert_disabled: boolean;
+      }
+    | null;
+};
+
+export async function getSystemHealthDetailed(): Promise<SystemHealthDetailed> {
+  return apiFetch<SystemHealthDetailed>(`/health/detailed`);
 }

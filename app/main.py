@@ -235,6 +235,23 @@ async def lifespan(app: FastAPI):
         get_ci_monitor().start()
     except Exception as exc:
         logging.getLogger("aethos").warning("self_improvement ci_monitor start failed: %s", exc)
+    # Phase 73e — record process-started-at for the post-restart grace
+    # window in the auto-revert monitor; harmless when auto_revert is off.
+    try:
+        from app.services.agent.system_state import get_system_state
+
+        get_system_state().mark_process_started()
+    except Exception as exc:
+        logging.getLogger("aethos").warning("system_state mark_process_started failed: %s", exc)
+    # Phase 73e — start the auto-revert monitor (no-op if any of the gates
+    # inside RevertMonitor.start are not satisfied: feature off, github
+    # off, or auto_revert disabled).
+    try:
+        from app.services.self_improvement.revert_monitor import get_revert_monitor
+
+        get_revert_monitor().start()
+    except Exception as exc:
+        logging.getLogger("aethos").warning("self_improvement revert_monitor start failed: %s", exc)
     yield
     try:
         from app.services.browser.session import shutdown_browser_session
@@ -256,6 +273,13 @@ async def lifespan(app: FastAPI):
         await get_ci_monitor().stop()
     except Exception as exc:
         logging.getLogger("aethos").warning("self_improvement ci_monitor shutdown failed: %s", exc)
+    # Phase 73e — stop the auto-revert monitor (no-op if not running).
+    try:
+        from app.services.self_improvement.revert_monitor import get_revert_monitor
+
+        await get_revert_monitor().stop()
+    except Exception as exc:
+        logging.getLogger("aethos").warning("self_improvement revert_monitor shutdown failed: %s", exc)
     try:
         from app.services.cron.scheduler import get_nexa_cron_scheduler
 

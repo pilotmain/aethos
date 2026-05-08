@@ -211,6 +211,33 @@ class CiMonitor:
             # Auto-merge handoff.
             if not p.auto_merge_on_ci_pass:
                 return
+            # Phase 73e — global cooldown gate. After an auto-revert
+            # fires, pause the auto-merge-on-CI path for a configurable
+            # window so we don't immediately re-merge a similar change
+            # and risk a revert/un-revert loop. Manual /merge-pr remains
+            # unaffected.
+            try:
+                from app.services.agent.system_state import get_system_state
+
+                s_local = get_settings()
+                _raw = getattr(
+                    s_local,
+                    "nexa_self_improvement_revert_cooldown_minutes",
+                    30,
+                )
+                cooldown_minutes = int(_raw) if _raw is not None else 30
+                if get_system_state().in_auto_revert_cooldown(cooldown_minutes):
+                    logger.info(
+                        "ci_monitor: auto-merge paused by 73e cooldown proposal=%s",
+                        p.id,
+                    )
+                    counters["awaiting_sandbox"] += 0  # no-op tally; keep keys stable
+                    return
+            except Exception:  # noqa: BLE001
+                logger.debug(
+                    "ci_monitor: cooldown probe failed; continuing without pause",
+                    exc_info=True,
+                )
             sandbox_age = store.get_sandbox_run_age_seconds(p.id)
             if sandbox_age is None or sandbox_age > APPLY_REQUIRES_FRESH_SANDBOX_S:
                 store.set_ci_state(

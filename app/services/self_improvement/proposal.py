@@ -160,6 +160,18 @@ class Proposal:
     ci_checked_at: str | None = None
     ci_first_seen_pending_at: str | None = None  # used for the max-age timeout
     auto_merge_on_ci_pass: bool = False
+    # Phase 73e — post-merge auto-revert tracking. ``auto_revert_state`` is one of:
+    #   None | "watching" | "reverted" | "cleared" | "disabled"
+    # ``watching`` is set automatically when a proposal flips to ``merged``;
+    # ``reverted`` is set when the revert monitor opens a revert PR for it;
+    # ``cleared`` is set after the observation window elapses without
+    # triggering; ``disabled`` is set by the operator via the per-proposal
+    # opt-out toggle. The per-proposal ``auto_revert_disabled`` flag is the
+    # source of truth for "should the monitor consider this proposal at all".
+    auto_revert_state: str | None = None
+    auto_revert_decided_at: str | None = None
+    auto_revert_disabled: bool = False
+    merged_at: str | None = None  # set when status flips to ``merged``
 
     def to_dict(self) -> dict[str, Any]:
         d = asdict(self)
@@ -483,6 +495,18 @@ class ProposalStore:
         ("auto_merge_on_ci_pass", "INTEGER NOT NULL DEFAULT 0"),
     )
 
+    # Phase 73e additive columns (auto-revert tracking).
+    _PHASE73E_COLUMNS: tuple[tuple[str, str], ...] = (
+        ("auto_revert_state", "TEXT"),
+        ("auto_revert_decided_at", "TEXT"),
+        ("auto_revert_disabled", "INTEGER NOT NULL DEFAULT 0"),
+        # ``merged_at`` is intentionally separate from ``updated_at`` so the
+        # revert monitor can compute the observation-window remaining without
+        # being thrown off by unrelated row updates (e.g. CI poll bumps
+        # updated_at every 30s).
+        ("merged_at", "TEXT"),
+    )
+
     def __init__(self, db_path: str | Path | None = None) -> None:
         if db_path is None:
             settings = get_settings()
@@ -533,6 +557,17 @@ class ProposalStore:
                     conn.execute(
                         f"ALTER TABLE self_improvement_proposals ADD COLUMN {col} {col_type}"
                     )
+            # Phase 73e lazy migration; same idempotent pattern.
+            existing_after_d = {
+                row[1] for row in conn.execute(
+                    "PRAGMA table_info(self_improvement_proposals)"
+                ).fetchall()
+            }
+            for col, col_type in self._PHASE73E_COLUMNS:
+                if col not in existing_after_d:
+                    conn.execute(
+                        f"ALTER TABLE self_improvement_proposals ADD COLUMN {col} {col_type}"
+                    )
 
     def _row_to_proposal(self, r: sqlite3.Row) -> Proposal:
         try:
@@ -565,6 +600,7 @@ class ProposalStore:
             except Exception:
                 ci_details = None
         auto_merge_raw = _opt("auto_merge_on_ci_pass")
+        auto_revert_disabled_raw = _opt("auto_revert_disabled")
         return Proposal(
             id=str(r["id"]),
             title=r["title"],
@@ -589,6 +625,10 @@ class ProposalStore:
             ci_checked_at=_opt("ci_checked_at"),
             ci_first_seen_pending_at=_opt("ci_first_seen_pending_at"),
             auto_merge_on_ci_pass=bool(auto_merge_raw) if auto_merge_raw is not None else False,
+            auto_revert_state=_opt("auto_revert_state"),
+            auto_revert_decided_at=_opt("auto_revert_decided_at"),
+            auto_revert_disabled=bool(auto_revert_disabled_raw) if auto_revert_disabled_raw is not None else False,
+            merged_at=_opt("merged_at"),
         )
 
     def create(
@@ -772,9 +812,17 @@ class ProposalStore:
 
         Each ``COALESCE`` keeps the existing value when the kwarg is ``None``
         so callers can update one or two fields without clobbering the rest.
+
+        Phase 73e side-effect: when ``new_status`` flips to ``"merged"``, the
+        ``merged_at`` timestamp is stamped (so the revert monitor can compute
+        the observation window without depending on ``updated_at``, which
+        gets bumped on every CI poll), and ``auto_revert_state`` is seeded
+        to ``"watching"`` unless the operator already opted out for this
+        proposal.
         """
         if new_status is not None and new_status not in VALID_STATUSES:
             raise ValueError(f"invalid_status:{new_status}")
+        bump_merged_at = new_status == STATUS_MERGED
         with self._lock, self._connect() as conn:
             conn.execute(
                 """
@@ -800,7 +848,145 @@ class ProposalStore:
                     proposal_id,
                 ),
             )
+            if bump_merged_at:
+                conn.execute(
+                    """
+                    UPDATE self_improvement_proposals
+                    SET merged_at = COALESCE(merged_at, datetime('now')),
+                        auto_revert_state = COALESCE(
+                            auto_revert_state,
+                            CASE WHEN COALESCE(auto_revert_disabled, 0) = 1
+                                 THEN 'disabled' ELSE 'watching' END
+                        )
+                    WHERE id = ?
+                    """,
+                    (proposal_id,),
+                )
         return self.get(proposal_id)
+
+    def set_auto_revert_state(
+        self,
+        proposal_id: str,
+        *,
+        state: str,
+    ) -> Proposal | None:
+        """Phase 73e — record the latest auto-revert decision for a proposal.
+
+        ``state`` is one of ``"watching" | "reverted" | "cleared" | "disabled"``;
+        unknown states are persisted as-is (the UI surfaces whatever lands
+        in this column).
+        """
+        with self._lock, self._connect() as conn:
+            conn.execute(
+                """
+                UPDATE self_improvement_proposals
+                SET auto_revert_state = ?,
+                    auto_revert_decided_at = datetime('now'),
+                    updated_at = datetime('now')
+                WHERE id = ?
+                """,
+                (state, proposal_id),
+            )
+        return self.get(proposal_id)
+
+    def set_auto_revert_disabled(
+        self,
+        proposal_id: str,
+        *,
+        disabled: bool,
+    ) -> Proposal | None:
+        """Phase 73e — operator opt-out for a single proposal.
+
+        Setting ``disabled=True`` also bumps ``auto_revert_state`` to
+        ``"disabled"`` so the UI badge reflects the new state immediately.
+        Setting it back to ``False`` re-arms the watcher for the remainder
+        of the observation window (status is left alone if already
+        ``"reverted"``/``"cleared"``).
+        """
+        with self._lock, self._connect() as conn:
+            if disabled:
+                conn.execute(
+                    """
+                    UPDATE self_improvement_proposals
+                    SET auto_revert_disabled = 1,
+                        auto_revert_state = 'disabled',
+                        auto_revert_decided_at = datetime('now'),
+                        updated_at = datetime('now')
+                    WHERE id = ?
+                    """,
+                    (proposal_id,),
+                )
+            else:
+                conn.execute(
+                    """
+                    UPDATE self_improvement_proposals
+                    SET auto_revert_disabled = 0,
+                        auto_revert_state = CASE
+                            WHEN auto_revert_state IN ('reverted', 'cleared')
+                                THEN auto_revert_state
+                            ELSE 'watching'
+                        END,
+                        auto_revert_decided_at = datetime('now'),
+                        updated_at = datetime('now')
+                    WHERE id = ?
+                    """,
+                    (proposal_id,),
+                )
+        return self.get(proposal_id)
+
+    def list_recent_merged_within(
+        self,
+        *,
+        window_seconds: int,
+        limit: int = 10,
+    ) -> list[Proposal]:
+        """Phase 73e — proposals whose ``merged_at`` falls inside the window.
+
+        Used by the revert monitor to scope its scan: any merge older than
+        ``window_seconds`` is past the observation window and no longer
+        eligible to fire an auto-revert. Newest-first; capped at ``limit``.
+        Only returns proposals in terminal merged states (``merged`` or
+        ``revert_pr_open``) — proposals that already moved to
+        ``revert_pr_open`` are still returned so the monitor can mark them
+        ``cleared`` and stop polling.
+        """
+        limit = max(1, min(int(limit or 10), 100))
+        window_seconds = max(1, int(window_seconds or 1))
+        with self._lock, self._connect() as conn:
+            cur = conn.execute(
+                """
+                SELECT * FROM self_improvement_proposals
+                WHERE merged_at IS NOT NULL
+                  AND status IN (?, ?)
+                  AND (julianday('now') - julianday(merged_at)) * 86400.0 <= ?
+                ORDER BY datetime(merged_at) DESC
+                LIMIT ?
+                """,
+                (STATUS_MERGED, STATUS_REVERT_PR_OPEN, float(window_seconds), limit),
+            )
+            rows = cur.fetchall()
+        return [self._row_to_proposal(r) for r in rows]
+
+    def get_merged_age_seconds(self, proposal_id: str) -> float | None:
+        """How long ago (in seconds) the proposal flipped to ``merged``."""
+        with self._lock, self._connect() as conn:
+            cur = conn.execute(
+                "SELECT merged_at FROM self_improvement_proposals WHERE id = ?",
+                (proposal_id,),
+            )
+            row = cur.fetchone()
+        if not row or not row["merged_at"]:
+            return None
+        try:
+            with self._connect() as conn:
+                cur = conn.execute(
+                    "SELECT (julianday('now') - julianday(?)) * 86400.0 AS secs",
+                    (row["merged_at"],),
+                )
+                got = cur.fetchone()
+                return float(got["secs"]) if got and got["secs"] is not None else None
+        except Exception:  # noqa: BLE001
+            return None
 
     def record_sandbox_result(
         self,

@@ -94,6 +94,20 @@ class AgentSupervisor:
                     agent,
                     f"High failure rate: {rate:.1f}% over last {total} actions (24h)",
                 )
+                # Phase 73e — nudge the auto-revert monitor so it doesn't
+                # have to wait for its next periodic tick. The monitor
+                # still does its own evaluation against the configured
+                # thresholds + observation window; this just shortens the
+                # detection latency on the unhealthy → revert decision.
+                if bool(getattr(s, "nexa_self_improvement_auto_revert_enabled", False)):
+                    try:
+                        from app.services.self_improvement.revert_monitor import (
+                            get_revert_monitor,
+                        )
+
+                        get_revert_monitor().kick_now()
+                    except Exception:  # noqa: BLE001
+                        logger.debug("revert_monitor kick_now suppressed", exc_info=True)
 
             if agent.status == AgentStatus.BUSY:
                 la = getattr(agent, "last_active", None)

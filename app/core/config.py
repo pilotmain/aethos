@@ -379,6 +379,23 @@ class Settings(BaseSettings):
     # file under ``app/`` so a uvicorn ``--reload`` worker picks the new
     # code up in-process.
     nexa_self_improvement_auto_restart_method: str = "uvicorn-reload"
+    # Phase 73e — post-merge auto-revert on regression. Default off.
+    # When on, the revert monitor watches the most-recent ``merged`` proposal
+    # for the configured observation window and, if the agent_audit
+    # ``mistakes`` table shows an error rate above the threshold (with at
+    # least the configured min sample size of recorded mistakes during the
+    # window AND a post-restart grace period elapsed), opens a revert PR via
+    # the existing GitHub client. The revert PR is **not** auto-merged in
+    # v1 — operator decides. After a revert fires, the cooldown pauses
+    # 73d auto-merge-on-CI for ``_REVERT_COOLDOWN_MINUTES`` minutes (manual
+    # operator merges remain available).
+    nexa_self_improvement_auto_revert_enabled: bool = False
+    nexa_self_improvement_revert_health_check_interval_seconds: int = 30
+    nexa_self_improvement_revert_error_rate_threshold: float = 0.3
+    nexa_self_improvement_revert_min_observation_window_seconds: int = 300
+    nexa_self_improvement_revert_min_sample_size: int = 10
+    nexa_self_improvement_revert_post_restart_grace_seconds: int = 60
+    nexa_self_improvement_revert_cooldown_minutes: int = 30
 
     # Phase 18a — multi-modal (vision / audio / image gen); provider wiring in later sub-phases.
     nexa_multimodal_enabled: bool = False
