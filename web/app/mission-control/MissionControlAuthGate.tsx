@@ -1,26 +1,33 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 
-import { isConfigured } from "@/lib/config";
+import { readConfig } from "@/lib/config";
 
 /**
- * Ensures browser-local Mission Control credentials exist before rendering MC routes.
- * Phase 80 — avoids silent failures; pairs with login page session redirect.
+ * Redirect to Connection settings when Mission Control has no stored API base + user id.
+ * Prefer standalone localStorage keys; fall back to merged config (e.g. `aethos_web_v1`).
  */
 export function MissionControlAuthGate({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const pathname = usePathname();
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    if (!isConfigured()) {
-      router.replace("/login");
+    const c = readConfig();
+    const userId =
+      (typeof window !== "undefined" ? window.localStorage.getItem("aethos_user_id") : null)?.trim() ||
+      c.userId.trim();
+    const apiBase =
+      (typeof window !== "undefined" ? window.localStorage.getItem("aethos_api_base") : null)?.trim() ||
+      c.apiBase.trim();
+
+    if (!userId || !apiBase) {
+      router.push("/login");
       return;
     }
     setReady(true);
-  }, [pathname, router]);
+  }, [router]);
 
   if (!ready) {
     return (

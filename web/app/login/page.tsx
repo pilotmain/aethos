@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useState } from "react";
 import { defaultConfig, readConfig, saveConfig } from "@/lib/config";
 import {
   describeAethosWebUserIdProblem,
@@ -19,7 +19,6 @@ export default function LoginPage() {
   const [isTesting, setIsTesting] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [sessionGate, setSessionGate] = useState<"checking" | "form">("checking");
 
   const trimmedUserId = userId.trim();
   const userIdProblem =
@@ -29,48 +28,6 @@ export default function LoginPage() {
         ? describeAethosWebUserIdProblem(userId)
         : null;
   const userIdInvalid = Boolean(userIdProblem);
-
-  useEffect(() => {
-    let cancelled = false;
-    const c = readConfig();
-    const uid = c.userId.trim();
-    const base = (c.apiBase || defaultConfig.apiBase).trim().replace(/\/$/, "");
-    if (!uid) {
-      setSessionGate("form");
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    const headers: Record<string, string> = {
-      Accept: "application/json",
-      "X-User-Id": uid,
-    };
-    const tok = c.token.trim();
-    if (tok) {
-      headers.Authorization = `Bearer ${tok}`;
-    }
-
-    fetch(`${base}/api/v1/user/settings`, {
-      headers,
-      cache: "no-store",
-    })
-      .then((res) => {
-        if (cancelled) return;
-        if (res.ok) {
-          router.replace("/mission-control/overview");
-          return;
-        }
-        setSessionGate("form");
-      })
-      .catch(() => {
-        if (!cancelled) setSessionGate("form");
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [router]);
 
   async function readErrorDetail(response: Response): Promise<string> {
     const text = await response.text();
@@ -88,43 +45,6 @@ export default function LoginPage() {
     return text.length > 220 ? `${text.slice(0, 220)}…` : text;
   }
 
-  async function testConnection(nextApiBase: string, nextUserId: string, nextToken: string): Promise<void> {
-    const base = (nextApiBase.trim() || defaultConfig.apiBase).replace(/\/$/, "");
-    const headers: Record<string, string> = {
-      Accept: "application/json",
-      "X-User-Id": nextUserId,
-    };
-    if (nextToken) {
-      headers.Authorization = `Bearer ${nextToken}`;
-    }
-
-    let response: Response;
-    try {
-      response = await fetch(`${base}/api/v1/user/settings`, {
-        headers,
-        cache: "no-store",
-      });
-    } catch {
-      throw new Error(`Cannot reach API at ${base}. Make sure the API is running and CORS allows this origin.`);
-    }
-
-    if (response.ok) {
-      return;
-    }
-    const detail = await readErrorDetail(response);
-    if (response.status === 401) {
-      throw new Error(
-        /bearer/i.test(detail)
-          ? "Invalid bearer token. Check that it matches NEXA_WEB_API_TOKEN in the API environment."
-          : `Unauthorized: ${detail}`,
-      );
-    }
-    if (response.status === 403) {
-      throw new Error("Access forbidden. This user may need the required role for this API.");
-    }
-    throw new Error(`API returned ${response.status}: ${detail || response.statusText}`);
-  }
-
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setSubmitAttempted(true);
@@ -137,23 +57,45 @@ export default function LoginPage() {
     const nextToken = token.trim();
     setIsTesting(true);
     try {
-      await testConnection(nextApiBase, nextUserId, nextToken);
+      const base = (nextApiBase.trim() || defaultConfig.apiBase).replace(/\/$/, "");
+      const headers: Record<string, string> = {
+        Accept: "application/json",
+        "X-User-Id": nextUserId,
+      };
+      if (nextToken) {
+        headers.Authorization = `Bearer ${nextToken}`;
+      }
+
+      let response: Response;
+      try {
+        response = await fetch(`${base}/api/v1/health`, {
+          headers,
+          cache: "no-store",
+        });
+      } catch {
+        throw new Error(`Cannot reach API at ${base}. Make sure the API is running and CORS allows this origin.`);
+      }
+
+      if (!response.ok) {
+        const detail = await readErrorDetail(response);
+        if (response.status === 401) {
+          throw new Error(
+            /bearer/i.test(detail)
+              ? "Invalid bearer token. Check that it matches NEXA_WEB_API_TOKEN in the API environment."
+              : `Unauthorized: ${detail}`,
+          );
+        }
+        throw new Error(`Connection failed (${response.status}): ${detail || response.statusText}`);
+      }
+
       saveConfig({ apiBase: nextApiBase, userId: nextUserId, token: nextToken });
       setSaved(true);
-      router.replace("/mission-control/overview");
+      router.push("/mission-control/overview");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Connection test failed.");
     } finally {
       setIsTesting(false);
     }
-  }
-
-  if (sessionGate === "checking") {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-zinc-950 px-4 text-sm text-zinc-400">
-        Checking authentication…
-      </div>
-    );
   }
 
   return (
