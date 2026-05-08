@@ -558,6 +558,45 @@ def build_llm_usage_summary(
     }
 
 
+def get_cost_summary_today(
+    db: Session,
+    app_user_id: str | None,
+    *,
+    is_owner: bool,
+) -> dict[str, Any]:
+    """
+    Phase 72 — compact "today's cost" block for the CEO dashboard.
+
+    Reuses :func:`build_llm_usage_summary` so the CEO dashboard and the
+    `/usage/*` API stay on a single aggregation source. Returns a stable shape
+    the web UI can render directly:
+
+    .. code-block:: python
+
+        {
+            "total_cost_usd": 0.0123,
+            "system_key_cost_usd": 0.0090,
+            "user_key_cost_usd": 0.0033,
+            "total_calls": 47,
+            "total_tokens": 18432,
+            "by_provider": [{"provider": "anthropic", "calls": ..., "estimated_cost_usd": ...}, ...],
+            "top_actions": [{"action": "...", "count": ..., "cost": ..., "percent": ...}, ...],
+            "scope": "owner" | "user",
+        }
+    """
+    summary = build_llm_usage_summary("today", db, app_user_id, is_owner=is_owner)
+    return {
+        "total_cost_usd": float(summary.get("estimated_cost_usd") or 0.0),
+        "system_key_cost_usd": float(summary.get("system_key_cost_usd") or 0.0),
+        "user_key_cost_usd": float(summary.get("user_key_cost_usd") or 0.0),
+        "total_calls": int(summary.get("total_calls") or 0),
+        "total_tokens": int(summary.get("total_tokens") or 0),
+        "by_provider": list(summary.get("by_provider") or []),
+        "top_actions": list((summary.get("top_cost_drivers") or [])[:5]),
+        "scope": "owner" if is_owner else "user",
+    }
+
+
 def get_recent_llm_usage(
     db: Session, limit: int, app_user_id: str | None, *, is_owner: bool
 ) -> list[dict[str, Any]]:

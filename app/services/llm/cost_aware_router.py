@@ -24,6 +24,7 @@ with sub-agent execution and intent classification when those flows opt in).
 
 from __future__ import annotations
 
+import json
 import logging
 from dataclasses import dataclass
 from typing import Any, Iterable
@@ -65,15 +66,120 @@ class CostAwareDecision:
 
     provider: str
     model: str
-    tier: str  # "default" | "cheap"
+    tier: str  # "default" | "cheap" | "domain_override"
     estimated_cost_usd: float | None
     over_budget: bool
     used_cheaper: bool
     enabled: bool
+    domain_override: bool = False
+    task_type: str | None = None
 
 
 def _settings(settings: Settings | None) -> Settings:
     return settings or get_settings()
+
+
+_KNOWN_PROVIDERS = ("anthropic", "openai", "deepseek", "openrouter", "ollama", "gemini")
+
+
+def _provider_for_model(model: str, *, default_provider: str) -> str:
+    """
+    Best-effort provider inference from a bare model id (used when the domain
+    override JSON only carries a model name like ``gpt-4o-mini``). Falls back
+    to ``default_provider`` so routing stays predictable when the model name
+    has no obvious vendor prefix.
+    """
+    nm = (model or "").strip().lower()
+    if not nm:
+        return default_provider
+    if "/" in nm:
+        head = nm.split("/", 1)[0]
+        if head in _KNOWN_PROVIDERS:
+            return head
+    if nm.startswith("claude") or nm.startswith("anthropic"):
+        return "anthropic"
+    if nm.startswith("gpt") or nm.startswith("o1") or nm.startswith("o3") or nm.startswith("o4"):
+        return "openai"
+    if nm.startswith("deepseek"):
+        return "deepseek"
+    if nm.startswith("gemini") or nm.startswith("google"):
+        return "gemini"
+    if nm.startswith("llama") or nm.startswith("qwen") or nm.startswith("mistral") or nm.startswith("phi"):
+        return "ollama"
+    return default_provider
+
+
+def parse_domain_model_overrides(
+    settings: Settings | None = None,
+) -> dict[str, tuple[str, str]]:
+    """
+    Parse :data:`Settings.nexa_cost_aware_default_model_per_domain` (a JSON string
+    like ``{"qa":"claude-haiku-4-5","ops":"gpt-4o-mini"}``) into a dict keyed by
+    lowercased domain name with ``(provider, model)`` values. Malformed JSON or
+    non-string values are skipped silently and logged at WARN — domain overrides
+    are an opt-in convenience and must never break the surrounding LLM call.
+
+    Each value may be either:
+      * ``"<provider>/<model>"`` (e.g. ``"openai/gpt-4o-mini"``), in which case
+        the provider is taken from the prefix,
+      * ``"<model>"``, in which case the provider is inferred via
+        :func:`_provider_for_model` (with the cost-aware default tier provider
+        as the fallback).
+      * ``{"provider": "...", "model": "..."}`` for explicit pairs.
+    """
+    s = _settings(settings)
+    raw = (getattr(s, "nexa_cost_aware_default_model_per_domain", "") or "").strip()
+    if not raw:
+        return {}
+    try:
+        data = json.loads(raw)
+    except (TypeError, ValueError) as exc:
+        logger.warning(
+            "cost_aware_router: nexa_cost_aware_default_model_per_domain is not valid JSON (%s); ignoring",
+            exc,
+        )
+        return {}
+    if not isinstance(data, dict):
+        logger.warning(
+            "cost_aware_router: nexa_cost_aware_default_model_per_domain must be a JSON object; got %s",
+            type(data).__name__,
+        )
+        return {}
+    default_provider = (
+        getattr(s, "nexa_cost_aware_default_provider", "") or ""
+    ).strip().lower() or "anthropic"
+    out: dict[str, tuple[str, str]] = {}
+    for raw_domain, raw_value in data.items():
+        domain = (str(raw_domain or "")).strip().lower()
+        if not domain:
+            continue
+        provider: str | None = None
+        model: str | None = None
+        if isinstance(raw_value, str):
+            v = raw_value.strip()
+            if not v:
+                continue
+            if "/" in v:
+                head, tail = v.split("/", 1)
+                if head.strip().lower() in _KNOWN_PROVIDERS:
+                    provider, model = head.strip().lower(), tail.strip()
+            if model is None:
+                model = v
+                provider = _provider_for_model(v, default_provider=default_provider)
+        elif isinstance(raw_value, dict):
+            provider = (str(raw_value.get("provider", "")) or "").strip().lower() or None
+            model = (str(raw_value.get("model", "")) or "").strip() or None
+            if model and not provider:
+                provider = _provider_for_model(model, default_provider=default_provider)
+        if not provider or not model:
+            logger.warning(
+                "cost_aware_router: skipping invalid domain override domain=%s value=%r",
+                domain,
+                raw_value,
+            )
+            continue
+        out[domain] = (provider, model)
+    return out
 
 
 def _normalize_messages(messages: Iterable[Any]) -> list[dict[str, Any]]:
@@ -117,19 +223,35 @@ def select_model_for_task(
     force_tier: str | None = None,
 ) -> tuple[str, str, str]:
     """
-    Pick ``(provider, model, tier)`` for ``task_type`` using ``TASK_TIER_HINTS``.
+    Pick ``(provider, model, tier)`` for ``task_type``.
 
-    When cost-aware routing is disabled, always returns the configured default tier
-    (callers can still call this for telemetry without behavior change). Pass
-    ``force_tier="cheap"`` or ``force_tier="default"`` to override the heuristic.
+    Resolution order (highest precedence first):
+
+    1. ``force_tier`` argument when set to ``"default"`` or ``"cheap"``.
+    2. Phase 72 domain override map
+       (:data:`Settings.nexa_cost_aware_default_model_per_domain`) — when
+       cost-aware routing is enabled and ``task_type`` matches a key, returns
+       ``(provider, model, "domain_override")``.
+    3. ``TASK_TIER_HINTS`` for the lowercased ``task_type``.
+    4. Default tier when nothing matches (also when cost-aware routing is off,
+       so callers can use this function for telemetry without behavior change).
     """
     s = _settings(settings)
+    cost_aware = bool(getattr(s, "nexa_cost_aware_enabled", False))
     tier = (force_tier or "").strip().lower() or None
+    domain_key = (task_type or "").strip().lower()
+
+    if tier not in {"default", "cheap"} and cost_aware and domain_key:
+        overrides = parse_domain_model_overrides(s)
+        pair = overrides.get(domain_key)
+        if pair is not None:
+            return pair[0], pair[1], "domain_override"
+
     if tier not in {"default", "cheap"}:
-        if not bool(getattr(s, "nexa_cost_aware_enabled", False)):
+        if not cost_aware:
             tier = "default"
         else:
-            hint = TASK_TIER_HINTS.get((task_type or "").strip().lower(), "default")
+            hint = TASK_TIER_HINTS.get(domain_key, "default")
             tier = hint if hint in {"default", "cheap"} else "default"
 
     if tier == "cheap":
@@ -213,25 +335,30 @@ def route_for_task(
     s = _settings(settings)
     enabled = bool(getattr(s, "nexa_cost_aware_enabled", False))
     provider, model, tier = select_model_for_task(task_type, settings=s)
+    domain_override = tier == "domain_override"
     estimated = estimate_messages_cost(
         provider, model, messages, expected_output_tokens=expected_output_tokens
     )
     used_cheaper = False
     over_budget = False
 
+    # Domain overrides are an explicit operator choice — do not silently downgrade them.
+    # The over-budget check still runs and is reported on the decision so callers can
+    # surface a warning, but only the heuristic-tier path actually swaps models.
     if enabled and estimated is not None:
         budget = float(getattr(s, "nexa_cost_aware_max_per_task_usd", 0.0) or 0.0)
         over_budget = budget > 0 and estimated > budget
-        downgrade = recommend_cheaper_model_if_over_budget(
-            provider, model, estimated, settings=s
-        )
-        if downgrade is not None:
-            provider, model = downgrade
-            tier = "cheap"
-            used_cheaper = True
-            estimated = estimate_messages_cost(
-                provider, model, messages, expected_output_tokens=expected_output_tokens
+        if not domain_override:
+            downgrade = recommend_cheaper_model_if_over_budget(
+                provider, model, estimated, settings=s
             )
+            if downgrade is not None:
+                provider, model = downgrade
+                tier = "cheap"
+                used_cheaper = True
+                estimated = estimate_messages_cost(
+                    provider, model, messages, expected_output_tokens=expected_output_tokens
+                )
 
     decision = CostAwareDecision(
         provider=provider,
@@ -241,6 +368,8 @@ def route_for_task(
         over_budget=over_budget,
         used_cheaper=used_cheaper,
         enabled=enabled,
+        domain_override=domain_override,
+        task_type=(task_type or None),
     )
     logger.info(
         "cost_aware_router decision task=%s tier=%s provider=%s model=%s "
@@ -262,6 +391,7 @@ __all__ = [
     "TASK_TIER_HINTS",
     "estimate_messages_cost",
     "estimate_token_count",
+    "parse_domain_model_overrides",
     "recommend_cheaper_model_if_over_budget",
     "route_for_task",
     "select_model_for_task",

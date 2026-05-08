@@ -8,11 +8,18 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
+from sqlalchemy.orm import Session
 
+from app.core.db import get_db
 from app.core.security import get_valid_web_user_id
 from app.services.agent.activity_tracker import get_activity_tracker
 from app.services.agent.supervisor import get_supervisor
+from app.services.llm_usage_recorder import get_cost_summary_today
 from app.services.sub_agent_registry import AgentRegistry, AgentStatus
+from app.services.user_capabilities import (
+    get_telegram_role_for_app_user,
+    is_owner_role,
+)
 
 from app.api.routes.agent_spawn import (
     _agent_payload,
@@ -32,7 +39,10 @@ class RedirectRequest(BaseModel):
 
 
 @router.get("/dashboard")
-def get_ceo_dashboard(app_user_id: str = Depends(get_valid_web_user_id)) -> dict[str, Any]:
+def get_ceo_dashboard(
+    db: Session = Depends(get_db),
+    app_user_id: str = Depends(get_valid_web_user_id),
+) -> dict[str, Any]:
     scopes = _api_orchestration_scopes(app_user_id)
     registry = AgentRegistry()
     tracker = get_activity_tracker()
@@ -64,6 +74,22 @@ def get_ceo_dashboard(app_user_id: str = Depends(get_valid_web_user_id)) -> dict
     if tw > 0:
         overall = round(sum(r * w for r, w in actions_weights) / tw, 1)
 
+    is_owner = is_owner_role(get_telegram_role_for_app_user(db, app_user_id))
+    try:
+        cost_today = get_cost_summary_today(db, app_user_id, is_owner=is_owner)
+    except Exception:  # noqa: BLE001
+        cost_today = {
+            "total_cost_usd": 0.0,
+            "system_key_cost_usd": 0.0,
+            "user_key_cost_usd": 0.0,
+            "total_calls": 0,
+            "total_tokens": 0,
+            "by_provider": [],
+            "top_actions": [],
+            "scope": "owner" if is_owner else "user",
+            "error": "cost_summary_unavailable",
+        }
+
     summary = {
         "total_agents": len(agents),
         "active_agents": len([a for a in agents if a.status.value == "idle"]),
@@ -71,9 +97,16 @@ def get_ceo_dashboard(app_user_id: str = Depends(get_valid_web_user_id)) -> dict
         "paused_agents": len([a for a in agents if a.status.value == "paused"]),
         "total_actions_today": total_actions_today,
         "overall_success_rate": overall,
+        "total_cost_today_usd": float(cost_today.get("total_cost_usd") or 0.0),
+        "total_llm_calls_today": int(cost_today.get("total_calls") or 0),
     }
 
-    return {"ok": True, "agents": agent_insights, "summary": summary}
+    return {
+        "ok": True,
+        "agents": agent_insights,
+        "summary": summary,
+        "cost_today": cost_today,
+    }
 
 
 @router.get("/agent/{agent_id}/insights")

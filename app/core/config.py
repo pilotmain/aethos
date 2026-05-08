@@ -124,6 +124,15 @@ class Settings(BaseSettings):
     nexa_cost_aware_default_model: str = "claude-sonnet-4-5"
     nexa_cost_aware_cheap_provider: str = "anthropic"
     nexa_cost_aware_cheap_model: str = "claude-haiku-4-5"
+    # Phase 72 — production wiring of the Phase 70 cost-aware helper.
+    # JSON map: {"qa":"claude-haiku-4-5","security":"claude-sonnet-4-5","ops":"gpt-4o-mini"}
+    # Empty string disables domain-specific overrides (tier hints still apply). Models referenced
+    # here only switch the Anthropic chain head; non-Anthropic providers fall back to the
+    # configured chain (`primary_complete_messages` keeps its multi-provider semantics).
+    nexa_cost_aware_default_model_per_domain: str = ""
+    # Provider name appended to the LLM fallback chain when cost-aware routing is enabled.
+    # Defaults to ``ollama`` so a local model becomes the last-resort safety net.
+    nexa_cost_aware_fallback_provider: str = "ollama"
     # Phase 70 — when true, ``host_executor.execute_payload`` defaults to ``simulate=True``
     # and returns a planned-actions summary instead of running anything. Callers can still
     # pass ``simulate=False`` explicitly. Off by default to preserve current behavior.

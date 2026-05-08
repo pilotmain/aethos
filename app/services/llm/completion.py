@@ -39,13 +39,21 @@ def _build_chain() -> list[str]:
         for p in _parse_fallback_csv(s.nexa_llm_fallback_providers):
             if p not in chain and reg.get_provider(p):
                 chain.append(p)
-        return chain
+    else:
+        fb = _parse_fallback_csv(s.nexa_llm_fallback_providers)
+        chain = [primary]
+        for p in fb:
+            if p not in chain:
+                chain.append(p)
 
-    fb = _parse_fallback_csv(s.nexa_llm_fallback_providers)
-    chain = [primary]
-    for p in fb:
-        if p not in chain:
-            chain.append(p)
+    # Phase 72 — append the cost-aware fallback provider as the absolute last
+    # entry so a local Ollama install becomes the safety net when remote
+    # providers fail. Only adds it when cost-aware routing is enabled and the
+    # provider is registered (otherwise falls back to existing behavior).
+    if bool(getattr(s, "nexa_cost_aware_enabled", False)):
+        fp = (getattr(s, "nexa_cost_aware_fallback_provider", "") or "").strip().lower()
+        if fp and fp not in chain and reg.get_provider(fp):
+            chain.append(fp)
     return chain
 
 
@@ -104,8 +112,20 @@ def primary_complete_messages(
     anthropic_model_override: str | None = None,
     budget_member_id: str | None = None,
     budget_member_name: str | None = None,
+    task_type: str | None = None,
 ) -> str:
-    """Multi-message completion using the same provider chain as :func:`primary_complete_raw`."""
+    """
+    Multi-message completion using the same provider chain as :func:`primary_complete_raw`.
+
+    Phase 72 — when ``task_type`` is provided **and** cost-aware routing is enabled
+    (:data:`Settings.nexa_cost_aware_enabled`), the call is routed through
+    :func:`app.services.llm.cost_aware_router.route_for_task`. The resulting
+    ``CostAwareDecision`` is logged and, when it picks an Anthropic model, applied
+    via the existing ``anthropic_model_override`` mechanism (the explicit
+    ``anthropic_model_override`` argument still wins). Non-Anthropic decisions only
+    log telemetry and do not change provider routing — the multi-provider fallback
+    chain stays in charge so this remains backward-compatible.
+    """
     register_llm_providers_from_settings()
     reg = get_llm_registry()
     s = get_settings()
@@ -115,6 +135,37 @@ def primary_complete_messages(
 
     temp = temperature if temperature is not None else s.nexa_llm_temperature
     mt = max_tokens if max_tokens is not None else s.nexa_llm_max_tokens
+
+    cost_aware_anth_override: str | None = None
+    if (
+        task_type
+        and (anthropic_model_override is None or not anthropic_model_override.strip())
+        and bool(getattr(s, "nexa_cost_aware_enabled", False))
+    ):
+        try:
+            from app.services.llm.cost_aware_router import route_for_task
+
+            decision = route_for_task(task_type, messages, settings=s)
+            if (decision.provider or "").strip().lower() == "anthropic" and (decision.model or "").strip():
+                cost_aware_anth_override = decision.model.strip()
+            logger.info(
+                "primary_complete_messages cost_aware task=%s provider=%s model=%s tier=%s "
+                "estimated_usd=%s over_budget=%s used_cheaper=%s domain_override=%s",
+                task_type,
+                decision.provider,
+                decision.model,
+                decision.tier,
+                f"{decision.estimated_cost_usd:.6f}" if decision.estimated_cost_usd is not None else None,
+                decision.over_budget,
+                decision.used_cheaper,
+                decision.domain_override,
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("cost_aware routing failed for task=%s: %s", task_type, exc)
+
+    effective_anth_override = (
+        (anthropic_model_override or "").strip() or (cost_aware_anth_override or "").strip()
+    )
 
     if budget_member_id and budget_enabled():
         ok, err = check_budget_before_llm(
@@ -130,11 +181,11 @@ def primary_complete_messages(
         prov = reg.get_provider(name)
         if not prov:
             continue
-        if name == "anthropic" and (anthropic_model_override or "").strip():
+        if name == "anthropic" and effective_anth_override:
             from app.services.llm.providers.anthropic_backend import AnthropicBackend
 
             if isinstance(prov, AnthropicBackend):
-                prov = prov.clone_with_model(anthropic_model_override.strip())
+                prov = prov.clone_with_model(effective_anth_override)
         eg = _egress_map(name)
         block = assert_provider_egress_allowed(eg, None)
         if block:
