@@ -22,7 +22,10 @@ export type SelfImprovementStatus =
   | "approved"
   | "rejected"
   | "applied"
-  | "reverted";
+  | "reverted"
+  | "pr_open"
+  | "merged"
+  | "revert_pr_open";
 
 export type SandboxStep = {
   name: string;
@@ -57,6 +60,79 @@ export type SelfImprovementProposal = {
   sandbox_result: SandboxResult | null;
   applied_commit_sha: string | null;
   reverted_commit_sha: string | null;
+  pr_number: number | null;
+  pr_url: string | null;
+  github_branch: string | null;
+  merge_commit_sha: string | null;
+  revert_pr_number: number | null;
+  revert_pr_url: string | null;
+};
+
+export type SelfImprovementCapabilities = {
+  ok: boolean;
+  self_improvement: {
+    enabled: boolean;
+    max_files_per_proposal: number;
+    max_diff_lines: number;
+    allowed_paths: string;
+  };
+  github: {
+    enabled: boolean;
+    configured: boolean;
+    owner: string | null;
+    repo: string | null;
+    base_branch: string | null;
+    branch_prefix: string | null;
+    merge_method: string | null;
+  };
+  auto_restart: {
+    enabled: boolean;
+    deferred: string;
+  };
+};
+
+export type OpenPrResponse = {
+  ok: boolean;
+  proposal: SelfImprovementProposal;
+  pr: {
+    number: number;
+    url: string;
+    head_branch: string;
+    base_branch: string;
+    head_sha: string;
+  };
+};
+
+export type PrStatusResponse = {
+  ok: boolean;
+  pr: {
+    number: number;
+    state: string;
+    merged: boolean;
+    mergeable: boolean | null;
+    mergeable_state: string | null;
+    head_sha: string | null;
+    head_branch: string;
+    base_branch: string;
+  };
+};
+
+export type MergePrResponse = {
+  ok: boolean;
+  proposal: SelfImprovementProposal;
+  merge_commit_sha?: string;
+  note?: string;
+};
+
+export type RevertMergeResponse = {
+  ok: boolean;
+  proposal: SelfImprovementProposal;
+  revert_pr: {
+    number: number;
+    url: string;
+    head_branch: string;
+    base_branch: string;
+  };
 };
 
 export type ValidationFile = {
@@ -193,6 +269,45 @@ export async function revertSelfImprovement(
 ): Promise<RevertResponse> {
   return apiFetch<RevertResponse>(
     `/self_improvement/${encodeURIComponent(id)}/revert`,
+    { method: "POST" },
+  );
+}
+
+// --- Phase 73c: GitHub auto-merge flow ---------------------------------
+
+export async function selfImprovementCapabilities(): Promise<SelfImprovementCapabilities> {
+  return apiFetch<SelfImprovementCapabilities>(`/self_improvement/-/capabilities`);
+}
+
+export async function openSelfImprovementPr(id: string): Promise<OpenPrResponse> {
+  return apiFetch<OpenPrResponse>(
+    `/self_improvement/${encodeURIComponent(id)}/open-pr`,
+    { method: "POST" },
+  );
+}
+
+export async function getSelfImprovementPrStatus(
+  id: string,
+): Promise<PrStatusResponse> {
+  return apiFetch<PrStatusResponse>(
+    `/self_improvement/${encodeURIComponent(id)}/pr-status`,
+  );
+}
+
+export async function mergeSelfImprovementPr(
+  id: string,
+): Promise<MergePrResponse> {
+  return apiFetch<MergePrResponse>(
+    `/self_improvement/${encodeURIComponent(id)}/merge-pr`,
+    { method: "POST" },
+  );
+}
+
+export async function revertSelfImprovementMerge(
+  id: string,
+): Promise<RevertMergeResponse> {
+  return apiFetch<RevertMergeResponse>(
+    `/self_improvement/${encodeURIComponent(id)}/revert-merge`,
     { method: "POST" },
   );
 }

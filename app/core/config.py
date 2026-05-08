@@ -343,11 +343,24 @@ class Settings(BaseSettings):
     # outside this allowlist is rejected by the validator. Defaults are deliberately
     # narrow — operators can widen via env (e.g., add ``web/app/``) when ready.
     nexa_self_improvement_allowed_paths: str = "app/services/,app/api/routes/,docs/"
-    # Reserved for Phase 73c (parsed but unused in 73b — declared here so operator
-    # docs / .env stay aligned and adding the GitHub flow later doesn't require a
-    # config-side migration).
+    # Phase 73c — GitHub auto-merge flow (default off). When enabled, an approved
+    # proposal that has a fresh passing sandbox run can be turned into a
+    # ``self-improvement/<id>`` branch + PR on the configured remote and merged
+    # via the REST API. Reuses the 73b ``git worktree`` machinery for the diff
+    # apply, then ``git push``-es the worktree to ``origin``. Token is read at
+    # request time and never logged or echoed in API responses.
+    nexa_self_improvement_github_enabled: bool = False
     nexa_self_improvement_github_token: str = ""
-    nexa_self_improvement_base_branch: str = "main"
+    nexa_self_improvement_github_owner: str = "pilotmain"
+    nexa_self_improvement_github_repo: str = "aethos"
+    nexa_self_improvement_github_base_branch: str = "main"
+    nexa_self_improvement_github_pr_title_prefix: str = "[self-improvement]"
+    nexa_self_improvement_github_branch_prefix: str = "self-improvement/"
+    # Merge method passed to PUT /repos/{o}/{r}/pulls/{n}/merge ("squash" | "merge" | "rebase").
+    nexa_self_improvement_github_merge_method: str = "squash"
+    # Reserved for Phase 73d (parsed but unused in 73c — graceful in-process
+    # restart needs a process supervisor we don't currently have on this box).
+    nexa_self_improvement_auto_restart: bool = False
 
     # Phase 18a — multi-modal (vision / audio / image gen); provider wiring in later sub-phases.
     nexa_multimodal_enabled: bool = False

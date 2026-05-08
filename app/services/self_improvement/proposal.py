@@ -54,8 +54,24 @@ STATUS_APPROVED = "approved"
 STATUS_REJECTED = "rejected"
 STATUS_APPLIED = "applied"
 STATUS_REVERTED = "reverted"
+# Phase 73c — GitHub auto-merge flow. ``applied`` (73b, local commit) and
+# ``merged`` (73c, remote merge) are deliberately separate terminal states
+# so the operator can pick the local-only flow per proposal even when the
+# GitHub flow is enabled.
+STATUS_PR_OPEN = "pr_open"
+STATUS_MERGED = "merged"
+STATUS_REVERT_PR_OPEN = "revert_pr_open"
 
-VALID_STATUSES = {STATUS_PENDING, STATUS_APPROVED, STATUS_REJECTED, STATUS_APPLIED, STATUS_REVERTED}
+VALID_STATUSES = {
+    STATUS_PENDING,
+    STATUS_APPROVED,
+    STATUS_REJECTED,
+    STATUS_APPLIED,
+    STATUS_REVERTED,
+    STATUS_PR_OPEN,
+    STATUS_MERGED,
+    STATUS_REVERT_PR_OPEN,
+}
 
 
 # --- Validator constants ---------------------------------------------------
@@ -118,6 +134,14 @@ class Proposal:
     sandbox_result: dict[str, Any] | None
     applied_commit_sha: str | None
     reverted_commit_sha: str | None
+    # Phase 73c — GitHub auto-merge fields. ``None`` for proposals that
+    # never use the remote flow.
+    pr_number: int | None = None
+    pr_url: str | None = None
+    github_branch: str | None = None
+    merge_commit_sha: str | None = None
+    revert_pr_number: int | None = None
+    revert_pr_url: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         d = asdict(self)
@@ -420,6 +444,18 @@ class ProposalStore:
         )
     """
 
+    # Phase 73c — additive columns. We use the same lazy / idempotent pattern
+    # as :mod:`app.services.agent.learning` rather than introducing alembic
+    # for this single table.
+    _PHASE73C_COLUMNS: tuple[tuple[str, str], ...] = (
+        ("pr_number", "INTEGER"),
+        ("pr_url", "TEXT"),
+        ("github_branch", "TEXT"),
+        ("merge_commit_sha", "TEXT"),
+        ("revert_pr_number", "INTEGER"),
+        ("revert_pr_url", "TEXT"),
+    )
+
     def __init__(self, db_path: str | Path | None = None) -> None:
         if db_path is None:
             settings = get_settings()
@@ -446,6 +482,19 @@ class ProposalStore:
                 "CREATE INDEX IF NOT EXISTS idx_si_proposals_created_at "
                 "ON self_improvement_proposals(created_at)"
             )
+            # Phase 73c lazy migration: add any missing columns. SQLite's
+            # PRAGMA table_info gives us the current column set; we only
+            # ALTER what's missing so the path is idempotent across restarts.
+            existing = {
+                row[1] for row in conn.execute(
+                    "PRAGMA table_info(self_improvement_proposals)"
+                ).fetchall()
+            }
+            for col, col_type in self._PHASE73C_COLUMNS:
+                if col not in existing:
+                    conn.execute(
+                        f"ALTER TABLE self_improvement_proposals ADD COLUMN {col} {col_type}"
+                    )
 
     def _row_to_proposal(self, r: sqlite3.Row) -> Proposal:
         try:
@@ -458,6 +507,15 @@ class ProposalStore:
             sb = json.loads(r["sandbox_result"]) if r["sandbox_result"] else None
         except Exception:
             sb = None
+        # Phase 73c columns may not exist on rows from databases written before
+        # the lazy migration ran; access them defensively via .keys().
+        keys = set(r.keys())
+
+        def _opt(col: str) -> Any:
+            return r[col] if col in keys else None
+
+        pr_num = _opt("pr_number")
+        revert_pr_num = _opt("revert_pr_number")
         return Proposal(
             id=str(r["id"]),
             title=r["title"],
@@ -471,6 +529,12 @@ class ProposalStore:
             sandbox_result=sb,
             applied_commit_sha=r["applied_commit_sha"],
             reverted_commit_sha=r["reverted_commit_sha"],
+            pr_number=int(pr_num) if pr_num is not None else None,
+            pr_url=_opt("pr_url"),
+            github_branch=_opt("github_branch"),
+            merge_commit_sha=_opt("merge_commit_sha"),
+            revert_pr_number=int(revert_pr_num) if revert_pr_num is not None else None,
+            revert_pr_url=_opt("revert_pr_url"),
         )
 
     def create(
@@ -567,6 +631,52 @@ class ProposalStore:
             )
         return self.get(proposal_id)
 
+    def set_github_state(
+        self,
+        proposal_id: str,
+        *,
+        new_status: str | None = None,
+        pr_number: int | None = None,
+        pr_url: str | None = None,
+        github_branch: str | None = None,
+        merge_commit_sha: str | None = None,
+        revert_pr_number: int | None = None,
+        revert_pr_url: str | None = None,
+    ) -> Proposal | None:
+        """Phase 73c — patch the GitHub-flow columns + optionally bump status.
+
+        Each ``COALESCE`` keeps the existing value when the kwarg is ``None``
+        so callers can update one or two fields without clobbering the rest.
+        """
+        if new_status is not None and new_status not in VALID_STATUSES:
+            raise ValueError(f"invalid_status:{new_status}")
+        with self._lock, self._connect() as conn:
+            conn.execute(
+                """
+                UPDATE self_improvement_proposals
+                SET status = COALESCE(?, status),
+                    pr_number = COALESCE(?, pr_number),
+                    pr_url = COALESCE(?, pr_url),
+                    github_branch = COALESCE(?, github_branch),
+                    merge_commit_sha = COALESCE(?, merge_commit_sha),
+                    revert_pr_number = COALESCE(?, revert_pr_number),
+                    revert_pr_url = COALESCE(?, revert_pr_url),
+                    updated_at = datetime('now')
+                WHERE id = ?
+                """,
+                (
+                    new_status,
+                    pr_number,
+                    pr_url,
+                    github_branch,
+                    merge_commit_sha,
+                    revert_pr_number,
+                    revert_pr_url,
+                    proposal_id,
+                ),
+            )
+        return self.get(proposal_id)
+
     def record_sandbox_result(
         self,
         proposal_id: str,
@@ -625,8 +735,11 @@ __all__ = [
     "ProposalStore",
     "STATUS_APPLIED",
     "STATUS_APPROVED",
+    "STATUS_MERGED",
     "STATUS_PENDING",
+    "STATUS_PR_OPEN",
     "STATUS_REJECTED",
+    "STATUS_REVERT_PR_OPEN",
     "STATUS_REVERTED",
     "ValidationResult",
     "VALID_STATUSES",

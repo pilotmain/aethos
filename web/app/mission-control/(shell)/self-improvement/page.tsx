@@ -16,16 +16,22 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { formatMissionControlApiError } from "@/lib/api";
 import {
+  type SelfImprovementCapabilities,
   type SelfImprovementProposal,
   type SelfImprovementStatus,
   type ValidationSummary,
   applySelfImprovement,
   approveSelfImprovement,
+  getSelfImprovementPrStatus,
   listSelfImprovementProposals,
+  mergeSelfImprovementPr,
+  openSelfImprovementPr,
   proposeSelfImprovement,
   rejectSelfImprovement,
   revertSelfImprovement,
+  revertSelfImprovementMerge,
   runSelfImprovementSandbox,
+  selfImprovementCapabilities,
 } from "@/lib/api/self_improvement";
 
 type Flash = { tone: "ok" | "warn" | "err"; text: string } | null;
@@ -40,7 +46,13 @@ function statusBadgeClass(status: SelfImprovementStatus): string {
       return "border-rose-700 bg-rose-950/40 text-rose-200";
     case "applied":
       return "border-emerald-700 bg-emerald-950/40 text-emerald-200";
+    case "merged":
+      return "border-emerald-700 bg-emerald-950/40 text-emerald-200";
     case "reverted":
+      return "border-violet-700 bg-violet-950/40 text-violet-200";
+    case "pr_open":
+      return "border-cyan-700 bg-cyan-950/40 text-cyan-200";
+    case "revert_pr_open":
       return "border-violet-700 bg-violet-950/40 text-violet-200";
     default:
       return "border-zinc-700 bg-zinc-900/60 text-zinc-200";
@@ -74,6 +86,7 @@ export default function MissionControlImprovementsPage() {
   const [flash, setFlash] = useState<Flash>(null);
   const [busy, setBusy] = useState<{ id: string; kind: string } | null>(null);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [caps, setCaps] = useState<SelfImprovementCapabilities | null>(null);
 
   const [title, setTitle] = useState("");
   const [problem, setProblem] = useState("");
@@ -112,6 +125,21 @@ export default function MissionControlImprovementsPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const c = await selfImprovementCapabilities();
+        if (!cancelled) setCaps(c);
+      } catch {
+        if (!cancelled) setCaps(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const onPropose = useCallback(async () => {
     setProposing(true);
@@ -172,7 +200,16 @@ export default function MissionControlImprovementsPage() {
   const runAction = useCallback(
     async (
       id: string,
-      kind: "sandbox" | "approve" | "reject" | "apply" | "revert",
+      kind:
+        | "sandbox"
+        | "approve"
+        | "reject"
+        | "apply"
+        | "revert"
+        | "open-pr"
+        | "pr-status"
+        | "merge-pr"
+        | "revert-merge",
     ) => {
       setBusy({ id, kind });
       setFlash(null);
@@ -200,6 +237,36 @@ export default function MissionControlImprovementsPage() {
           setFlash({
             tone: "ok",
             text: `Reverted. New commit ${r.reverted_commit_sha?.slice(0, 7) ?? "?"}.`,
+          });
+        } else if (kind === "open-pr") {
+          const r = await openSelfImprovementPr(id);
+          setFlash({
+            tone: "ok",
+            text: `PR #${r.pr.number} opened on ${r.pr.head_branch} → ${r.pr.base_branch}.`,
+          });
+        } else if (kind === "pr-status") {
+          const r = await getSelfImprovementPrStatus(id);
+          const m = r.pr.mergeable;
+          const tone: "ok" | "warn" | "err" =
+            r.pr.merged ? "ok" : m === true ? "ok" : m === false ? "err" : "warn";
+          setFlash({
+            tone,
+            text:
+              `PR #${r.pr.number} state=${r.pr.state}, merged=${r.pr.merged}, ` +
+              `mergeable=${m === null ? "computing…" : String(m)}` +
+              `${r.pr.mergeable_state ? ` (${r.pr.mergeable_state})` : ""}.`,
+          });
+        } else if (kind === "merge-pr") {
+          const r = await mergeSelfImprovementPr(id);
+          setFlash({
+            tone: "ok",
+            text: `PR merged. Remote commit ${r.merge_commit_sha?.slice(0, 7) ?? "?"}. ${r.note ?? ""}`,
+          });
+        } else if (kind === "revert-merge") {
+          const r = await revertSelfImprovementMerge(id);
+          setFlash({
+            tone: "ok",
+            text: `Revert PR #${r.revert_pr.number} opened on ${r.revert_pr.head_branch}.`,
           });
         }
         await load();
@@ -245,6 +312,24 @@ export default function MissionControlImprovementsPage() {
       {topError ? (
         <div className="rounded-lg border border-amber-700 bg-amber-950/40 px-4 py-3 text-sm text-amber-200">
           {topError}
+        </div>
+      ) : null}
+
+      {caps ? (
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-zinc-800 bg-zinc-950/40 px-4 py-2 text-xs text-zinc-400">
+          <span>
+            <strong className="text-zinc-200">GitHub auto-merge:</strong>{" "}
+            {caps.github.enabled
+              ? caps.github.configured
+                ? `enabled (${caps.github.owner}/${caps.github.repo} · ${caps.github.merge_method} · base ${caps.github.base_branch})`
+                : "enabled but not fully configured (set NEXA_SELF_IMPROVEMENT_GITHUB_TOKEN/OWNER/REPO)"
+              : "disabled (set NEXA_SELF_IMPROVEMENT_GITHUB_ENABLED=true to opt in)"}
+          </span>
+          <span className="text-zinc-500">·</span>
+          <span>
+            <strong className="text-zinc-200">Auto-restart:</strong>{" "}
+            {caps.auto_restart.enabled ? "enabled" : `deferred (${caps.auto_restart.deferred})`}
+          </span>
         </div>
       ) : null}
 
@@ -488,6 +573,53 @@ export default function MissionControlImprovementsPage() {
                           {isBusy && busy?.kind === "revert" ? "Reverting…" : "Revert"}
                         </Button>
                       ) : null}
+                      {/* Phase 73c — GitHub flow buttons. Gated by capabilities so the
+                          UI hides them entirely when the GitHub flow is off. */}
+                      {caps?.github.enabled && p.status === "approved" ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={isBusy}
+                          onClick={() => void runAction(p.id, "open-pr")}
+                        >
+                          {isBusy && busy?.kind === "open-pr" ? "Opening PR…" : "Open PR"}
+                        </Button>
+                      ) : null}
+                      {caps?.github.enabled && p.status === "pr_open" ? (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={isBusy}
+                            onClick={() => void runAction(p.id, "pr-status")}
+                          >
+                            {isBusy && busy?.kind === "pr-status"
+                              ? "Refreshing…"
+                              : "Refresh PR status"}
+                          </Button>
+                          <Button
+                            size="sm"
+                            disabled={isBusy}
+                            onClick={() => void runAction(p.id, "merge-pr")}
+                          >
+                            {isBusy && busy?.kind === "merge-pr"
+                              ? "Merging…"
+                              : "Merge if mergeable"}
+                          </Button>
+                        </>
+                      ) : null}
+                      {caps?.github.enabled && p.status === "merged" ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={isBusy}
+                          onClick={() => void runAction(p.id, "revert-merge")}
+                        >
+                          {isBusy && busy?.kind === "revert-merge"
+                            ? "Opening revert PR…"
+                            : "Revert via PR"}
+                        </Button>
+                      ) : null}
                     </div>
                   </div>
                   {p.applied_commit_sha ? (
@@ -498,6 +630,50 @@ export default function MissionControlImprovementsPage() {
                   {p.reverted_commit_sha ? (
                     <div className="mt-1 text-xs text-violet-300">
                       reverted commit: <code>{p.reverted_commit_sha.slice(0, 12)}</code>
+                    </div>
+                  ) : null}
+                  {p.pr_number ? (
+                    <div className="mt-1 text-xs text-cyan-300">
+                      PR{" "}
+                      {p.pr_url ? (
+                        <a
+                          href={p.pr_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="underline"
+                        >
+                          #{p.pr_number}
+                        </a>
+                      ) : (
+                        <code>#{p.pr_number}</code>
+                      )}
+                      {p.github_branch ? (
+                        <>
+                          {" "}on branch <code>{p.github_branch}</code>
+                        </>
+                      ) : null}
+                    </div>
+                  ) : null}
+                  {p.merge_commit_sha ? (
+                    <div className="mt-1 text-xs text-emerald-300">
+                      merged commit: <code>{p.merge_commit_sha.slice(0, 12)}</code>
+                    </div>
+                  ) : null}
+                  {p.revert_pr_number ? (
+                    <div className="mt-1 text-xs text-violet-300">
+                      revert PR{" "}
+                      {p.revert_pr_url ? (
+                        <a
+                          href={p.revert_pr_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="underline"
+                        >
+                          #{p.revert_pr_number}
+                        </a>
+                      ) : (
+                        <code>#{p.revert_pr_number}</code>
+                      )}
                     </div>
                   ) : null}
                   <div className="mt-2 whitespace-pre-wrap break-words text-sm text-zinc-300">

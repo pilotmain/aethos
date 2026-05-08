@@ -57,11 +57,18 @@ from app.core.config import get_settings
 from app.core.db import get_db
 from app.core.security import get_valid_web_user_id
 from app.services.self_improvement.context import repo_root
+from app.services.self_improvement.github_client import (
+    GitHubError,
+    get_github_client,
+)
 from app.services.self_improvement.proposal import (
     STATUS_APPLIED,
     STATUS_APPROVED,
+    STATUS_MERGED,
     STATUS_PENDING,
+    STATUS_PR_OPEN,
     STATUS_REJECTED,
+    STATUS_REVERT_PR_OPEN,
     STATUS_REVERTED,
     Proposal,
     generate_proposal_diff,
@@ -415,4 +422,345 @@ def revert_proposal(
         "ok": True,
         "proposal": _proposal_to_dict(refreshed) if refreshed else _proposal_to_dict(p),
         "reverted_commit_sha": revert_sha,
+    }
+
+
+# =============================================================================
+# Phase 73c — GitHub auto-merge flow
+# =============================================================================
+#
+# These endpoints are gated by ``NEXA_SELF_IMPROVEMENT_GITHUB_ENABLED`` (the
+# 73b master switch ``NEXA_SELF_IMPROVEMENT_ENABLED`` must also be on; the
+# 73b ``_ensure_enabled`` is invoked by every endpoint below). Mutating
+# endpoints additionally require the Telegram-linked owner.
+#
+# State machine for the GitHub flow (parallel to the 73b local-apply flow):
+#
+#     pending --approve--> approved --open-pr--> pr_open
+#         pr_open --merge-pr--> merged
+#         merged --revert-merge--> revert_pr_open
+#
+# ``applied`` (73b) and ``merged`` (73c) are deliberately separate terminal
+# states — they describe two different deployment paths for the same diff.
+
+
+def _ensure_github_enabled() -> None:
+    s = get_settings()
+    if not bool(getattr(s, "nexa_self_improvement_github_enabled", False)):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="GitHub auto-merge is disabled (NEXA_SELF_IMPROVEMENT_GITHUB_ENABLED=false).",
+        )
+
+
+def _github_error_to_http(exc: GitHubError) -> HTTPException:
+    code = exc.code
+    if code in {"github_disabled", "github_token_missing"}:
+        return HTTPException(status_code=503, detail=str(exc))
+    if code in {"pr_not_found", "github_repo_not_configured"}:
+        return HTTPException(status_code=404, detail=str(exc))
+    if code == "not_mergeable" or code == "merge_conflict":
+        return HTTPException(status_code=409, detail=str(exc))
+    if code == "diff_does_not_apply" or code == "diff_apply_failed":
+        return HTTPException(status_code=412, detail=str(exc))
+    if code == "github_network_error":
+        return HTTPException(status_code=502, detail=str(exc))
+    return HTTPException(status_code=500, detail=str(exc))
+
+
+@router.get("/-/capabilities")
+def capabilities(
+    _: str = Depends(get_valid_web_user_id),
+) -> dict[str, Any]:
+    """Tell the UI which sub-features are wired in this deployment.
+
+    Open to any authenticated web user (read-only). The UI uses this to
+    decide whether to render the GitHub-flow buttons.
+    """
+    _ensure_enabled()
+    s = get_settings()
+    gh_client = get_github_client()
+    return {
+        "ok": True,
+        "self_improvement": {
+            "enabled": True,
+            "max_files_per_proposal": int(getattr(s, "nexa_self_improvement_max_files_per_proposal", 5) or 5),
+            "max_diff_lines": int(getattr(s, "nexa_self_improvement_max_diff_lines", 400) or 400),
+            "allowed_paths": str(getattr(s, "nexa_self_improvement_allowed_paths", "") or ""),
+        },
+        "github": {
+            "enabled": gh_client.enabled,
+            "configured": gh_client.has_token and bool(gh_client.owner) and bool(gh_client.repo),
+            "owner": gh_client.owner if gh_client.enabled else None,
+            "repo": gh_client.repo if gh_client.enabled else None,
+            "base_branch": gh_client.base_branch if gh_client.enabled else None,
+            "branch_prefix": gh_client.branch_prefix if gh_client.enabled else None,
+            "merge_method": gh_client.merge_method if gh_client.enabled else None,
+        },
+        # Deferred-to-73d note for the UI; we declare the flag here so the
+        # frontend can show a "coming in 73d" hint instead of a broken button.
+        "auto_restart": {
+            "enabled": False,
+            "deferred": "phase73d",
+        },
+    }
+
+
+@router.post("/{proposal_id}/open-pr")
+async def open_pr(
+    proposal_id: str,
+    db: Session = Depends(get_db),
+    app_user_id: str = Depends(get_valid_web_user_id),
+) -> dict[str, Any]:
+    """Push the diff to a fresh ``self-improvement/<id>`` branch and open a PR.
+
+    Hard preconditions (mirror the 73b local-apply gate):
+    * Proposal in ``approved`` state.
+    * Sandbox passed within :data:`APPLY_REQUIRES_FRESH_SANDBOX_S` seconds.
+    * GitHub flow enabled + token + owner/repo configured.
+    """
+    _ensure_enabled()
+    _ensure_github_enabled()
+    _require_owner(db, app_user_id)
+    p = _get_or_404(proposal_id)
+    if p.status != STATUS_APPROVED:
+        raise HTTPException(status_code=409, detail=f"cannot_open_pr_from_status:{p.status}")
+    sb = p.sandbox_result or {}
+    if not sb or not sb.get("success"):
+        raise HTTPException(status_code=412, detail="open_pr_requires_passing_sandbox_run")
+    age = get_proposal_store().get_sandbox_run_age_seconds(proposal_id)
+    if age is None or age > APPLY_REQUIRES_FRESH_SANDBOX_S:
+        raise HTTPException(
+            status_code=412,
+            detail=(
+                f"open_pr_requires_fresh_sandbox_run:age={age}s"
+                f">max_{APPLY_REQUIRES_FRESH_SANDBOX_S}s"
+            ),
+        )
+
+    gh = get_github_client()
+    pr_body = (
+        f"### Self-improvement proposal `{proposal_id}`\n\n"
+        f"**Problem statement:**\n\n{p.problem_statement.strip()}\n\n"
+        f"**Rationale:** {(p.rationale or 'n/a').strip()}\n\n"
+        f"**Targets:** {', '.join(p.target_paths)}\n\n"
+        f"_Generated and validated by AethOS Phase 73c (sandbox passed locally)._"
+    )
+    commit_message = (
+        f"[self-improvement:{proposal_id}] {p.title}\n\n"
+        f"{(p.rationale or '').strip()}\n\n"
+        f"Proposal-id: {proposal_id}"
+    )
+    try:
+        push = await gh.push_diff_branch(
+            proposal_id=proposal_id,
+            diff_text=p.diff,
+            commit_message=commit_message,
+            author_name="AethOS Self-Improvement",
+            author_email="self-improvement@aethos.local",
+        )
+        pr = await gh.open_pull_request(
+            head_branch=push.branch,
+            title=p.title,
+            body=pr_body,
+        )
+    except GitHubError as exc:
+        raise _github_error_to_http(exc) from exc
+
+    refreshed = get_proposal_store().set_github_state(
+        proposal_id,
+        new_status=STATUS_PR_OPEN,
+        pr_number=pr.number,
+        pr_url=pr.url,
+        github_branch=push.branch,
+    )
+    return {
+        "ok": True,
+        "proposal": _proposal_to_dict(refreshed) if refreshed else _proposal_to_dict(p),
+        "pr": {
+            "number": pr.number,
+            "url": pr.url,
+            "head_branch": push.branch,
+            "base_branch": pr.base_branch,
+            "head_sha": push.head_sha,
+        },
+    }
+
+
+@router.get("/{proposal_id}/pr-status")
+async def pr_status(
+    proposal_id: str,
+    db: Session = Depends(get_db),
+    app_user_id: str = Depends(get_valid_web_user_id),
+) -> dict[str, Any]:
+    """Refresh the PR status from GitHub. Owner-only.
+
+    Returns ``mergeable`` (True/False/None — None means GitHub is still
+    computing, retry shortly), ``mergeable_state``, ``state``, ``merged``.
+    """
+    _ensure_enabled()
+    _ensure_github_enabled()
+    _require_owner(db, app_user_id)
+    p = _get_or_404(proposal_id)
+    if not p.pr_number:
+        raise HTTPException(status_code=409, detail="proposal_has_no_open_pr")
+    try:
+        st = await get_github_client().get_pull_request_status(p.pr_number)
+    except GitHubError as exc:
+        raise _github_error_to_http(exc) from exc
+    return {
+        "ok": True,
+        "pr": {
+            "number": st.number,
+            "state": st.state,
+            "merged": st.merged,
+            "mergeable": st.mergeable,
+            "mergeable_state": st.mergeable_state,
+            "head_sha": st.head_sha,
+            "head_branch": st.head_branch,
+            "base_branch": st.base_branch,
+        },
+    }
+
+
+@router.post("/{proposal_id}/merge-pr")
+async def merge_pr(
+    proposal_id: str,
+    db: Session = Depends(get_db),
+    app_user_id: str = Depends(get_valid_web_user_id),
+) -> dict[str, Any]:
+    """Merge the proposal's PR if it's mergeable.
+
+    Hard preconditions:
+    * Proposal in ``pr_open`` state with a recorded PR number.
+    * Local sandbox passed within :data:`APPLY_REQUIRES_FRESH_SANDBOX_S`
+      seconds (matches the 73b apply gate; protects against stale sandboxes
+      surviving across long approval queues).
+    * GitHub-side ``mergeable=True`` (PR has no merge conflict). NOTE: this
+      repo currently has no Python/web CI workflow, so ``mergeable`` reflects
+      *only* conflict status — the local sandbox is the actual safety net.
+    """
+    _ensure_enabled()
+    _ensure_github_enabled()
+    _require_owner(db, app_user_id)
+    p = _get_or_404(proposal_id)
+    if p.status != STATUS_PR_OPEN or not p.pr_number:
+        raise HTTPException(status_code=409, detail=f"cannot_merge_from_status:{p.status}")
+    sb = p.sandbox_result or {}
+    if not sb or not sb.get("success"):
+        raise HTTPException(status_code=412, detail="merge_requires_passing_sandbox_run")
+    age = get_proposal_store().get_sandbox_run_age_seconds(proposal_id)
+    if age is None or age > APPLY_REQUIRES_FRESH_SANDBOX_S:
+        raise HTTPException(
+            status_code=412,
+            detail=(
+                f"merge_requires_fresh_sandbox_run:age={age}s"
+                f">max_{APPLY_REQUIRES_FRESH_SANDBOX_S}s"
+            ),
+        )
+
+    gh = get_github_client()
+    try:
+        st = await gh.get_pull_request_status(p.pr_number)
+    except GitHubError as exc:
+        raise _github_error_to_http(exc) from exc
+    if st.merged:
+        return {
+            "ok": True,
+            "proposal": _proposal_to_dict(p),
+            "note": "pr_already_merged",
+        }
+    if st.mergeable is False:
+        raise HTTPException(
+            status_code=409,
+            detail=f"pr_not_mergeable:state={st.mergeable_state}",
+        )
+    if st.mergeable is None:
+        raise HTTPException(
+            status_code=409,
+            detail="github_still_computing_mergeability_retry_shortly",
+        )
+
+    try:
+        merge = await gh.merge_pull_request(
+            p.pr_number,
+            commit_title=f"{gh.pr_title_prefix} {p.title}",
+            commit_message=(p.rationale or "").strip() or None,
+        )
+    except GitHubError as exc:
+        raise _github_error_to_http(exc) from exc
+
+    refreshed = get_proposal_store().set_github_state(
+        proposal_id,
+        new_status=STATUS_MERGED,
+        merge_commit_sha=merge.merge_commit_sha,
+    )
+    return {
+        "ok": True,
+        "proposal": _proposal_to_dict(refreshed) if refreshed else _proposal_to_dict(p),
+        "merge_commit_sha": merge.merge_commit_sha,
+        "note": (
+            "Merge committed on the remote. Operator must `git pull` and "
+            "restart the API to deploy the change locally. Auto-restart is "
+            "deferred to Phase 73d."
+        ),
+    }
+
+
+@router.post("/{proposal_id}/revert-merge")
+async def revert_merge(
+    proposal_id: str,
+    db: Session = Depends(get_db),
+    app_user_id: str = Depends(get_valid_web_user_id),
+) -> dict[str, Any]:
+    """Open a fresh PR that reverts the previously-merged commit.
+
+    Available even when ``NEXA_SELF_IMPROVEMENT_GITHUB_ENABLED=false`` is
+    flipped off mid-flight, so an operator can always undo a remote merge.
+    The 73b local-apply ``/{id}/revert`` endpoint stays in place for the
+    local-only flow.
+    """
+    _require_owner(db, app_user_id)
+    p = _get_or_404(proposal_id)
+    if p.status != STATUS_MERGED or not p.merge_commit_sha:
+        raise HTTPException(status_code=409, detail=f"cannot_revert_merge_from_status:{p.status}")
+
+    # Lazy import so the module still loads when GitHub is disabled.
+    gh = get_github_client()
+    if not gh.enabled or not gh.has_token:
+        raise HTTPException(
+            status_code=503,
+            detail="revert_via_pr_requires_github_enabled_and_token",
+        )
+
+    revert_title = f"Revert {p.title}"
+    revert_body = (
+        f"Revert of self-improvement proposal `{proposal_id}` "
+        f"(merge commit `{p.merge_commit_sha[:12]}`).\n\n"
+        f"Original problem statement:\n\n{p.problem_statement.strip()}"
+    )
+    try:
+        revert_pr = await gh.open_revert_pr(
+            merge_commit_sha=p.merge_commit_sha,
+            title=revert_title,
+            body=revert_body,
+        )
+    except GitHubError as exc:
+        raise _github_error_to_http(exc) from exc
+
+    refreshed = get_proposal_store().set_github_state(
+        proposal_id,
+        new_status=STATUS_REVERT_PR_OPEN,
+        revert_pr_number=revert_pr.number,
+        revert_pr_url=revert_pr.url,
+    )
+    return {
+        "ok": True,
+        "proposal": _proposal_to_dict(refreshed) if refreshed else _proposal_to_dict(p),
+        "revert_pr": {
+            "number": revert_pr.number,
+            "url": revert_pr.url,
+            "head_branch": revert_pr.head_branch,
+            "base_branch": revert_pr.base_branch,
+        },
     }
