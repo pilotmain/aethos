@@ -63,6 +63,7 @@ from app.api.routes import (
     tasks,
     trust,
     user_settings,
+    users,
     web,
     whatsapp,
 )
@@ -382,6 +383,7 @@ app.include_router(pr_review.router, prefix=settings.api_v1_prefix)
 app.include_router(social.router, prefix=settings.api_v1_prefix)
 app.include_router(trust.router, prefix=settings.api_v1_prefix)
 app.include_router(user_settings.router, prefix=settings.api_v1_prefix)
+app.include_router(users.router, prefix=settings.api_v1_prefix)
 app.include_router(providers_usage.router, prefix=settings.api_v1_prefix)
 app.include_router(mission_control.router, prefix=settings.api_v1_prefix)
 app.include_router(mobile.router, prefix=settings.api_v1_prefix)

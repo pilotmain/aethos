@@ -967,7 +967,9 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
-    return Settings()
+    settings = Settings()
+    print(f"WEB API TOKEN SET: {bool(settings.nexa_web_api_token)}")
+    return settings
 
 
 def print_local_service_urls() -> None:

@@ -73,11 +73,11 @@ async def _gate_owner(update: Update) -> str | None:
         await update.message.reply_text(disabled)
         return None
     db = SessionLocal()
-    try:
-        link = telegram_service.get_link(db, update.effective_user.id)
-        if not link:
-            await update.message.reply_text("Link your account with /start first.")
-            return None
+    try:        from app.services.channel_gateway.telegram_adapter import get_telegram_adapter
+        app_user_id = get_telegram_adapter().resolve_app_user_id(db, update)
+        orchestrator.users.get_or_create(db, app_user_id)
+        class _Link: app_user_id = app_user_id
+        link = _Link()
         role = get_telegram_role(update.effective_user.id, db)
     finally:
         db.close()
@@ -286,12 +286,11 @@ async def sim_txt_exec_callback(
         return
 
     db = SessionLocal()
-    try:
-        link = telegram_service.get_link(db, q.from_user.id)
-        if not link:
-            if q.message:
-                await q.message.reply_text("Link your account with /start first.")
-            return
+    try:        from app.services.channel_gateway.telegram_adapter import get_telegram_adapter
+        app_user_id = get_telegram_adapter().resolve_app_user_id(db, q)
+        orchestrator.users.get_or_create(db, app_user_id)
+        class _Link: app_user_id = app_user_id
+        link = _Link()
         if not is_owner_role(get_telegram_role(q.from_user.id, db)):
             if q.message:
                 await q.message.reply_text(ACCESS_RESTRICTED)
@@ -366,12 +365,11 @@ async def sim_inline_callback(
     action = m.group(2)
 
     db = SessionLocal()
-    try:
-        link = telegram_service.get_link(db, q.from_user.id)
-        if not link:
-            if q.message:
-                await q.message.reply_text("Link your account with /start first.")
-            return
+    try:        from app.services.channel_gateway.telegram_adapter import get_telegram_adapter
+        app_user_id = get_telegram_adapter().resolve_app_user_id(db, q)
+        orchestrator.users.get_or_create(db, app_user_id)
+        class _Link: app_user_id = app_user_id
+        link = _Link()
         if not is_owner_role(get_telegram_role(q.from_user.id, db)):
             if q.message:
                 await q.message.reply_text(ACCESS_RESTRICTED)

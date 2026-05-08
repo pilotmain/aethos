@@ -96,7 +96,16 @@ export default function LoginPage() {
     try {
       await testConnection(nextApiBase, nextUserId, nextToken);
       saveConfig({ apiBase: nextApiBase, userId: nextUserId, token: nextToken });
+      localStorage.setItem('aethos_api_base', nextApiBase);
+      localStorage.setItem('aethos_user_id', nextUserId);
+      localStorage.setItem('aethos_bearer_token', nextToken);
+      localStorage.setItem('aethos_web_v1', JSON.stringify({
+        apiBase: nextApiBase,
+        userId: nextUserId,
+        bearerToken: nextToken,
+      }));
       setSaved(true);
+      window.location.reload();
       router.push("/");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Connection test failed.");

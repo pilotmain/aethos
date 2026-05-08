@@ -111,8 +111,12 @@ export async function webFetch<T = unknown>(path: string, init: ApiOptions = {})
       parseErrorBodyText(text) || "Unauthorized (check X-User-Id and optional bearer token)";
     if (/bearer token|Authorization:\s*Bearer/i.test(msg)) {
       clearSavedBearerToken();
+      if (typeof window !== "undefined") {
+        window.localStorage.removeItem('aethos_bearer_token');
+        window.localStorage.removeItem('aethos_web_v1');
+      }
     }
-    throw new Error(`${r.status}: ${msg}`);
+    throw new Error(`Invalid bearer token. Please check your Connection settings. (${r.status}: ${msg})`);
   }
   if (!r.ok) {
     const msg = parseErrorBodyText(text) || r.statusText;
@@ -186,4 +190,14 @@ export function downloadBlobToFile(blob: Blob, filename: string): void {
   a.rel = "noopener";
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 60_000);
+}
+
+export async function autoInitUser(chatId: string, username?: string): Promise<void> {
+  const c = readConfig();
+  const base = (c.apiBase || DEFAULT_API_BASE).replace(/\/$/, "");
+  await fetch(`${base}${API_PREFIX}/users/auto-init`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ chat_id: chatId, username })
+  });
 }

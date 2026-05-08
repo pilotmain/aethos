@@ -12,11 +12,16 @@ class UserRepository:
         user = self.get(db, user_id)
         if user:
             return user
-        user = User(id=user_id, timezone=timezone, is_new=True)
-        db.add(user)
-        db.commit()
-        db.refresh(user)
-        return user
+        import sqlalchemy.exc
+        try:
+            user = User(id=user_id, timezone=timezone, is_new=True)
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+            return user
+        except sqlalchemy.exc.IntegrityError:
+            db.rollback()
+            return self.get(db, user_id)
 
     def clear_new_user_flag(self, db: Session, user_id: str) -> None:
         user = self.get(db, user_id)

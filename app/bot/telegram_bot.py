@@ -667,11 +667,11 @@ async def usage_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def today(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     db = SessionLocal()
-    try:
-        link = telegram_service.get_link(db, update.effective_user.id)
-        if not link:
-            await update.message.reply_text("Use /start first.")
-            return
+    try:from app.services.channel_gateway.telegram_adapter import get_telegram_adapter
+app_user_id = get_telegram_adapter().resolve_app_user_id(db, update)
+orchestrator.users.get_or_create(db, app_user_id)
+class _Link: app_user_id = app_user_id
+link = _Link()
         result = orchestrator.get_today_plan(db, link.app_user_id)
         if not result:
             await update.message.reply_text("No plan yet. Send me a brain dump first.")
@@ -751,11 +751,11 @@ async def overwhelmed(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
 async def prefs(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     db = SessionLocal()
-    try:
-        link = telegram_service.get_link(db, update.effective_user.id)
-        if not link:
-            await update.message.reply_text("Use /start first.")
-            return
+    try:from app.services.channel_gateway.telegram_adapter import get_telegram_adapter
+app_user_id = get_telegram_adapter().resolve_app_user_id(db, update)
+orchestrator.users.get_or_create(db, app_user_id)
+class _Link: app_user_id = app_user_id
+link = _Link()
         p = memory_service.get_preferences(db, link.app_user_id)
         await update.message.reply_text(
             f"Planning style: {p.planning_style}\nMax daily tasks: {p.max_daily_tasks}\nGym days: {', '.join(p.typical_gym_days) or 'none'}"
@@ -777,11 +777,11 @@ async def doc_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     )
 
     db = SessionLocal()
-    try:
-        link = telegram_service.get_link(db, update.effective_user.id)
-        if not link:
-            await update.message.reply_text("Use /start first.")
-            return
+    try:from app.services.channel_gateway.telegram_adapter import get_telegram_adapter
+app_user_id = get_telegram_adapter().resolve_app_user_id(db, update)
+orchestrator.users.get_or_create(db, app_user_id)
+class _Link: app_user_id = app_user_id
+link = _Link()
         app_uid = link.app_user_id
         args = [str(a).lower() for a in (context.args or [])]
         if not args or args[0] in ("help", "h", "-h"):
@@ -846,11 +846,11 @@ async def command_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         return
     sub = (context.args[0] or "").lower() if (context and context.args) else ""
     db = SessionLocal()
-    try:
-        link = telegram_service.get_link(db, update.effective_user.id)
-        if not link:
-            await update.message.reply_text("Use /start first.")
-            return
+    try:from app.services.channel_gateway.telegram_adapter import get_telegram_adapter
+app_user_id = get_telegram_adapter().resolve_app_user_id(db, update)
+orchestrator.users.get_or_create(db, app_user_id)
+class _Link: app_user_id = app_user_id
+link = _Link()
         if sub == "status":
             cctx = get_or_create_context(db, link.app_user_id)
             out = format_agents_status(db, link.app_user_id, active_topic=cctx.active_topic)[:12_000]
@@ -867,11 +867,11 @@ async def memory_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     if not update.message or not update.effective_user:
         return
     db = SessionLocal()
-    try:
-        link = telegram_service.get_link(db, update.effective_user.id)
-        if not link:
-            await update.message.reply_text("Use /start first.")
-            return
+    try:from app.services.channel_gateway.telegram_adapter import get_telegram_adapter
+app_user_id = get_telegram_adapter().resolve_app_user_id(db, update)
+orchestrator.users.get_or_create(db, app_user_id)
+class _Link: app_user_id = app_user_id
+link = _Link()
         tr = get_telegram_role(update.effective_user.id, db)
         raw = (update.message.text or "/memory").strip()
         norm = re.sub(r"^/memory@\S+\b", "/memory", raw.strip(), flags=re.IGNORECASE).strip()
@@ -904,11 +904,11 @@ async def memory_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
 
 async def forget_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     db = SessionLocal()
-    try:
-        link = telegram_service.get_link(db, update.effective_user.id)
-        if not link:
-            await update.message.reply_text("Use /start first.")
-            return
+    try:from app.services.channel_gateway.telegram_adapter import get_telegram_adapter
+app_user_id = get_telegram_adapter().resolve_app_user_id(db, update)
+orchestrator.users.get_or_create(db, app_user_id)
+class _Link: app_user_id = app_user_id
+link = _Link()
         tr = get_telegram_role(update.effective_user.id, db)
         if not can_memory_working_remember_forget(tr):
             _deny(
@@ -939,11 +939,11 @@ async def forget_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
 
 async def soul_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     db = SessionLocal()
-    try:
-        link = telegram_service.get_link(db, update.effective_user.id)
-        if not link:
-            await update.message.reply_text("Use /start first.")
-            return
+    try:from app.services.channel_gateway.telegram_adapter import get_telegram_adapter
+app_user_id = get_telegram_adapter().resolve_app_user_id(db, update)
+orchestrator.users.get_or_create(db, app_user_id)
+class _Link: app_user_id = app_user_id
+link = _Link()
         tr = get_telegram_role(update.effective_user.id, db)
         if context.args:
             if not can_write_global_memory_file(tr):
@@ -997,11 +997,11 @@ async def permissions_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     )
 
     db = SessionLocal()
-    try:
-        link = telegram_service.get_link(db, update.effective_user.id)
-        if not link:
-            await update.message.reply_text("Use /start first.")
-            return
+    try:from app.services.channel_gateway.telegram_adapter import get_telegram_adapter
+app_user_id = get_telegram_adapter().resolve_app_user_id(db, update)
+orchestrator.users.get_or_create(db, app_user_id)
+class _Link: app_user_id = app_user_id
+link = _Link()
         tr = get_telegram_role(update.effective_user.id, db)
         if (tr or "") == "blocked":
             await update.message.reply_text(BLOCKED_MSG)
@@ -1082,11 +1082,11 @@ async def workspace_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     from app.services.workspace_registry import add_root, list_roots, revoke_root
 
     db = SessionLocal()
-    try:
-        link = telegram_service.get_link(db, update.effective_user.id)
-        if not link:
-            await update.message.reply_text("Use /start first.")
-            return
+    try:from app.services.channel_gateway.telegram_adapter import get_telegram_adapter
+app_user_id = get_telegram_adapter().resolve_app_user_id(db, update)
+orchestrator.users.get_or_create(db, app_user_id)
+class _Link: app_user_id = app_user_id
+link = _Link()
         tr = get_telegram_role(update.effective_user.id, db)
         if (tr or "") == "blocked":
             await update.message.reply_text(BLOCKED_MSG)
@@ -1172,11 +1172,11 @@ async def nexa_projects_list_cmd(update: Update, context: ContextTypes.DEFAULT_T
     from app.services.nexa_workspace_project_registry import list_workspace_projects
 
     db = SessionLocal()
-    try:
-        link = telegram_service.get_link(db, update.effective_user.id)
-        if not link:
-            await update.message.reply_text("Use /start first.")
-            return
+    try:from app.services.channel_gateway.telegram_adapter import get_telegram_adapter
+app_user_id = get_telegram_adapter().resolve_app_user_id(db, update)
+orchestrator.users.get_or_create(db, app_user_id)
+class _Link: app_user_id = app_user_id
+link = _Link()
         if (get_telegram_role(update.effective_user.id, db) or "") == "blocked":
             await update.message.reply_text(BLOCKED_MSG)
             return
@@ -1215,11 +1215,11 @@ async def nexa_project_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     )
 
     db = SessionLocal()
-    try:
-        link = telegram_service.get_link(db, update.effective_user.id)
-        if not link:
-            await update.message.reply_text("Use /start first.")
-            return
+    try:from app.services.channel_gateway.telegram_adapter import get_telegram_adapter
+app_user_id = get_telegram_adapter().resolve_app_user_id(db, update)
+orchestrator.users.get_or_create(db, app_user_id)
+class _Link: app_user_id = app_user_id
+link = _Link()
         tr = get_telegram_role(update.effective_user.id, db)
         if (tr or "") == "blocked":
             await update.message.reply_text(BLOCKED_MSG)
@@ -1289,11 +1289,11 @@ async def projects_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     from app.services.telegram_project_commands import format_projects_list_for_user
 
     db = SessionLocal()
-    try:
-        link = telegram_service.get_link(db, update.effective_user.id)
-        if not link:
-            await update.message.reply_text("Use /start first.")
-            return
+    try:from app.services.channel_gateway.telegram_adapter import get_telegram_adapter
+app_user_id = get_telegram_adapter().resolve_app_user_id(db, update)
+orchestrator.users.get_or_create(db, app_user_id)
+class _Link: app_user_id = app_user_id
+link = _Link()
         tr = get_telegram_role(update.effective_user.id, db)
         if (tr or "") == "blocked":
             await update.message.reply_text(BLOCKED_MSG)
@@ -1317,11 +1317,11 @@ async def project_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     )
 
     db = SessionLocal()
-    try:
-        link = telegram_service.get_link(db, update.effective_user.id)
-        if not link:
-            await update.message.reply_text("Use /start first.")
-            return
+    try:from app.services.channel_gateway.telegram_adapter import get_telegram_adapter
+app_user_id = get_telegram_adapter().resolve_app_user_id(db, update)
+orchestrator.users.get_or_create(db, app_user_id)
+class _Link: app_user_id = app_user_id
+link = _Link()
         tr = get_telegram_role(update.effective_user.id, db)
         if (tr or "") == "blocked":
             await update.message.reply_text(BLOCKED_MSG)
@@ -1415,11 +1415,11 @@ async def project_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
 async def approve_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     db = SessionLocal()
-    try:
-        link = telegram_service.get_link(db, update.effective_user.id)
-        if not link:
-            await update.message.reply_text("Use /start first.")
-            return
+    try:from app.services.channel_gateway.telegram_adapter import get_telegram_adapter
+app_user_id = get_telegram_adapter().resolve_app_user_id(db, update)
+orchestrator.users.get_or_create(db, app_user_id)
+class _Link: app_user_id = app_user_id
+link = _Link()
         if not is_owner_role(get_telegram_role(update.effective_user.id, db)):
             _deny(
                 db, telegram_id=update.effective_user.id, app_user=link.app_user_id,
@@ -1450,11 +1450,11 @@ async def approve_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
 async def deny_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     db = SessionLocal()
-    try:
-        link = telegram_service.get_link(db, update.effective_user.id)
-        if not link:
-            await update.message.reply_text("Use /start first.")
-            return
+    try:from app.services.channel_gateway.telegram_adapter import get_telegram_adapter
+app_user_id = get_telegram_adapter().resolve_app_user_id(db, update)
+orchestrator.users.get_or_create(db, app_user_id)
+class _Link: app_user_id = app_user_id
+link = _Link()
         if not is_owner_role(get_telegram_role(update.effective_user.id, db)):
             _deny(
                 db, telegram_id=update.effective_user.id, app_user=link.app_user_id,
@@ -1481,11 +1481,11 @@ async def agents_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
         return
     sub = (context.args[0] or "").lower() if (context and context.args) else ""
     db = SessionLocal()
-    try:
-        link = telegram_service.get_link(db, update.effective_user.id)
-        if not link:
-            await update.message.reply_text("Use /start first.")
-            return
+    try:from app.services.channel_gateway.telegram_adapter import get_telegram_adapter
+app_user_id = get_telegram_adapter().resolve_app_user_id(db, update)
+orchestrator.users.get_or_create(db, app_user_id)
+class _Link: app_user_id = app_user_id
+link = _Link()
         if sub == "status":
             cctx = get_or_create_context(db, link.app_user_id)
             out = format_agents_status(
@@ -1532,11 +1532,11 @@ async def agent_count_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
     chat_id = telegram_agent_registry_chat_id(update.effective_chat.id)
     db = SessionLocal()
-    try:
-        link = telegram_service.get_link(db, update.effective_user.id)
-        if not link:
-            await update.message.reply_text("Use /start first.")
-            return
+    try:from app.services.channel_gateway.telegram_adapter import get_telegram_adapter
+app_user_id = get_telegram_adapter().resolve_app_user_id(db, update)
+orchestrator.users.get_or_create(db, app_user_id)
+class _Link: app_user_id = app_user_id
+link = _Link()
         from app.core.config import get_settings
         from app.services.team.roster import TeamRoster
 
@@ -1568,11 +1568,11 @@ async def agent_status_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     from app.services.sub_agent_registry import AgentRegistry
 
     db = SessionLocal()
-    try:
-        link = telegram_service.get_link(db, update.effective_user.id)
-        if not link:
-            await update.message.reply_text("Use /start first.")
-            return
+    try:from app.services.channel_gateway.telegram_adapter import get_telegram_adapter
+app_user_id = get_telegram_adapter().resolve_app_user_id(db, update)
+orchestrator.users.get_or_create(db, app_user_id)
+class _Link: app_user_id = app_user_id
+link = _Link()
         chat_scope = telegram_agent_registry_chat_id(update.effective_chat.id)
         agents = AgentRegistry().list_agents(chat_scope)
         if not agents:
@@ -1612,11 +1612,11 @@ async def user_agent_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     args = list(context.args or [])
     db = SessionLocal()
-    try:
-        link = telegram_service.get_link(db, update.effective_user.id)
-        if not link:
-            await update.message.reply_text("Use /start first.")
-            return
+    try:from app.services.channel_gateway.telegram_adapter import get_telegram_adapter
+app_user_id = get_telegram_adapter().resolve_app_user_id(db, update)
+orchestrator.users.get_or_create(db, app_user_id)
+class _Link: app_user_id = app_user_id
+link = _Link()
         uid = link.app_user_id
         if not args:
             await update.message.reply_text(
@@ -1686,11 +1686,11 @@ async def learning_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         return
     args = (context and context.args) or []
     db = SessionLocal()
-    try:
-        link = telegram_service.get_link(db, update.effective_user.id)
-        if not link:
-            await update.message.reply_text("Use /start first.")
-            return
+    try:from app.services.channel_gateway.telegram_adapter import get_telegram_adapter
+app_user_id = get_telegram_adapter().resolve_app_user_id(db, update)
+orchestrator.users.get_or_create(db, app_user_id)
+class _Link: app_user_id = app_user_id
+link = _Link()
         u = link.app_user_id
         tr = get_telegram_role(update.effective_user.id, db)
         if len(args) >= 2 and (args[0] or "").lower() in ("approve", "reject"):
@@ -1761,11 +1761,11 @@ async def access_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     if not update.effective_user or not update.message:
         return
     db = SessionLocal()
-    try:
-        link = telegram_service.get_link(db, update.effective_user.id)
-        if not link:
-            await update.message.reply_text("Use /start first.")
-            return
+    try:from app.services.channel_gateway.telegram_adapter import get_telegram_adapter
+app_user_id = get_telegram_adapter().resolve_app_user_id(db, update)
+orchestrator.users.get_or_create(db, app_user_id)
+class _Link: app_user_id = app_user_id
+link = _Link()
         tr = get_telegram_role(update.effective_user.id, db)
         if (tr or "") == "blocked":
             await update.message.reply_text(BLOCKED_MSG)
@@ -1779,11 +1779,11 @@ async def users_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not update.effective_user or not update.message:
         return
     db = SessionLocal()
-    try:
-        link = telegram_service.get_link(db, update.effective_user.id)
-        if not link:
-            await update.message.reply_text("Use /start first.")
-            return
+    try:from app.services.channel_gateway.telegram_adapter import get_telegram_adapter
+app_user_id = get_telegram_adapter().resolve_app_user_id(db, update)
+orchestrator.users.get_or_create(db, app_user_id)
+class _Link: app_user_id = app_user_id
+link = _Link()
         if not is_owner_role(get_telegram_role(update.effective_user.id, db)):
             _deny(
                 db, telegram_id=update.effective_user.id, app_user=link.app_user_id,
@@ -1811,11 +1811,11 @@ async def keys_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not update.effective_user or not update.message:
         return
     db = SessionLocal()
-    try:
-        link = telegram_service.get_link(db, update.effective_user.id)
-        if not link:
-            await update.message.reply_text("Use /start first.")
-            return
+    try:from app.services.channel_gateway.telegram_adapter import get_telegram_adapter
+app_user_id = get_telegram_adapter().resolve_app_user_id(db, update)
+orchestrator.users.get_or_create(db, app_user_id)
+class _Link: app_user_id = app_user_id
+link = _Link()
         if (get_telegram_role(update.effective_user.id, db) or "") == "blocked":
             await update.message.reply_text(BLOCKED_MSG)
             return
@@ -1851,11 +1851,11 @@ async def key_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             await update.message.reply_text(piece)
         return
     db = SessionLocal()
-    try:
-        link = telegram_service.get_link(db, update.effective_user.id)
-        if not link:
-            await update.message.reply_text("Use /start first.")
-            return
+    try:from app.services.channel_gateway.telegram_adapter import get_telegram_adapter
+app_user_id = get_telegram_adapter().resolve_app_user_id(db, update)
+orchestrator.users.get_or_create(db, app_user_id)
+class _Link: app_user_id = app_user_id
+link = _Link()
         tid = int(update.effective_user.id)
         if (get_telegram_role(tid, db) or "") == "blocked":
             await update.message.reply_text(BLOCKED_MSG)
@@ -1923,11 +1923,11 @@ async def why_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     from app.services.decision_summary import format_decision_for_telegram_why
 
     db = SessionLocal()
-    try:
-        link = telegram_service.get_link(db, update.effective_user.id)
-        if not link:
-            await update.message.reply_text("Use /start first.")
-            return
+    try:from app.services.channel_gateway.telegram_adapter import get_telegram_adapter
+app_user_id = get_telegram_adapter().resolve_app_user_id(db, update)
+orchestrator.users.get_or_create(db, app_user_id)
+class _Link: app_user_id = app_user_id
+link = _Link()
         cctx = get_or_create_context(db, link.app_user_id)
         d = get_last_decision_from_context(cctx)
         t = format_decision_for_telegram_why(d)
@@ -2000,11 +2000,11 @@ async def imagine_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
 async def cancel_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     db = SessionLocal()
-    try:
-        link = telegram_service.get_link(db, update.effective_user.id)
-        if not link:
-            await update.message.reply_text("Use /start first.")
-            return
+    try:from app.services.channel_gateway.telegram_adapter import get_telegram_adapter
+app_user_id = get_telegram_adapter().resolve_app_user_id(db, update)
+orchestrator.users.get_or_create(db, app_user_id)
+class _Link: app_user_id = app_user_id
+link = _Link()
         if not is_owner_role(get_telegram_role(update.effective_user.id, db)):
             _deny(
                 db, telegram_id=update.effective_user.id, app_user=link.app_user_id,

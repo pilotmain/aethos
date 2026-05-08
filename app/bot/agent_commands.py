@@ -139,11 +139,11 @@ async def agent_diagnostic_command(update: Update, context: ContextTypes.DEFAULT
         return
 
     db = SessionLocal()
-    try:
-        link = telegram_service.get_link(db, update.effective_user.id)
-        if not link:
-            await update.message.reply_text("Use /start first.")
-            return
+    try:from app.services.channel_gateway.telegram_adapter import get_telegram_adapter
+app_user_id = get_telegram_adapter().resolve_app_user_id(db, update)
+orchestrator.users.get_or_create(db, app_user_id)
+class _Link: app_user_id = app_user_id
+link = _Link()
 
         s = get_settings()
         chat_id = update.effective_chat.id if update.effective_chat else 0
@@ -190,11 +190,11 @@ async def subagent_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 
     args = list(context.args or [])
     db = SessionLocal()
-    try:
-        link = telegram_service.get_link(db, update.effective_user.id)
-        if not link:
-            await update.message.reply_text("Use /start first.")
-            return
+    try:from app.services.channel_gateway.telegram_adapter import get_telegram_adapter
+app_user_id = get_telegram_adapter().resolve_app_user_id(db, update)
+orchestrator.users.get_or_create(db, app_user_id)
+class _Link: app_user_id = app_user_id
+link = _Link()
 
         scopes = telegram_subagent_scopes(update.effective_chat.id, link.app_user_id)
         registry = AgentRegistry()
