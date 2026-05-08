@@ -122,6 +122,16 @@ class AgentExecutor:
                 )
             record_rate_limited_action(agent.id, agent.domain, chat_id)
             self.registry.touch_agent(agent.id)
+            # Phase 73.5 — a clean success means whatever was failing is no
+            # longer failing. Clear the per-agent recovery_attempts counter so
+            # a future run gets the full quota again instead of escalating
+            # immediately on the next hiccup. Best-effort; never propagates.
+            try:
+                from app.services.agent.recovery import get_recovery_handler
+
+                get_recovery_handler().reset_recovery_attempts(agent.id)
+            except Exception:  # noqa: BLE001
+                logger.debug("reset_recovery_attempts on success suppressed", exc_info=True)
             dur_ms = (time.perf_counter() - t0) * 1000.0
             log_agent_event(
                 "execute",

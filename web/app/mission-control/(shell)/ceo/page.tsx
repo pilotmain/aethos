@@ -121,6 +121,14 @@ export default function CEODashboardPage() {
   const [agents, setAgents] = useState<CeoAgentRow[]>([]);
   const [costToday, setCostToday] = useState<CeoCostToday | null>(null);
   const [healthByAgent, setHealthByAgent] = useState<Record<string, AgentHealth | null>>({});
+  const [healAction, setHealAction] = useState<{
+    agentId: string;
+    kind: "diagnose" | "recover";
+  } | null>(null);
+  const [healFlash, setHealFlash] = useState<{
+    tone: "ok" | "warn" | "err";
+    text: string;
+  } | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -139,6 +147,105 @@ export default function CEODashboardPage() {
       setLoading(false);
     }
   }, []);
+
+  const refreshAgentHealth = useCallback(async (agentId: string) => {
+    try {
+      const r = await webFetch<{ ok?: boolean } & AgentHealth>(
+        `/agent/health/${encodeURIComponent(agentId)}`,
+      );
+      setHealthByAgent((prev) => ({ ...prev, [agentId]: r as AgentHealth }));
+    } catch {
+      /* leave the stale value in place; the load loop will retry */
+    }
+  }, []);
+
+  const handleDiagnose = useCallback(
+    async (agentId: string) => {
+      setHealAction({ agentId, kind: "diagnose" });
+      setHealFlash(null);
+      try {
+        const r = await webFetch<{
+          ok?: boolean;
+          diagnosis?: {
+            cause_class?: string;
+            summary?: string;
+            error_count?: number;
+            used_llm?: boolean;
+          };
+        }>(`/agent/health/${encodeURIComponent(agentId)}/diagnose`, { method: "POST" });
+        const d = r?.diagnosis;
+        const cause = d?.cause_class ?? "unknown";
+        const tone = cause === "no_recent_failures" ? "ok" : "warn";
+        const llmTag = d?.used_llm ? " · LLM-assisted" : "";
+        setHealFlash({
+          tone,
+          text:
+            `Diagnosis for ${agentId}: ${cause}${llmTag} (${d?.error_count ?? 0} recent failure(s)). ` +
+            `${d?.summary ? d.summary : ""}`.trim(),
+        });
+        await refreshAgentHealth(agentId);
+      } catch (e) {
+        setHealFlash({
+          tone: "err",
+          text: `Diagnose failed for ${agentId}: ${formatMissionControlApiError(
+            e instanceof Error ? e.message : String(e),
+          )}`,
+        });
+      } finally {
+        setHealAction(null);
+      }
+    },
+    [refreshAgentHealth],
+  );
+
+  const handleRecover = useCallback(
+    async (agentId: string) => {
+      setHealAction({ agentId, kind: "recover" });
+      setHealFlash(null);
+      try {
+        const r = await webFetch<{
+          ok?: boolean;
+          diagnosis?: { cause_class?: string };
+          recovery?: {
+            strategy?: string;
+            succeeded?: boolean;
+            attempts_used?: number;
+            escalate?: boolean;
+            reason?: string;
+          };
+        }>(`/agent/health/${encodeURIComponent(agentId)}/recover`, { method: "POST" });
+        const rec = r?.recovery;
+        const strategy = rec?.strategy ?? "none";
+        const succeeded = !!rec?.succeeded;
+        const tone: "ok" | "warn" | "err" = succeeded
+          ? "ok"
+          : rec?.escalate
+            ? "err"
+            : "warn";
+        setHealFlash({
+          tone,
+          text:
+            `Recovery for ${agentId}: strategy=${strategy} ` +
+            `${succeeded ? "succeeded" : "did not succeed"} ` +
+            `(attempt ${rec?.attempts_used ?? 0}` +
+            `${rec?.escalate ? ", escalated" : ""}). ` +
+            `${rec?.reason ?? ""}`.trim(),
+        });
+        await refreshAgentHealth(agentId);
+        await load();
+      } catch (e) {
+        setHealFlash({
+          tone: "err",
+          text: `Recover failed for ${agentId}: ${formatMissionControlApiError(
+            e instanceof Error ? e.message : String(e),
+          )}`,
+        });
+      } finally {
+        setHealAction(null);
+      }
+    },
+    [refreshAgentHealth, load],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -202,6 +309,13 @@ export default function CEODashboardPage() {
   const busyAgents = summary?.busy_agents ?? Math.max(0, totalAgents - idleAgents);
   const successRate = summary?.overall_success_rate ?? 100;
 
+  const flashClasses =
+    healFlash?.tone === "err"
+      ? "border-rose-700 bg-rose-950/40 text-rose-200"
+      : healFlash?.tone === "warn"
+        ? "border-amber-700 bg-amber-950/40 text-amber-200"
+        : "border-emerald-700 bg-emerald-950/40 text-emerald-200";
+
   return (
     <div className="space-y-6">
       <div>
@@ -212,6 +326,23 @@ export default function CEODashboardPage() {
           ).
         </p>
       </div>
+
+      {healFlash ? (
+        <div
+          role="status"
+          aria-live="polite"
+          className={`flex items-start justify-between gap-3 rounded-lg border px-4 py-3 text-sm ${flashClasses}`}
+        >
+          <span className="break-words">{healFlash.text}</span>
+          <button
+            type="button"
+            onClick={() => setHealFlash(null)}
+            className="shrink-0 rounded px-2 py-0.5 text-xs uppercase tracking-wide text-zinc-300 hover:bg-zinc-900/60"
+          >
+            Dismiss
+          </button>
+        </div>
+      ) : null}
 
       <div className="grid gap-4 md:grid-cols-4">
         <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">
@@ -349,6 +480,30 @@ export default function CEODashboardPage() {
                     Success: {typeof agent.success_rate === "number" ? Math.round(agent.success_rate) : 100}% (
                     {typeof agent.total_actions === "number" ? agent.total_actions : 0} actions)
                   </div>
+                  {h?.self_healing.enabled && id ? (
+                    <div className="mt-2 flex justify-end gap-2">
+                      <button
+                        type="button"
+                        disabled={healAction?.agentId === id}
+                        onClick={() => void handleDiagnose(id)}
+                        className="rounded border border-zinc-700 px-2 py-1 text-xs text-zinc-200 hover:bg-zinc-900 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {healAction?.agentId === id && healAction.kind === "diagnose"
+                          ? "Diagnosing…"
+                          : "Diagnose"}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={healAction?.agentId === id}
+                        onClick={() => void handleRecover(id)}
+                        className="rounded border border-violet-700 bg-violet-950/40 px-2 py-1 text-xs text-violet-200 hover:bg-violet-900/50 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {healAction?.agentId === id && healAction.kind === "recover"
+                          ? "Recovering…"
+                          : "Recover"}
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
               </div>
             );

@@ -177,11 +177,36 @@ Broader sweep of 326 tests (lockdown + Phase 70/71/72/73) green; tsc clean.
   match; embedding lookup would let semantically related errors cluster.
 * **Subprocess restart.** Agents are in-process today; if/when they become
   real workers we'd add a `STRATEGY_PROCESS_RESTART`.
-* **Auto-clear `recovery_attempts` on next successful task.** Currently
-  cleared only by manual recover endpoint; integrating into the executor's
-  success path is a small targeted follow-up.
-* **Mission Control "Diagnose" / "Recover" buttons.** The endpoints are
-  live and owner-gated; the buttons are a UI-only follow-up.
+* ~~**Auto-clear `recovery_attempts` on next successful task.**~~ ✅ Landed
+  in Phase 73.5 — `AgentExecutor.execute` calls
+  `RecoveryHandler.reset_recovery_attempts(agent_id)` on the success path
+  (best-effort, swallows handler errors).
+* ~~**Mission Control "Diagnose" / "Recover" buttons.**~~ ✅ Landed in
+  Phase 73.5 — buttons appear inside each agent row when
+  `self_healing.enabled` is reported by the health endpoint, with an inline
+  status banner showing the diagnosis cause + recovery strategy + result
+  (and an explicit "Dismiss" affordance).
+
+## Phase 73.5 — wrap-up addendum
+
+### What landed
+
+| File | Change |
+|---|---|
+| `app/services/sub_agent_executor.py` | After `self.registry.touch_agent(agent.id)` on the success path, calls `get_recovery_handler().reset_recovery_attempts(agent.id)` inside a `try/except` so a flapping-then-recovered agent gets its quota back without escalating on the next minor hiccup. Failures inside the recovery handler never propagate. |
+| `web/app/mission-control/(shell)/ceo/page.tsx` | Per-agent "Diagnose" / "Recover" buttons inside the existing roster row, gated by `h?.self_healing.enabled` returned by `/agent/health/{id}`. Inline status banner with `ok` / `warn` / `err` tones reports the diagnosis cause class + recovery strategy + attempt count + escalation flag. Button labels switch to "Diagnosing…" / "Recovering…" while the request is in flight, and other rows remain interactive (state is keyed by `{agentId, kind}`). |
+| `tests/test_self_healing_wrap_up_phase73_5.py` | 4 new tests: executor clears `recovery_attempts` on success, idempotent when already zero, swallows recovery-handler exceptions, leaves the counter alone on a failed task. |
+
+### Notes for future maintainers
+
+* The recovery handler is a module-level singleton
+  (`app.services.agent.recovery._recovery_handler`). Earlier Phase 73 tests
+  inject fakes into it; tests that touch the executor's auto-clear path must
+  reset the singleton in their fixture (see `_reset_state` in
+  `tests/test_self_healing_wrap_up_phase73_5.py`).
+* The CEO page's Diagnose/Recover buttons hit the existing owner-gated
+  endpoints — non-owner users will see a 403 surfaced as the inline error
+  banner, not as a silent failure.
 
 ## Files touched / added
 
@@ -198,6 +223,15 @@ app/main.py                               # router wiring
 web/app/mission-control/(shell)/ceo/page.tsx
 tests/test_self_healing_phase73.py        # new (24 cases)
 docs/PHASE73_SELF_HEALING.md              # new
+```
+
+### Phase 73.5 wrap-up — additional files touched
+
+```
+app/services/sub_agent_executor.py        # success-path reset_recovery_attempts hook
+web/app/mission-control/(shell)/ceo/page.tsx  # Diagnose/Recover buttons + flash banner
+tests/test_self_healing_wrap_up_phase73_5.py  # new (4 cases)
+docs/PHASE73_SELF_HEALING.md              # this addendum
 ```
 
 ## Configuration matrix
