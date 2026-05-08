@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Header
 from sqlalchemy.orm import Session
 from typing import Optional
 
@@ -22,15 +22,16 @@ def me(user_id: str = Depends(get_current_user_id), db: Session = Depends(get_db
 
 
 @router.get("/web/me")
-async def get_current_user(
+async def get_web_me(
     user_id: str = Depends(get_valid_web_user_id),
-    token: Optional[str] = Depends(lambda: None)  # Just for debugging
-):
-    """Debug endpoint to check authentication status."""
+    authorization: Optional[str] = Header(default=None, alias="Authorization"),
+) -> dict:
+    """Return basic identity for browser auth checks (requires same headers as Mission Control)."""
     settings = get_settings()
+    tok_required = bool((settings.nexa_web_api_token or "").strip())
     return {
         "authenticated": True,
         "user_id": user_id,
-        "token_required": bool(settings.nexa_web_api_token),
-        "token_matches": True,  # actual check would verify
+        "token_required": tok_required,
+        "has_token": bool((authorization or "").strip()),
     }

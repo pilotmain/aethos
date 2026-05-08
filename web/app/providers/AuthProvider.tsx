@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { DEFAULT_API_BASE, readConfig } from "@/lib/config";
 
@@ -29,6 +30,7 @@ function buildAuthHeaders(userId: string | null, bearerToken: string | null): Re
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
   const [userId, setUserId] = useState<string | null>(null);
   const [bearerToken, setBearerToken] = useState<string | null>(null);
   const [apiBase, setApiBase] = useState<string | null>(null);
@@ -59,7 +61,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .catch(() => setIsConnected(false));
 
     return () => controller.abort();
-  }, []);
+  }, [pathname]);
 
   const value = useMemo(
     () => ({ userId, bearerToken, apiBase, isConnected }),

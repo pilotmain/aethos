@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { defaultConfig, readConfig, saveConfig } from "@/lib/config";
 import {
   describeAethosWebUserIdProblem,
@@ -19,6 +19,7 @@ export default function LoginPage() {
   const [isTesting, setIsTesting] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sessionGate, setSessionGate] = useState<"checking" | "form">("checking");
 
   const trimmedUserId = userId.trim();
   const userIdProblem =
@@ -28,6 +29,48 @@ export default function LoginPage() {
         ? describeAethosWebUserIdProblem(userId)
         : null;
   const userIdInvalid = Boolean(userIdProblem);
+
+  useEffect(() => {
+    let cancelled = false;
+    const c = readConfig();
+    const uid = c.userId.trim();
+    const base = (c.apiBase || defaultConfig.apiBase).trim().replace(/\/$/, "");
+    if (!uid) {
+      setSessionGate("form");
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const headers: Record<string, string> = {
+      Accept: "application/json",
+      "X-User-Id": uid,
+    };
+    const tok = c.token.trim();
+    if (tok) {
+      headers.Authorization = `Bearer ${tok}`;
+    }
+
+    fetch(`${base}/api/v1/user/settings`, {
+      headers,
+      cache: "no-store",
+    })
+      .then((res) => {
+        if (cancelled) return;
+        if (res.ok) {
+          router.replace("/mission-control/overview");
+          return;
+        }
+        setSessionGate("form");
+      })
+      .catch(() => {
+        if (!cancelled) setSessionGate("form");
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [router]);
 
   async function readErrorDetail(response: Response): Promise<string> {
     const text = await response.text();
@@ -96,22 +139,21 @@ export default function LoginPage() {
     try {
       await testConnection(nextApiBase, nextUserId, nextToken);
       saveConfig({ apiBase: nextApiBase, userId: nextUserId, token: nextToken });
-      localStorage.setItem('aethos_api_base', nextApiBase);
-      localStorage.setItem('aethos_user_id', nextUserId);
-      localStorage.setItem('aethos_bearer_token', nextToken);
-      localStorage.setItem('aethos_web_v1', JSON.stringify({
-        apiBase: nextApiBase,
-        userId: nextUserId,
-        bearerToken: nextToken,
-      }));
       setSaved(true);
-      window.location.reload();
-      router.push("/");
+      router.replace("/mission-control/overview");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Connection test failed.");
     } finally {
       setIsTesting(false);
     }
+  }
+
+  if (sessionGate === "checking") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-zinc-950 px-4 text-sm text-zinc-400">
+        Checking authentication…
+      </div>
+    );
   }
 
   return (
