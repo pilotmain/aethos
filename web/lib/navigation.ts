@@ -7,6 +7,7 @@ import {
   Package,
   Settings,
   ShieldCheck,
+  Sparkles,
   Users,
 } from "lucide-react";
 
@@ -59,6 +60,12 @@ export const missionControlNavItems: MissionControlNavItem[] = [
     href: "/mission-control/marketplace",
     icon: Package,
     description: "Discover and install ClawHub community skills",
+  },
+  {
+    name: "Improvements",
+    href: "/mission-control/self-improvement",
+    icon: Sparkles,
+    description: "Self-improvement proposals (owner-gated, sandboxed)",
   },
   {
     name: "Advanced",

@@ -324,6 +324,31 @@ class Settings(BaseSettings):
     # endpoints for browser users; mutating actions still require Telegram-linked owner).
     nexa_marketplace_panel_enabled: bool = True
 
+    # Phase 73b — Self-Improvement (Genesis Loop, safe-adapt v1).
+    # Owner-driven: operator submits a problem statement + target file, the LLM
+    # produces a unified diff, the diff is validated against an allowlist + size
+    # cap, optionally executed in an isolated ``git worktree`` sandbox (compileall +
+    # targeted pytest), and on owner approval applied to the working copy as a
+    # single ``[self-improvement]`` commit. The commit is **NOT auto-pushed** and
+    # the API is **NOT auto-restarted**; rollback via ``git revert`` always works.
+    # GitHub-API integration / auto-merge / branch flow are deferred to Phase 73c.
+    nexa_self_improvement_enabled: bool = False
+    # Hard cap on number of files a single proposal is allowed to touch.
+    nexa_self_improvement_max_files_per_proposal: int = 5
+    # Hard cap on total +/- lines in a proposal (across all files in the diff).
+    nexa_self_improvement_max_diff_lines: int = 400
+    # Wall-clock seconds the sandbox runner is allowed to use (compileall + pytest).
+    nexa_self_improvement_sandbox_timeout_s: int = 120
+    # Comma-separated path prefixes that proposals are *allowed* to touch. Anything
+    # outside this allowlist is rejected by the validator. Defaults are deliberately
+    # narrow — operators can widen via env (e.g., add ``web/app/``) when ready.
+    nexa_self_improvement_allowed_paths: str = "app/services/,app/api/routes/,docs/"
+    # Reserved for Phase 73c (parsed but unused in 73b — declared here so operator
+    # docs / .env stay aligned and adding the GitHub flow later doesn't require a
+    # config-side migration).
+    nexa_self_improvement_github_token: str = ""
+    nexa_self_improvement_base_branch: str = "main"
+
     # Phase 18a — multi-modal (vision / audio / image gen); provider wiring in later sub-phases.
     nexa_multimodal_enabled: bool = False
     nexa_multimodal_vision_enabled: bool = False
