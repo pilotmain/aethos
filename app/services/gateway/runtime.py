@@ -610,6 +610,19 @@ class NexaGateway:
             channel,
         )
 
+        if intent == "config_query":
+            from app.services.config_query import handle_config_query
+
+            return {
+                "mode": "chat",
+                "text": gateway_finalize_chat_reply(
+                    handle_config_query(raw),
+                    source="config_query",
+                    user_text=raw,
+                ),
+                "intent": "config_query",
+            }
+
         # Orchestration sub-agents (Mission Control): NL roster → create_sub_agent via intent_classifier +
         # looks_like_registry_agent_creation_nl (Phase 54/59).
         if intent in ("create_sub_agent", "create_custom_agent") and (uid or "").strip():
@@ -776,6 +789,20 @@ class NexaGateway:
                     raw_user_text=raw_gate,
                     payload=cred_gate,
                 )
+
+            from app.services.config_query import handle_config_query
+            from app.services.intent_classifier import is_config_query
+
+            if is_config_query(raw_gate):
+                return {
+                    "mode": "chat",
+                    "text": gateway_finalize_chat_reply(
+                        handle_config_query(raw_gate),
+                        source="config_query",
+                        user_text=raw_gate,
+                    ),
+                    "intent": "config_query",
+                }
 
             from app.services.sub_agent_router import try_sub_agent_gateway_turn
 

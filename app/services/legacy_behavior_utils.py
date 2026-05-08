@@ -371,6 +371,10 @@ def build_response(
     if is_command_question(text):
         r = apply_tone(format_command_help_response(), context.memory)
         return _out(r)
+    if intent == "config_query":
+        from app.services.config_query import handle_config_query
+
+        return _out(handle_config_query(text))
     if intent == "orchestrate_system" and db is not None and (app_user_id or "").strip():
         from app.services.orchestrator_status_reply import format_orchestrator_mc_snapshot
 

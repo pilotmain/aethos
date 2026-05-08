@@ -31,6 +31,7 @@ Valid intents:
 - status_update: user says they completed something
 - correction: user says the assistant misunderstood, asks it to answer the question, or rejects the previous response
 - general_chat: anything else
+- config_query: user asks about **this deployment's** configuration — LLM provider/model, workspace paths on the host, whether API keys are set (never the secret values)
 
 Important rules:
 - Do NOT classify as brain_dump just because the message contains "and".
@@ -78,7 +79,29 @@ VALID_INTENTS = {
     "correction",
     "general_chat",
     "dev_command",
+    "config_query",
 }
+
+# Phase 77 — questions about this deployment's Settings (.env), not user files or missions.
+CONFIG_QUERY_PATTERNS = [
+    r"what model (?:are you using|are we using|do you use)\??",
+    r"which (?:llm|model|anthropic|openai|deepseek|ollama) (?:are we using|is running|do you use)\??",
+    r"what (?:llm|model|provider) (?:is configured|am i using|are you using)\??",
+    r"show (?:me )?my (?:llm|model|provider) settings",
+    r"what (?:api key|token) (?:is configured|am i using)",
+    r"where is my workspace",
+    r"show (?:me )?my workspace",
+    r"what (?:workspace|repository) (?:path|root) (?:is set|am i using)\??",
+    r"show (?:me )?my configuration",
+    r"what settings (?:do i have|are active)\??",
+]
+
+
+def is_config_query(text: str) -> bool:
+    t = (text or "").strip()
+    if len(t) < 6:
+        return False
+    return any(re.search(p, t, re.I) for p in CONFIG_QUERY_PATTERNS)
 
 TASK_VERBS = [
     "finish",
@@ -529,6 +552,9 @@ def classify_intent_fallback(
 ) -> dict:
     t = message.lower().strip()
 
+    if is_config_query(message):
+        return {"intent": "config_query", "confidence": 0.95, "reason": "configuration / settings question"}
+
     if looks_like_orchestrate_system(message):
         return {"intent": "orchestrate_system", "confidence": 0.92, "reason": "mission control / orchestration cues"}
 
@@ -707,6 +733,10 @@ def get_intent(
     t0 = (message or "").strip()
     tl0 = t0.lower()
     from app.services.sub_agent_natural_creation import looks_like_registry_agent_creation_nl
+
+    # Phase 77 — before registry/orchestration cues so "what model…" is never mistaken for actions.
+    if is_config_query(t0):
+        return "config_query"
 
     if looks_like_registry_agent_creation_nl(t0):
         return "create_sub_agent"
