@@ -1,4 +1,4 @@
-"""Multi-user capability modes for the Nexa Telegram bot (env + DB bootstrap; no PII in replies)."""
+"""Multi-user capability modes for the Telegram bot (env + DB bootstrap; no PII in replies)."""
 
 from __future__ import annotations
 
@@ -10,25 +10,27 @@ from dataclasses import dataclass
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.branding import (
+    access_restricted_body,
+    blocked_account_body,
+    dev_execution_restricted_body,
+    display_product_name,
+    guest_projects_hint,
+    ops_execution_restricted_body,
+)
 from app.models.telegram_link import TelegramLink
 
 logger = logging.getLogger(__name__)
 
-ACCESS_RESTRICTED = (
-    "This command is restricted.\n\n"
-    "You can still chat with Nexa in plain language — ask what you’re trying to do or describe the outcome you want.\n"
-    "If you need Dev, Ops, or project admin, ask the bot owner to grant access."
-)
+ACCESS_RESTRICTED = access_restricted_body()
 
-DEV_EXECUTION_RESTRICTED = "Development execution is restricted on this Nexa instance."
+DEV_EXECUTION_RESTRICTED = dev_execution_restricted_body()
 
-OPS_EXECUTION_RESTRICTED = "Ops execution is restricted on this Nexa instance."
+OPS_EXECUTION_RESTRICTED = ops_execution_restricted_body()
 
-GUEST_PROJECTS = (
-    "Projects on this instance are not shown publicly. Ask the bot owner for access to Dev or project details."
-)
+GUEST_PROJECTS = guest_projects_hint()
 
-BLOCKED_MSG = "This Nexa instance is not available for your account."
+BLOCKED_MSG = blocked_account_body()
 
 
 def parse_telegram_id_list(env_value: str | None) -> set[int]:
@@ -124,12 +126,24 @@ def is_privileged_owner_for_web_mutations(db: Session, app_user_id: str) -> bool
     Also grants access when enterprise governance marks the user as owner/admin
     (``users.governance_role``) or assigns org owner/admin on an enabled membership row,
     matching admin surfaces in :mod:`app.api.routes.governance_api`.
+
+    Additionally, comma-separated :envvar:`AETHOS_OWNER_IDS` (canonical ``tg_*`` / ``web_*`` ids)
+    always grants this gate without requiring Telegram bootstrap alignment.
     """
-    if is_owner_role(get_telegram_role_for_app_user(db, app_user_id)):
-        return True
     uid = (app_user_id or "").strip()[:64]
     if not uid:
         return False
+
+    from app.core.config import get_settings
+
+    raw = (get_settings().aethos_owner_ids or "").strip()
+    if raw:
+        allow = {x.strip()[:64] for x in raw.split(",") if x.strip()}
+        if uid in allow:
+            return True
+
+    if is_owner_role(get_telegram_role_for_app_user(db, app_user_id)):
+        return True
 
     from app.models.governance import OrganizationMembership
     from app.models.user import User
@@ -153,7 +167,7 @@ def is_privileged_owner_for_web_mutations(db: Session, app_user_id: str) -> bool
 
 def require_personal_workspace_mutation_allowed(db: Session, app_user_id: str) -> None:
     """
-    Who may add workspace roots and Nexa workspace projects (labeled folders).
+    Who may add workspace roots and labeled workspace projects (multi-root folders).
 
     - Non-Telegram-shaped app user ids (``web_*``, ``local_*``, email, etc.) are treated as
       the sole operator of that id and may manage their own rows.
@@ -248,7 +262,8 @@ def make_access(
 def format_access_command_text(role: str) -> str:
     """Plain text for /access (no code fences)."""
     r = (role or "guest").strip()
-    lines: list[str] = ["Nexa access", "", f"You are: {r}", "", "Capabilities:"]
+    bn = display_product_name()
+    lines: list[str] = [f"{bn} access", "", f"You are: {r}", "", "Capabilities:"]
     if r == "owner":
         lines += [
             "• Chat: enabled",
@@ -273,7 +288,7 @@ def format_access_command_text(role: str) -> str:
     else:  # guest
         lines += [
             "• Chat: enabled",
-            "• Reset / planning: enabled (say “reset” or ask Nexa for slash-command help)",
+            f"• Reset / planning: enabled (say “reset” or ask {bn} for slash-command help)",
             "• Development tasks: disabled",
             "• Ops: disabled",
             "• Project lists with host details: not shown (ask the owner to grant access)",
@@ -284,12 +299,13 @@ def format_access_command_text(role: str) -> str:
 def access_section_for_doctor(telegram_id: int, db: Session) -> str:
     r = get_telegram_role(telegram_id, db)
     ocfg = "yes" if is_owner_ids_configured() else "no (bootstrap: first /start = owner; others guest until you set the env var)"
+    bn = display_product_name()
     return "\n".join(
         [
             "",
             "**Access**",
             f"• `TELEGRAM_OWNER_IDS` configured: {ocfg}",
             f"• current user role: {r}",
-            "• risky command checks: yes (Nexa capability mode)",
+            f"• risky command checks: yes ({bn} capability mode)",
         ]
     )[:2000]

@@ -91,6 +91,9 @@ class Settings(BaseSettings):
     aethos_brand_name: str = "AethOS"
     aethos_brand_tagline: str = "The Agentic Operating System"
     aethos_brand_prompt: str | None = None
+    #: Comma-separated canonical user ids (``tg_*``, ``web_*``, …) always granted owner-class
+    #: access for Mission Control privileged routes (merged with Telegram ``TELEGRAM_OWNER_IDS`` roles).
+    aethos_owner_ids: str = ""
     app_env: str = "development"
     debug: bool = True
     # When true, API boot uses JSON log lines (one object per line) for aggregation; see app.services.logging

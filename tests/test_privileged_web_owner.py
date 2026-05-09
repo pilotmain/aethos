@@ -6,11 +6,22 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
+from app.core.branding import display_product_name
+from app.core.config import get_settings
 from app.core.db import Base
 from app.models.governance import Organization, OrganizationMembership
 from app.models.user import User
 from app.services.governance.service import ROLE_OWNER
 from app.services.user_capabilities import is_privileged_owner_for_web_mutations
+
+
+@pytest.fixture(autouse=True)
+def _clear_settings_cache_for_owner_tests() -> None:
+    get_settings.cache_clear()
+    display_product_name.cache_clear()
+    yield
+    get_settings.cache_clear()
+    display_product_name.cache_clear()
 
 
 @pytest.fixture
@@ -82,3 +93,10 @@ def test_guest_without_governance(mem_db: Session) -> None:
     )
     mem_db.commit()
     assert is_privileged_owner_for_web_mutations(mem_db, "tg_888000002") is False
+
+
+def test_privileged_by_aethos_owner_ids_env(mem_db: Session, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AETHOS_OWNER_IDS", "web_listed_only_1, tg_900")
+    assert is_privileged_owner_for_web_mutations(mem_db, "web_listed_only_1") is True
+    assert is_privileged_owner_for_web_mutations(mem_db, "tg_900") is True
+    assert is_privileged_owner_for_web_mutations(mem_db, "tg_not_listed") is False
