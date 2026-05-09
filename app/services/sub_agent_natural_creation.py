@@ -73,9 +73,39 @@ _NAME_DOMAIN_FRAGMENTS: tuple[tuple[str, str], ...] = (
 
 
 _CREATION_VERBS = re.compile(r"(?i)\b(create|make|add|build|spawn)\b")
+_EXTENDED_CREATION_VERBS = re.compile(
+    r"(?i)\b(create|make|add|build|spawn|set\s+up|generate)\b"
+)
+_VOLITION_SPAWN = re.compile(r"(?i)\b(i\s+need|i\s+want|give\s+me|get\s+me)\b")
 _CREATION_TEAM_WORDS = re.compile(
     r"(?i)\b(agents?|sub[- ]?agents?|subagents?|assistants?|teammates?|workers?|bots?)\b"
 )
+
+# Polite / conversational spawn requests (Phase NL — include question forms).
+_RE_EXPLICIT_CONVERSATIONAL_SPAWN = re.compile(
+    r"(?is)\b(?:can|could|would)\s+you\s+(?:please\s+)?(?:create|make|spawn|add|set\s+up|build)\s+"
+    r"(?:an?\s+)?(?:a\s+)?[^\n]{0,160}?\b(agent|specialist|expert|assistant)\s*\??"
+)
+_RE_VOLITION_SPAWN_TAIL = re.compile(
+    r"(?is)^\s*(?:i\s+need|i\s+want|give\s+me|get\s+me)\s+(?:an?\s+)?(?:a\s+)?[^\n]{1,120}\b(agent|specialist|expert|assistant)\b"
+)
+_RE_SETUP_SPAWN = re.compile(
+    r"(?is)\b(?:set\s+up|generate)\s+(?:an?\s+)?(?:a\s+)?[^\n]{1,120}\b(agent|specialist|expert)\b"
+)
+
+
+def _nl_explicit_conversational_spawn_line(text: str) -> bool:
+    """Single-agent spawn cues including 'Can you create … agent?' and 'I need a QA specialist'."""
+    raw = (text or "").strip()
+    if not raw:
+        return False
+    if _RE_EXPLICIT_CONVERSATIONAL_SPAWN.search(raw):
+        return True
+    if _RE_VOLITION_SPAWN_TAIL.search(raw):
+        return True
+    if _RE_SETUP_SPAWN.search(raw):
+        return True
+    return False
 
 
 def looks_like_registry_agent_creation_nl(text: str) -> bool:
@@ -89,15 +119,21 @@ def looks_like_registry_agent_creation_nl(text: str) -> bool:
     raw = (text or "").strip()
     if not raw:
         return False
-    if not _CREATION_VERBS.search(raw):
-        return False
     from app.services.multi_agent_routing import is_multi_agent_capability_question
+
+    # Conversational spawn ("Can you create a marketing agent?", "I need a QA specialist").
+    if _nl_explicit_conversational_spawn_line(raw) and not is_multi_agent_capability_question(raw):
+        return True
+
+    has_creation_verb = bool(_EXTENDED_CREATION_VERBS.search(raw) or _VOLITION_SPAWN.search(raw))
+    if not has_creation_verb:
+        return False
 
     if is_multi_agent_capability_question(raw):
         return False
     tl = raw.lower()
-    # Question-shaped requests ("can you create agents?", "how do I create…") → not imperative NL spawn.
-    if "?" in raw:
+    # Question-shaped — allow explicit conversational spawn (handled above); block vague tutorials.
+    if "?" in raw and not _nl_explicit_conversational_spawn_line(raw):
         return False
     first_w = tl.split()[0] if tl.split() else ""
     if first_w in (
@@ -117,7 +153,9 @@ def looks_like_registry_agent_creation_nl(text: str) -> bool:
         "when",
         "where",
     ):
-        return False
+        # Allow "Can/Could/Would you create …" (already handled by conversational spawn).
+        if not _RE_EXPLICIT_CONVERSATIONAL_SPAWN.search(raw):
+            return False
 
     # Phase 59 — explicit roster NL (comma lists, "N agents:", numbered *_agent lines) → sub-agent registry.
     if (
@@ -316,11 +354,74 @@ def _extract_numbered_agent_specs(segment: str, full_text: str) -> list[tuple[st
     return specs
 
 
+def _parse_conversational_agent_specs(text: str) -> list[tuple[str, str]]:
+    """
+    Free-form single-agent lines: \"Create a marketing agent\", \"Can you create a QA agent?\",
+    \"I need a QA specialist\".
+    """
+    raw = (text or "").strip()
+    if not raw:
+        return []
+    rc = raw.rstrip("?!.")
+
+    # Can/Could/Would you … create … agent / specialist / …
+    m = re.search(
+        r"(?is)\b(?:can|could|would)\s+you\s+(?:please\s+)?(?:create|make|spawn|add|set\s+up|build)\s+"
+        r"(?:an?\s+)?(?:a\s+)?(.+?)\s+(agent|specialist|expert|assistant)\s*$",
+        rc,
+    )
+    if m:
+        phrase = (m.group(1) or "").strip()
+        phrase = re.sub(r"(?i)^a\s+", "", phrase)
+        role = (m.group(2) or "agent").lower()
+        if role == "agent":
+            base = f"{phrase}_agent" if not phrase.endswith("_agent") else phrase
+        else:
+            base = f"{phrase}_{role}" if not phrase.endswith(f"_{role}") else phrase
+        nm = _slugify_roster_title(base) or _slugify_roster_title(phrase)
+        if nm:
+            return [(nm, _infer_domain(nm, raw))]
+
+    # I need / I want / Give me … agent|specialist|…
+    m = re.match(
+        r"(?is)^\s*(?:i\s+need|i\s+want|give\s+me|get\s+me)\s+(?:an?\s+)?(?:a\s+)?(.+?)\s+(agent|specialist|expert|assistant)\s*$",
+        rc,
+    )
+    if m:
+        phrase = (m.group(1) or "").strip()
+        phrase = re.sub(r"(?i)^a\s+", "", phrase)
+        role = (m.group(2) or "agent").lower()
+        if role == "agent":
+            base = f"{phrase}_agent" if not phrase.endswith("_agent") else phrase
+        else:
+            base = f"{phrase}_{role}"
+        nm = _slugify_roster_title(base) or _slugify_roster_title(phrase)
+        if nm:
+            return [(nm, _infer_domain(nm, raw))]
+
+    # Create/Make/Spawn a … agent (no trailing domain token)
+    m = re.match(
+        r"(?is)^\s*(?:create|make|spawn|add|build|set\s+up|generate)\s+(?:an?\s+)?(?:a\s+)?(.+?)\s+agent\s*$",
+        rc,
+    )
+    if m:
+        phrase = (m.group(1) or "").strip()
+        nm = _slugify_roster_title(f"{phrase}_agent")
+        if nm:
+            return [(nm, _infer_domain(nm, raw))]
+
+    return []
+
+
 def parse_natural_sub_agent_specs(text: str) -> list[tuple[str, str]]:
     """Return (name, domain) pairs to spawn."""
     raw = (text or "").strip()
     if not raw:
         return []
+
+    conv = _parse_conversational_agent_specs(raw)
+    if conv:
+        return _dedupe_specs(conv)
 
     role_specs = _extract_role_based_agent_specs(raw)
     if role_specs:
@@ -444,7 +545,10 @@ def try_spawn_natural_sub_agents(
     if not specs:
         return (
             "**Create orchestration agents**\n\n"
-            "Examples:\n"
+            "**Natural language:**\n"
+            "• “Create a marketing agent” · “Can you create a QA agent?”\n"
+            "• “I need a QA specialist” · “Set up a testing agent”\n\n"
+            "**Structured:**\n"
             "• `create five agents: product_manager, designer, backend, frontend, qa`\n"
             "• `create two agents qa_agent and marketing_agent`\n"
             "• `subagent create ops_agent ops`\n"

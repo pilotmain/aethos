@@ -46,7 +46,7 @@ Important rules:
 - If the user asks you to run a full pipeline (check/fix/push/redeploy/verify) against Railway or production — classify as external_execution (not external_investigation).
 - If the user is answering a prior prompt about Railway/CLI auth or deploy preferences — classify as external_execution_continue.
 - If the user focuses on Railway/hosted deploy/service health/production outage without that full execution pipeline or follow-up context — classify as external_investigation unless they only want local repo debugging paths.
-- If the user wants orchestration/registry agents (natural “create agents …”, ``*_agent`` handles, ``subagent create``), classify as **create_sub_agent**.
+- If the user wants orchestration/registry agents (natural “create agents …”, conversational lines like “Create a marketing agent”, “Can you create a QA agent?”, “I need a QA specialist”, ``*_agent`` handles, ``subagent create``), classify as **create_sub_agent**.
 - **create … agent** without orchestration cues may still classify **create_custom_agent** only when registry NL routing is off (e.g. numbered lists); prefer **create_sub_agent** per Phase 48.
 - If uncertain, choose general_chat, not brain_dump.
 

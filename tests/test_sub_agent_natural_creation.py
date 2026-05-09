@@ -73,3 +73,23 @@ def test_infer_domain_phase54_product_and_design() -> None:
     assert _infer_domain("product_manager_agent", "product_manager_agent for product strategy") == "general"
     assert _infer_domain("designer_agent", "designer_agent for UI/UX design") == "design"
     assert _infer_domain("backend_agent", "backend_agent for API development") == "backend"
+
+
+def test_conversational_create_agent_parsing() -> None:
+    s = parse_natural_sub_agent_specs("Create a marketing agent")
+    assert s and s[0][0] == "marketing_agent" and s[0][1] == "marketing"
+
+    s2 = parse_natural_sub_agent_specs("Can you create a QA agent?")
+    assert s2 and "qa" in s2[0][0].lower() and s2[0][1] == "qa"
+
+    s3 = parse_natural_sub_agent_specs("I need a QA specialist")
+    assert s3 and s3[0][1] == "qa"
+
+
+def test_prefers_registry_conversational_spawn() -> None:
+    from app.services.sub_agent_natural_creation import looks_like_registry_agent_creation_nl
+
+    assert looks_like_registry_agent_creation_nl("Create a marketing agent") is True
+    assert looks_like_registry_agent_creation_nl("Can you create a marketing agent?") is True
+    assert looks_like_registry_agent_creation_nl("I need a QA specialist") is True
+    assert looks_like_registry_agent_creation_nl("Set up a testing agent") is True
