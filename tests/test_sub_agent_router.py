@@ -29,6 +29,11 @@ class _NLoff(_S):
     nexa_natural_agent_invocation = False
 
 
+class _Recover(_S):
+    nexa_assignment_auto_recover = True
+    nexa_assignment_auto_recover_wait_seconds = 0.0
+
+
 class _Off:
     nexa_agent_orchestration_enabled = False
     nexa_agent_max_per_chat = 5
@@ -130,6 +135,42 @@ def test_route_busy_agent(registry: AgentRegistry, router: AgentRouter) -> None:
         result = router.route("@busy-agent deploy", "chat123")
         assert result["handled"] is True
         assert "busy" in result["response"].lower()
+
+
+def test_route_terminated_agent_blocked_when_auto_recover_off(
+    registry: AgentRegistry, router: AgentRouter
+) -> None:
+    with (
+        patch("app.services.sub_agent_router.get_settings", return_value=_S()),
+        patch("app.services.sub_agent_registry.get_settings", return_value=_S()),
+    ):
+        agent = registry.spawn_agent("dead-agent", "git", "chat123")
+        assert agent is not None
+        registry.update_status(agent.id, AgentStatus.TERMINATED)
+        result = router.route("@dead-agent deploy", "chat123")
+        assert result["handled"] is True
+        assert "terminated" in result["response"].lower()
+
+
+def test_route_terminated_agent_auto_recover_then_execute(
+    registry: AgentRegistry, router: AgentRouter
+) -> None:
+    with (
+        patch("app.services.sub_agent_router.get_settings", return_value=_Recover()),
+        patch("app.services.sub_agent_registry.get_settings", return_value=_Recover()),
+        patch("app.services.sub_agent_executor.AgentExecutor") as ex_cls,
+    ):
+        agent = registry.spawn_agent("revive-agent", "git", "chat123")
+        assert agent is not None
+        registry.update_status(agent.id, AgentStatus.TERMINATED)
+        ex_cls.return_value.execute.return_value = "recovered_ok"
+        result = router.route("@revive-agent ping", "chat123", user_id="u1")
+        assert result["handled"] is True
+        assert result["response"] == "recovered_ok"
+        ex_cls.return_value.execute.assert_called_once()
+        refreshed = registry.get_agent(agent.id)
+        assert refreshed is not None
+        assert refreshed.status == AgentStatus.IDLE
 
 
 def test_extract_natural_language_ask_to(registry: AgentRegistry) -> None:

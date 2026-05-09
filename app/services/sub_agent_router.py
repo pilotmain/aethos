@@ -147,6 +147,57 @@ def try_extract_natural_language_sub_agent(
     return None
 
 
+def _maybe_auto_recover_terminated_for_dispatch(
+    agent: SubAgent,
+    registry: AgentRegistry,
+) -> SubAgent:
+    """
+    When enabled, move TERMINATED orchestration agents back to IDLE so assignments can run.
+
+    Idle cleanup marks agents TERMINATED without deleting them; operators asked for seamless
+    reassignment without manual CEO Recover when ``nexa_assignment_auto_recover`` is true.
+    """
+    if agent.status != AgentStatus.TERMINATED:
+        return agent
+    s = get_settings()
+    if not bool(getattr(s, "nexa_assignment_auto_recover", False)):
+        return agent
+    wait_s = float(getattr(s, "nexa_assignment_auto_recover_wait_seconds", 0.0) or 0.0)
+    registry.patch_agent(
+        agent.id,
+        status=AgentStatus.IDLE,
+        metadata_patch={
+            "auto_recovered_at": time.time(),
+            "auto_recovered_via": "sub_agent_assignment_dispatch",
+        },
+    )
+    try:
+        from app.services.agent.activity_tracker import get_activity_tracker
+
+        get_activity_tracker().log_action(
+            agent_id=agent.id,
+            agent_name=agent.name,
+            action_type="assignment_auto_recover",
+            input_data={"from_status": "terminated"},
+            output_data={"to_status": "idle"},
+            success=True,
+            metadata={"via": "sub_agent_router"},
+        )
+    except Exception:  # noqa: BLE001
+        logger.debug("assignment_auto_recover tracker log suppressed", exc_info=True)
+
+    if wait_s > 0:
+        time.sleep(min(wait_s, 60.0))
+
+    refreshed = registry.get_agent(agent.id)
+    logger.info(
+        "assignment auto-recovery: revived terminated agent %s → idle",
+        agent.name,
+        extra={"nexa_event": "assignment_auto_recover", "agent_id": agent.id},
+    )
+    return refreshed or agent
+
+
 class AgentRouter:
     """Routes ``@mentions`` and (Phase 66) NL phrases to registered sub-agents (sync)."""
 
@@ -168,6 +219,8 @@ class AgentRouter:
         natural_language: bool = False,
     ) -> dict[str, Any]:
         agent_name = (display_name or agent.name or "").strip() or agent.name
+
+        agent = _maybe_auto_recover_terminated_for_dispatch(agent, self.registry)
 
         if agent.status != AgentStatus.IDLE:
             hint = (

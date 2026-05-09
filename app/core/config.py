@@ -103,6 +103,10 @@ class Settings(BaseSettings):
     # Phase 67 — POST /agent-assignments runs dispatch_assignment immediately when payload omits auto_dispatch.
     # Set false to require an explicit POST /agent-assignments/{id}/dispatch (legacy two-step behavior).
     nexa_assignment_auto_dispatch_default: bool = True
+    # Phase 74 — orchestration @mention / NL dispatch: auto-revive TERMINATED sub-agents (idle-timeout
+    # cleanup) to IDLE before running tools. Does not apply to custom-agent SQL assignments.
+    nexa_assignment_auto_recover: bool = False
+    nexa_assignment_auto_recover_wait_seconds: float = 0.0
     # Phase 69 — when true, skip LLM intent classification for clearly interrogative/informational
     # messages without pain/provider/imperative cues, routing them straight to general_chat /
     # capability_question. Prevents the dev-execution path from hijacking questions like
