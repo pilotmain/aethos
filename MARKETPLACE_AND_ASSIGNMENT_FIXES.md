@@ -46,4 +46,5 @@ Legacy-style bodies such as `{"agent_id": "<id>", "task": "…"}` validate after
 ## Verification
 
 - `pytest tests/test_marketplace_api_phase71.py tests/test_agent_assignment_schema.py tests/test_sub_agent_router.py tests/test_agent_assignment_auto_dispatch.py`
+- Live API smoke (requires running API + `curl`/`jq`): `./scripts/test_marketplace.sh` — reads `NEXA_WEB_API_TOKEN` from `.env` safely; set `TEST_X_USER_ID` or `NEXA_TEST_X_USER_ID`.
 - Manual: set Connection user + bearer, open Marketplace — search and (as owner) check updates.
