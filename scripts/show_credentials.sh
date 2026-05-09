@@ -69,6 +69,16 @@ if ok:
 else:
     print(f"  {RD}✗ Health check failed (is the API running?){NC}")
 
+print(f"\n{CY}{'━' * 58}{NC}")
+print(f"{BD}Host executor (autonomous runs){NC}")
+nex = (e.get("NEXA_HOST_EXECUTOR_ENABLED") or "").strip().lower()
+wr = (e.get("HOST_EXECUTOR_WORK_ROOT") or e.get("NEXA_WORKSPACE_ROOT") or "").strip()
+if nex in ("1", "true", "yes"):
+    print(f"  {GN}✓ NEXA_HOST_EXECUTOR_ENABLED{NC}")
+    print(f"  {BD}HOST_EXECUTOR_WORK_ROOT:{NC} {wr or '(unset)'}")
+else:
+    print(f"  {YW}⚠ Host executor disabled — agents only return plans/code until you enable it.{NC}")
+
 print(f"\n{YW}Keep NEXA_WEB_API_TOKEN secret.{NC}")
 print(f"{CY}{'━' * 58}{NC}")
 '

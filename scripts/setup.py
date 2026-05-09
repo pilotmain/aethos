@@ -33,7 +33,7 @@ from setup_helpers import (  # noqa: E402
 
 STATE_FILE = _REPO_ROOT / ".aethos_setup_state.json"
 BACKUP_SUBDIR = _REPO_ROOT / ".setup" / "backups"
-TOTAL_STEPS = 8
+TOTAL_STEPS = 9
 CREDS_FILE_HOME = Path.home() / ".aethos_credentials"
 
 
@@ -93,6 +93,7 @@ class SetupWizard:
         "authentication",
         "database",
         "llm_keys",
+        "host_executor",
         "services",
         "verify",
     )
@@ -121,6 +122,8 @@ class SetupWizard:
         self.force = bool(force or env_force)
         self.results: dict[str, bool] = {}
         self._api_process: subprocess.Popen[bytes] | None = None
+        self.pending_workspace: tuple[str, str] | None = None
+        self._workspace_register_done: bool = False
 
     # --- state ---
 
@@ -486,6 +489,58 @@ HOST_EXECUTOR_WORK_ROOT={Path.home() / "aethos-workspace"}
             print(f"\n  {Colors.warning('No LLM keys added — you can edit .env later.')}")
         return True
 
+    def configure_host_executor(self) -> bool:
+        """Enable host executor + work root; optional workspace root registration after API is up."""
+        print(f"\n{Colors.step(7, TOTAL_STEPS, 'Host executor (autonomous runs)…')}\n")
+        print(
+            f"  {Colors.info('Sub-agents and host jobs need NEXA_HOST_EXECUTOR_ENABLED on the worker/API host.')}"
+        )
+        print(
+            f"  {Colors.DIM}The API process must load these env vars; restart after changing .env.{Colors.RESET}\n"
+        )
+        yn = prompt_line(
+            f"  {Colors.question('Enable local host executor (file + command actions)? [y/N]')} "
+        ).strip().lower()
+        if yn != "y":
+            self._update_env_key("NEXA_HOST_EXECUTOR_ENABLED", "false")
+            print(
+                f"  {Colors.DIM}Left NEXA_HOST_EXECUTOR_ENABLED=false — agents will not run host actions here.{Colors.RESET}"
+            )
+            return True
+
+        default_root = (self._get_env_value("NEXA_WORKSPACE_ROOT") or "").strip() or str(
+            Path.home() / "aethos-workspace"
+        )
+        path_raw = prompt_line(
+            f"  {Colors.question(f'Host / workspace root path [{default_root}]')} "
+        ).strip()
+        work_path = path_raw or default_root
+        p = Path(work_path).expanduser()
+        try:
+            p.mkdir(parents=True, exist_ok=True)
+            resolved = str(p.resolve())
+        except OSError as e:
+            print(f"  {Colors.error(f'Cannot use path: {e}')}")
+            return False
+
+        self._update_env_key("NEXA_HOST_EXECUTOR_ENABLED", "true")
+        self._update_env_key("HOST_EXECUTOR_WORK_ROOT", resolved)
+        self._update_env_key("NEXA_WORKSPACE_ROOT", resolved)
+        print(f"  {Colors.success(f'NEXA_HOST_EXECUTOR_ENABLED=true; HOST_EXECUTOR_WORK_ROOT={resolved}')}")
+        print(
+            f"  {Colors.warning('Host actions can modify files under this tree — use a dedicated folder.')}"
+        )
+
+        reg = prompt_line(
+            f"  {Colors.question('Register this path as a Mission Control workspace root when the API is up? [Y/n]')} "
+        ).strip().lower()
+        if reg in ("", "y", "yes"):
+            self.pending_workspace = (resolved, "setup_workspace")
+            print(
+                f"  {Colors.info('Will POST /api/v1/web/workspace/roots during verification if the API responds.')}"
+            )
+        return True
+
     def setup_database(self) -> bool:
         print(f"\n{Colors.step(5, TOTAL_STEPS, 'Initializing database…')}\n")
         print(f"  {Colors.info('Running app.core.db.ensure_schema()')}")
@@ -526,7 +581,7 @@ HOST_EXECUTOR_WORK_ROOT={Path.home() / "aethos-workspace"}
         return out
 
     def start_services(self) -> bool:
-        print(f"\n{Colors.step(7, TOTAL_STEPS, 'Starting API (optional smoke test)…')}\n")
+        print(f"\n{Colors.step(8, TOTAL_STEPS, 'Starting API (optional smoke test)…')}\n")
         if self.skip_services:
             print(f"  {Colors.info('Skipped (--skip-services)')}")
             return True
@@ -577,8 +632,38 @@ HOST_EXECUTOR_WORK_ROOT={Path.home() / "aethos-workspace"}
         print(f"  {Colors.warning('API did not bind in time — see .setup/uvicorn.setup.log')}")
         return True
 
+    def _register_pending_workspace(self, api_base: str, web_user: str, token: str) -> None:
+        """POST Mission Control workspace root (requires DB + authenticated API)."""
+        if self._workspace_register_done or not self.pending_workspace:
+            return
+        path, label = self.pending_workspace
+        if not token or not web_user:
+            print(
+                f"  {Colors.warning('Skipping workspace registration (missing token or TEST_X_USER_ID)')}"
+            )
+            return
+        url = f"{api_base.rstrip('/')}/api/v1/web/workspace/roots"
+        body = json.dumps({"path": path, "label": label}).encode("utf-8")
+        req = urllib.request.Request(url, data=body, method="POST")
+        req.add_header("Content-Type", "application/json")
+        req.add_header("X-User-Id", web_user)
+        req.add_header("Authorization", f"Bearer {token}")
+        try:
+            urllib.request.urlopen(req, timeout=20)
+            print(
+                f"  {Colors.success('Workspace root registered (POST /api/v1/web/workspace/roots)')}"
+            )
+            self._workspace_register_done = True
+            self.pending_workspace = None
+        except urllib.error.HTTPError as e:
+            print(
+                f"  {Colors.warning(f'Workspace registration HTTP {e.code} — add the root in Mission Control if needed.')}"
+            )
+        except Exception as exc:  # noqa: BLE001
+            print(f"  {Colors.warning(f'Workspace registration skipped: {exc!s}')}")
+
     def verify_installation(self) -> bool:
-        print(f"\n{Colors.step(8, TOTAL_STEPS, 'Verifying installation…')}\n")
+        print(f"\n{Colors.step(9, TOTAL_STEPS, 'Verifying installation…')}\n")
         api_base = (self._get_env_value("API_BASE_URL") or "http://127.0.0.1:8010").rstrip("/")
 
         token = (self._get_env_value("NEXA_WEB_API_TOKEN") or "").strip()
@@ -619,6 +704,8 @@ HOST_EXECUTOR_WORK_ROOT={Path.home() / "aethos-workspace"}
                 all_passed = False
                 continue
             ok, detail = _req(url, needs_auth=needs_auth)
+            if ok and name.startswith("Health"):
+                self._register_pending_workspace(api_base, web_user, token)
             if ok:
                 print(f"  {Colors.success(f'{name} — {detail}')}")
                 continue
@@ -697,6 +784,7 @@ HOST_EXECUTOR_WORK_ROOT={Path.home() / "aethos-workspace"}
             ("authentication", "Authentication (user id + token)", self.configure_authentication),
             ("database", "Initialize database", self.setup_database),
             ("llm_keys", "LLM keys (optional)", self.configure_llm_keys),
+            ("host_executor", "Host executor (local runs)", self.configure_host_executor),
             ("services", "Start API (optional)", self.start_services),
             ("verify", "Verify HTTP endpoints", self.verify_installation),
         ]

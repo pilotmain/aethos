@@ -23,8 +23,11 @@ export type ProviderUsageSummary = {
 };
 
 export type ProviderUsageResponse = {
+  ok?: boolean;
   calls: ProviderUsageCall[];
   summary: ProviderUsageSummary;
+  /** Full DB-backed roll-up (same source as `/web/usage/summary`). */
+  llm_summary?: Record<string, unknown>;
 };
 
 export async function fetchProviderUsage(): Promise<ProviderUsageResponse> {
