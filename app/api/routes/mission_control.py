@@ -23,7 +23,7 @@ from datetime import datetime, timezone
 from typing import Literal
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect, status
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
@@ -82,6 +82,29 @@ class IntegrityOverrideBody(BaseModel):
 
     alert_id: str
     action: Literal["ignore"]
+
+
+class MissionControlGatewayRunBody(BaseModel):
+    """
+    POST /mission-control/gateway/run — tolerate ``text``, ``raw``, ``message``, or ``prompt``.
+
+    Using an explicit model avoids FastAPI's strict ``dict`` body typing (clients that sent
+    non-object JSON or relied only on ``raw`` saw *Input should be a valid dictionary*).
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
+    text: str | None = Field(default=None, description="Primary message field.")
+    raw: str | None = Field(default=None, description="Alias used by some clients / docs.")
+    message: str | None = Field(default=None, description="Alias (chat-shaped payloads).")
+    prompt: str | None = Field(default=None, description="Alias for gateway-style prompts.")
+    user_id: str | None = Field(default=None, description="Logical user id for GatewayContext.")
+
+    def resolved_text(self) -> str:
+        return str(self.text or self.raw or self.message or self.prompt or "").strip()
+
+    def resolved_user_id(self) -> str:
+        return str(self.user_id or "dev_user").strip()
 
 
 @router.get("/data-inventory")
@@ -290,19 +313,12 @@ async def mission_control_events_ws(ws: WebSocket) -> None:
 
 @router.post("/gateway/run")
 def mission_control_gateway_run(
-    payload: dict,
+    body: MissionControlGatewayRunBody,
     db: Session = Depends(get_db),
 ) -> dict:
     """Run user text through :class:`~app.services.gateway.runtime.NexaGateway`."""
-    # Accept common aliases so curl/docs mistakes (`raw`, `message`) still work.
-    text = str(
-        payload.get("text")
-        or payload.get("raw")
-        or payload.get("message")
-        or payload.get("prompt")
-        or ""
-    )
-    user_id = str(payload.get("user_id") or "dev_user")
+    text = body.resolved_text()
+    user_id = body.resolved_user_id()
 
     from app.services.gateway.context import GatewayContext
     from app.services.gateway.runtime import NexaGateway

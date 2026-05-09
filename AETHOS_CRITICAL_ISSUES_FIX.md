@@ -42,13 +42,15 @@ curl -sS -X POST "http://localhost:8000/api/v1/web/chat" \
   -d '{"message":"Hello","session_id":"default"}'
 ```
 
-**Gateway example (note `text`, not `raw` only — both supported after the fix):**
+**Gateway example:** the handler accepts **`text`**, **`raw`**, **`message`**, or **`prompt`** (first non-empty wins), via an explicit Pydantic body model — **not** a bare `dict` (avoids *Input should be a valid dictionary* when clients send only `raw`).
 
 ```bash
 curl -sS -X POST "http://localhost:8000/api/v1/mission-control/gateway/run" \
   -H "Content-Type: application/json" \
   -d '{"text":"Create a marketing agent","user_id":"tg_YOURID"}'
 ```
+
+See **`docs/API_AND_FRONTEND_CONNECTION.md`** for ports, auth, and `./scripts/fix_api_connection.sh`.
 
 **Health:**
 

@@ -26,6 +26,17 @@ def test_locked_gateway_run_accepts_post() -> None:
     assert r.status_code != 404
 
 
+def test_locked_gateway_run_accepts_raw_only_body() -> None:
+    """Clients that only send ``raw`` must not hit *Input should be a valid dictionary*."""
+    c = TestClient(app)
+    r = c.post(
+        f"{PREFIX}/gateway/run",
+        json={"raw": "ping", "user_id": "contract_test_user"},
+    )
+    assert r.status_code != 404
+    assert r.status_code != 422, r.text
+
+
 def test_locked_websocket_connects() -> None:
     c = TestClient(app)
     with c.websocket_connect(f"{PREFIX}/events/ws") as ws:
