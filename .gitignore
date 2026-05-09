@@ -66,6 +66,9 @@ pip-wheel-metadata/
 # Logs & runtime
 *.log
 .runtime/
+# Setup wizard (scripts/setup.py) — local UVicorn logs / PID / resume state
+.setup/
+.aethos_setup_state.json
 .aider*
 tmp/
 temp/
