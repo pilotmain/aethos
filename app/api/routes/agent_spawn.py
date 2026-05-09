@@ -26,7 +26,11 @@ from app.services.web_user_id import orchestration_registry_scopes
 from app.services.agent.activity_stream import recent_activity_for_agents
 from app.services.agent.activity_tracker import get_activity_tracker
 from app.services.sub_agent_executor import AgentExecutor
-from app.services.sub_agent_registry import AgentRegistry, AgentStatus
+from app.services.sub_agent_registry import (
+    ORCH_OWNER_APP_USER_ID_META_KEY,
+    AgentRegistry,
+    AgentStatus,
+)
 
 router = APIRouter(prefix="/agents", tags=["agents"])
 
@@ -42,12 +46,25 @@ def _api_orchestration_scopes(app_user_id: str, session_id: str = "default") -> 
     return orchestration_registry_scopes(app_user_id, session_id=session_id)
 
 
-def _ensure_agent_in_scopes(agent_id: str, scopes: list[str]):
+def _ensure_agent_in_scopes(
+    agent_id: str,
+    scopes: list[str],
+    *,
+    app_user_id: str | None = None,
+):
+    """Allow access if ``parent_chat_id`` is in merged scopes or metadata owner matches API user."""
     registry = AgentRegistry()
     agent = registry.get_agent(agent_id)
-    if not agent or agent.parent_chat_id not in scopes:
+    if not agent:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found")
-    return registry, agent
+    if agent.parent_chat_id in scopes:
+        return registry, agent
+    uid = (app_user_id or "").strip()
+    if uid:
+        md_uid = (agent.metadata or {}).get(ORCH_OWNER_APP_USER_ID_META_KEY)
+        if md_uid is not None and str(md_uid).strip() == uid:
+            return registry, agent
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found")
 
 
 class SpawnAgentRequest(BaseModel):
@@ -140,7 +157,7 @@ def post_spawn_agent(
     scopes = _api_orchestration_scopes(app_user_id)
     chat_id = _web_chat_scope(app_user_id)
     registry = AgentRegistry()
-    existing = registry.get_agent_by_name_in_scopes(body.name.strip(), scopes)
+    existing = registry.get_agent_by_name_for_app_user(body.name.strip(), app_user_id)
     if existing:
         return {
             "ok": True,
@@ -154,6 +171,7 @@ def post_spawn_agent(
         body.domain.strip().lower(),
         chat_id,
         capabilities=caps,
+        owner_app_user_id=app_user_id,
     )
     if not agent:
         raise HTTPException(
@@ -176,7 +194,7 @@ def post_create_agent(
     chat_id = _web_chat_scope(app_user_id)
     registry = AgentRegistry()
     name_key = body.name.strip()
-    if registry.get_agent_by_name_in_scopes(name_key, scopes):
+    if registry.get_agent_by_name_for_app_user(name_key, app_user_id):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=f"Agent '{name_key}' already exists for this workspace.",
@@ -192,6 +210,7 @@ def post_create_agent(
         chat_id,
         capabilities=caps,
         trusted=trusted,
+        owner_app_user_id=app_user_id,
     )
     if not agent:
         raise HTTPException(
@@ -248,6 +267,7 @@ def get_debug_agent_scopes(app_user_id: str = Depends(get_valid_web_user_id)) ->
 
     api_scopes = _api_orchestration_scopes(app_user_id)
     merged = registry.list_agents_merged(api_scopes)
+    unified = registry.list_agents_for_app_user(app_user_id)
     return {
         "ok": True,
         "user_id": app_user_id,
@@ -255,6 +275,7 @@ def get_debug_agent_scopes(app_user_id: str = Depends(get_valid_web_user_id)) ->
         "api_scopes": api_scopes,
         "agents_by_scope": agents_by_scope,
         "merged_count": len(merged),
+        "unified_for_mc_count": len(unified),
         "merged_agents": [
             {
                 "id": a.id,
@@ -271,8 +292,7 @@ def get_debug_agent_scopes(app_user_id: str = Depends(get_valid_web_user_id)) ->
 def get_agents_list(
     app_user_id: str = Depends(get_valid_web_user_id),
 ) -> dict[str, Any]:
-    scopes = _api_orchestration_scopes(app_user_id)
-    agents = AgentRegistry().list_agents_merged(scopes)
+    agents = AgentRegistry().list_agents_for_app_user(app_user_id)
     return {"ok": True, "agents": [_agent_payload(a, include_stats=True) for a in agents], "count": len(agents)}
 
 
@@ -283,8 +303,7 @@ def get_agents_activity_recent(
     limit: int = Query(80, ge=1, le=300),
 ) -> dict[str, Any]:
     """Recent orchestration actions (SQLite audit) for agents visible to this user."""
-    scopes = _api_orchestration_scopes(app_user_id)
-    agents = AgentRegistry().list_agents_merged(scopes)
+    agents = AgentRegistry().list_agents_for_app_user(app_user_id)
     ids = [a.id for a in agents]
     items = recent_activity_for_agents(ids, hours=hours, limit=limit)
     return {"ok": True, "items": items, "count": len(items)}
@@ -296,7 +315,7 @@ def get_agent_by_id(
     app_user_id: str = Depends(get_valid_web_user_id),
 ) -> dict[str, Any]:
     scopes = _api_orchestration_scopes(app_user_id)
-    _, agent = _ensure_agent_in_scopes(agent_id, scopes)
+    _, agent = _ensure_agent_in_scopes(agent_id, scopes, app_user_id=app_user_id)
     return {"ok": True, "agent": _agent_payload(agent, include_stats=True)}
 
 
@@ -308,7 +327,7 @@ def patch_agent_by_id(
 ) -> dict[str, Any]:
     _orch_enabled()
     scopes = _api_orchestration_scopes(app_user_id)
-    registry, agent = _ensure_agent_in_scopes(agent_id, scopes)
+    registry, agent = _ensure_agent_in_scopes(agent_id, scopes, app_user_id=app_user_id)
 
     changes = body.model_dump(exclude_unset=True)
     if body.name is not None:
@@ -380,7 +399,7 @@ def delete_agent_by_id(
     _orch_enabled()
     scopes = _api_orchestration_scopes(app_user_id)
     chat_id = _web_chat_scope(app_user_id)
-    registry, agent = _ensure_agent_in_scopes(agent_id, scopes)
+    registry, agent = _ensure_agent_in_scopes(agent_id, scopes, app_user_id=app_user_id)
 
     get_activity_tracker().log_action(
         agent_id=agent.id,
@@ -402,7 +421,7 @@ def pause_agent_by_id(
 ) -> dict[str, Any]:
     _orch_enabled()
     scopes = _api_orchestration_scopes(app_user_id)
-    registry, agent = _ensure_agent_in_scopes(agent_id, scopes)
+    registry, agent = _ensure_agent_in_scopes(agent_id, scopes, app_user_id=app_user_id)
     registry.patch_agent(agent_id, status=AgentStatus.PAUSED)
     get_activity_tracker().log_action(agent_id=agent.id, agent_name=agent.name, action_type="paused")
     return {"ok": True, "message": f"Agent '{agent.name}' paused"}
@@ -415,7 +434,7 @@ def resume_agent_by_id(
 ) -> dict[str, Any]:
     _orch_enabled()
     scopes = _api_orchestration_scopes(app_user_id)
-    registry, agent = _ensure_agent_in_scopes(agent_id, scopes)
+    registry, agent = _ensure_agent_in_scopes(agent_id, scopes, app_user_id=app_user_id)
     if agent.status == AgentStatus.TERMINATED:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot resume a terminated agent")
     registry.patch_agent(agent_id, status=AgentStatus.IDLE)
@@ -428,8 +447,8 @@ def get_agent_named_status(
     agent_name: str,
     app_user_id: str = Depends(get_valid_web_user_id),
 ) -> dict[str, Any]:
-    scopes = _api_orchestration_scopes(app_user_id)
-    agent = AgentRegistry().get_agent_by_name_in_scopes(agent_name.strip(), scopes)
+    registry = AgentRegistry()
+    agent = registry.get_agent_by_name_for_app_user(agent_name.strip(), app_user_id)
     if not agent:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Agent '{agent_name}' not found")
     return {"ok": True, "agent": _agent_payload(agent, include_stats=True)}
@@ -444,9 +463,8 @@ def post_execute_agent(
 ) -> dict[str, Any]:
     """Run the sync sub-agent executor for this user's workspace scope (same as @mention routing)."""
     _orch_enabled()
-    scopes = _api_orchestration_scopes(app_user_id)
     registry = AgentRegistry()
-    agent = registry.get_agent_by_name_in_scopes(agent_name.strip(), scopes)
+    agent = registry.get_agent_by_name_for_app_user(agent_name.strip(), app_user_id)
     if not agent:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Agent '{agent_name}' not found")
 

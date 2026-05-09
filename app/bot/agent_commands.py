@@ -153,7 +153,11 @@ async def agent_diagnostic_command(update: Update, context: ContextTypes.DEFAULT
         chat_id = update.effective_chat.id if update.effective_chat else 0
         scopes = telegram_subagent_scopes(chat_id, link.app_user_id)
         registry = AgentRegistry()
-        local_n = len(registry.list_agents_merged(scopes))
+        local_n = (
+            len(registry.list_agents_for_app_user(link.app_user_id))
+            if link.app_user_id
+            else len(registry.list_agents_merged(scopes))
+        )
 
         urls = _candidate_api_list_urls()
         ok, agents, err = await _fetch_agents_list_via_api(link.app_user_id)
@@ -240,14 +244,20 @@ async def subagent_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             if not name_new or not domain_new:
                 await update.message.reply_text("Name and domain are required.")
                 return
-            if registry.get_agent_by_name_in_scopes(name_new, scopes):
+            if registry.get_agent_by_name_for_app_user(name_new, link.app_user_id):
                 await update.message.reply_text(
                     f"An orchestration agent named @{name_new} already exists in this chat or your workspace."
                 )
                 return
             tscope = telegram_agent_registry_chat_id(update.effective_chat.id)
             trusted = bool(getattr(settings, "nexa_agent_auto_approve", False))
-            spawned = registry.spawn_agent(name_new, domain_new, tscope, trusted=trusted)
+            spawned = registry.spawn_agent(
+                name_new,
+                domain_new,
+                tscope,
+                trusted=trusted,
+                owner_app_user_id=link.app_user_id,
+            )
             if not spawned:
                 await update.message.reply_text(
                     "Could not create agent (limit reached, duplicate, or orchestration blocked)."
@@ -296,7 +306,11 @@ async def subagent_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
                 await update.message.reply_text("\n".join(lines).strip()[:9000])
                 return
 
-            agents = registry.list_agents_merged(scopes)
+            agents = (
+                registry.list_agents_for_app_user(link.app_user_id)
+                if link.app_user_id
+                else registry.list_agents_merged(scopes)
+            )
             header = (
                 f"(API list unavailable{f': {api_err}' if api_err else ''}; showing local registry.)\n\n"
                 if not ok
@@ -332,7 +346,11 @@ async def subagent_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             return
 
         name = args[1].strip().lstrip("@")
-        agent = registry.get_agent_by_name_in_scopes(name, scopes)
+        agent = (
+            registry.get_agent_by_name_for_app_user(name, link.app_user_id)
+            if link.app_user_id
+            else registry.get_agent_by_name_in_scopes(name, scopes)
+        )
         if not agent:
             await update.message.reply_text(
                 f"No orchestration agent named '{name}' for this chat/account "

@@ -27,6 +27,9 @@ from app.services.sub_agent_audit import log_agent_event
 
 logger = logging.getLogger(__name__)
 
+# Stamped on spawn so Mission Control can list agents across Telegram group chats + web session.
+ORCH_OWNER_APP_USER_ID_META_KEY = "app_user_id"
+
 
 def _orch_registry_db_enabled() -> bool:
     """Avoid SQLite / DB writes during pytest (unit tests expect pure in-memory state)."""
@@ -184,6 +187,7 @@ class AgentRegistry:
         capabilities: list[str] | None = None,
         *,
         trusted: bool = False,
+        owner_app_user_id: str | None = None,
     ) -> SubAgent | None:
         self._ensure_loaded()
         settings = get_settings()
@@ -211,6 +215,10 @@ class AgentRegistry:
 
         caps = list(capabilities) if capabilities is not None else _default_capabilities_for_domain(domain)
         agent_id = str(uuid.uuid4())[:8]
+        md: dict[str, Any] = {}
+        ouid = (owner_app_user_id or "").strip()
+        if ouid:
+            md[ORCH_OWNER_APP_USER_ID_META_KEY] = ouid[:128]
         agent = SubAgent(
             id=agent_id,
             name=name,
@@ -218,6 +226,7 @@ class AgentRegistry:
             capabilities=caps,
             parent_chat_id=chat_id,
             trusted=bool(trusted),
+            metadata=md,
         )
         self._agents[agent_id] = agent
         self._persist_agent(agent)
@@ -289,6 +298,41 @@ class AgentRegistry:
         for scope in scopes:
             a = self.get_agent_by_name(name, scope)
             if a:
+                return a
+        return None
+
+    def list_agents_for_app_user(self, app_user_id: str) -> list[SubAgent]:
+        """
+        All orchestration agents visible to Mission Control / ``GET /agents/list``.
+
+        Merges registry scopes (web session + Telegram aliases) with any agent stamped with
+        ``metadata[ORCH_OWNER_APP_USER_ID_META_KEY] == app_user_id`` (e.g. Telegram **group** chats
+        where ``parent_chat_id`` is ``telegram:<group_id>``, outside normal tg_* scope merge).
+        """
+        from app.services.web_user_id import orchestration_registry_scopes
+
+        uid = (app_user_id or "").strip()
+        scopes = orchestration_registry_scopes(uid)
+        merged = self.list_agents_merged(scopes)
+        seen: set[str] = {a.id for a in merged}
+        self._ensure_loaded()
+        out = list(merged)
+        for a in self.list_agents(None):
+            if a.id in seen:
+                continue
+            md_uid = (a.metadata or {}).get(ORCH_OWNER_APP_USER_ID_META_KEY)
+            if md_uid is not None and str(md_uid).strip() == uid:
+                out.append(a)
+                seen.add(a.id)
+        return out
+
+    def get_agent_by_name_for_app_user(self, name: str, app_user_id: str) -> SubAgent | None:
+        """Case-insensitive name match among :meth:`list_agents_for_app_user`."""
+        nm = (name or "").strip().lower()
+        if not nm:
+            return None
+        for a in self.list_agents_for_app_user(app_user_id):
+            if (a.name or "").strip().lower() == nm:
                 return a
         return None
 
@@ -410,4 +454,4 @@ class AgentRegistry:
         }
 
 
-__all__ = ["AgentRegistry", "AgentStatus", "SubAgent"]
+__all__ = ["AgentRegistry", "AgentStatus", "SubAgent", "ORCH_OWNER_APP_USER_ID_META_KEY"]

@@ -464,7 +464,13 @@ def try_spawn_natural_sub_agents(
         if registry.get_agent_by_name(clean_name, parent_chat_id):
             lines.append(f"⚠️ @{clean_name} already exists in this scope.")
             continue
-        spawned = registry.spawn_agent(clean_name, dom, parent_chat_id, trusted=trusted)
+        spawned = registry.spawn_agent(
+            clean_name,
+            dom,
+            parent_chat_id,
+            trusted=trusted,
+            owner_app_user_id=uid,
+        )
         if not spawned:
             lines.append(
                 f"❌ Could not create @{clean_name} (limit reached, duplicate, or registry blocked)."

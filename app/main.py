@@ -42,6 +42,7 @@ from app.api.routes import (
     agent_health,
     self_improvement,
     memory,
+    mission_agents,
     mission_control,
     mobile,
     multimodal,
@@ -371,6 +372,7 @@ app.include_router(orchestration.router, prefix=settings.api_v1_prefix)
 # Sub-agent CRUD + POST …/agents/execute/{agent_name} (orchestration registry)
 app.include_router(agent_spawn.router, prefix=settings.api_v1_prefix)
 app.include_router(ceo_dashboard.router, prefix=settings.api_v1_prefix)
+app.include_router(mission_agents.router, prefix=settings.api_v1_prefix)
 app.include_router(jobs.router, prefix=settings.api_v1_prefix)
 app.include_router(approvals.router, prefix=settings.api_v1_prefix)
 app.include_router(marketplace.router, prefix=settings.api_v1_prefix)

@@ -122,7 +122,7 @@ def get_agent_health(
 ) -> dict[str, Any]:
     _ensure_enabled()
     scopes = _api_orchestration_scopes(app_user_id)
-    _registry, agent = _ensure_agent_in_scopes(agent_id, scopes)
+    _registry, agent = _ensure_agent_in_scopes(agent_id, scopes, app_user_id=app_user_id)
     return {"ok": True, **_build_health_payload(agent)}
 
 
@@ -135,7 +135,7 @@ def diagnose_agent(
     _ensure_enabled()
     _require_owner(db, app_user_id)
     scopes = _api_orchestration_scopes(app_user_id)
-    _registry, agent = _ensure_agent_in_scopes(agent_id, scopes)
+    _registry, agent = _ensure_agent_in_scopes(agent_id, scopes, app_user_id=app_user_id)
     diagnosis = get_self_diagnosis().diagnose(agent)
     return {"ok": True, "agent_id": agent.id, "diagnosis": diagnosis.to_dict()}
 
@@ -149,7 +149,7 @@ def recover_agent(
     _ensure_enabled()
     _require_owner(db, app_user_id)
     scopes = _api_orchestration_scopes(app_user_id)
-    _registry, agent = _ensure_agent_in_scopes(agent_id, scopes)
+    _registry, agent = _ensure_agent_in_scopes(agent_id, scopes, app_user_id=app_user_id)
     diagnosis = get_self_diagnosis().diagnose(agent)
     result = get_recovery_handler().attempt(agent, diagnosis)
     return {

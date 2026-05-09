@@ -43,10 +43,9 @@ def get_ceo_dashboard(
     db: Session = Depends(get_db),
     app_user_id: str = Depends(get_valid_web_user_id),
 ) -> dict[str, Any]:
-    scopes = _api_orchestration_scopes(app_user_id)
     registry = AgentRegistry()
     tracker = get_activity_tracker()
-    agents = [a for a in registry.list_agents_merged(scopes) if a.status != AgentStatus.TERMINATED]
+    agents = [a for a in registry.list_agents_for_app_user(app_user_id) if a.status != AgentStatus.TERMINATED]
     agent_ids = [a.id for a in agents]
 
     agent_insights: list[dict[str, Any]] = []
@@ -115,7 +114,7 @@ async def get_agent_insights_route(
     app_user_id: str = Depends(get_valid_web_user_id),
 ) -> dict[str, Any]:
     scopes = _api_orchestration_scopes(app_user_id)
-    _ensure_agent_in_scopes(agent_id, scopes)
+    _ensure_agent_in_scopes(agent_id, scopes, app_user_id=app_user_id)
     supervisor = get_supervisor()
     insights = await supervisor.get_agent_insights(agent_id)
     if "error" in insights:
@@ -130,7 +129,7 @@ async def intervene_route(
     app_user_id: str = Depends(get_valid_web_user_id),
 ) -> dict[str, Any]:
     scopes = _api_orchestration_scopes(app_user_id)
-    _ensure_agent_in_scopes(agent_id, scopes)
+    _ensure_agent_in_scopes(agent_id, scopes, app_user_id=app_user_id)
     supervisor = get_supervisor()
     result = await supervisor.intervene(agent_id, body.correction)
     if "error" in result:
@@ -145,7 +144,7 @@ async def redirect_route(
     app_user_id: str = Depends(get_valid_web_user_id),
 ) -> dict[str, Any]:
     scopes = _api_orchestration_scopes(app_user_id)
-    _ensure_agent_in_scopes(agent_id, scopes)
+    _ensure_agent_in_scopes(agent_id, scopes, app_user_id=app_user_id)
     supervisor = get_supervisor()
     result = await supervisor.redirect_agent(agent_id, body.new_task)
     if "error" in result:
@@ -159,8 +158,9 @@ def get_activity_feed(
     limit: int = Query(50, ge=1, le=500),
     app_user_id: str = Depends(get_valid_web_user_id),
 ) -> dict[str, Any]:
-    scopes = _api_orchestration_scopes(app_user_id)
-    agents = [a for a in AgentRegistry().list_agents_merged(scopes) if a.status != AgentStatus.TERMINATED]
+    agents = [
+        a for a in AgentRegistry().list_agents_for_app_user(app_user_id) if a.status != AgentStatus.TERMINATED
+    ]
     ids = [a.id for a in agents]
     tracker = get_activity_tracker()
     activities = tracker.get_global_activity(ids, hours=hours, limit=limit)

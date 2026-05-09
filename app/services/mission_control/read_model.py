@@ -30,17 +30,16 @@ _GATEWAY_OUTBOUND_FAILED = "gateway.outbound_failed"
 
 
 def _registry_sub_agents_for_user(user_id: str) -> list[dict[str, Any]]:
-    """Orchestration registry handles (same scopes as ``GET /api/v1/agents/list``)."""
-    from app.api.routes.agent_spawn import _agent_payload, _api_orchestration_scopes
+    """Orchestration registry handles (same roster as ``GET /api/v1/agents/list``)."""
+    from app.api.routes.agent_spawn import _agent_payload
 
     from app.services.sub_agent_registry import AgentRegistry, AgentStatus
 
     uid = (user_id or "").strip()[:64]
     if not uid:
         return []
-    scopes = _api_orchestration_scopes(uid)
     reg = AgentRegistry()
-    agents = reg.list_agents_merged(scopes)
+    agents = reg.list_agents_for_app_user(uid)
     now = wall_time()
     out: list[dict[str, Any]] = []
     for a in agents:

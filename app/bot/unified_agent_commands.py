@@ -14,7 +14,6 @@ def format_unified_agents_list_reply(
     telegram_chat_id: int | None = None,
 ) -> str:
     """Mission Control / Telegram — merged orchestration scopes + optional legacy LLM profiles."""
-    from app.api.routes.agent_spawn import _api_orchestration_scopes
     from app.bot.agent_commands import telegram_subagent_scopes
     from app.services.agent.activity_tracker import get_activity_tracker
     from app.services.sub_agent_registry import AgentRegistry
@@ -25,10 +24,9 @@ def format_unified_agents_list_reply(
 
     if telegram_chat_id is not None:
         scopes = telegram_subagent_scopes(int(telegram_chat_id), uid)
+        agents = reg.list_agents_merged(scopes)
     else:
-        scopes = _api_orchestration_scopes(uid)
-
-    agents = reg.list_agents_merged(scopes)
+        agents = reg.list_agents_for_app_user(uid)
     emoji = {
         "idle": "🟢",
         "busy": "🟡",
