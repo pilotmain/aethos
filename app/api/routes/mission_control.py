@@ -294,7 +294,14 @@ def mission_control_gateway_run(
     db: Session = Depends(get_db),
 ) -> dict:
     """Run user text through :class:`~app.services.gateway.runtime.NexaGateway`."""
-    text = str(payload.get("text") or "")
+    # Accept common aliases so curl/docs mistakes (`raw`, `message`) still work.
+    text = str(
+        payload.get("text")
+        or payload.get("raw")
+        or payload.get("message")
+        or payload.get("prompt")
+        or ""
+    )
     user_id = str(payload.get("user_id") or "dev_user")
 
     from app.services.gateway.context import GatewayContext

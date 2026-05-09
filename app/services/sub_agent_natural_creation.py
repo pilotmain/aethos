@@ -399,9 +399,9 @@ def _parse_conversational_agent_specs(text: str) -> list[tuple[str, str]]:
         if nm:
             return [(nm, _infer_domain(nm, raw))]
 
-    # Create/Make/Spawn a … agent (no trailing domain token)
+    # Create/Make/Spawn a … agent (optional tail: "… agent for product launch")
     m = re.match(
-        r"(?is)^\s*(?:create|make|spawn|add|build|set\s+up|generate)\s+(?:an?\s+)?(?:a\s+)?(.+?)\s+agent\s*$",
+        r"(?is)^\s*(?:create|make|spawn|add|build|set\s+up|generate)\s+(?:an?\s+)?(?:a\s+)?(.+?)\s+agent\b(?:\s+.*)?$",
         rc,
     )
     if m:

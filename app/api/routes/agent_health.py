@@ -6,10 +6,11 @@ Phase 73 — agent health + manual self-heal triggers (Genesis Loop).
   their orchestration scope (same gate the rest of ``/agents/*`` uses).
 * ``POST /api/v1/agent/health/{agent_id}/diagnose`` — runs the heuristic
   diagnosis (and the optional cost-aware LLM summary) and returns the result.
-  Owner-only — diagnosis is cheap but it can call the LLM.
+  Restricted to Telegram **owner/trusted** or the orchestration owner
+  (``metadata.app_user_id``) — diagnosis can call the LLM.
 * ``POST /api/v1/agent/health/{agent_id}/recover`` — runs diagnose + recovery
-  and returns both the diagnosis and the recovery result. Owner-only — this
-  mutates agent state.
+  and returns both the diagnosis and the recovery result. Same gate as diagnose —
+  mutates recovery metadata.
 
 Agent scoping uses the existing ``_api_orchestration_scopes`` /
 ``_ensure_agent_in_scopes`` pair from :mod:`app.api.routes.agent_spawn` so a
@@ -28,6 +29,7 @@ from app.api.routes.agent_spawn import (
     _api_orchestration_scopes,
     _ensure_agent_in_scopes,
 )
+from app.services.sub_agent_registry import ORCH_OWNER_APP_USER_ID_META_KEY
 from app.core.config import get_settings
 from app.core.db import get_db
 from app.core.security import get_valid_web_user_id
@@ -36,7 +38,7 @@ from app.services.agent.recovery import get_recovery_handler
 from app.services.agent.self_diagnosis import get_self_diagnosis
 from app.services.user_capabilities import (
     get_telegram_role_for_app_user,
-    is_owner_role,
+    is_trusted_or_owner,
 )
 
 router = APIRouter(prefix="/agent/health", tags=["agent-health"])
@@ -51,16 +53,27 @@ def _ensure_enabled() -> None:
         )
 
 
-def _require_owner(db: Session, app_user_id: str) -> None:
+def _require_manual_heal_actor(db: Session, app_user_id: str, agent: Any) -> None:
+    """
+    Diagnose/recover may call the LLM and mutate recovery metadata.
+
+    Allow: Telegram **owner** or **trusted**, or the app user stamped on the agent
+    (``metadata.app_user_id``) so registry owners are not blocked as **guest**.
+    """
     role = get_telegram_role_for_app_user(db, app_user_id)
-    if not is_owner_role(role):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=(
-                "Manual diagnose / recover require the Telegram-linked owner. "
-                "Auto-recovery still runs in the supervisor for any failing agent."
-            ),
-        )
+    if is_trusted_or_owner(role):
+        return
+    md_uid = (agent.metadata or {}).get(ORCH_OWNER_APP_USER_ID_META_KEY)
+    if md_uid is not None and str(md_uid).strip() == (app_user_id or "").strip():
+        return
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail=(
+            "Manual diagnose / recover require owner/trusted Telegram role, "
+            "or your X-User-Id must match this agent's orchestration owner. "
+            "Auto-recovery still runs in the supervisor for failing agents."
+        ),
+    )
 
 
 def _build_health_payload(agent: Any) -> dict[str, Any]:
@@ -133,9 +146,9 @@ def diagnose_agent(
     app_user_id: str = Depends(get_valid_web_user_id),
 ) -> dict[str, Any]:
     _ensure_enabled()
-    _require_owner(db, app_user_id)
     scopes = _api_orchestration_scopes(app_user_id)
     _registry, agent = _ensure_agent_in_scopes(agent_id, scopes, app_user_id=app_user_id)
+    _require_manual_heal_actor(db, app_user_id, agent)
     diagnosis = get_self_diagnosis().diagnose(agent)
     return {"ok": True, "agent_id": agent.id, "diagnosis": diagnosis.to_dict()}
 
@@ -147,9 +160,9 @@ def recover_agent(
     app_user_id: str = Depends(get_valid_web_user_id),
 ) -> dict[str, Any]:
     _ensure_enabled()
-    _require_owner(db, app_user_id)
     scopes = _api_orchestration_scopes(app_user_id)
     _registry, agent = _ensure_agent_in_scopes(agent_id, scopes, app_user_id=app_user_id)
+    _require_manual_heal_actor(db, app_user_id, agent)
     diagnosis = get_self_diagnosis().diagnose(agent)
     result = get_recovery_handler().attempt(agent, diagnosis)
     return {

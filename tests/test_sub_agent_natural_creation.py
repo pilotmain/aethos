@@ -79,6 +79,9 @@ def test_conversational_create_agent_parsing() -> None:
     s = parse_natural_sub_agent_specs("Create a marketing agent")
     assert s and s[0][0] == "marketing_agent" and s[0][1] == "marketing"
 
+    tail = parse_natural_sub_agent_specs("Create a marketing agent for product launch")
+    assert tail and tail[0][0] == "marketing_agent" and tail[0][1] == "marketing"
+
     s2 = parse_natural_sub_agent_specs("Can you create a QA agent?")
     assert s2 and "qa" in s2[0][0].lower() and s2[0][1] == "qa"
 
