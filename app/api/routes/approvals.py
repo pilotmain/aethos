@@ -23,10 +23,7 @@ from app.core.db import get_db
 from app.core.security import get_current_user_id
 from app.models.agent_job import AgentJob
 from app.services.execution_policy import assess_interaction_risk
-from app.services.user_capabilities import (
-    get_telegram_role_for_app_user,
-    is_owner_role,
-)
+from app.services.user_capabilities import is_privileged_owner_for_web_mutations
 
 logger = logging.getLogger(__name__)
 
@@ -51,11 +48,13 @@ def _ensure_simulation_enabled() -> None:
 
 
 def _require_owner(db: Session, app_user_id: str) -> None:
-    role = get_telegram_role_for_app_user(db, app_user_id)
-    if not is_owner_role(role):
+    if not is_privileged_owner_for_web_mutations(db, app_user_id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Simulation requires the Telegram-linked owner role.",
+            detail=(
+                "Simulation requires an owner: Telegram-linked owner, governance "
+                "owner/admin, or organization owner/admin."
+            ),
         )
 
 
@@ -194,11 +193,10 @@ def simulation_capabilities(
 ) -> dict[str, Any]:
     """Phase 76 — expose simulation gating + caps so the UI can render a banner."""
     settings = get_settings()
-    role = get_telegram_role_for_app_user(db, user_id)
     return {
         "simulation_enabled": bool(getattr(settings, "nexa_simulation_enabled", True)),
         "max_diff_lines": int(getattr(settings, "nexa_simulation_max_diff_lines", 500)),
-        "is_owner": is_owner_role(role),
+        "is_owner": is_privileged_owner_for_web_mutations(db, user_id),
         "panel_enabled": bool(getattr(settings, "nexa_approvals_panel_enabled", True)),
     }
 

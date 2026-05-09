@@ -9,8 +9,8 @@ flow (``X-User-Id`` plus optional ``Authorization: Bearer <NEXA_WEB_API_TOKEN>``
 
 Read-only discovery (search / popular / metadata / installed list) is allowed for
 any authenticated web user. Mutating operations (install / uninstall / update)
-additionally require the caller to be the **Telegram-linked owner**, the same
-trust gate the rest of the web surface uses for destructive actions.
+additionally require the caller to match the unified owner gate (Telegram-linked owner,
+governance owner/admin, or organization owner/admin).
 
 Compatibility aliases (same auth + behavior): ``GET /marketplace/skills/search`` →
 ``GET /marketplace/search``; ``POST /marketplace/check-updates`` →
@@ -37,10 +37,7 @@ from app.core.db import get_db
 from app.core.security import get_valid_web_user_id
 from app.services.skills.clawhub_client import ClawHubClient
 from app.services.skills.installer import SkillInstaller
-from app.services.user_capabilities import (
-    get_telegram_role_for_app_user,
-    is_owner_role,
-)
+from app.services.user_capabilities import is_privileged_owner_for_web_mutations
 
 router = APIRouter(prefix="/marketplace", tags=["marketplace"])
 
@@ -55,11 +52,13 @@ def _ensure_enabled() -> None:
 
 
 def _require_owner(db: Session, app_user_id: str) -> None:
-    role = get_telegram_role_for_app_user(db, app_user_id)
-    if not is_owner_role(role):
+    if not is_privileged_owner_for_web_mutations(db, app_user_id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Marketplace install / uninstall / update require the Telegram-linked owner.",
+            detail=(
+                "Marketplace install / uninstall / update require an owner: Telegram-linked "
+                "owner, governance owner/admin, or organization owner/admin."
+            ),
         )
 
 

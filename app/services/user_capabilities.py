@@ -116,6 +116,41 @@ def get_telegram_role_for_app_user(db: Session, app_user_id: str) -> str:
     return "guest"
 
 
+def is_privileged_owner_for_web_mutations(db: Session, app_user_id: str) -> bool:
+    """
+    Owner gate for Mission Control mutating APIs that historically required a Telegram
+    ``tg_*`` id with bootstrap / ``TELEGRAM_OWNER_IDS`` owner role.
+
+    Also grants access when enterprise governance marks the user as owner/admin
+    (``users.governance_role``) or assigns org owner/admin on an enabled membership row,
+    matching admin surfaces in :mod:`app.api.routes.governance_api`.
+    """
+    if is_owner_role(get_telegram_role_for_app_user(db, app_user_id)):
+        return True
+    uid = (app_user_id or "").strip()[:64]
+    if not uid:
+        return False
+
+    from app.models.governance import OrganizationMembership
+    from app.models.user import User
+    from app.services.governance.service import ROLE_ADMIN, ROLE_OWNER
+
+    u = db.get(User, uid)
+    if u is not None:
+        gr = str(u.governance_role or "").strip().lower()
+        if gr in ("owner", "admin"):
+            return True
+
+    m = db.scalar(
+        select(OrganizationMembership.id).where(
+            OrganizationMembership.user_id == uid,
+            OrganizationMembership.enabled.is_(True),
+            OrganizationMembership.role.in_((ROLE_OWNER, ROLE_ADMIN)),
+        ).limit(1)
+    )
+    return m is not None
+
+
 def require_personal_workspace_mutation_allowed(db: Session, app_user_id: str) -> None:
     """
     Who may add workspace roots and Nexa workspace projects (labeled folders).
