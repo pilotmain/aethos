@@ -828,3 +828,14 @@ def is_command_question(text: str) -> bool:
     if re.search(r"/help\b", t) or re.search(r"(?i)\bhelp\b", t):
         return True
     return False
+
+
+def get_fallback_response(user_input: str) -> str:
+    """Return a friendly response when intent not recognized"""
+    
+    # Check if it MIGHT be an agent creation
+    if any(word in user_input.lower() for word in ['create', 'make', 'agent', 'new']):
+        return "I can help you create an agent. Try: 'Create a marketing agent'"
+    
+    # Otherwise, normal fallback
+    return "I'm not sure what you mean. Can you rephrase?"

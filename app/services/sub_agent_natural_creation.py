@@ -90,7 +90,7 @@ _RE_VOLITION_SPAWN_TAIL = re.compile(
     r"(?is)^\s*(?:i\s+need|i\s+want|give\s+me|get\s+me)\s+(?:an?\s+)?(?:a\s+)?[^\n]{1,120}\b(agent|specialist|expert|assistant)\b"
 )
 _RE_SETUP_SPAWN = re.compile(
-    r"(?is)\b(?:set\s+up|generate)\s+(?:an?\s+)?(?:a\s+)?[^\n]{1,120}\b(agent|specialist|expert)\b"
+    r"(?is)^\s*(?:create|make|spawn|add|build|set\s+up|generate)\s+(?:me\s+)?(?:an?\s+)?(?:a\s+)?[^\n]{1,120}\b(agent|specialist|expert|assistant)\b"
 )
 
 
@@ -367,7 +367,7 @@ def _parse_conversational_agent_specs(text: str) -> list[tuple[str, str]]:
     # Can/Could/Would you … create … agent / specialist / …
     m = re.search(
         r"(?is)\b(?:can|could|would)\s+you\s+(?:please\s+)?(?:create|make|spawn|add|set\s+up|build)\s+"
-        r"(?:an?\s+)?(?:a\s+)?(.+?)\s+(agent|specialist|expert|assistant)\s*$",
+        r"(?:an?\s+)?(?:a\s+)?(.+?)\s+(agent|specialist|expert|assistant)(?:\s+.*)?$",
         rc,
     )
     if m:
@@ -384,7 +384,7 @@ def _parse_conversational_agent_specs(text: str) -> list[tuple[str, str]]:
 
     # I need / I want / Give me … agent|specialist|…
     m = re.match(
-        r"(?is)^\s*(?:i\s+need|i\s+want|give\s+me|get\s+me)\s+(?:an?\s+)?(?:a\s+)?(.+?)\s+(agent|specialist|expert|assistant)\s*$",
+        r"(?is)^\s*(?:i\s+need|i\s+want|give\s+me|get\s+me)\s+(?:an?\s+)?(?:a\s+)?(.+?)\s+(agent|specialist|expert|assistant)(?:\s+.*)?$",
         rc,
     )
     if m:
@@ -401,12 +401,17 @@ def _parse_conversational_agent_specs(text: str) -> list[tuple[str, str]]:
 
     # Create/Make/Spawn a … agent (optional tail: "… agent for product launch")
     m = re.match(
-        r"(?is)^\s*(?:create|make|spawn|add|build|set\s+up|generate)\s+(?:an?\s+)?(?:a\s+)?(.+?)\s+agent\b(?:\s+.*)?$",
+        r"(?is)^\s*(?:create|make|spawn|add|build|set\s+up|generate)\s+(?:me\s+)?(?:an?\s+)?(?:a\s+)?(.+?)\s+(agent|specialist|expert|assistant)\b(?:\s+.*)?$",
         rc,
     )
     if m:
         phrase = (m.group(1) or "").strip()
-        nm = _slugify_roster_title(f"{phrase}_agent")
+        role = (m.group(2) or "agent").lower()
+        if role == "agent":
+            base = f"{phrase}_agent" if not phrase.endswith("_agent") else phrase
+        else:
+            base = f"{phrase}_{role}"
+        nm = _slugify_roster_title(base) or _slugify_roster_title(phrase)
         if nm:
             return [(nm, _infer_domain(nm, raw))]
 
@@ -543,19 +548,23 @@ def try_spawn_natural_sub_agents(
     if not specs:
         specs = _fallback_registry_specs_from_explicit_nl(user_text)
     if not specs:
-        return (
-            "**Create orchestration agents**\n\n"
-            "**Natural language:**\n"
-            "• “Create a marketing agent” · “Can you create a QA agent?”\n"
-            "• “I need a QA specialist” · “Set up a testing agent”\n\n"
-            "**Structured:**\n"
-            "• `create five agents: product_manager, designer, backend, frontend, qa`\n"
-            "• `create two agents qa_agent and marketing_agent`\n"
-            "• `subagent create ops_agent ops`\n"
-            "• `create agent security_expert security`\n\n"
-            "Domains include **qa**, **marketing**, **git**, **vercel**, **railway**, **ops**, **test**, **security**.\n\n"
-            "View roster: `/subagent list` · Mission Control → **orchestration.sub_agents**."
-        )
+        tl = user_text.lower()
+        if "?" in tl or "help" in tl:
+            return (
+                "**Create orchestration agents**\n\n"
+                "**Natural language:**\n"
+                "• “Create a marketing agent” · “Can you create a QA agent?”\n"
+                "• “I need a QA specialist” · “Set up a testing agent”\n\n"
+                "**Structured:**\n"
+                "• `create five agents: product_manager, designer, backend, frontend, qa`\n"
+                "• `create two agents qa_agent and marketing_agent`\n"
+                "• `subagent create ops_agent ops`\n"
+                "• `create agent security_expert security`\n\n"
+                "Domains include **qa**, **marketing**, **git**, **vercel**, **railway**, **ops**, **test**, **security**.\n\n"
+                "View roster: `/subagent list` · Mission Control → **orchestration.sub_agents**."
+            )
+        from app.services.intent_classifier import get_fallback_response
+        return get_fallback_response(user_text)
 
     registry = AgentRegistry()
     tracker = get_activity_tracker()
