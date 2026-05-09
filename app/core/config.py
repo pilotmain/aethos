@@ -324,6 +324,13 @@ class Settings(BaseSettings):
     nexa_clawhub_require_signature: bool = False
     nexa_clawhub_auto_update: bool = False
     nexa_clawhub_require_install_approval: bool = False
+    # When the remote ClawHub-compatible registry is down (HTTP errors, empty JSON), serve a
+    # bundled + optional JSON catalog so Mission Control search/popular/featured are not empty.
+    # See data/aethos_marketplace/fallback_skills.json and app/services/skills/registry_fallback.py.
+    nexa_clawhub_fallback_enabled: bool = True
+    nexa_clawhub_fallback_catalog_path: str = Field(
+        default_factory=lambda: str(REPO_ROOT / "data" / "aethos_marketplace" / "fallback_skills.json")
+    )
     # Phase 71 — Mission Control "Marketplace" web panel (proxies the cron-gated /clawhub
     # endpoints for browser users; mutating actions still require Telegram-linked owner).
     nexa_marketplace_panel_enabled: bool = True

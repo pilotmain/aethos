@@ -112,6 +112,16 @@ if [[ "$code" != "200" ]]; then
 fi
 pass "GET /health"
 
+rs_tmp="$(mktemp "${TMPDIR:-/tmp}/nexa_rs.XXXXXX")"
+rs_code="$(curl -sS -o "$rs_tmp" -w "%{http_code}" "${HDRS[@]}" "$API_V1/marketplace/-/registry-status")"
+rs_json="$(cat "$rs_tmp")"
+rm -f "$rs_tmp"
+if [[ "$rs_code" == "200" ]] && echo "$rs_json" | jq -e '.ok == true' >/dev/null 2>&1; then
+  pass "GET marketplace/-/registry-status"
+else
+  fail "GET marketplace/-/registry-status HTTP $rs_code"
+fi
+
 # --- Marketplace (read) ---
 SKILL_NAME=""
 search_body="$(expect_http_json "GET marketplace/search" "200" "${HDRS[@]}" "$API_V1/marketplace/search?q=skill&limit=5")" || true

@@ -16,6 +16,9 @@ Compatibility aliases (same auth + behavior): ``GET /marketplace/skills/search``
 ``GET /marketplace/search``; ``POST /marketplace/check-updates`` →
 ``POST /marketplace/-/check-updates-now``.
 
+``GET /marketplace/-/registry-status`` probes upstream ClawHub reachability and reports
+bundled fallback catalog stats when ``NEXA_CLAWHUB_FALLBACK_ENABLED=true``.
+
 The whole surface is gated by ``NEXA_MARKETPLACE_PANEL_ENABLED`` (default ``true``)
 so operators can disable the marketplace panel without disabling the cron-side
 ``/clawhub`` automation endpoints.
@@ -311,6 +314,23 @@ async def marketplace_check_updates_alias(
     """Alias for ``POST /marketplace/-/check-updates-now``."""
 
     return await _marketplace_check_updates_now_impl(db, app_user_id)
+
+
+@router.get("/-/registry-status")
+async def marketplace_registry_status(
+    _: str = Depends(get_valid_web_user_id),
+) -> dict[str, Any]:
+    """Operator probe: remote registry HTTP reachability + bundled fallback catalog stats."""
+
+    _ensure_enabled()
+    client = ClawHubClient()
+    probe = await client.probe_remote()
+    s = get_settings()
+    return {
+        "ok": True,
+        "configured_api_base": (getattr(s, "nexa_clawhub_api_base", "") or "").strip(),
+        **probe,
+    }
 
 
 @router.get("/-/capabilities")

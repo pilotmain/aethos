@@ -1,0 +1,74 @@
+{
+  "skills": [
+    {
+      "name": "github",
+      "version": "1.0.0",
+      "description": "GitHub repository management, PRs, and issue workflows (offline catalog stub).",
+      "author": "aethos",
+      "publisher": "builtin",
+      "tags": ["git", "devops", "ci"],
+      "category": "devops",
+      "downloads": 120000,
+      "rating": 4.6,
+      "updated_at": "2026-01-01T00:00:00Z",
+      "manifest_url": "",
+      "archive_url": ""
+    },
+    {
+      "name": "telegram",
+      "version": "1.0.0",
+      "description": "Telegram messaging and bot integration (offline catalog stub).",
+      "author": "aethos",
+      "publisher": "builtin",
+      "tags": ["messaging", "chat"],
+      "category": "messaging",
+      "downloads": 145000,
+      "rating": 4.5,
+      "updated_at": "2026-01-01T00:00:00Z",
+      "manifest_url": "",
+      "archive_url": ""
+    },
+    {
+      "name": "web-browsing",
+      "version": "1.0.0",
+      "description": "Browse websites and extract structured content (offline catalog stub).",
+      "author": "aethos",
+      "publisher": "builtin",
+      "tags": ["browser", "automation"],
+      "category": "automation",
+      "downloads": 180000,
+      "rating": 4.7,
+      "updated_at": "2026-01-01T00:00:00Z",
+      "manifest_url": "",
+      "archive_url": ""
+    },
+    {
+      "name": "database-query",
+      "version": "1.0.0",
+      "description": "SQL database queries and schema introspection (offline catalog stub).",
+      "author": "aethos",
+      "publisher": "builtin",
+      "tags": ["sql", "data"],
+      "category": "data",
+      "downloads": 95000,
+      "rating": 4.4,
+      "updated_at": "2026-01-01T00:00:00Z",
+      "manifest_url": "",
+      "archive_url": ""
+    },
+    {
+      "name": "felo-search",
+      "version": "1.0.0",
+      "description": "AI-assisted web search aggregation (offline catalog stub).",
+      "author": "aethos",
+      "publisher": "builtin",
+      "tags": ["search", "ai"],
+      "category": "search",
+      "downloads": 88000,
+      "rating": 4.3,
+      "updated_at": "2026-01-01T00:00:00Z",
+      "manifest_url": "",
+      "archive_url": ""
+    }
+  ]
+}

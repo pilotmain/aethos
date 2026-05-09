@@ -297,6 +297,32 @@ def test_update_owner_propagates_force_flag(marketplace_client, monkeypatch) -> 
     assert captured == {"name": "demo_skill", "force": True}
 
 
+def test_registry_status_endpoint(marketplace_client, monkeypatch) -> None:
+    client, _uid = marketplace_client
+
+    async def fake_probe(self):
+        return {
+            "base_url": "http://test/api/v1",
+            "reachable": False,
+            "http_status": 404,
+            "json_ok": False,
+            "fallback_enabled": True,
+            "fallback_skill_count": 7,
+        }
+
+    monkeypatch.setattr(
+        "app.api.routes.marketplace.ClawHubClient.probe_remote",
+        fake_probe,
+    )
+
+    r = client.get("/api/v1/marketplace/-/registry-status")
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["ok"] is True
+    assert body["fallback_skill_count"] == 7
+    assert "configured_api_base" in body
+
+
 def test_panel_disabled_returns_503(marketplace_client, monkeypatch) -> None:
     client, _uid = marketplace_client
 
