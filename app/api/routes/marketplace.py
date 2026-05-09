@@ -12,6 +12,10 @@ any authenticated web user. Mutating operations (install / uninstall / update)
 additionally require the caller to be the **Telegram-linked owner**, the same
 trust gate the rest of the web surface uses for destructive actions.
 
+Compatibility aliases (same auth + behavior): ``GET /marketplace/skills/search`` →
+``GET /marketplace/search``; ``POST /marketplace/check-updates`` →
+``POST /marketplace/-/check-updates-now``.
+
 The whole surface is gated by ``NEXA_MARKETPLACE_PANEL_ENABLED`` (default ``true``)
 so operators can disable the marketplace panel without disabling the cron-side
 ``/clawhub`` automation endpoints.
@@ -80,6 +84,18 @@ def _install_http_error(msg: str) -> HTTPException:
     return HTTPException(status_code=500, detail=msg)
 
 
+async def _marketplace_search_impl(
+    q: str,
+    limit: int = 20,
+    category: str | None = None,
+) -> dict[str, Any]:
+    _ensure_enabled()
+    safe_limit = max(1, min(int(limit or 0) or 20, 100))
+    cat = (category or "").strip().lower() or None
+    results = await ClawHubClient().search_skills(q, safe_limit, category=cat)
+    return {"ok": True, "skills": [r.to_dict() for r in results]}
+
+
 @router.get("/search")
 async def marketplace_search(
     q: str,
@@ -87,11 +103,19 @@ async def marketplace_search(
     category: str | None = None,
     _: str = Depends(get_valid_web_user_id),
 ) -> dict[str, Any]:
-    _ensure_enabled()
-    safe_limit = max(1, min(int(limit or 0) or 20, 100))
-    cat = (category or "").strip().lower() or None
-    results = await ClawHubClient().search_skills(q, safe_limit, category=cat)
-    return {"ok": True, "skills": [r.to_dict() for r in results]}
+    return await _marketplace_search_impl(q, limit, category)
+
+
+@router.get("/skills/search")
+async def marketplace_skills_search_alias(
+    q: str,
+    limit: int = 20,
+    category: str | None = None,
+    _: str = Depends(get_valid_web_user_id),
+) -> dict[str, Any]:
+    """Alias for ``GET /marketplace/search`` (clients that namespace under ``/skills``)."""
+
+    return await _marketplace_search_impl(q, limit, category)
 
 
 @router.get("/popular")
@@ -252,10 +276,9 @@ async def marketplace_update(
     return {"ok": True, "message": msg}
 
 
-@router.post("/-/check-updates-now")
-async def marketplace_check_updates_now(
-    db: Session = Depends(get_db),
-    app_user_id: str = Depends(get_valid_web_user_id),
+async def _marketplace_check_updates_now_impl(
+    db: Session,
+    app_user_id: str,
 ) -> dict[str, Any]:
     """Phase 75 — owner-triggered immediate update probe.
 
@@ -270,6 +293,24 @@ async def marketplace_check_updates_now(
 
     counters = await get_update_checker().scan_once()
     return {"ok": True, "counters": counters}
+
+
+@router.post("/-/check-updates-now")
+async def marketplace_check_updates_now(
+    db: Session = Depends(get_db),
+    app_user_id: str = Depends(get_valid_web_user_id),
+) -> dict[str, Any]:
+    return await _marketplace_check_updates_now_impl(db, app_user_id)
+
+
+@router.post("/check-updates")
+async def marketplace_check_updates_alias(
+    db: Session = Depends(get_db),
+    app_user_id: str = Depends(get_valid_web_user_id),
+) -> dict[str, Any]:
+    """Alias for ``POST /marketplace/-/check-updates-now``."""
+
+    return await _marketplace_check_updates_now_impl(db, app_user_id)
 
 
 @router.get("/-/capabilities")

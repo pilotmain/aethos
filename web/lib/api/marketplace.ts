@@ -3,6 +3,7 @@
  *
  * Wraps the web-auth proxy under ``/api/v1/marketplace/*``:
  *   - GET  /marketplace/search?q=&limit=&category=
+ *   - GET  /marketplace/skills/search?q=…           (alias)
  *   - GET  /marketplace/popular?limit=
  *   - GET  /marketplace/featured?limit=                 (75)
  *   - GET  /marketplace/categories                      (75)
@@ -14,6 +15,7 @@
  *   - POST /marketplace/uninstall/{name}                (owner-only)
  *   - POST /marketplace/update/{name}?force=            (owner-only)
  *   - POST /marketplace/-/check-updates-now             (75, owner-only)
+ *   - POST /marketplace/check-updates                   (alias)
  *
  * The ClawHub backend itself (under ``/api/v1/clawhub/*``) keeps the cron-token
  * gate for automation; this proxy gives the browser a parallel surface that
@@ -129,12 +131,13 @@ export async function searchSkills(
   category?: string,
 ): Promise<MarketplaceSkillInfo[]> {
   const q = (query || "").trim();
-  if (!q) return [];
-  const safe = Math.max(1, Math.min(Math.trunc(limit) || 20, 100));
   const cat = (category || "").trim().toLowerCase();
+  if (!q && !cat) return [];
+  const safe = Math.max(1, Math.min(Math.trunc(limit) || 20, 100));
+  const queryParam = q || cat || "";
   const catParam = cat ? `&category=${encodeURIComponent(cat)}` : "";
   const data = await apiFetch<MarketplaceSkillsResponse>(
-    `/marketplace/search?q=${encodeURIComponent(q)}&limit=${safe}${catParam}`,
+    `/marketplace/search?q=${encodeURIComponent(queryParam)}&limit=${safe}${catParam}`,
   );
   return Array.isArray(data?.skills) ? data.skills : [];
 }

@@ -11,6 +11,7 @@ from app.services.sub_agent_registry import AgentRegistry, AgentStatus
 from app.services.sub_agent_router import (
     AgentRouter,
     orchestration_chat_key,
+    resolve_agent_for_dispatch,
     try_extract_natural_language_sub_agent,
     try_sub_agent_gateway_turn,
 )
@@ -228,6 +229,56 @@ def test_route_natural_language_disabled(registry: AgentRegistry, router: AgentR
         registry.spawn_agent("git-agent", "git", "chat123")
         result = router.route("ask git-agent to hello", "chat123", user_id="u1")
         assert result["handled"] is False
+
+
+def test_resolve_agent_for_dispatch_falls_back_to_owner_scope(
+    registry: AgentRegistry,
+) -> None:
+    with (
+        patch("app.services.sub_agent_router.get_settings", return_value=_S()),
+        patch("app.services.sub_agent_registry.get_settings", return_value=_S()),
+    ):
+        uid = "tg_9000000001"
+        reg = registry
+        ag = reg.spawn_agent(
+            "scoped-bot",
+            "git",
+            f"web:{uid}:other-session",
+            owner_app_user_id=uid,
+        )
+        assert ag is not None
+        assert (
+            resolve_agent_for_dispatch(reg, "scoped-bot", f"web:{uid}:default", uid)
+            is not None
+        )
+        assert (
+            resolve_agent_for_dispatch(reg, "scoped-bot", f"web:{uid}:default", None)
+            is None
+        )
+
+
+def test_route_mention_uses_global_fallback(registry: AgentRegistry, router: AgentRouter) -> None:
+    with (
+        patch("app.services.sub_agent_router.get_settings", return_value=_S()),
+        patch("app.services.sub_agent_registry.get_settings", return_value=_S()),
+        patch("app.services.sub_agent_executor.AgentExecutor") as ex_cls,
+    ):
+        uid = "tg_9000000002"
+        reg = registry
+        reg.spawn_agent(
+            "global-bot",
+            "git",
+            f"web:{uid}:sess-x",
+            owner_app_user_id=uid,
+        )
+        ex_cls.return_value.execute.return_value = "global_ok"
+        out = router.route(
+            "@global-bot ping",
+            f"web:{uid}:sess-y",
+            user_id=uid,
+        )
+        assert out["handled"] is True
+        assert out["response"] == "global_ok"
 
 
 def test_route_natural_language_ask_to_mock_execute(registry: AgentRegistry, router: AgentRouter) -> None:

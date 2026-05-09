@@ -92,6 +92,23 @@ def _stub_owner(monkeypatch, *, owner: bool) -> None:
     )
 
 
+def test_search_skills_path_alias_matches_search(marketplace_client, monkeypatch) -> None:
+    """``GET /marketplace/skills/search`` mirrors ``GET /marketplace/search``."""
+
+    client, _uid = marketplace_client
+
+    async def fake_search(self, query: str, limit: int = 20, **kwargs):  # noqa: ARG001
+        return [_fake_skill("alias_skill")]
+
+    monkeypatch.setattr(
+        "app.api.routes.marketplace.ClawHubClient.search_skills", fake_search
+    )
+
+    r = client.get("/api/v1/marketplace/skills/search", params={"q": "alias", "limit": 3})
+    assert r.status_code == 200, r.text
+    assert [s["name"] for s in r.json()["skills"]] == ["alias_skill"]
+
+
 def test_search_proxies_clawhub_client(marketplace_client, monkeypatch) -> None:
     client, _uid = marketplace_client
 

@@ -76,10 +76,29 @@ def telegram_agent_registry_chat_id(telegram_chat_id: int | str | None) -> str:
     return f"telegram:{tid}" if tid else "telegram:unknown"
 
 
+def resolve_agent_for_dispatch(
+    registry: AgentRegistry,
+    name: str,
+    chat_id: str,
+    user_id: str | None,
+) -> SubAgent | None:
+    """Resolve a sub-agent for this chat, then fall back to any agent visible to ``user_id``."""
+
+    ag = registry.resolve_agent_by_name(name, chat_id)
+    if ag is not None:
+        return ag
+    uid = (user_id or "").strip()
+    if not uid:
+        return None
+    return registry.get_agent_by_name_for_app_user(name, uid)
+
+
 def try_extract_natural_language_sub_agent(
     text: str,
     chat_id: str,
     registry: AgentRegistry,
+    *,
+    user_id: str | None = None,
 ) -> tuple[SubAgent, str] | None:
     """
     If ``text`` names a **registered** sub-agent in ``chat_id`` via common NL patterns, return
@@ -92,7 +111,7 @@ def try_extract_natural_language_sub_agent(
         return None
 
     def _resolve(nm: str) -> SubAgent | None:
-        return registry.resolve_agent_by_name(nm, chat_id)
+        return resolve_agent_for_dispatch(registry, nm, chat_id, user_id)
 
     m = re.match(r"^\s*what\s+is\s+([a-zA-Z0-9_-]+)\s+doing\b", raw, re.I)
     if m:
@@ -308,7 +327,12 @@ class AgentRouter:
         mention = self._parse_mention(user_input)
         if mention is not None:
             agent_name, clean_message = mention
-            agent = self.registry.get_agent_by_name(agent_name, chat_id)
+            agent = resolve_agent_for_dispatch(
+                self.registry,
+                agent_name,
+                chat_id,
+                user_id,
+            )
             if agent is None:
                 return {
                     "handled": True,
@@ -332,7 +356,9 @@ class AgentRouter:
             )
 
         if bool(getattr(get_settings(), "nexa_natural_agent_invocation", True)):
-            nl = try_extract_natural_language_sub_agent(user_input, chat_id, self.registry)
+            nl = try_extract_natural_language_sub_agent(
+                user_input, chat_id, self.registry, user_id=user_id
+            )
             if nl is not None:
                 agent, instruction = nl
                 return self._dispatch_known_sub_agent(
@@ -399,6 +425,7 @@ __all__ = [
     "AgentRouter",
     "orchestration_chat_key",
     "orchestration_web_session_id",
+    "resolve_agent_for_dispatch",
     "telegram_agent_registry_chat_id",
     "try_extract_natural_language_sub_agent",
     "try_sub_agent_gateway_turn",
