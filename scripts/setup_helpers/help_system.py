@@ -54,6 +54,19 @@ Set at least one key you plan to use, e.g.:
 You can add more later by editing ``.env``.
 """,
         },
+        "auth": {
+            "title": "Mission Control authentication",
+            "content": """
+The API expects:
+
+• ``X-User-Id`` — canonical web user id (e.g. ``web_label``, ``tg_123456789``).
+
+• ``Authorization: Bearer <NEXA_WEB_API_TOKEN>`` when ``NEXA_WEB_API_TOKEN`` is set in ``.env``.
+
+The wizard saves ``TEST_X_USER_ID`` for your chosen id and generates ``NEXA_WEB_API_TOKEN``.
+Use the same values in the web UI connection settings.
+""",
+        },
         "troubleshoot": {
             "title": "Common issues",
             "content": """
