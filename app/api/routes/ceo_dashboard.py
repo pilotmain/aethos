@@ -45,13 +45,14 @@ def get_ceo_dashboard(
 ) -> dict[str, Any]:
     registry = AgentRegistry()
     tracker = get_activity_tracker()
-    agents = [a for a in registry.list_agents_for_app_user(app_user_id) if a.status != AgentStatus.TERMINATED]
-    agent_ids = [a.id for a in agents]
+    # Match ``GET /api/v1/agents/list`` — include terminated rows so counts match Mission Control / simple-CEO.
+    all_agents = registry.list_agents_for_app_user(app_user_id)
+    agent_ids = [a.id for a in all_agents]
 
     agent_insights: list[dict[str, Any]] = []
     actions_weights: list[tuple[float, int]] = []
 
-    for agent in agents:
+    for agent in all_agents:
         stats = tracker.get_agent_statistics(agent.id)
         tr = float(stats.get("success_rate", 100.0) or 100.0)
         ta = int(stats.get("total_actions", 0) or 0)
@@ -89,11 +90,13 @@ def get_ceo_dashboard(
             "error": "cost_summary_unavailable",
         }
 
+    non_term = [a for a in all_agents if a.status != AgentStatus.TERMINATED]
     summary = {
-        "total_agents": len(agents),
-        "active_agents": len([a for a in agents if a.status.value == "idle"]),
-        "busy_agents": len([a for a in agents if a.status.value == "busy"]),
-        "paused_agents": len([a for a in agents if a.status.value == "paused"]),
+        "total_agents": len(all_agents),
+        "terminated_agents": len(all_agents) - len(non_term),
+        "active_agents": len([a for a in non_term if a.status.value == "idle"]),
+        "busy_agents": len([a for a in non_term if a.status.value == "busy"]),
+        "paused_agents": len([a for a in non_term if a.status.value == "paused"]),
         "total_actions_today": total_actions_today,
         "overall_success_rate": overall,
         "total_cost_today_usd": float(cost_today.get("total_cost_usd") or 0.0),

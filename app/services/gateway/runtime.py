@@ -625,14 +625,20 @@ class NexaGateway:
 
         # Orchestration sub-agents (Mission Control): NL roster → create_sub_agent via intent_classifier +
         # looks_like_registry_agent_creation_nl (Phase 54/59).
-        if intent in ("create_sub_agent", "create_custom_agent") and (uid or "").strip():
-            from app.services.sub_agent_natural_creation import (
-                prefers_registry_sub_agent,
-                try_spawn_natural_sub_agents,
-            )
-            from app.services.sub_agent_router import orchestration_chat_key
+        # Web ``/web/chat`` runs this spawn path when ``prefers_registry_sub_agent`` is true before
+        # ``get_intent`` — gateway must do the same, otherwise ``POST …/mission-control/gateway/run``
+        # falls through to general chat when the classifier returns ``general_chat``.
+        from app.services.sub_agent_natural_creation import (
+            prefers_registry_sub_agent,
+            try_spawn_natural_sub_agents,
+        )
+        from app.services.sub_agent_router import orchestration_chat_key
 
-            if intent == "create_sub_agent" or prefers_registry_sub_agent(raw):
+        uid_stripped = (uid or "").strip()
+        registry_nl = bool(uid_stripped and prefers_registry_sub_agent(raw))
+        intent_spawn = intent in ("create_sub_agent", "create_custom_agent")
+        if uid_stripped and (intent_spawn or registry_nl):
+            if intent == "create_sub_agent" or registry_nl:
                 orch_key = orchestration_chat_key(gctx)
                 sub_txt = try_spawn_natural_sub_agents(db, uid, raw, parent_chat_id=orch_key)
                 if sub_txt:
