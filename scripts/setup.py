@@ -100,6 +100,7 @@ class SetupWizard:
         resume: bool,
         skip_services: bool,
         full_reset: bool,
+        force: bool = False,
     ) -> None:
         self.repo_root = _REPO_ROOT
         self.env_path = self.repo_root / ".env"
@@ -109,6 +110,12 @@ class SetupWizard:
         self.resume = resume
         self.skip_services = skip_services
         self.full_reset = full_reset
+        env_force = (os.environ.get("AETHOS_SETUP_FORCE") or "").strip().lower() in (
+            "1",
+            "true",
+            "yes",
+        )
+        self.force = bool(force or env_force)
         self.results: dict[str, bool] = {}
         self._api_process: subprocess.Popen[bytes] | None = None
 
@@ -531,7 +538,7 @@ HOST_EXECUTOR_WORK_ROOT={Path.home() / "aethos-workspace"}
 
     def prompt_overwrite(self) -> bool:
         print(f"\n{Colors.warning('Existing configuration detected (.env present).')}")
-        print(f"  {Colors.DIM('A backup will be written before changes.')}")
+        print(f"  {Colors.DIM}A backup will be written before changes.{Colors.RESET}")
         out = prompt_line(f"\n{Colors.question('Re-run full setup (override)? [y/N]')} ").strip().lower()
         return out == "y"
 
@@ -543,7 +550,9 @@ HOST_EXECUTOR_WORK_ROOT={Path.home() / "aethos-workspace"}
         completed = set(state.get("completed_steps") or [])
 
         if self.env_path.is_file() and not self.full_reset:
-            if not self.prompt_overwrite():
+            if self.force:
+                print(f"\n{Colors.info('Force mode — proceeding (existing .env will be backed up).')}")
+            elif not self.prompt_overwrite():
                 print(f"\n{Colors.info('Keeping existing .env — exiting.')}")
                 return
 
@@ -629,6 +638,11 @@ def main() -> None:
         action="store_true",
         help="Ignore saved progress and run every step",
     )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Skip overwrite confirmation when .env exists (non-interactive)",
+    )
     args, _rest = parser.parse_known_args(argv)
 
     # Allow ``python scripts/setup.py help llm`` after argparse
@@ -639,6 +653,7 @@ def main() -> None:
         resume=args.resume,
         skip_services=args.skip_services,
         full_reset=args.full_reset,
+        force=args.force,
     )
     try:
         wizard.run()
