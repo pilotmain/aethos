@@ -228,12 +228,53 @@ class AgentExecutor:
         if domain in {"qa", "test"}:
             return self._qa_or_test(agent, message, chat_id, db=db, user_id=user_id, web_session_id=web_session_id)
         if domain in {"general", "marketing", "ceo", "support", "scrum", "backend", "frontend", "design"}:
-            return (
-                f"🤖 **@{agent.name}** ({domain}) is registered for this chat.\n\n"
-                "Send a concrete instruction. For tooling runs, use agents with domains "
-                "**git**, **vercel**, **railway**, **ops**, **qa**, **test**, or **security**."
-            )[:4000]
+            return self._conversational_response(agent, message, domain)
         return f"Unknown sub-agent domain {domain!r}."
+
+    # ------------------------------------------------------------------
+    # Conversational / creative domains — LLM text generation
+    # ------------------------------------------------------------------
+
+    def _conversational_response(self, agent: SubAgent, message: str, domain: str) -> str:
+        """Generate an LLM response for non-tooling domains (marketing, ceo, etc.)."""
+        from app.services.agent_templates import get_agent_system_prompt
+        from app.services.llm.completion import primary_complete_messages, providers_available
+        from app.services.llm.base import Message
+
+        if not providers_available():
+            return (
+                f"🤖 **@{agent.name}** ({domain}) received your request but no LLM provider "
+                "is configured. Set an API key (Anthropic, OpenAI, etc.) and restart."
+            )
+
+        system_prompt = get_agent_system_prompt(domain)
+        agent_name = (agent.name or "").strip()
+        system_text = (
+            f"You are @{agent_name}, a {domain} agent.\n\n{system_prompt}\n\n"
+            "Respond directly to the user's request. Do not ask for tooling commands."
+        )
+
+        messages = [
+            Message(role="system", content=system_text),
+            Message(role="user", content=message),
+        ]
+
+        try:
+            text = primary_complete_messages(
+                messages,
+                max_tokens=1024,
+                temperature=0.7,
+                budget_member_id=agent.id,
+                budget_member_name=agent_name,
+                task_type="agent_conversational",
+            )
+            return (text or "").strip()[:4000] or f"@{agent_name} produced an empty response."
+        except Exception as exc:
+            logger.warning("conversational LLM failed agent=%s: %s", agent.id, exc)
+            return (
+                f"🤖 **@{agent_name}** ({domain}) could not generate a response: {exc}\n\n"
+                "Check LLM provider configuration and API keys."
+            )
 
     def _infra_ops(
         self,
