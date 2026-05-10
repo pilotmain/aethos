@@ -90,7 +90,13 @@ def resolve_agent_for_dispatch(
     uid = (user_id or "").strip()
     if not uid:
         return None
-    return registry.get_agent_by_name_for_app_user(name, uid)
+    global_agent = registry.get_agent_by_name_for_app_user(name, uid)
+    if global_agent:
+        # Auto-link to current chat for future mentions
+        registry.patch_agent(global_agent.id, parent_chat_id=chat_id)
+        logger.info(f"Auto-linked global agent {name} to chat {chat_id}")
+        return global_agent
+    return None
 
 
 def try_extract_natural_language_sub_agent(
@@ -337,8 +343,9 @@ class AgentRouter:
                 return {
                     "handled": True,
                     "response": (
-                        f"Sub-agent '@{agent_name}' was not found for this chat. "
-                        "Create a sub-agent for this session first (same chat scope as routing)."
+                        f"Agent '{agent_name}' not found. Try:\n"
+                        f"  - Create it first: 'Create a {agent_name} agent'\n"
+                        f"  - Or list available agents with '/subagent list'"
                     ),
                     "agent_id": None,
                     "agent_name": agent_name,

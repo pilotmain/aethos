@@ -402,6 +402,7 @@ class AgentRegistry:
         capabilities: list[str] | None = None,
         status: AgentStatus | None = None,
         trusted: bool | None = None,
+        parent_chat_id: str | None = None,
         metadata_patch: dict[str, Any] | None = None,
     ) -> SubAgent | None:
         self._ensure_loaded()
@@ -418,6 +419,8 @@ class AgentRegistry:
             agent.status = status
         if trusted is not None:
             agent.trusted = bool(trusted)
+        if parent_chat_id is not None:
+            agent.parent_chat_id = parent_chat_id
         if metadata_patch:
             md = dict(agent.metadata or {})
             md.update(metadata_patch)
