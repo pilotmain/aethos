@@ -59,8 +59,37 @@ def test_write_file_requires_body() -> None:
     }
 
 
+def test_create_file_with_content_in_absolute_workspace(tmp_path: Path) -> None:
+    workspace = tmp_path / "aethos_workspace"
+
+    class S:
+        host_executor_work_root = str(tmp_path.resolve())
+
+    with patch("app.services.host_executor_intent.get_settings", return_value=S()):
+        assert infer_host_executor_action(
+            f"Create a file called test.txt with content 'Hello AethOS' in {workspace}"
+        ) == {
+            "host_action": "file_write",
+            "relative_path": "aethos_workspace/test.txt",
+            "content": "Hello AethOS",
+        }
+
+
+def test_write_quoted_content_to_absolute_file(tmp_path: Path) -> None:
+    target = tmp_path / "aethos_workspace" / "simple_test.txt"
+
+    class S:
+        host_executor_work_root = str(tmp_path.resolve())
+
+    with patch("app.services.host_executor_intent.get_settings", return_value=S()):
+        assert infer_host_executor_action(f"Write 'test content' to {target}") == {
+            "host_action": "file_write",
+            "relative_path": "aethos_workspace/simple_test.txt",
+            "content": "test content",
+        }
+
+
 def test_rejects_traversal_and_unknown() -> None:
     assert infer_host_executor_action("read ../../etc/passwd") is None
     assert infer_host_executor_action("deploy to production") is None
     assert infer_host_executor_action("") is None
-

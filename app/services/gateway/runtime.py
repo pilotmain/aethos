@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import uuid
 from typing import Any
 
@@ -265,6 +266,97 @@ class NexaGateway:
             "dev_run": res,
             "intent": "dev_mission",
         }
+
+    @staticmethod
+    def _host_action_intent_from_state(
+        db: Session,
+        cctx: Any,
+        related_job_ids: tuple[int, ...],
+    ) -> str:
+        """Best-effort host action name for gateway clients that branch on ``intent``."""
+        for raw in (
+            getattr(cctx, "next_action_pending_inject_json", None),
+            getattr(cctx, "blocked_host_executor_json", None),
+        ):
+            if not (raw or "").strip():
+                continue
+            try:
+                parsed = json.loads(raw)
+            except (json.JSONDecodeError, TypeError, ValueError):
+                continue
+            if not isinstance(parsed, dict):
+                continue
+            payload = parsed.get("payload") if isinstance(parsed.get("payload"), dict) else parsed
+            action = str(payload.get("host_action") or "").strip()
+            if action:
+                return action
+
+        if related_job_ids:
+            try:
+                from app.models.agent_job import AgentJob
+
+                job = db.get(AgentJob, int(related_job_ids[0]))
+                payload = job.payload_json if job is not None else None
+                if isinstance(payload, dict):
+                    action = str(payload.get("host_action") or "").strip()
+                    if action:
+                        return action
+            except (TypeError, ValueError):
+                pass
+
+        return "host_executor"
+
+    def _try_host_executor_turn(self, gctx: GatewayContext, text: str, db: Session) -> dict[str, Any] | None:
+        """
+        Mission-control gateway parity with web chat's deterministic host executor path.
+
+        This keeps mutating local actions permission/confirmation-gated while preventing
+        file-write requests from falling through to sub-agent creation or generic chat.
+        """
+        raw = (text or "").strip()
+        uid = (gctx.user_id or "").strip()
+        if not uid or not raw:
+            return None
+
+        from app.services.conversation_context_service import get_or_create_context
+        from app.services.host_executor_chat import (
+            evaluate_deterministic_host_permission_turn,
+            may_run_pre_llm_deterministic_host,
+            try_apply_host_executor_turn,
+        )
+
+        web_session_id = str(gctx.extras.get("web_session_id") or "default").strip()[:64] or "default"
+        cctx = get_or_create_context(db, uid, web_session_id=web_session_id)
+        result = try_apply_host_executor_turn(db, cctx, raw, web_session_id=web_session_id)
+        if result is None and may_run_pre_llm_deterministic_host(cctx):
+            result = evaluate_deterministic_host_permission_turn(
+                db,
+                cctx,
+                raw,
+                web_session_id=web_session_id,
+            )
+        if result is None:
+            return None
+
+        db.refresh(cctx)
+        intent = self._host_action_intent_from_state(db, cctx, result.related_job_ids)
+        out: dict[str, Any] = {
+            "mode": "chat",
+            "text": result.early_assistant or result.inject_ack or "",
+            "intent": intent,
+            "host_executor": True,
+        }
+        if result.related_job_ids:
+            out["related_job_ids"] = list(result.related_job_ids)
+        if result.pending_system_events:
+            out["pending_system_events"] = [
+                {"kind": kind, "text": event_text} for kind, event_text in result.pending_system_events
+            ]
+        if result.permission_required:
+            out["permission_required"] = result.permission_required
+        if result.telegram_inline_keyboard_rows:
+            out["telegram_inline_keyboard_rows"] = result.telegram_inline_keyboard_rows
+        return out
 
     def _try_structured_route(self, gctx: GatewayContext, text: str, db: Session) -> dict[str, Any] | None:
         """Dev runs, missions, and dev hints only — ``None`` means generic chat."""
@@ -809,6 +901,10 @@ class NexaGateway:
                     ),
                     "intent": "config_query",
                 }
+
+            host_out = self._try_host_executor_turn(gctx, raw_gate, db_inner)
+            if host_out is not None:
+                return host_out
 
             from app.services.sub_agent_router import try_sub_agent_gateway_turn
 
