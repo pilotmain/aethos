@@ -34,10 +34,53 @@ _RE_GIT = re.compile(
 _RE_READ = re.compile(
     r"(?i)^(read|show|cat|open)\s+(?:file\s+)?([\w.`'\"/\-.]{1,240})$"
 )
+_PATH_TOKEN = r"([\w.`'\"/\-.~]{1,400})"
+_RE_CREATE_FILE_WITH_CONTENT = re.compile(
+    rf"(?is)^create\s+(?:a\s+)?file\s+(?:called|named)\s+{_PATH_TOKEN}\s+"
+    rf"with\s+content\s+(.+?)(?:\s+in\s+{_PATH_TOKEN})?\s*$"
+)
+_RE_WRITE_CONTENT_TO = re.compile(
+    rf"(?is)^write\s+(.+?)\s+to\s+(?:file\s+)?{_PATH_TOKEN}\s*$"
+)
 _RE_WRITE = re.compile(
     r"(?i)^write\s+(?:to\s+)?(?:file\s+)?([\w.`'\"/\-.]{1,240})\s+(?:with|using|containing|:)\s*(.+)$",
     re.DOTALL,
 )
+
+
+def _strip_outer_quotes(raw: str) -> str:
+    s = (raw or "").strip()
+    if len(s) >= 2 and s[0] == s[-1] and s[0] in {"'", '"', "`"}:
+        return s[1:-1].strip()
+    return s
+
+
+def _clean_path_token(raw: str) -> str:
+    return (raw or "").strip().strip('`"\'').rstrip(".,;")
+
+
+def _write_target_relative_path(path_raw: str, *, parent_raw: str | None = None) -> str | None:
+    """Normalize relative paths, or absolute paths that are inside the host work root."""
+    raw_path = _clean_path_token(path_raw)
+    raw_parent = _clean_path_token(parent_raw or "")
+    if not raw_path:
+        return None
+
+    target = Path(raw_path)
+    if raw_parent and not target.is_absolute():
+        target = Path(raw_parent) / raw_path
+
+    target_text = str(target).strip()
+    if target.is_absolute() or target_text.startswith("~"):
+        try:
+            root = Path(get_settings().host_executor_work_root).expanduser().resolve()
+            candidate = Path(target_text).expanduser().resolve()
+            rel = candidate.relative_to(root)
+        except (OSError, ValueError):
+            return None
+        return safe_relative_path(str(rel).replace("\\", "/"))
+
+    return safe_relative_path(target_text.replace("\\", "/"))
 
 
 def title_for_payload(payload: dict[str, Any]) -> str:
@@ -96,11 +139,29 @@ def infer_host_executor_action(user_text: str) -> dict[str, Any] | None:
         return None
     line = t.splitlines()[0].strip()
 
+    cm = _RE_CREATE_FILE_WITH_CONTENT.match(line)
+    if cm:
+        path_raw = cm.group(1)
+        content = _strip_outer_quotes((cm.group(2) or "").strip())
+        parent_raw = cm.group(3)
+        rel = _write_target_relative_path(path_raw, parent_raw=parent_raw)
+        if not rel or not content:
+            return None
+        return {"host_action": "file_write", "relative_path": rel, "content": content}
+
+    wtm = _RE_WRITE_CONTENT_TO.match(line)
+    if wtm:
+        content = _strip_outer_quotes((wtm.group(1) or "").strip())
+        rel = _write_target_relative_path(wtm.group(2))
+        if not rel or not content:
+            return None
+        return {"host_action": "file_write", "relative_path": rel, "content": content}
+
     if _RE_WRITE.match(line):
         m = _RE_WRITE.match(line)
         assert m is not None
-        path_raw, content = m.group(1), (m.group(2) or "").strip()
-        rel = safe_relative_path(path_raw)
+        path_raw, content = m.group(1), _strip_outer_quotes((m.group(2) or "").strip())
+        rel = _write_target_relative_path(path_raw)
         if not rel or not content:
             return None
         return {"host_action": "file_write", "relative_path": rel, "content": content}
