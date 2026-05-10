@@ -129,6 +129,47 @@ def title_for_payload(payload: dict[str, Any]) -> str:
     return "Host action"
 
 
+def parse_file_write_intent(text: str) -> dict[str, Any] | None:
+    """
+    Parse natural-language file write phrasing into display-friendly parts.
+
+    This is detection only. Execution still goes through ``infer_host_executor_action``
+    so paths are normalized under ``HOST_EXECUTOR_WORK_ROOT`` before queueing.
+    """
+    if not text or not isinstance(text, str):
+        return None
+    line = text.strip().splitlines()[0].strip()
+    if not line:
+        return None
+
+    match = _RE_WRITE.match(line)
+    if match:
+        filename = _clean_path_token(match.group(1))
+        content = _strip_outer_quotes((match.group(2) or "").strip())
+        if not filename or not content:
+            return None
+        return {"filename": filename, "content": content, "directory": None}
+
+    match = _RE_CREATE_FILE_WITH_CONTENT.match(line)
+    if match:
+        filename = _clean_path_token(match.group(1))
+        content = _strip_outer_quotes((match.group(2) or "").strip())
+        directory = _clean_path_token(match.group(3) or "") if match.lastindex and match.lastindex >= 3 else ""
+        if not filename or not content:
+            return None
+        return {"filename": filename, "content": content, "directory": directory or None}
+
+    match = _RE_WRITE_CONTENT_TO.match(line)
+    if match:
+        filename = _clean_path_token(match.group(2))
+        content = _strip_outer_quotes((match.group(1) or "").strip())
+        if not filename or not content:
+            return None
+        return {"filename": filename, "content": content, "directory": None}
+
+    return None
+
+
 def infer_host_executor_action(user_text: str) -> dict[str, Any] | None:
     """
     If the line clearly requests a supported host tool, return payload_json fragment
@@ -139,29 +180,14 @@ def infer_host_executor_action(user_text: str) -> dict[str, Any] | None:
         return None
     line = t.splitlines()[0].strip()
 
-    cm = _RE_CREATE_FILE_WITH_CONTENT.match(line)
-    if cm:
-        path_raw = cm.group(1)
-        content = _strip_outer_quotes((cm.group(2) or "").strip())
-        parent_raw = cm.group(3)
-        rel = _write_target_relative_path(path_raw, parent_raw=parent_raw)
-        if not rel or not content:
-            return None
-        return {"host_action": "file_write", "relative_path": rel, "content": content}
-
-    wtm = _RE_WRITE_CONTENT_TO.match(line)
-    if wtm:
-        content = _strip_outer_quotes((wtm.group(1) or "").strip())
-        rel = _write_target_relative_path(wtm.group(2))
-        if not rel or not content:
-            return None
-        return {"host_action": "file_write", "relative_path": rel, "content": content}
-
-    if _RE_WRITE.match(line):
-        m = _RE_WRITE.match(line)
-        assert m is not None
-        path_raw, content = m.group(1), _strip_outer_quotes((m.group(2) or "").strip())
-        rel = _write_target_relative_path(path_raw)
+    write_intent = parse_file_write_intent(line)
+    if write_intent:
+        parent_raw = write_intent.get("directory")
+        rel = _write_target_relative_path(
+            str(write_intent.get("filename") or ""),
+            parent_raw=str(parent_raw) if parent_raw else None,
+        )
+        content = str(write_intent.get("content") or "")
         if not rel or not content:
             return None
         return {"host_action": "file_write", "relative_path": rel, "content": content}
