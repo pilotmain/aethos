@@ -249,13 +249,13 @@ class AgentRouter:
 
         if agent.status != AgentStatus.IDLE:
             hint = (
-                "Resume it with `/subagent resume` or Mission Control when it is paused."
+                "Say `resume` to restart it, or wait until it finishes."
                 if agent.status == AgentStatus.PAUSED
-                else "Try again when it is idle."
+                else "It's busy right now — try again in a moment."
             )
             return {
                 "handled": True,
-                "response": (f"Agent '@{agent_name}' is {agent.status.value}. {hint}"),
+                "response": (f"⏳ Agent **@{agent_name}** is currently {agent.status.value}. {hint}"),
                 "agent_id": agent.id,
                 "agent_name": agent_name,
                 "clean_message": clean_message,
@@ -275,8 +275,8 @@ class AgentRouter:
                 return {
                     "handled": True,
                     "response": (
-                        f"Agent '@{agent_name}' ({agent.domain}) is ready. "
-                        f"Send `@{agent_name} <instruction>` to run tools."
+                        f"✅ **@{agent_name}** ({agent.domain}) is ready.\n\n"
+                        f"💡 Tell it what to do: \"@{agent_name} <your request>\""
                     ),
                     "agent_id": agent.id,
                     "agent_name": agent_name,
@@ -343,9 +343,8 @@ class AgentRouter:
                 return {
                     "handled": True,
                     "response": (
-                        f"Agent '{agent_name}' not found. Try:\n"
-                        f"  - Create it first: 'Create a {agent_name} agent'\n"
-                        f"  - Or list available agents with '/subagent list'"
+                        f"I don't have an agent called **{agent_name}** yet.\n\n"
+                        f"💡 Create one by saying: \"Create a {agent_name} agent\""
                     ),
                     "agent_id": None,
                     "agent_name": agent_name,

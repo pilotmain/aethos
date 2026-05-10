@@ -742,7 +742,7 @@ class AgentExecutor:
             domain,
             extra={"nexa_event": "sub_agent_queued", "job_id": job.id, "domain": domain},
         )
-        base = f"Queued host job #{job.id} — open Jobs to approve and run on the worker."
+        base = f"📋 Task #{job.id} queued — approve it in the Jobs tab to run."
         return f"{base} {suffix}".strip()
 
     def _run_host_payload(

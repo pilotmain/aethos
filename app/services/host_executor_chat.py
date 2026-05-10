@@ -388,9 +388,9 @@ def enqueue_host_job_from_validated_payload(
     )
     jobs = AgentJobService()
     resume_note = (
-        "Resumed from approved permission — executes without a second job approval."
+        "Auto-approved — running now."
         if access_permission_resume
-        else "Approval-gated host tool: executes only after you approve this job in the Job tab."
+        else "Waiting for your approval in the Jobs tab before running."
     )
     job = jobs.create_job(
         db,

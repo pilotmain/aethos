@@ -551,17 +551,15 @@ def try_spawn_natural_sub_agents(
         tl = user_text.lower()
         if "?" in tl or "help" in tl:
             return (
-                "**Create orchestration agents**\n\n"
-                "**Natural language:**\n"
-                "• “Create a marketing agent” · “Can you create a QA agent?”\n"
-                "• “I need a QA specialist” · “Set up a testing agent”\n\n"
-                "**Structured:**\n"
-                "• `create five agents: product_manager, designer, backend, frontend, qa`\n"
-                "• `create two agents qa_agent and marketing_agent`\n"
-                "• `subagent create ops_agent ops`\n"
-                "• `create agent security_expert security`\n\n"
-                "Domains include **qa**, **marketing**, **git**, **vercel**, **railway**, **ops**, **test**, **security**.\n\n"
-                "View roster: `/subagent list` · Mission Control → **orchestration.sub_agents**."
+                "**Create agents**\n\n"
+                "**Just say it naturally:**\n"
+                "\u2022 \"Create a marketing agent\" \u00b7 \"I need a QA specialist\"\n"
+                "\u2022 \"Set up a testing agent\" \u00b7 \"Can you create a security agent?\"\n\n"
+                "**Or be specific:**\n"
+                "\u2022 `create five agents: product_manager, designer, backend, frontend, qa`\n"
+                "\u2022 `create two agents qa_agent and marketing_agent`\n\n"
+                "Available types: **qa**, **marketing**, **git**, **vercel**, **railway**, **ops**, **test**, **security**.\n\n"
+                "See your agents: `/subagent list`"
             )
         from app.services.intent_classifier import get_fallback_response
         return get_fallback_response(user_text)
@@ -600,7 +598,7 @@ def try_spawn_natural_sub_agents(
     if not lines:
         return None
     lines.append("")
-    lines.append("📋 **Team** — `/subagent list` · Mission Control → dashboard **orchestration.sub_agents**")
+    lines.append("💡 Talk to your agents with `@name <request>` or say \"ask name to do something\".")
     return "\n".join(lines).strip()[:9000]
 
 

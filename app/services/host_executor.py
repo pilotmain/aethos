@@ -1051,7 +1051,7 @@ def execute_payload(
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(b)
         logger.info("host_executor file_write ok path_suffix=%s", rel[-64:])
-        return _finalize_output(f"Wrote {len(b)} bytes to {rel}")
+        return _finalize_output(f"✅ File created: **{rel}**\n📍 Location: `{path}`\n📦 Size: {len(b)} bytes")
 
     if action == "list_directory":
         raw_abs = payload.get("nexa_permission_abs_targets")

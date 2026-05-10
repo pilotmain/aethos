@@ -36,11 +36,11 @@ _RE_READ = re.compile(
 )
 _PATH_TOKEN = r"([\w.`'\"/\-.~]{1,400})"
 _RE_CREATE_FILE_WITH_CONTENT = re.compile(
-    rf"(?is)^create\s+(?:a\s+)?file\s+(?:called|named)\s+{_PATH_TOKEN}\s+"
-    rf"with\s+content\s+(.+?)(?:\s+in\s+{_PATH_TOKEN})?\s*$"
+    rf"(?is)^(?:create|make)\s+(?:a\s+)?file\s+(?:called|named)?\s*{_PATH_TOKEN}\s+"
+    rf"(?:with\s+content|with|that\s+(?:says|contains|reads))\s+(.+?)(?:\s+in\s+{_PATH_TOKEN})?\s*$"
 )
 _RE_WRITE_CONTENT_TO = re.compile(
-    rf"(?is)^write\s+(.+?)\s+to\s+(?:file\s+)?{_PATH_TOKEN}\s*$"
+    rf"(?is)^(?:write|save)\s+(.+?)\s+to\s+(?:file\s+)?{_PATH_TOKEN}\s*$"
 )
 _RE_WRITE = re.compile(
     r"(?i)^write\s+(?:to\s+)?(?:file\s+)?([\w.`'\"/\-.]{1,240})\s+(?:with|using|containing|:)\s*(.+)$",
