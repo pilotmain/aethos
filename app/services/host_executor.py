@@ -302,9 +302,26 @@ def _resolve_command_cwd(cwd: str | None = None) -> Path:
 
 
 def _command_timeout(default_timeout: int) -> int:
+    """Resolve subprocess timeout from env and per-call hint.
+
+    Previously this incorrectly capped at ``default_timeout``, so raising
+    ``NEXA_COMMAND_TIMEOUT_SECONDS`` above the caller default (often 60) had no effect.
+    """
     s = _host_settings()
-    raw = int(getattr(s, "nexa_command_timeout_seconds", default_timeout) or default_timeout)
-    return min(max(raw, 5), min(max(default_timeout, 5), 3600))
+    configured = int(getattr(s, "nexa_command_timeout_seconds", default_timeout) or default_timeout)
+    effective = max(configured, default_timeout)
+    return min(max(effective, 5), 3600)
+
+
+def _apply_task_scaffold_timeout(argv: list[str], base_timeout: int) -> int:
+    """Bump timeout for long npm/npx scaffolds (e.g. ``create-react-app``)."""
+    blob = " ".join(str(a) for a in argv).lower()
+    if "create-react-app" not in blob:
+        return base_timeout
+    s = _host_settings()
+    task = int(getattr(s, "nexa_task_timeout_seconds", 300) or 300)
+    floor = max(300, task)
+    return min(max(base_timeout, floor), 3600)
 
 
 def _execute_command_sync(
@@ -345,7 +362,8 @@ def _execute_command_sync(
             "stderr": str(exc),
             "command": command,
         }
-    code, out, err = _run_argv(argv, cwd=exec_cwd, timeout=_command_timeout(timeout))
+    exec_timeout = _apply_task_scaffold_timeout(argv, _command_timeout(timeout))
+    code, out, err = _run_argv(argv, cwd=exec_cwd, timeout=exec_timeout)
     return {
         "success": code == 0,
         "stdout": out,
@@ -1286,7 +1304,7 @@ def execute_payload(
             result = _execute_command_sync(
                 command,
                 cwd=command_cwd,
-                timeout=_command_timeout(timeout),
+                timeout=timeout,
                 user_id=str(uid) if uid else None,
             )
             return _finalize_output(_format_command_result(result))

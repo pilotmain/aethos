@@ -14,6 +14,7 @@ from starlette.responses import JSONResponse
 
 from app.api.routes import (
     admin_privacy,
+    budget_settings,
     agent_organization,
     agent_spawn,
     agent_runtime_api,
@@ -356,6 +357,7 @@ app.include_router(audit_export.router, prefix=settings.api_v1_prefix)
 app.include_router(auth.router, prefix=settings.api_v1_prefix)
 app.include_router(saas_auth.router, prefix=settings.api_v1_prefix)
 app.include_router(billing.router, prefix=settings.api_v1_prefix)
+app.include_router(budget_settings.router, prefix=settings.api_v1_prefix)
 app.include_router(tasks.router, prefix=settings.api_v1_prefix)
 app.include_router(dumps.router, prefix=settings.api_v1_prefix)
 app.include_router(plans.router, prefix=settings.api_v1_prefix)
