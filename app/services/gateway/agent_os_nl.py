@@ -42,24 +42,27 @@ def try_agent_os_status_turn(
                 "intent": "observability_dashboard",
                 "observability": True,
             }
+        obs = get_observability()
         note = (
-            "_Enable **NEXA_OBSERVABILITY_ENABLED** for in-process traces, metrics, and alerts._\n\n"
-            if not bool(getattr(get_settings(), "nexa_observability_enabled", False))
-            else ""
+            "_Optional: **NEXA_OBSERVABILITY_ENABLED=true** for full traces + alert fan-out._\n\n"
         )
         uid = (gctx.user_id or "").strip()
-        if uid:
+        if kind == "metrics":
+            recent = obs.list_recent_metrics(40)
+            lines = "\n".join(f"- **{m.name}**: {m.value} {m.unit}" for m in recent)
+            body = note + "## Metrics\n\n" + (lines or "_No metrics recorded yet._")
+        elif kind == "alerts":
+            rows = obs.list_active_alerts(40)
+            lines = "\n".join(
+                f"- **{a.get('severity')}** {a.get('title')}: {a.get('message')}" for a in rows
+            )
+            body = note + "## Alerts\n\n" + (lines or "_No alerts recorded._")
+        elif uid:
             mon = get_status_monitor()
             mon.tick()
-            dash = mon.get_dashboard_markdown(uid)
-            if kind == "alerts":
-                body = note + "## Alerts\n\n_Status monitor view (enable observability for alert store):_\n\n" + dash
-            elif kind == "metrics":
-                body = note + "## Metrics\n\n_Status monitor view (enable observability for metric samples):_\n\n" + dash
-            else:
-                body = note + dash
+            body = note + mon.get_dashboard_markdown(uid)
         else:
-            body = note + get_observability().get_dashboard_markdown()
+            body = note + obs.get_dashboard_markdown()
         return {
             "mode": "chat",
             "text": body,
