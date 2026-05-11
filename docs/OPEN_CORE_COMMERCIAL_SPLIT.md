@@ -13,7 +13,7 @@ This document complements **[OPEN_CORE_EXTENSIONS.md](OPEN_CORE_EXTENSIONS.md)**
 
 | Repository | License | Contents (examples) |
 |------------|---------|---------------------|
-| **aethos-core** (public) | AGPL-3.0 for published *core* artifact (see `LICENSE.AGPL` reference) | `aethos_core/`, shared utilities, agent templates, tests, docs |
+| **aethos-core** (public) | AGPL-3.0 for published *core* artifact (see `LICENSE.AGPL` reference) | PyPI/GitHub package ``aethos-core`` (Python import ``aethos_core``); see ``requirements.txt`` in this monorepo |
 | **aethos-pro** (private) | Commercial | Goal/healing/negotiation modules you keep closed; ship as `aethos_pro` on a **private** index |
 
 Until you split git history, keep developing in the monorepo and **extract** when stable.

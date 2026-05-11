@@ -16,6 +16,13 @@ from app.services.metrics.runtime import record_mission_completed, record_missio
 _log = get_logger("gateway")
 
 
+def gateway_resolve_optional_pro_classes() -> dict[str, Any]:
+    """Expose optional ``aethos_pro.*`` classes when the commercial wheel is enabled (see ``pro_extensions``)."""
+    from app.services.pro_extensions import resolve_optional_pro_classes
+
+    return resolve_optional_pro_classes()
+
+
 def gateway_finalize_chat_reply(
     text: str,
     *,

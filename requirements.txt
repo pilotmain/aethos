@@ -33,3 +33,7 @@ playwright>=1.40.0
 stripe>=7.0.0
 passlib[bcrypt]>=1.7.4
 email-validator>=2.0.0
+
+# Open-source core package (response formatting, plugin loader). Install from GitHub main.
+# Prefer: python -m pip install -r requirements.txt (this repo's venv ``pip`` may point elsewhere).
+aethos-core @ git+https://github.com/pilotmain/aethos-core.git
