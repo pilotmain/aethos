@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.services.gateway.context import GatewayContext
 from app.services.sub_agent_executor import AgentExecutor
-from app.services.sub_agent_registry import AgentRegistry
+from app.services.sub_agent_registry import AgentRegistry, AgentStatus, SubAgent
 
 
 def parse_inter_agent_steps(text: str) -> list[tuple[str, str]] | None:
@@ -101,6 +101,55 @@ def run_inter_agent_steps(
     return "\n\n---\n\n".join(chunks).strip()[:24_000]
 
 
+class AgentNegotiator:
+    """Score registered sub-agents for a task string (keyword overlap with capabilities/domain)."""
+
+    def __init__(self, registry: AgentRegistry | None = None) -> None:
+        self._registry = registry or AgentRegistry()
+
+    def _score_agent(self, agent: SubAgent, task: str) -> tuple[float, float]:
+        tl = (task or "").lower()
+        blob = " ".join(agent.capabilities).lower() + " " + (agent.domain or "").lower()
+        hits = sum(1 for w in tl.replace(",", " ").split() if len(w) > 2 and w in blob)
+        confidence = min(1.0, 0.25 + hits * 0.18)
+        est = max(8.0, 120.0 - hits * 15.0)
+        return confidence, est
+
+    def negotiate_task(self, task: str, *, user_id: str, chat_id: str | None = None) -> dict[str, Any]:
+        uid = (user_id or "").strip()
+        if not uid:
+            return {"error": "missing user_id"}
+        agents = (
+            self._registry.list_agents(chat_id)
+            if chat_id
+            else self._registry.list_agents_for_app_user(uid)
+        )
+        active = [a for a in agents if a.status != AgentStatus.TERMINATED]
+        bids: list[dict[str, Any]] = []
+        for ag in active:
+            conf, est = self._score_agent(ag, task)
+            if conf >= 0.25:
+                bids.append(
+                    {
+                        "agent": ag.name,
+                        "confidence": round(conf, 3),
+                        "estimated_time_seconds": round(est, 1),
+                        "domain": ag.domain,
+                    }
+                )
+        if not bids:
+            return {"error": "No agent can handle this task", "candidates": []}
+        best = max(bids, key=lambda x: x["confidence"])
+        return {"selected_agent": best["agent"], "bid": best, "candidates": bids}
+
+    def delegate_subtasks_plan(self, sub_tasks: list[str], *, user_id: str, chat_id: str | None = None) -> dict[str, Any]:
+        results: list[dict[str, Any]] = []
+        for st in sub_tasks:
+            sel = self.negotiate_task(st, user_id=user_id, chat_id=chat_id)
+            results.append({"task": st, "selection": sel})
+        return {"delegated": len(results), "results": results}
+
+
 def try_inter_agent_gateway_turn(
     gctx: GatewayContext,
     text: str,
@@ -137,6 +186,7 @@ def try_inter_agent_gateway_turn(
 
 
 __all__ = [
+    "AgentNegotiator",
     "parse_inter_agent_steps",
     "run_inter_agent_steps",
     "try_inter_agent_gateway_turn",

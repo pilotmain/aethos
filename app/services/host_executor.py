@@ -363,7 +363,25 @@ def _execute_command_sync(
             "command": command,
         }
     exec_timeout = _apply_task_scaffold_timeout(argv, _command_timeout(timeout))
-    code, out, err = _run_argv(argv, cwd=exec_cwd, timeout=exec_timeout)
+    hs = _host_settings()
+    attempts = max(1, min(10, int(getattr(hs, "nexa_host_command_max_attempts", 3) or 3)))
+    retry_host = bool(getattr(hs, "nexa_host_command_retry_enabled", False))
+    code, out, err = -1, "", ""
+    if retry_host and attempts > 1:
+        from app.services.self_healing import retry_config_from_settings, retry_delay_seconds
+
+        cfg = retry_config_from_settings()
+        cfg.max_attempts = attempts
+        for attempt in range(attempts):
+            code, out, err = _run_argv(argv, cwd=exec_cwd, timeout=exec_timeout)
+            if code == 0:
+                break
+            if attempt < attempts - 1:
+                delay = retry_delay_seconds(attempt + 1, cfg)
+                if delay > 0:
+                    time.sleep(delay)
+    else:
+        code, out, err = _run_argv(argv, cwd=exec_cwd, timeout=exec_timeout)
     return {
         "success": code == 0,
         "stdout": out,

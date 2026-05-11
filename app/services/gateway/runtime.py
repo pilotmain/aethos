@@ -947,6 +947,12 @@ class NexaGateway:
             if early_nl is not None:
                 return early_nl
 
+            from app.services.gateway.goal_nl_actions import try_goal_planning_gateway_turn
+
+            goal_nl = try_goal_planning_gateway_turn(gctx, raw_gate, db_inner)
+            if goal_nl is not None:
+                return goal_nl
+
             from app.services.inter_agent_coordinator import try_inter_agent_gateway_turn
 
             inter_ag = try_inter_agent_gateway_turn(gctx, raw_gate, db_inner)

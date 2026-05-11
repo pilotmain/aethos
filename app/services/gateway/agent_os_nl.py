@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.services.gateway.context import GatewayContext
 from app.services.host_executor_intent import parse_status_intent
+from app.services.observability import get_observability, parse_observability_intent
 from app.services.status_monitor import get_status_monitor
 
 
@@ -19,6 +20,28 @@ def try_agent_os_status_turn(
 ) -> dict[str, Any] | None:
     """Return status dashboard markdown when the user asks for progress/heartbeat."""
     _ = db
+    if bool(getattr(get_settings(), "nexa_observability_enabled", False)):
+        kind = parse_observability_intent(text)
+        if kind:
+            obs = get_observability()
+            if kind == "alerts":
+                rows = obs.list_active_alerts(40)
+                body = "## Alerts\n\n"
+                body += "\n".join(
+                    f"- **{a.get('severity')}** {a.get('title')}: {a.get('message')}" for a in rows
+                ) or "_No active alerts._"
+            elif kind == "metrics":
+                recent = obs.list_recent_metrics(20)
+                body = "## Metrics\n\n"
+                body += "\n".join(f"- **{m.name}**: {m.value} {m.unit}" for m in recent) or "_No metrics recorded._"
+            else:
+                body = obs.get_dashboard_markdown()
+            return {
+                "mode": "chat",
+                "text": body,
+                "intent": "observability_dashboard",
+                "observability": True,
+            }
     parsed = parse_status_intent(text)
     if not parsed:
         return None

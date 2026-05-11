@@ -198,6 +198,16 @@ class Settings(BaseSettings):
     nexa_status_auto_report: bool = True
     nexa_task_timeout_seconds: int = 300
     nexa_max_concurrent_tasks: int = 5
+    # Agentic OS — autonomous NL goal decomposition + workspace execution (gateway; owner-only).
+    nexa_autonomous_goal_planning: bool = False
+    # Host subprocess retries for approved argv commands (distinct from Phase 73 agent Genesis Loop).
+    nexa_host_command_retry_enabled: bool = False
+    nexa_host_command_max_attempts: int = 3
+    nexa_retry_strategy: str = "exponential"
+    # Lightweight in-process traces/metrics for NL “system status” (not OpenTelemetry).
+    nexa_observability_enabled: bool = False
+    nexa_trace_retention_hours: int = 24
+    nexa_alert_channel: str = "log"
     # Rolling conversation turns injected into LLM snapshot (user + assistant lines).
     nexa_conversation_memory_enabled: bool = True
     nexa_conversation_memory_turns: int = 10
