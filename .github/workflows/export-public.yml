@@ -1,0 +1,60 @@
+# Syncs an allowlisted subset of this repo to pilotmain/aethos-core (see scripts/export_public.py).
+# Requires repository secret PUBLIC_REPO_TOKEN (fine-grained PAT with contents: write on aethos-core).
+
+name: Export to public repo
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "aethos_core/**"
+      - "app/services/response_formatter.py"
+      - "app/services/file_ops.py"
+      - "app/services/command_executor.py"
+      - "tests/test_response_formatter.py"
+      - "tests/test_command_execution.py"
+      - "README.md"
+      - "LICENSE"
+      - "scripts/export_public.py"
+
+concurrency:
+  group: export-public-aethos-core
+  cancel-in-progress: true
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    if: github.repository == 'pilotmain/aethos'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Clone public repo
+        env:
+          GH_TOKEN: ${{ secrets.PUBLIC_REPO_TOKEN }}
+        run: |
+          set -eux
+          git clone --depth 1 "https://x-access-token:${GH_TOKEN}@github.com/pilotmain/aethos-core.git" "${GITHUB_WORKSPACE}/../aethos-core"
+
+      - name: Git identity for public repo commits
+        run: |
+          set -eux
+          git -C "${GITHUB_WORKSPACE}/../aethos-core" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C "${GITHUB_WORKSPACE}/../aethos-core" config user.name "github-actions[bot]"
+
+      - name: Sync allowlisted paths
+        env:
+          GH_TOKEN: ${{ secrets.PUBLIC_REPO_TOKEN }}
+        run: |
+          set -eux
+          python3 scripts/export_public.py --no-push --skip-pull --public-repo "${GITHUB_WORKSPACE}/../aethos-core"
+
+      - name: Push public repo
+        env:
+          GH_TOKEN: ${{ secrets.PUBLIC_REPO_TOKEN }}
+        run: |
+          set -eux
+          cd "${GITHUB_WORKSPACE}/../aethos-core"
+          git push "https://x-access-token:${GH_TOKEN}@github.com/pilotmain/aethos-core.git" HEAD:main
