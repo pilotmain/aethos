@@ -538,6 +538,8 @@ class Settings(BaseSettings):
     # Without NEXA_LICENSE_PUBLIC_KEY_PEM, license strings are ignored (OSS default).
     nexa_license_key: str | None = None
     nexa_license_public_key_pem: str | None = None
+    # When true, callers may attempt optional ``aethos_pro.*`` imports / Pro UX (still requires package + valid license for gated APIs).
+    aethos_pro_enabled: bool = False
     # Comma-separated enterprise capability keys (same names as app.core.feature_flags.ENTERPRISE_FEATURES)
     # or raw license feature IDs — grants without a signed token (pilots / contract installs).
     nexa_enterprise_granted_features: str = ""

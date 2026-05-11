@@ -17,7 +17,7 @@ nexa = "aethos_cli.__main__:main"
 [tool.setuptools.packages.find]
 where = ["."]
 # Include `app` so `pip install -e .` can import the full API/bot tree (clawhub, skills, etc.).
-include = ["aethos_cli*", "app*"]
+include = ["aethos_cli*", "app*", "aethos_core*"]
 
 [tool.ruff]
 target-version = "py311"

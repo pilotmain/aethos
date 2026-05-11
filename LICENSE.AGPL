@@ -1,0 +1,16 @@
+AethOS Core — Affero GPL reference license (future extraction)
+==============================================================
+
+Copyright (c) AethOS contributors.
+
+When **AethOS Core** is published as a standalone repository or PyPI package, it may be
+licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)** so that network use
+of modified versions preserves source-reciprocity obligations.
+
+**Full license text (official):** https://www.gnu.org/licenses/agpl-3.0.txt
+
+**SPDX-License-Identifier:** AGPL-3.0-only
+
+This repository’s **current** default license for the full tree remains **Apache-2.0**
+(see the root ``LICENSE`` file). Dual- or split-licensing only applies after you explicitly
+publish a designated “core” artifact under AGPL; consult counsel before changing distribution terms.

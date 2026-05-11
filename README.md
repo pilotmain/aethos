@@ -33,6 +33,21 @@
 
 Backward compatibility: many runtime flags still use the **`NEXA_*`** env prefix alongside **`AETHOS_*`** aliases (see `.env.example` and `app/core/config.py`).
 
+## Open core and AethOS Pro
+
+This repository’s **default** license is **Apache-2.0** (`LICENSE`). Some roadmap artifacts reference a future **AGPL** “core” extraction (`LICENSE.AGPL`); commercial terms for closed components are summarized in `LICENSE.commercial`.
+
+**Not included** in the default OSS distribution (sold or licensed separately under commercial agreement):
+
+- Advanced goal planning beyond OSS defaults  
+- Packaged self-healing / enterprise extensions  
+- Inter-agent negotiation “secret sauce” shipped in private builds  
+- Enterprise-only surfaces (RBAC, SSO, advanced audit, etc.)
+
+Optional **signed** license verification and feature flags: `app/services/licensing/` — set `NEXA_LICENSE_KEY` / `NEXA_LICENSE_PUBLIC_KEY_PEM` when using vendor builds. Optional **`aethos_pro`** plugins load via `aethos_core.plugin_manager` when the commercial wheel is installed.
+
+For **commercial licensing**, contact your vendor channel (placeholder: **license@aethos.ai**). Technical overview: [docs/OPEN_CORE_COMMERCIAL_SPLIT.md](docs/OPEN_CORE_COMMERCIAL_SPLIT.md).
+
 ---
 
 ## One-command install

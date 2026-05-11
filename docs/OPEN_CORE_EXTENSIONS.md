@@ -33,3 +33,7 @@ Signing is Ed25519 over the **raw UTF-8 bytes** of that JSON (the middle segment
 ## Repository license
 
 This tree is released under **Apache-2.0** — see `LICENSE`. Closed-source layers ship separately under commercial terms.
+
+## `aethos_pro.*` plugins (optional wheel)
+
+The **`aethos_core.plugin_manager.PluginManager`** helper loads `aethos_pro.<module>` when a commercial package is installed (private PyPI). OSS deployments omit that package; callers pass an **open-source fallback**. See **[OPEN_CORE_COMMERCIAL_SPLIT.md](OPEN_CORE_COMMERCIAL_SPLIT.md)** for repository split and publishing notes.
