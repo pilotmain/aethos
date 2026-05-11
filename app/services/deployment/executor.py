@@ -11,6 +11,7 @@ from typing import Any
 
 from app.core.config import get_settings
 from app.services.deployment.detector import DeploymentDetector, _normalize_provider
+from app.services.deployment.project_layout import bundle_deploy_metadata, find_project_root
 
 
 _LOCALHOST_MARKERS = ("localhost", "127.0.0.1", "0.0.0.0", "example.com")
@@ -43,6 +44,8 @@ class DeploymentExecutor:
                 "provider": provider,
                 "preview": preview,
             }
+
+        root = find_project_root(root)
 
         settings = get_settings()
         auto_on = bool(getattr(settings, "nexa_deploy_auto_detect", True))
@@ -242,6 +245,8 @@ class DeploymentExecutor:
             "note": cfg.get("note"),
             "preview": preview,
         }
+        if ok:
+            result.update(bundle_deploy_metadata(cwd))
         if not ok:
             result["error"] = err_tail or out_tail or f"exit code {proc.returncode}"
         return result

@@ -461,3 +461,32 @@ def parse_deploy_intent(text: str) -> dict[str, Any] | None:
         }
 
     return None
+
+
+def parse_deployment_status_intent(text: str) -> dict[str, Any] | None:
+    """NL intent to list cloud projects / deployments (gateway deployment-status hook)."""
+    if not text or not isinstance(text, str):
+        return None
+    line = text.strip().splitlines()[0].strip()
+    if not line:
+        return None
+    low = line.lower()
+
+    if re.search(r"(?i)^(?:check|list)\s+(?:my\s+)?vercel\s+(?:projects|deployments|services)\s*$", low):
+        return {"intent": "check_deployments", "provider": "vercel", "raw_text": text}
+    if re.search(r"(?i)^(?:check|list)\s+(?:my\s+)?railway\s+(?:projects|deployments|services)\s*$", low):
+        return {"intent": "check_deployments", "provider": "railway", "raw_text": text}
+
+    m = re.search(r"(?i)\bwhat(?:'s| is)\s+(?:running|deployed)\s+on\s+(vercel|railway)\b", low)
+    if m:
+        return {"intent": "check_deployments", "provider": m.group(1).lower(), "raw_text": text}
+
+    m_lm = re.search(r"(?i)\blist\s+my\s+(vercel|railway)\s+projects\b", low)
+    if m_lm:
+        return {"intent": "check_deployments", "provider": m_lm.group(1).lower(), "raw_text": text}
+
+    m_show = re.search(r"(?i)^(?:show\s+)?(?:my\s+)?(vercel|railway)\s+(?:projects|deployments)\s*$", low)
+    if m_show:
+        return {"intent": "check_deployments", "provider": m_show.group(1).lower(), "raw_text": text}
+
+    return None
