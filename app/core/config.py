@@ -208,6 +208,10 @@ class Settings(BaseSettings):
     nexa_observability_enabled: bool = False
     nexa_trace_retention_hours: int = 24
     nexa_alert_channel: str = "log"
+    # Gateway reply framing: simple (default), beautiful (banner wrapper), raw (unchanged).
+    nexa_response_format: str = "simple"
+    nexa_show_progress_updates: bool = True
+    nexa_progress_update_interval_seconds: int = 2
     # Rolling conversation turns injected into LLM snapshot (user + assistant lines).
     nexa_conversation_memory_enabled: bool = True
     nexa_conversation_memory_turns: int = 10
@@ -980,6 +984,12 @@ class Settings(BaseSettings):
         except (TypeError, ValueError):
             return 1
         return max(1, min(28, n))
+
+    @field_validator("nexa_response_format", mode="before")
+    @classmethod
+    def _normalize_nexa_response_format(cls, v: object) -> str:
+        x = (str(v) if v is not None else "simple").strip().lower()
+        return x if x in ("simple", "beautiful", "raw") else "simple"
 
     @model_validator(mode="after")
     def _phase33_production_lock(self) -> Settings:

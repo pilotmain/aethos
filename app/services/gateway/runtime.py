@@ -137,7 +137,13 @@ def _finalize_gateway_payload(payload: dict[str, Any]) -> dict[str, Any]:
         return payload
     t = payload.get("text")
     if isinstance(t, str):
-        return {**payload, "text": gateway_finalize_chat_reply(t, source="gateway_payload")}
+        t2 = gateway_finalize_chat_reply(t, source="gateway_payload")
+        from app.services.chat_response_banner import apply_gateway_response_style
+
+        intent_val = payload.get("intent")
+        intent_str = str(intent_val) if intent_val is not None else ""
+        t2 = apply_gateway_response_style(intent_str, t2)
+        return {**payload, "text": t2}
     return payload
 
 # Legacy constant — Phase 35 routes generic chat through :meth:`handle_full_chat` instead.
