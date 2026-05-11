@@ -222,6 +222,27 @@ def _command_from_intent(intent_type: str, match: re.Match[str]) -> tuple[str, s
     return first, None
 
 
+_STATUS_PATTERNS: list[tuple[str, str]] = [
+    (r"^(?:what\'s|what is)\s+(?:the\s+)?(?:status|progress)$", "get_status"),
+    (r"^(?:show|list)\s+(?:my\s+)?(?:tasks|work|progress)$", "list_tasks"),
+    (r"^(?:what|who)\s+is\s+working(?:\s+on\s+what)?$", "active_work"),
+    (r"^(?:any\s+)?(?:update|report|heartbeat)$", "heartbeat"),
+]
+
+
+def parse_status_intent(text: str) -> dict[str, Any] | None:
+    """Parse status / dashboard inquiry intent."""
+    if not text or not isinstance(text, str):
+        return None
+    text_lower = text.strip().splitlines()[0].strip().lower()
+    if not text_lower:
+        return None
+    for pattern, intent_type in _STATUS_PATTERNS:
+        if re.search(pattern, text_lower):
+            return {"intent": intent_type}
+    return None
+
+
 _READ_NL_PATTERNS: list[tuple[str, str]] = [
     (r"^(?:read|show|cat|open)\s+(?:file\s+)?(.+)$", "read_file"),
     (r"^(?:what\'s|what is|show me)\s+in\s+(.+)$", "read_file"),

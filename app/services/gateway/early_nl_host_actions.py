@@ -89,7 +89,7 @@ def try_early_nl_host_actions(
     react_intent = parse_react_app_intent(raw)
     if react_intent:
         app_name = str(react_intent.get("app_name") or "").strip()
-        result = create_react_app(app_name, root)
+        result = create_react_app(app_name, root, owner_user_id=uid)
         steps = result.get("steps") or []
         lines = "\n".join(
             f"  - {s.get('step')}: {'✓' if s.get('success') else '✗'}" for s in steps

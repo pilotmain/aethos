@@ -253,6 +253,36 @@ class AgentRegistry:
             chat_id=chat_id,
             success=True,
         )
+        try:
+            from app.services.agent_visibility_feed import push_agent_spawn_notice
+            from app.services.events.envelope import emit_runtime_event
+
+            vis_uid = (owner_app_user_id or "").strip()
+            if vis_uid:
+                push_agent_spawn_notice(
+                    vis_uid,
+                    agent_name=name,
+                    domain=domain,
+                    agent_id=agent_id,
+                )
+                emit_runtime_event(
+                    "agent.spawned",
+                    user_id=vis_uid,
+                    agent=name,
+                    payload={
+                        "domain": domain,
+                        "agent_id": agent_id,
+                        "chat_id": chat_id,
+                    },
+                )
+        except Exception:
+            logger.debug("agent spawn visibility/event skipped", exc_info=True)
+        try:
+            from app.services.status_monitor import get_status_monitor
+
+            get_status_monitor().register_active_agent(name, "active")
+        except Exception:
+            logger.debug("status_monitor register_active_agent skipped", exc_info=True)
         return agent
 
     def get_agent(self, agent_id: str) -> SubAgent | None:

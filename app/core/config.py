@@ -193,6 +193,11 @@ class Settings(BaseSettings):
     nexa_auto_approve_log_only: bool = False
     # When true, privileged owners skip the chat confirmation step for host actions and execute in-process.
     nexa_auto_approve_owner: bool = True
+    # Agentic OS — status dashboard, React/long-task timeouts, concurrency (see .env.example).
+    nexa_agent_heartbeat_interval: int = 30
+    nexa_status_auto_report: bool = True
+    nexa_task_timeout_seconds: int = 300
+    nexa_max_concurrent_tasks: int = 5
     api_v1_prefix: str = "/api/v1"
     # Phase 60: default absolute SQLite under ~/.aethos/data (API + bot same file); override with DATABASE_URL.
     database_url: str = Field(default_factory=get_default_sqlite_database_url)

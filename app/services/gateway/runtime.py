@@ -873,6 +873,19 @@ class NexaGateway:
 
         load_plugins()
 
+        vis_uid = (gctx.user_id or "").strip()
+        from app.services.agent_visibility_feed import drain_user_visibility_banner
+
+        visibility_banner = drain_user_visibility_banner(vis_uid) if vis_uid else None
+
+        def _merge_visibility_banner(payload: dict[str, Any], banner: str | None) -> dict[str, Any]:
+            if not banner or not isinstance(payload, dict):
+                return payload
+            t = payload.get("text")
+            if isinstance(t, str) and t.strip():
+                return {**payload, "text": (banner.rstrip() + "\n\n" + t).strip()}
+            return {**payload, "text": banner}
+
         def _route(db_inner: Session) -> dict[str, Any]:
             from app.services.conversation_context_service import build_context_snapshot, get_or_create_context
             from app.services.execution_loop import try_execute_or_explain
@@ -908,11 +921,23 @@ class NexaGateway:
                     "intent": "config_query",
                 }
 
+            from app.services.gateway.agent_os_nl import try_agent_os_status_turn
+
+            agent_os_st = try_agent_os_status_turn(gctx, raw_gate, db_inner)
+            if agent_os_st is not None:
+                return agent_os_st
+
             from app.services.gateway.early_nl_host_actions import try_early_nl_host_actions
 
             early_nl = try_early_nl_host_actions(gctx, raw_gate, db_inner)
             if early_nl is not None:
                 return early_nl
+
+            from app.services.inter_agent_coordinator import try_inter_agent_gateway_turn
+
+            inter_ag = try_inter_agent_gateway_turn(gctx, raw_gate, db_inner)
+            if inter_ag is not None:
+                return inter_ag
 
             host_out = self._try_host_executor_turn(gctx, raw_gate, db_inner)
             if host_out is not None:
@@ -984,10 +1009,10 @@ class NexaGateway:
             return self.handle_full_chat(gctx, text, db=db_inner)
 
         if db is not None:
-            return _finalize_gateway_payload(_route(db))
+            return _merge_visibility_banner(_finalize_gateway_payload(_route(db)), visibility_banner)
 
         with SessionLocal() as session:
-            return _finalize_gateway_payload(_route(session))
+            return _merge_visibility_banner(_finalize_gateway_payload(_route(session)), visibility_banner)
 
     def _run_mission(
         self,

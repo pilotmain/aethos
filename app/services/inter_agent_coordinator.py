@@ -1,0 +1,135 @@
+"""Natural-language agent-to-agent task chaining (registry sub-agents)."""
+
+from __future__ import annotations
+
+import re
+from typing import Any
+
+from sqlalchemy.orm import Session
+
+from app.services.gateway.context import GatewayContext
+from app.services.sub_agent_executor import AgentExecutor
+from app.services.sub_agent_registry import AgentRegistry
+
+
+def parse_inter_agent_steps(text: str) -> list[tuple[str, str]] | None:
+    """
+    Parse multi-step agent instructions.
+
+    Supported:
+    - ``ask marketing_agent to … and ask qa_agent to …``
+    - ``ask marketing_agent to …`` / ``tell marketing_agent to …``
+    """
+    raw = (text or "").strip()
+    if not raw:
+        return None
+    line = raw.splitlines()[0].strip()
+
+    m = re.search(
+        r"(?is)^ask\s+@?([\w-]+)\s+to\s+(.+?)\s+and\s+ask\s+@?([\w-]+)\s+to\s+(.+)$",
+        line,
+    )
+    if m:
+        a1, t1, a2, t2 = m.group(1), m.group(2).strip(), m.group(3), m.group(4).strip()
+        if a1 and t1 and a2 and t2:
+            return [(a1, t1), (a2, t2)]
+
+    m2 = re.search(r"(?is)^(?:ask|tell)\s+@?([\w-]+)\s+to\s+(.+)$", line)
+    if m2:
+        a, t = m2.group(1), m2.group(2).strip()
+        if a and t:
+            return [(a, t)]
+
+    return None
+
+
+def _resolve_agent(registry: AgentRegistry, name: str, chat_id: str, user_id: str):
+    ag = registry.resolve_agent_by_name(name, chat_id)
+    if ag is not None:
+        return ag
+    ag = registry.get_agent_by_name_for_app_user(name, user_id)
+    if ag is not None:
+        registry.patch_agent(ag.id, parent_chat_id=chat_id)
+    return ag
+
+
+def run_inter_agent_steps(
+    db: Session | None,
+    *,
+    user_id: str,
+    chat_id: str,
+    web_session_id: str,
+    steps: list[tuple[str, str]],
+) -> str:
+    """Execute each (agent_name, task) sequentially via :class:`~app.services.sub_agent_executor.AgentExecutor`."""
+    registry = AgentRegistry()
+    executor = AgentExecutor()
+    uid = (user_id or "").strip()
+    wid = (web_session_id or "default").strip()[:64] or "default"
+    chunks: list[str] = []
+
+    for agent_name, task in steps:
+        ag = _resolve_agent(registry, agent_name, chat_id, uid)
+        if ag is None:
+            chunks.append(
+                f"❌ **@{agent_name}** was not found in this chat. "
+                f"Create it first (e.g. “create a {agent_name.replace('_', ' ')} agent”)."
+            )
+            continue
+        try:
+            out = executor.execute(
+                ag,
+                task,
+                chat_id,
+                db=db,
+                user_id=uid,
+                web_session_id=wid,
+            )
+        except Exception as exc:  # noqa: BLE001
+            chunks.append(f"### @{agent_name}\n\n⚠️ {exc!s}")
+            continue
+        chunks.append(f"### @{agent_name}\n\n{out}")
+
+    return "\n\n---\n\n".join(chunks).strip()[:24_000]
+
+
+def try_inter_agent_gateway_turn(
+    gctx: GatewayContext,
+    text: str,
+    db: Session | None,
+) -> dict[str, Any] | None:
+    """Gateway hook: NL agent-to-agent orchestration."""
+    from app.core.config import get_settings
+
+    if not bool(getattr(get_settings(), "nexa_agent_orchestration_enabled", False)):
+        return None
+    uid = (gctx.user_id or "").strip()
+    if not uid:
+        return None
+    steps = parse_inter_agent_steps(text)
+    if not steps:
+        return None
+    from app.services.sub_agent_router import orchestration_chat_key
+
+    chat_id = orchestration_chat_key(gctx)
+    wid = str(gctx.extras.get("web_session_id") or "default").strip()[:64] or "default"
+    body = run_inter_agent_steps(
+        db,
+        user_id=uid,
+        chat_id=chat_id,
+        web_session_id=wid,
+        steps=steps,
+    )
+    return {
+        "mode": "chat",
+        "text": body,
+        "intent": "inter_agent_chain",
+        "inter_agent": True,
+    }
+
+
+__all__ = [
+    "parse_inter_agent_steps",
+    "run_inter_agent_steps",
+    "try_inter_agent_gateway_turn",
+]
