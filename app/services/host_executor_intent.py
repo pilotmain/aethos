@@ -490,3 +490,55 @@ def parse_deployment_status_intent(text: str) -> dict[str, Any] | None:
         return {"intent": "check_deployments", "provider": m_show.group(1).lower(), "raw_text": text}
 
     return None
+
+
+def is_cancel_deploy_intent(text: str) -> bool:
+    """User wants to abandon an in-progress deploy cloud-choice prompt."""
+    if not text or not isinstance(text, str):
+        return False
+    line = text.strip().splitlines()[0].strip().lower()
+    if not line:
+        return False
+    patterns = (
+        r"^(cancel|stop|abort|exit|quit|skip|nope|forget\s+it|nevermind|never\s+mind)\s*$",
+        r"^no\s*$",
+        r"^cancel\s+(?:that|this|deploy|deployment)\s*$",
+        r"^(?:don'?t|do\s+not)\s+deploy\s*$",
+    )
+    return any(re.match(p, line) for p in patterns)
+
+
+def is_reset_deploy_intent(text: str) -> bool:
+    """Clear saved deploy-choice state without starting a deploy."""
+    if not text or not isinstance(text, str):
+        return False
+    line = text.strip().splitlines()[0].strip().lower()
+    if not line:
+        return False
+    patterns = (
+        r"^reset\s+deploy\s*$",
+        r"^clear\s+deploy\s+state\s*$",
+        r"^clear\s+deployment\s+state\s*$",
+    )
+    return any(re.match(p, line) for p in patterns)
+
+
+def parse_available_clouds_intent(text: str) -> bool:
+    """User is asking which deployment CLIs / targets exist on this machine."""
+    if not text or not isinstance(text, str):
+        return False
+    line = text.strip().splitlines()[0].strip().lower()
+    if not line:
+        return False
+    if parse_deploy_intent(text):
+        return False
+    patterns = (
+        r"\bwhat\s+clouds?\b",
+        r"\bwhat\s+(?:deployment|deploy)\s+(?:options|targets|providers)\b",
+        r"\bwhere\s+can\s+i\s+deploy\b",
+        r"\bavailable\s+clouds\b",
+        r"\bwhich\s+clouds?\b",
+        r"\blist\s+(?:my\s+)?deployment\s+(?:tools|clis|targets)\b",
+        r"\bwhat\s+can\s+i\s+deploy\s+to\b",
+    )
+    return any(re.search(p, line) for p in patterns)

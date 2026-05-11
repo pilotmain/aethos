@@ -14,8 +14,24 @@ from app.services.deployment.detector import DeploymentDetector
 from app.services.deployment.executor import DeploymentExecutor
 from app.services.deployment.project_layout import find_project_root
 from app.services.gateway.context import GatewayContext
-from app.services.host_executor_intent import parse_deploy_intent
+from app.services.host_executor_intent import (
+    is_cancel_deploy_intent,
+    is_reset_deploy_intent,
+    parse_available_clouds_intent,
+    parse_deploy_intent,
+)
 from app.services.user_capabilities import is_privileged_owner_for_web_mutations
+
+_DEPLOY_DISPLAY: dict[str, str] = {
+    "vercel": "Vercel",
+    "railway": "Railway",
+    "fly": "Fly.io",
+    "netlify": "Netlify",
+    "cloudflare": "Cloudflare (Wrangler)",
+    "deno": "Deno Deploy",
+    "gcloud": "Google Cloud (gcloud)",
+    "heroku": "Heroku",
+}
 
 _PENDING_KEY = "nexa:deploy_choice_pending"
 _PREF_KEY = "nexa:deploy_preferred_provider"
@@ -127,8 +143,23 @@ def _pinned_provider_names(project_root: Path) -> list[str]:
 
 
 def _ordered_cli_names(project_root: Path) -> list[str]:
+    """Slugs for CLIs that are on PATH **and** have an automated deploy path in the registry."""
     avail = DeploymentDetector.detect_available(str(project_root))
-    names = [str(c.get("name") or "") for c in avail if c.get("name")]
+    names: list[str] = []
+    for c in avail:
+        n = str(c.get("name") or "").strip()
+        if not n or c.get("manual_only"):
+            continue
+        cfg = DeploymentDetector.get_registry(n) or c
+        if cfg.get("manual_only"):
+            continue
+        if not (
+            cfg.get("deploy_argv")
+            or cfg.get("deploy_shell")
+            or cfg.get("deploy_argv_preview")
+        ):
+            continue
+        names.append(n)
     order = list(DeploymentDetector.PRIORITY)
     out: list[str] = []
     for k in order:
@@ -138,6 +169,69 @@ def _ordered_cli_names(project_root: Path) -> list[str]:
         if k not in out:
             out.append(k)
     return out
+
+
+def get_cloud_choices(project_root: Path) -> list[dict[str, Any]]:
+    """Installed deployment targets only (same source as the numbered deploy prompt)."""
+    out: list[dict[str, Any]] = []
+    for slug in _ordered_cli_names(project_root):
+        cfg = DeploymentDetector.get_registry(slug)
+        if not cfg or cfg.get("manual_only"):
+            continue
+        argv = cfg.get("deploy_argv") or cfg.get("deploy_argv_preview") or []
+        shell = cfg.get("deploy_shell")
+        cmd = " ".join(str(x) for x in argv) if isinstance(argv, list) and argv else (str(shell) if shell else slug)
+        out.append(
+            {
+                "name": slug,
+                "display": _DEPLOY_DISPLAY.get(slug, slug.replace("_", " ").title()),
+                "command": cmd,
+            }
+        )
+    return out
+
+
+def install_instructions_text() -> str:
+    return (
+        "**No deployment tools found on this machine**\n\n"
+        "Install at least one CLI, then try `deploy` again:\n\n"
+        "• **Vercel:** `npm install -g vercel`\n"
+        "• **Railway:** `brew install railway` (or see https://docs.railway.app/develop/cli)\n"
+        "• **Fly.io:** https://fly.io/docs/hobbyists/install-flyctl/\n"
+        "• **Netlify:** `npm install -g netlify-cli`\n"
+        "• **Cloudflare:** `npm install -g wrangler`\n"
+    )
+
+
+def format_cloud_choice_prompt(project_root: Path) -> str:
+    choices = get_cloud_choices(project_root)
+    if not choices:
+        return install_instructions_text()
+    lines = [
+        "**Which cloud should deploy this folder?**",
+        "",
+        f"_Deploy root:_ `{project_root}`",
+        "",
+    ]
+    for i, c in enumerate(choices, 1):
+        lines.append(f"{i}. **{c['display']}** (`{c['name']}`)")
+    lines.append("")
+    lines.append("Reply with the **number** or **`deploy to <name>`**.")
+    lines.append("Say **`cancel`** to abort, or **`reset deploy`** to clear this prompt.")
+    lines.append("_Your choice is remembered for the next plain `deploy`._")
+    return "\n".join(lines)
+
+
+def format_available_clouds_reply(project_root: Path) -> str:
+    choices = get_cloud_choices(project_root)
+    if not choices:
+        return "**Available deployment targets:** none detected.\n\n" + install_instructions_text()
+    lines = ["**Available deployment targets (installed CLIs):**", ""]
+    for c in choices:
+        lines.append(f"• **{c['display']}** — `{c['name']}`")
+    lines.append("")
+    lines.append("Say **`deploy`** to pick (or use a saved default), or **`deploy to <name>`**.")
+    return "\n".join(lines)
 
 
 def parse_deploy_choice_reply(text: str, options: list[str]) -> str | None:
@@ -233,6 +327,40 @@ def try_gateway_deploy_turn(
         _clear_pending(db, uid)
         pending = None
 
+    if is_reset_deploy_intent(raw):
+        _clear_pending(db, uid)
+        return {
+            "mode": "chat",
+            "text": gateway_finalize_chat_reply(
+                "**Deploy state reset.**\n\nYou can start again with `deploy` or `deploy to <provider>`.",
+                source="deploy_reset",
+                user_text=raw,
+            ),
+            "intent": "deploy_reset",
+        }
+
+    if pending and is_cancel_deploy_intent(raw):
+        _clear_pending(db, uid)
+        return {
+            "mode": "chat",
+            "text": gateway_finalize_chat_reply(
+                "**Deployment cancelled.**\n\nSay `deploy` when you want to try again.",
+                source="deploy_cancelled",
+                user_text=raw,
+            ),
+            "intent": "deploy_cancelled",
+        }
+
+    workspace0 = _deploy_workspace_root()
+    root0 = find_project_root(Path(workspace0))
+    if parse_available_clouds_intent(raw) and parse_deploy_intent(raw) is None:
+        body = format_available_clouds_reply(root0)
+        return {
+            "mode": "chat",
+            "text": gateway_finalize_chat_reply(body.strip(), source="deploy_available_targets", user_text=raw),
+            "intent": "available_clouds",
+        }
+
     parsed = parse_deploy_intent(raw)
 
     if parsed and parsed.get("provider"):
@@ -248,10 +376,12 @@ def try_gateway_deploy_turn(
                 "**Pick a cloud for this deploy**",
                 "",
                 "Reply with the **number** or say **`deploy to <tool>`**.",
+                "Say **`cancel`** to abort, or **`reset deploy`** to clear state.",
                 "",
             ]
             for i, name in enumerate(opts, 1):
-                lines.append(f"{i}. **{name}**")
+                disp = _DEPLOY_DISPLAY.get(name, name)
+                lines.append(f"{i}. **{disp}** (`{name}`)")
             return {
                 "mode": "chat",
                 "text": gateway_finalize_chat_reply("\n".join(lines), source="deploy_choice_remind", user_text=raw),
@@ -278,6 +408,18 @@ def try_gateway_deploy_turn(
     preview = str(parsed.get("deploy_type") or "deploy") == "deploy_preview"
     explicit = str(parsed.get("provider") or "").strip() or None
 
+    installed_slugs = _ordered_cli_names(root)
+    if explicit is None and not installed_slugs:
+        return {
+            "mode": "chat",
+            "text": gateway_finalize_chat_reply(
+                install_instructions_text().strip(),
+                source="deploy_no_cli",
+                user_text=raw,
+            ),
+            "intent": "deploy_no_cli",
+        }
+
     need_prompt = False
     chosen: str | None = explicit
 
@@ -295,20 +437,13 @@ def try_gateway_deploy_turn(
             chosen = opts[0] if opts else None
         else:
             _save_pending(db, uid, options=opts, workspace=str(root), preview=preview)
-            lines = [
-                "**Which cloud should deploy this folder?**",
-                "",
-                f"_Deploy root:_ `{root}`",
-                "",
-            ]
-            for i, name in enumerate(opts, 1):
-                lines.append(f"{i}. **{name}**")
-            lines.append("")
-            lines.append("Reply with the **number** or **`deploy to <vercel|railway|…>`**.")
-            lines.append("_Your choice is remembered for the next plain `deploy`._")
             return {
                 "mode": "chat",
-                "text": gateway_finalize_chat_reply("\n".join(lines), source="deploy_choice", user_text=raw),
+                "text": gateway_finalize_chat_reply(
+                    format_cloud_choice_prompt(root).strip(),
+                    source="deploy_choice",
+                    user_text=raw,
+                ),
                 "intent": "deploy_choice_required",
             }
 
@@ -399,10 +534,7 @@ def _finalize_deploy_reply(
     if avail:
         lines += "\nYou can also say `deploy to vercel` (or another installed tool).\n"
     else:
-        lines += (
-            "\n**Install a CLI:** `npm i -g vercel` · `brew install railway` · "
-            "see https://fly.io/docs/hobbyists/install-flyctl/\n"
-        )
+        lines += "\n" + install_instructions_text()
     return {
         "mode": "chat",
         "text": gateway_finalize_chat_reply(lines.strip(), source="generic_deploy_fail", user_text=raw),
@@ -411,4 +543,11 @@ def _finalize_deploy_reply(
     }
 
 
-__all__ = ["parse_deploy_choice_reply", "try_gateway_deploy_turn"]
+__all__ = [
+    "format_available_clouds_reply",
+    "format_cloud_choice_prompt",
+    "get_cloud_choices",
+    "install_instructions_text",
+    "parse_deploy_choice_reply",
+    "try_gateway_deploy_turn",
+]
