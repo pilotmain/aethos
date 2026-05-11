@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 import threading
 import uuid
 from collections import deque
@@ -184,16 +185,31 @@ def trace_execution(func: F) -> F:
     return wrapper  # type: ignore[return-value]
 
 
+# NL routing for gateway / early_nl guards. Order: narrow (alerts/metrics) before broad “show …”.
+_OBSERVABILITY_REGEX: list[tuple[re.Pattern[str], str]] = [
+    (re.compile(r"^(?:show|display|view)\s+(?:me\s+)?alerts?\b", re.I), "alerts"),
+    (re.compile(r"^(?:show|display|view)\s+(?:me\s+)?metrics?\b", re.I), "metrics"),
+    (re.compile(r"^(?:list|see)\s+alerts?\b", re.I), "alerts"),
+    (re.compile(r"^(?:show|display|view)\s+(?:me\s+)?(?:system\s+)?(?:status|health|dashboard)\b", re.I), "full"),
+    (re.compile(r"(?:show|display|view)\s+(?:me\s+)?(?:system\s+)?(?:status|health|dashboard)", re.I), "full"),
+    (re.compile(r"(?:what|how)\b.+\b(system|status|health)\b", re.I), "full"),
+    (re.compile(r"^is\s+everything\s+ok\??$", re.I), "full"),
+    (re.compile(r"^health\s+check\b", re.I), "full"),
+    (re.compile(r"^(?:show\s+me\s+)?system\s+status\b", re.I), "full"),
+]
+
+
 def parse_observability_intent(text: str) -> str | None:
-    """Return dashboard kind: full | alerts | metrics."""
-    line = (text or "").strip().splitlines()[0].strip().lower()
-    if not line:
+    """Return dashboard kind: full | alerts | metrics (does not depend on env flags)."""
+    raw = (text or "").strip().splitlines()[0].strip()
+    if not raw:
         return None
-    if line in ("show alerts", "list alerts", "active alerts"):
+    low = raw.lower()
+    if low in ("show alerts", "list alerts", "active alerts", "alerts"):
         return "alerts"
-    if line in ("show metrics", "metrics", "recent metrics"):
+    if low in ("show metrics", "metrics", "recent metrics"):
         return "metrics"
-    phrases = (
+    literal_full = (
         "show me system status",
         "system status",
         "system observability",
@@ -202,8 +218,11 @@ def parse_observability_intent(text: str) -> str | None:
         "what's happening",
         "whats happening",
     )
-    if line in phrases or any(line.startswith(p) for p in phrases):
+    if low in literal_full or any(low.startswith(p) for p in literal_full):
         return "full"
+    for rx, kind in _OBSERVABILITY_REGEX:
+        if rx.search(raw):
+            return kind
     return None
 
 

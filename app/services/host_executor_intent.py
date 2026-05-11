@@ -258,6 +258,11 @@ def parse_read_intent(text: str) -> dict[str, Any] | None:
     line = text.strip().splitlines()[0].strip()
     if not line:
         return None
+    # Avoid treating "show me system status" as `show <path>` → path "me system status".
+    from app.services.observability.runtime_store import parse_observability_intent
+
+    if parse_observability_intent(line):
+        return None
     text_lower = line.lower()
     for pattern, _kind in _READ_NL_PATTERNS:
         match = re.search(pattern, text_lower, re.IGNORECASE)

@@ -20,9 +20,9 @@ def try_agent_os_status_turn(
 ) -> dict[str, Any] | None:
     """Return status dashboard markdown when the user asks for progress/heartbeat."""
     _ = db
-    if bool(getattr(get_settings(), "nexa_observability_enabled", False)):
-        kind = parse_observability_intent(text)
-        if kind:
+    kind = parse_observability_intent(text)
+    if kind:
+        if bool(getattr(get_settings(), "nexa_observability_enabled", False)):
             obs = get_observability()
             if kind == "alerts":
                 rows = obs.list_active_alerts(40)
@@ -42,6 +42,30 @@ def try_agent_os_status_turn(
                 "intent": "observability_dashboard",
                 "observability": True,
             }
+        note = (
+            "_Enable **NEXA_OBSERVABILITY_ENABLED** for in-process traces, metrics, and alerts._\n\n"
+            if not bool(getattr(get_settings(), "nexa_observability_enabled", False))
+            else ""
+        )
+        uid = (gctx.user_id or "").strip()
+        if uid:
+            mon = get_status_monitor()
+            mon.tick()
+            dash = mon.get_dashboard_markdown(uid)
+            if kind == "alerts":
+                body = note + "## Alerts\n\n_Status monitor view (enable observability for alert store):_\n\n" + dash
+            elif kind == "metrics":
+                body = note + "## Metrics\n\n_Status monitor view (enable observability for metric samples):_\n\n" + dash
+            else:
+                body = note + dash
+        else:
+            body = note + get_observability().get_dashboard_markdown()
+        return {
+            "mode": "chat",
+            "text": body,
+            "intent": "observability_dashboard",
+            "observability": True,
+        }
     parsed = parse_status_intent(text)
     if not parsed:
         return None
