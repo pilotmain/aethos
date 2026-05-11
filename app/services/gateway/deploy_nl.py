@@ -49,20 +49,24 @@ def try_gateway_deploy_turn(
     workspace = _deploy_workspace_root()
     provider = parsed.get("provider")
     provider_str = str(provider).strip() if provider else None
+    preview = str(parsed.get("deploy_type") or "deploy") == "deploy_preview"
 
     result = DeploymentExecutor.deploy_sync(
         workspace,
         provider=provider_str,
+        preview=preview,
         timeout_seconds=timeout,
     )
 
     if result.get("success"):
         url = result.get("url") or "(see CLI output)"
+        preview_note = " **(Preview)**" if preview else ""
         body = (
-            f"✅ **DEPLOYMENT COMPLETE**\n\n"
+            f"✅ **DEPLOYMENT COMPLETE**{preview_note}\n\n"
             f"• Provider: **{result.get('provider')}**\n"
             f"• URL: {url}\n"
-            f"• Command: `{result.get('command')}`\n"
+            f"• Command: `{result.get('command')}`\n\n"
+            f"💡 Share the URL with your team!"
         )
         if result.get("stdout"):
             body += f"\n```\n{str(result.get('stdout'))[:4000]}\n```\n"
@@ -78,15 +82,28 @@ def try_gateway_deploy_turn(
         }
 
     avail = result.get("available_detected") or []
+    cfg_detect = result.get("config_detected") or []
     hint = result.get("login_hint")
+    suggestion = result.get("suggestion") or ""
     err = result.get("error") or "Unknown error"
     lines = (
         f"❌ **DEPLOYMENT FAILED**\n\n"
         f"**Error:** {err}\n\n"
-        f"💡 **Detected CLIs:** {avail if avail else 'none'}\n"
+        f"💡 **PATH CLIs:** {avail if avail else 'none'}\n"
     )
+    if cfg_detect:
+        lines += f"📁 **Config hints:** {', '.join(cfg_detect)}\n"
+    if suggestion:
+        lines += f"\n{suggestion}\n"
     if hint:
         lines += f"\nTry: `{hint}`\n"
+    if avail:
+        lines += "\nYou can also say `deploy to vercel` (or another installed tool).\n"
+    else:
+        lines += (
+            "\n**Install a CLI:** `npm i -g vercel` · `brew install railway` · "
+            "see https://fly.io/docs/hobbyists/install-flyctl/\n"
+        )
     return {
         "mode": "chat",
         "text": gateway_finalize_chat_reply(lines.strip(), source="generic_deploy_fail", user_text=raw),

@@ -726,6 +726,8 @@ class Settings(BaseSettings):
     # Generic CLI deploy (vercel/railway/fly/netlify/gcloud) — gateway NL; owner-only in deploy_nl module.
     nexa_generic_deploy_enabled: bool = False
     nexa_deploy_timeout_seconds: float = 300.0
+    # When false, bare ``deploy`` without ``deploy to <tool>`` is rejected (no auto CLI scan).
+    nexa_deploy_auto_detect: bool = True
     # Cap for bundling file text into on-demand LLM analysis (no storage / indexing).
     host_executor_intel_max_prompt_chars: int = 48_000
     # Workspace registry: when strict, paths must fall under explicit /workspace roots (no compat default root).

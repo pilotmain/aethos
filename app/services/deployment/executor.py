@@ -9,11 +9,15 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
+from app.core.config import get_settings
 from app.services.deployment.detector import DeploymentDetector, _normalize_provider
 
 
+_LOCALHOST_MARKERS = ("localhost", "127.0.0.1", "0.0.0.0", "example.com")
+
+
 class DeploymentExecutor:
-    """Execute one deployment attempt using registry-defined commands."""
+    """Execute deployment using registry-defined argv or shell commands."""
 
     @classmethod
     def deploy_sync(
@@ -21,15 +25,15 @@ class DeploymentExecutor:
         project_path: str,
         *,
         provider: str | None = None,
+        preview: bool = False,
         timeout_seconds: float = 300.0,
     ) -> dict[str, Any]:
         """
-        Deploy from ``project_path`` using an installed CLI.
+        Deploy from ``project_path``.
 
-        When ``provider`` is set, only that provider is attempted (if binary exists).
-        Otherwise file hints are tried first, then available CLIs in :attr:`DeploymentDetector.PRIORITY` order.
+        Candidate order (auto): config files → framework (Next.js→Vercel) → PATH priority list.
 
-        **Note:** Many providers need prior login and project linking; failures surface in stderr.
+        When ``preview`` is True, uses ``deploy_argv_preview`` when defined.
         """
         root = Path(project_path).expanduser().resolve()
         if not root.is_dir():
@@ -37,13 +41,35 @@ class DeploymentExecutor:
                 "success": False,
                 "error": f"Not a directory: {root}",
                 "provider": provider,
+                "preview": preview,
+            }
+
+        settings = get_settings()
+        auto_on = bool(getattr(settings, "nexa_deploy_auto_detect", True))
+
+        if not provider and not auto_on:
+            return {
+                "success": False,
+                "error": (
+                    "Auto-detect is disabled (set NEXA_DEPLOY_AUTO_DETECT=true or say "
+                    "`deploy to vercel`, `deploy to railway`, …)."
+                ),
+                "available_detected": [],
+                "preview": preview,
             }
 
         if provider:
             norm = _normalize_provider(provider)
             cfg = DeploymentDetector.get_registry(norm or "")
             if not cfg:
-                return {"success": False, "error": f"Unknown provider: {provider}", "provider": provider}
+                avail = [c["name"] for c in DeploymentDetector.detect_available(str(root))]
+                return {
+                    "success": False,
+                    "error": f"Unknown provider: {provider}. Installed: {avail or 'none'}",
+                    "provider": provider,
+                    "available_detected": avail,
+                    "preview": preview,
+                }
             bin_name = str(cfg.get("binary") or "")
             if not shutil.which(bin_name):
                 return {
@@ -51,15 +77,17 @@ class DeploymentExecutor:
                     "error": f"CLI not on PATH: {bin_name}",
                     "provider": cfg["name"],
                     "login_hint": cfg.get("login_hint"),
+                    "preview": preview,
                 }
-            return cls._run_deploy(cfg, root, timeout_seconds)
+            return cls._run_deploy(cfg, root, timeout_seconds, preview=preview)
 
         file_hints = DeploymentDetector.detect_by_file(str(root))
-        available = DeploymentDetector.detect_available()
+        framework = DeploymentDetector.detect_by_framework(str(root))
+        available = DeploymentDetector.detect_available(str(root))
 
         candidates: list[dict[str, Any]] = []
         seen: set[str] = set()
-        for c in file_hints + available:
+        for c in file_hints + framework + available:
             name = str(c.get("name") or "")
             if name and name not in seen:
                 seen.add(name)
@@ -68,15 +96,19 @@ class DeploymentExecutor:
         if not candidates:
             return {
                 "success": False,
-                "error": "No deployment CLI found on PATH (install vercel, railway, flyctl, netlify, etc.).",
+                "error": "No deployment CLI found on PATH (install vercel, railway, flyctl, netlify, wrangler, …).",
                 "available_detected": [],
+                "config_detected": [],
+                "preview": preview,
+                "suggestion": "Try: npm i -g vercel | brew install railway | https://fly.io/docs/hobbyists/install-flyctl/",
             }
 
         errors: list[str] = []
         for cfg in candidates:
             name = str(cfg.get("name") or "unknown")
-            res = cls._run_deploy(cfg, root, timeout_seconds)
+            res = cls._run_deploy(cfg, root, timeout_seconds, preview=preview)
             if res.get("success"):
+                res["preview"] = preview
                 return res
             err = str(res.get("error") or res.get("stderr") or "failed")
             errors.append(f"{name}: {err[:200]}")
@@ -84,7 +116,14 @@ class DeploymentExecutor:
         return {
             "success": False,
             "error": "; ".join(errors) if errors else "All deployment attempts failed.",
-            "available_detected": [str(c.get("name")) for c in candidates],
+            "available_detected": [str(c.get("name")) for c in available],
+            "config_detected": [str(c.get("name")) for c in file_hints],
+            "framework_detected": [str(c.get("name")) for c in framework],
+            "preview": preview,
+            "suggestion": (
+                "Try: npm i -g vercel · brew install railway · "
+                "https://fly.io/docs/hobbyists/install-flyctl/"
+            ),
         }
 
     @classmethod
@@ -93,13 +132,14 @@ class DeploymentExecutor:
         project_path: str,
         *,
         provider: str | None = None,
+        preview: bool = False,
         timeout_seconds: float = 300.0,
     ) -> dict[str, Any]:
-        """Async wrapper (thread offload) for callers that already use asyncio."""
         return await asyncio.to_thread(
             cls.deploy_sync,
             project_path,
             provider=provider,
+            preview=preview,
             timeout_seconds=timeout_seconds,
         )
 
@@ -109,6 +149,8 @@ class DeploymentExecutor:
         cfg: dict[str, Any],
         cwd: Path,
         timeout_seconds: float,
+        *,
+        preview: bool,
     ) -> dict[str, Any]:
         provider_name = str(cfg.get("name") or "unknown")
         if cfg.get("manual_only"):
@@ -121,12 +163,30 @@ class DeploymentExecutor:
                 "provider": provider_name,
                 "login_hint": cfg.get("login_hint"),
                 "note": cfg.get("note"),
+                "preview": preview,
             }
+
+        if preview and cfg.get("deploy_shell") and not cfg.get("deploy_argv_preview"):
+            return {
+                "success": False,
+                "error": (
+                    "Preview deploy is not supported for this provider's git/shell flow "
+                    "(e.g. Heroku). Use production deploy or the provider dashboard."
+                ),
+                "provider": provider_name,
+                "preview": True,
+            }
+
         shell_cmd = cfg.get("deploy_shell")
-        argv = cfg.get("deploy_argv")
+        if preview:
+            argv = cfg.get("deploy_argv_preview")
+            if not argv:
+                argv = cfg.get("deploy_argv")
+        else:
+            argv = cfg.get("deploy_argv")
 
         try:
-            if shell_cmd:
+            if shell_cmd and not preview:
                 proc = subprocess.run(
                     shell_cmd,
                     shell=True,
@@ -149,22 +209,24 @@ class DeploymentExecutor:
                     "success": False,
                     "error": "No deploy_argv or deploy_shell in registry entry",
                     "provider": provider_name,
+                    "preview": preview,
                 }
         except subprocess.TimeoutExpired:
             return {
                 "success": False,
                 "error": f"Deployment timed out after {int(timeout_seconds)} seconds",
                 "provider": provider_name,
+                "preview": preview,
             }
         except Exception as exc:
-            return {"success": False, "error": str(exc), "provider": provider_name}
+            return {"success": False, "error": str(exc), "provider": provider_name, "preview": preview}
 
         out = (proc.stdout or "") + (proc.stderr or "")
         url_pattern = cfg.get("url_pattern")
         url = cls._extract_url(out, url_pattern if isinstance(url_pattern, str) else None)
         ok = proc.returncode == 0
 
-        deploy_repr = shell_cmd if shell_cmd else " ".join(str(x) for x in (argv or []))
+        deploy_repr = shell_cmd if shell_cmd and not preview else " ".join(str(x) for x in (argv or []))
 
         err_tail = (proc.stderr or "").strip() if proc.stderr else None
         out_tail = (proc.stdout or "").strip() if proc.stdout else None
@@ -178,6 +240,7 @@ class DeploymentExecutor:
             "url": url,
             "login_hint": cfg.get("login_hint"),
             "note": cfg.get("note"),
+            "preview": preview,
         }
         if not ok:
             result["error"] = err_tail or out_tail or f"exit code {proc.returncode}"
@@ -188,7 +251,18 @@ class DeploymentExecutor:
         if pattern:
             m = re.search(pattern, text)
             if m:
-                return m.group(0).rstrip(").,]}\"'")
+                u = m.group(0).rstrip(").,]}\"'")
+                if not _is_noise_url(u):
+                    return u
         generic = r"https?://[^\s\"'<>]+"
         matches = re.findall(generic, text)
-        return matches[0].rstrip(").,]}\"'") if matches else None
+        for u in matches:
+            u2 = u.rstrip(").,]}\"'")
+            if not _is_noise_url(u2):
+                return u2
+        return None
+
+
+def _is_noise_url(url: str) -> bool:
+    low = url.lower()
+    return any(m in low for m in _LOCALHOST_MARKERS)
