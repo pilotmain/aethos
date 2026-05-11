@@ -7,6 +7,7 @@ Only emits allowlisted structures — no raw shell, no arbitrary commands.
 from __future__ import annotations
 
 import re
+import shlex
 from pathlib import Path
 from typing import Any
 
@@ -46,6 +47,18 @@ _RE_WRITE = re.compile(
     r"(?i)^write\s+(?:to\s+)?(?:file\s+)?([\w.`'\"/\-.]{1,240})\s+(?:with|using|containing|:)\s*(.+)$",
     re.DOTALL,
 )
+_COMMAND_PATTERNS = [
+    (r"^(?:run|execute)\s+(.+?)\s+in\s+([\w.`'\"/\-.~]{1,400})$", "run_command_with_dir"),
+    (r"^npm\s+install\s+(.+?)$", "npm_install"),
+    (r"^pip\s+install\s+(.+?)$", "pip_install"),
+    (r"^install\s+(.+?)(?:\s+package)?$", "install_package"),
+    (r"^start\s+(?:a|the)\s+(.+?)\s+server(?:\s+on\s+port\s+(\d{2,5}))?$", "start_server"),
+    (r"^clone\s+(https?://[^\s]+|git@[^\s]+)$", "git_clone"),
+    (r"^create\s+directory\s+(.+?)$", "create_directory"),
+    (r"^mkdir\s+(.+?)$", "create_directory"),
+    (r"^create\s+(?:a\s+)?react\s+app\s+called\s+([\w.-]{1,80})(?:\s+and\s+start\s+it)?$", "create_react_app"),
+    (r"^(?:run|execute)\s+(.+?)$", "run_command"),
+]
 
 
 def _strip_outer_quotes(raw: str) -> str:
@@ -89,6 +102,10 @@ def title_for_payload(payload: dict[str, Any]) -> str:
     if act == "git_status":
         return "Git status"
     if act == "run_command":
+        cmd = (payload.get("command") or "").strip()
+        if cmd:
+            preview = cmd[:80] + ("..." if len(cmd) > 80 else "")
+            return f"Run command: {preview}"
         rn = (payload.get("run_name") or "").strip().lower()
         if rn == "pytest":
             return "Run tests (pytest)"
@@ -170,6 +187,67 @@ def parse_file_write_intent(text: str) -> dict[str, Any] | None:
     return None
 
 
+def _quote_command_arg(raw: str) -> str:
+    return shlex.quote((raw or "").strip())
+
+
+def _command_from_intent(intent_type: str, match: re.Match[str]) -> tuple[str, str | None]:
+    first = (match.group(1) or "").strip()
+    cwd = None
+    if intent_type == "run_command_with_dir":
+        cwd = (match.group(2) or "").strip()
+        return first, cwd
+    if intent_type == "run_command":
+        return first, None
+    if intent_type == "npm_install":
+        return f"npm install {_quote_command_arg(first)}", None
+    if intent_type == "pip_install":
+        return f"pip install {_quote_command_arg(first)}", None
+    if intent_type == "install_package":
+        return f"npm install {_quote_command_arg(first)}", None
+    if intent_type == "git_clone":
+        return f"git clone {_quote_command_arg(first)}", None
+    if intent_type == "create_directory":
+        return f"mkdir -p {_quote_command_arg(first)}", None
+    if intent_type == "create_react_app":
+        return f"npx create-react-app {_quote_command_arg(first)}", None
+    if intent_type == "start_server":
+        server = first.lower()
+        port = (match.group(2) or "").strip() if match.lastindex and match.lastindex >= 2 else ""
+        if "web" in server and port:
+            return f"python3 -m http.server {port}", None
+        if "dev" in server:
+            return "npm run dev", None
+        return "npm start", None
+    return first, None
+
+
+def parse_command_intent(text: str) -> dict[str, Any] | None:
+    """Parse natural language command intent."""
+    if not text or not isinstance(text, str):
+        return None
+    line = text.strip().splitlines()[0].strip()
+    if not line:
+        return None
+
+    for pattern, intent_type in _COMMAND_PATTERNS:
+        match = re.search(pattern, line, re.IGNORECASE)
+        if match:
+            command, cwd = _command_from_intent(intent_type, match)
+            if not command:
+                return None
+            out: dict[str, Any] = {
+                "intent": "command_execution",
+                "command_type": intent_type,
+                "command": command,
+                "raw_text": text,
+            }
+            if cwd:
+                out["directory"] = cwd
+            return out
+    return None
+
+
 def infer_host_executor_action(user_text: str) -> dict[str, Any] | None:
     """
     If the line clearly requests a supported host tool, return payload_json fragment
@@ -218,6 +296,26 @@ def infer_host_executor_action(user_text: str) -> dict[str, Any] | None:
 
     if re.search(r"(?i)\brun\s+tests?\b|\brun\s+pytest\b|^pytest\b", low):
         return {"host_action": "run_command", "run_name": "pytest"}
+
+    command_intent = parse_command_intent(line)
+    if command_intent:
+        from app.services.host_executor import is_command_safe
+
+        command = str(command_intent.get("command") or "").strip()
+        if not is_command_safe(command):
+            return None
+        out = {
+            "host_action": "run_command",
+            "command": command,
+            "command_type": str(command_intent.get("command_type") or "").strip(),
+        }
+        directory = str(command_intent.get("directory") or "").strip()
+        if directory:
+            cwd_rel = _write_target_relative_path(".", parent_raw=directory)
+            if not cwd_rel:
+                return None
+            out["cwd_relative"] = "." if cwd_rel == "." else cwd_rel.rstrip("/")
+        return out
 
     if re.search(r"(?i)(?:^|[\s,])\bgit\s+push\b", line):
         return {"host_action": "git_push"}

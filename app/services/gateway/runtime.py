@@ -289,6 +289,8 @@ class NexaGateway:
             payload = parsed.get("payload") if isinstance(parsed.get("payload"), dict) else parsed
             action = str(payload.get("host_action") or "").strip()
             if action:
+                if action == "run_command" and str(payload.get("command") or "").strip():
+                    return "command_approval"
                 return action
 
         if related_job_ids:
@@ -300,6 +302,8 @@ class NexaGateway:
                 if isinstance(payload, dict):
                     action = str(payload.get("host_action") or "").strip()
                     if action:
+                        if action == "run_command" and str(payload.get("command") or "").strip():
+                            return "command_approval"
                         return action
             except (TypeError, ValueError):
                 pass

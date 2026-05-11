@@ -11,8 +11,11 @@ When ``db`` and ``job`` with ``user_id`` are provided, permission registry + gra
 """
 from __future__ import annotations
 
+import asyncio
 import logging
+import os
 import re
+import shlex
 import subprocess
 import time
 from pathlib import Path
@@ -36,6 +39,55 @@ ALLOWED_RUN_COMMANDS: dict[str, list[str]] = {
     "pytest": ["python", "-m", "pytest"],
     "git_status_short": ["git", "status", "--short", "--branch"],
 }
+
+DEFAULT_ALLOWED_COMMANDS: tuple[str, ...] = (
+    "npm",
+    "yarn",
+    "pnpm",
+    "pip",
+    "python",
+    "python3",
+    "node",
+    "npx",
+    "git",
+    "gh",
+    "ls",
+    "cat",
+    "echo",
+    "mkdir",
+    "touch",
+    "cp",
+    "mv",
+    "cd",
+    "pwd",
+)
+
+_BLOCKED_COMMAND_SUBSTRINGS: tuple[str, ...] = (
+    "rm -rf /",
+    "rm -rf ~",
+    "dd if=",
+    "mkfs",
+    ":(){ :|:& };:",
+    "chmod 777 /",
+    "> /dev/sda",
+    "git reset --hard",
+    "git clean -fd",
+    "git push --force",
+)
+
+_SHELL_META_TOKENS: tuple[str, ...] = (
+    "&&",
+    "||",
+    ";",
+    "|",
+    ">",
+    "<",
+    "`",
+    "$(",
+    "${",
+    "\n",
+    "\r",
+)
 
 # Optional git_push remote/ref — argv only (no shell).
 _PUSH_REMOTE_RE = re.compile(r"^[a-zA-Z][a-zA-Z0-9_.-]{0,63}$")
@@ -159,6 +211,176 @@ def _path_allowed_for_io(p: Path) -> None:
     for b in _PATH_BLOCKED_SUBSTRINGS:
         if b in sp:
             raise ValueError(f"path not allowed (blocked segment): {b}")
+
+
+def _allowed_command_names() -> frozenset[str]:
+    s = _host_settings()
+    raw = str(
+        getattr(s, "nexa_allowed_commands", None)
+        or os.getenv("NEXA_ALLOWED_COMMANDS", "")
+        or ""
+    ).strip()
+    if not raw:
+        return frozenset(DEFAULT_ALLOWED_COMMANDS)
+    names = {x.strip().lower() for x in raw.split(",") if x.strip()}
+    return frozenset(names or DEFAULT_ALLOWED_COMMANDS)
+
+
+def _split_command(command: str) -> list[str] | None:
+    try:
+        argv = shlex.split(command or "")
+    except ValueError:
+        return None
+    return argv or None
+
+
+def _looks_like_url_arg(arg: str) -> bool:
+    return bool(re.match(r"(?i)^(?:https?|ssh|git)://", arg)) or arg.startswith("git@")
+
+
+def _command_arg_safe(arg: str) -> bool:
+    if not arg:
+        return True
+    if _looks_like_url_arg(arg):
+        return True
+    low = arg.lower()
+    if any(blocked in low for blocked in _PATH_BLOCKED_SUBSTRINGS):
+        return False
+    if any(tok in arg for tok in _SHELL_META_TOKENS):
+        return False
+    if arg.startswith(("/", "~")):
+        return False
+    if "=/" in arg:
+        return False
+    normalized = arg.replace("\\", "/")
+    if ".." in Path(normalized).parts:
+        return False
+    return True
+
+
+def is_command_safe(command: str) -> bool:
+    """Validate a command string before converting it to argv execution."""
+    command_text = (command or "").strip()
+    if not command_text:
+        return False
+    low = command_text.lower()
+    if any(pattern in low for pattern in _BLOCKED_COMMAND_SUBSTRINGS):
+        return False
+    argv = _split_command(command_text)
+    if not argv:
+        return False
+    first = Path(argv[0]).name.lower()
+    if first not in _allowed_command_names():
+        return False
+    return all(_command_arg_safe(arg) for arg in argv[1:])
+
+
+def _command_work_dir() -> Path:
+    s = _host_settings()
+    raw = (
+        str(getattr(s, "nexa_command_work_root", "") or "").strip()
+        or os.getenv("NEXA_COMMAND_WORK_ROOT", "").strip()
+        or str(_base_work_dir())
+    )
+    return Path(raw).expanduser().resolve()
+
+
+def _resolve_command_cwd(cwd: str | None = None) -> Path:
+    root = _command_work_dir()
+    raw = (cwd or "").strip()
+    target = root if not raw else Path(raw).expanduser()
+    if not target.is_absolute():
+        target = root / raw
+    resolved = target.resolve()
+    try:
+        resolved.relative_to(root)
+    except ValueError as e:
+        raise ValueError("command cwd escapes NEXA_COMMAND_WORK_ROOT") from e
+    _path_allowed_for_io(resolved)
+    resolved.mkdir(parents=True, exist_ok=True)
+    return resolved
+
+
+def _command_timeout(default_timeout: int) -> int:
+    s = _host_settings()
+    raw = int(getattr(s, "nexa_command_timeout_seconds", default_timeout) or default_timeout)
+    return min(max(raw, 5), min(max(default_timeout, 5), 3600))
+
+
+def _execute_command_sync(
+    command: str,
+    cwd: str | None = None,
+    timeout: int = 60,
+    user_id: str | None = None,
+) -> dict[str, Any]:
+    _ = user_id
+    if not bool(getattr(_host_settings(), "nexa_command_execution_enabled", True)):
+        return {
+            "success": False,
+            "error": "Command execution is disabled",
+            "stderr": "Set NEXA_COMMAND_EXECUTION_ENABLED=true to allow approved commands.",
+            "command": command,
+        }
+    if not is_command_safe(command):
+        return {
+            "success": False,
+            "error": "Command blocked for security reasons",
+            "stderr": "This command is not in the allowed list",
+            "command": command,
+        }
+    argv = _split_command(command)
+    if not argv:
+        return {
+            "success": False,
+            "error": "Command is empty or invalid",
+            "stderr": "Command could not be parsed safely.",
+            "command": command,
+        }
+    try:
+        exec_cwd = _resolve_command_cwd(cwd)
+    except ValueError as exc:
+        return {
+            "success": False,
+            "error": str(exc),
+            "stderr": str(exc),
+            "command": command,
+        }
+    code, out, err = _run_argv(argv, cwd=exec_cwd, timeout=_command_timeout(timeout))
+    return {
+        "success": code == 0,
+        "stdout": out,
+        "stderr": err,
+        "return_code": code,
+        "command": command,
+        "cwd": str(exec_cwd),
+    }
+
+
+async def execute_command(
+    command: str,
+    cwd: str | None = None,
+    timeout: int = 60,
+    user_id: str | None = None,
+) -> dict[str, Any]:
+    """Execute an approved command under the command work root."""
+    return await asyncio.to_thread(_execute_command_sync, command, cwd, timeout, user_id)
+
+
+def _format_command_result(result: dict[str, Any]) -> str:
+    pieces: list[str] = []
+    stdout = str(result.get("stdout") or "")
+    stderr = str(result.get("stderr") or "")
+    if stdout.strip():
+        pieces.append(stdout)
+    if stderr.strip():
+        pieces.append("STDERR:\n" + stderr)
+    msg = "\n".join(pieces) if pieces else "(no output)"
+    if not result.get("success"):
+        code = result.get("return_code")
+        if code is not None:
+            return f"(exit {code})\n{msg}"[:8000]
+        return f"{result.get('error') or 'Command failed'}\n{msg}"[:8000]
+    return msg[:8000]
 
 
 def _run_argv(
@@ -285,12 +507,16 @@ def _format_simulation_plan(
             return "\n".join(lines)
 
     if action == "run_command":
-        name = (payload.get("run_name") or "").strip().lower()
-        argv = ALLOWED_RUN_COMMANDS.get(name)
-        if argv:
-            lines.append(f"Would run: {' '.join(argv)} (cwd={cwd_display})")
+        command = (payload.get("command") or "").strip()
+        if command:
+            lines.append(f"Would run: {command} (cwd={_command_work_dir()})")
         else:
-            lines.append(f"Would resolve run_name={name!r} via ALLOWED_RUN_COMMANDS")
+            name = (payload.get("run_name") or "").strip().lower()
+            argv = ALLOWED_RUN_COMMANDS.get(name)
+            if argv:
+                lines.append(f"Would run: {' '.join(argv)} (cwd={cwd_display})")
+            else:
+                lines.append(f"Would resolve run_name={name!r} via ALLOWED_RUN_COMMANDS")
     elif action == "git_push":
         remote = (payload.get("remote") or "origin").strip()
         ref = (payload.get("ref") or "HEAD").strip()
@@ -689,14 +915,23 @@ def build_simulation_plan(payload: dict[str, Any]) -> dict[str, Any]:
 
     elif action == "run_command":
         plan["kind"] = "mutation"
-        name = (pl.get("run_name") or "").strip().lower()
-        argv = ALLOWED_RUN_COMMANDS.get(name)
-        plan["fields"] = {
-            "run_name": name or None,
-            "argv": list(argv) if argv else None,
-            "exec_root": str(exec_root),
-            "command_preview": " ".join(argv) if argv else None,
-        }
+        command = (pl.get("command") or "").strip()
+        if command:
+            plan["fields"] = {
+                "command": command,
+                "argv": _split_command(command),
+                "exec_root": str(_command_work_dir()),
+                "command_preview": command,
+            }
+        else:
+            name = (pl.get("run_name") or "").strip().lower()
+            argv = ALLOWED_RUN_COMMANDS.get(name)
+            plan["fields"] = {
+                "run_name": name or None,
+                "argv": list(argv) if argv else None,
+                "exec_root": str(exec_root),
+                "command_preview": " ".join(argv) if argv else None,
+            }
 
     elif action == "plugin_skill":
         plan["kind"] = "skill"
@@ -997,6 +1232,17 @@ def execute_payload(
         return _finalize_output(msg[:8000] or "(empty)")
 
     if action == "run_command":
+        command = (payload.get("command") or "").strip()
+        if command:
+            cwd_rel = str(payload.get("cwd_relative") or "").strip()
+            command_cwd = str(_safe_join_under_root(_command_work_dir(), cwd_rel)) if cwd_rel else None
+            result = _execute_command_sync(
+                command,
+                cwd=command_cwd,
+                timeout=_command_timeout(timeout),
+                user_id=str(uid) if uid else None,
+            )
+            return _finalize_output(_format_command_result(result))
         name = (payload.get("run_name") or "").strip().lower()
         if name not in ALLOWED_RUN_COMMANDS:
             raise ValueError(
@@ -1337,6 +1583,8 @@ def proposed_risk_level(payload: dict[str, Any]) -> str:
     if action == "vercel_projects_list":
         return "normal"
     if action == "run_command":
+        if (payload.get("command") or "").strip():
+            return "high"
         return "normal"
     if action in ("list_directory", "find_files"):
         return "low"

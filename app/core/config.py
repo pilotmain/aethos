@@ -690,6 +690,13 @@ class Settings(BaseSettings):
     host_executor_timeout_seconds: int = 120
     host_executor_max_file_bytes: int = 262_144
     host_executor_read_multiple_max_files: int = 20
+    # Approval-gated command execution through host_executor ``run_command`` payloads.
+    nexa_command_execution_enabled: bool = False
+    nexa_command_timeout_seconds: int = 60
+    nexa_allowed_commands: str = (
+        "npm,yarn,pnpm,pip,python,python3,node,npx,git,gh,ls,cat,echo,mkdir,touch,cp,mv,cd,pwd"
+    )
+    nexa_command_work_root: str = Field(default_factory=lambda: str(_PROJECT_ROOT))
     # Cap for bundling file text into on-demand LLM analysis (no storage / indexing).
     host_executor_intel_max_prompt_chars: int = 48_000
     # Workspace registry: when strict, paths must fall under explicit /workspace roots (no compat default root).
