@@ -344,6 +344,12 @@ def post_chat(
     db: Session = Depends(get_db),
     app_user_id: str = Depends(get_valid_web_user_id),
 ) -> WebChatMessageOut:
+    try:
+        from app.services.observability import get_observability
+
+        get_observability().record_metric("api.web.chat.requests", 1.0, "count")
+    except Exception:
+        pass
     link = TelegramRepository().get_by_app_user(db, app_user_id)
     un = (link.username or None) if link else None
     w_sid = _norm_web_session_id(body.session_id)

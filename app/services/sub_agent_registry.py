@@ -283,6 +283,13 @@ class AgentRegistry:
             get_status_monitor().register_active_agent(name, "active")
         except Exception:
             logger.debug("status_monitor register_active_agent skipped", exc_info=True)
+        try:
+            from app.services.observability import get_observability
+
+            dom = (domain or "unknown").lower()[:64]
+            get_observability().record_metric("agent.spawn", 1.0, "count", {"domain": dom})
+        except Exception:
+            pass
         return agent
 
     def get_agent(self, agent_id: str) -> SubAgent | None:

@@ -180,6 +180,10 @@ class NexaGateway:
         raw = (text or "").strip()
         if not uid or not raw:
             return None
+        from app.services.host_executor_intent import parse_file_write_intent
+
+        if parse_file_write_intent(raw):
+            return None
         rows = list_workspaces(db, uid)
         cctx = get_or_create_context(db, uid)
         snap = build_context_snapshot(cctx, db)

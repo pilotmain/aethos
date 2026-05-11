@@ -202,6 +202,16 @@ def record_llm_usage(
         )
         dbs.add(row)
         dbs.commit()
+        try:
+            from app.services.observability import get_observability
+
+            obs = get_observability()
+            obs.record_metric("llm.calls", 1.0, "count")
+            obs.record_metric("llm.tokens", float(tot), "tokens")
+            if p and p != "unknown":
+                obs.record_metric(f"llm.provider.{p}.calls", 1.0, "count")
+        except Exception:
+            pass
     except Exception as e:  # noqa: BLE001
         try:
             dbs.rollback()

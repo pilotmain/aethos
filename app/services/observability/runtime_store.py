@@ -81,8 +81,7 @@ class ObservabilityService:
                 t.status = status
 
     def record_metric(self, name: str, value: float, unit: str = "count", labels: dict[str, Any] | None = None) -> None:
-        if not bool(getattr(get_settings(), "nexa_observability_enabled", False)):
-            return
+        """Always append samples so ``show metrics`` reflects activity without extra flags."""
         with self._lock:
             self._metrics.append(
                 Metric(

@@ -159,6 +159,17 @@ def parse_file_write_intent(text: str) -> dict[str, Any] | None:
     if not line:
         return None
 
+    # Shorthand: "make a file notes.txt says Hello world" (bare ``says``, not only ``that says``).
+    m_says = re.match(
+        r"(?is)^(?:make|create)\s+(?:a\s+)?file\s+(\S+)\s+says\s+(.+)$",
+        line,
+    )
+    if m_says:
+        filename = _clean_path_token(m_says.group(1))
+        content = _strip_outer_quotes((m_says.group(2) or "").strip())
+        if filename and content:
+            return {"filename": filename, "content": content, "directory": None}
+
     match = _RE_WRITE.match(line)
     if match:
         filename = _clean_path_token(match.group(1))

@@ -382,6 +382,14 @@ def _execute_command_sync(
                     time.sleep(delay)
     else:
         code, out, err = _run_argv(argv, cwd=exec_cwd, timeout=exec_timeout)
+    try:
+        from app.services.observability import get_observability
+
+        obs = get_observability()
+        obs.record_metric("host.command.executions", 1.0, "count")
+        obs.record_metric("host.command.success" if code == 0 else "host.command.failure", 1.0, "count")
+    except Exception:
+        pass
     return {
         "success": code == 0,
         "stdout": out,
