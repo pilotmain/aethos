@@ -106,7 +106,6 @@ class ObservabilityService:
         with self._lock:
             self._alerts.append(alert)
         ch = str(getattr(get_settings(), "nexa_alert_channel", "log") or "log").lower()
-        log_line = "observability.alert %s: %s — %s", severity, title, message
         if ch in ("log", "both"):
             logger.warning("observability.alert %s: %s — %s", severity, title, message)
         if ch in ("chat", "both"):
@@ -155,6 +154,7 @@ _obs_instance: ObservabilityService | None = None
 
 
 def get_observability() -> ObservabilityService:
+    """Return the process-wide :class:`ObservabilityService` singleton."""
     global _obs_instance
     if _obs_instance is None:
         _obs_instance = ObservabilityService()
