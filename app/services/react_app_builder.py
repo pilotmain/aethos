@@ -28,7 +28,8 @@ def create_react_app(
     """
     name = (app_name or "").strip()
     s = get_settings()
-    timeout_sec = max(60, int(getattr(s, "nexa_task_timeout_seconds", 300)))
+    # Long npm/npx steps — floor at 300s unless Settings raises it further.
+    timeout_sec = max(300, int(getattr(s, "nexa_task_timeout_seconds", 300)))
 
     if not name or not _APP_NAME_RE.fullmatch(name):
         return {

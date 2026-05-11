@@ -67,6 +67,7 @@ def run_inter_agent_steps(
     uid = (user_id or "").strip()
     wid = (web_session_id or "default").strip()[:64] or "default"
     chunks: list[str] = []
+    prior_snippets: list[str] = []
 
     for agent_name, task in steps:
         ag = _resolve_agent(registry, agent_name, chat_id, uid)
@@ -76,10 +77,16 @@ def run_inter_agent_steps(
                 f"Create it first (e.g. “create a {agent_name.replace('_', ' ')} agent”)."
             )
             continue
+        effective_task = (task or "").strip()
+        if prior_snippets:
+            handoff = "\n\n---\n**Handoff (prior agent output):**\n" + prior_snippets[-1][
+                :4000
+            ]
+            effective_task = (effective_task + handoff).strip()[:24_000]
         try:
             out = executor.execute(
                 ag,
-                task,
+                effective_task,
                 chat_id,
                 db=db,
                 user_id=uid,
@@ -89,6 +96,7 @@ def run_inter_agent_steps(
             chunks.append(f"### @{agent_name}\n\n⚠️ {exc!s}")
             continue
         chunks.append(f"### @{agent_name}\n\n{out}")
+        prior_snippets.append(f"@{agent_name}: {(out or '')[:6000]}")
 
     return "\n\n---\n\n".join(chunks).strip()[:24_000]
 

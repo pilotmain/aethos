@@ -226,6 +226,8 @@ _STATUS_PATTERNS: list[tuple[str, str]] = [
     (r"^(?:what\'s|what is)\s+(?:the\s+)?(?:status|progress)$", "get_status"),
     (r"^(?:show|list)\s+(?:my\s+)?(?:tasks|work|progress)$", "list_tasks"),
     (r"^(?:what|who)\s+is\s+working(?:\s+on\s+what)?$", "active_work"),
+    (r"^(?:who\'s|who is)\s+working\b", "active_work"),
+    (r"^who\s+is\s+working\b", "active_work"),
     (r"^(?:any\s+)?(?:update|report|heartbeat)$", "heartbeat"),
 ]
 

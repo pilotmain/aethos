@@ -148,6 +148,16 @@ class StatusMonitor:
         lines.append(f"\n💓 Heartbeat: {hb}")
         return "\n".join(lines).strip()
 
+    def format_who_is_working(self, owner_user_id: str) -> str:
+        """Bold section for NL ``who is working`` — agents marked active in this process."""
+        _ = owner_user_id
+        with self._lock:
+            pairs = [(n, st) for n, st in self.active_agents.items() if st == "active"]
+        if not pairs:
+            return "### 👤 Who is working\n\n_No registered agents marked active in this process._"
+        body = "\n".join(f"- **@{n}** ({st})" for n, st in sorted(pairs, key=lambda x: x[0].lower())[:32])
+        return f"### 👤 Who is working\n\n{body}"
+
 
 _MONITOR = StatusMonitor()
 

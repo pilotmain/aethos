@@ -198,6 +198,9 @@ class Settings(BaseSettings):
     nexa_status_auto_report: bool = True
     nexa_task_timeout_seconds: int = 300
     nexa_max_concurrent_tasks: int = 5
+    # Rolling conversation turns injected into LLM snapshot (user + assistant lines).
+    nexa_conversation_memory_enabled: bool = True
+    nexa_conversation_memory_turns: int = 10
     api_v1_prefix: str = "/api/v1"
     # Phase 60: default absolute SQLite under ~/.aethos/data (API + bot same file); override with DATABASE_URL.
     database_url: str = Field(default_factory=get_default_sqlite_database_url)

@@ -568,8 +568,14 @@ class NexaGateway:
                 payload=cred_full,
             )
 
-        cctx = get_or_create_context(db, uid)
+        _ws_full = str(gctx.extras.get("web_session_id") or "default").strip()[:64] or "default"
+        cctx = get_or_create_context(db, uid, web_session_id=_ws_full)
         snap = build_context_snapshot(cctx, db)
+        from app.services.memory_manager import enrich_conversation_snapshot_for_llm
+
+        snap = enrich_conversation_snapshot_for_llm(snap, cctx, raw)
+        if isinstance(snap, dict):
+            snap.setdefault("web_session_id", _ws_full)
 
         from app.core.config import get_settings as _orch_get_settings
 
@@ -920,6 +926,14 @@ class NexaGateway:
                     ),
                     "intent": "config_query",
                 }
+
+            from app.services.gateway.owner_self_improvement_nl import (
+                try_owner_self_improvement_nl_turn,
+            )
+
+            owner_si = try_owner_self_improvement_nl_turn(gctx, raw_gate, db_inner)
+            if owner_si is not None:
+                return owner_si
 
             from app.services.gateway.agent_os_nl import try_agent_os_status_turn
 

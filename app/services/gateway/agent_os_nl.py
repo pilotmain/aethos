@@ -27,7 +27,11 @@ def try_agent_os_status_turn(
         return None
     mon = get_status_monitor()
     mon.tick()
-    body = mon.get_dashboard_markdown(uid)
+    intent = str(parsed.get("intent") or "")
+    if intent == "active_work":
+        body = mon.format_who_is_working(uid) + "\n\n---\n\n" + mon.get_dashboard_markdown(uid)
+    else:
+        body = mon.get_dashboard_markdown(uid)
     interval = int(getattr(get_settings(), "nexa_agent_heartbeat_interval", 30))
     if parsed.get("intent") == "heartbeat":
         body += f"\n\n_Configured agent heartbeat interval: **{interval}s**._"
