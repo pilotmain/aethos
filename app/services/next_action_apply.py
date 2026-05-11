@@ -49,6 +49,8 @@ class NextActionApplicationResult:
     permission_required: dict[str, Any] | None = None
     # Telegram only — rows of (button_label, callback_data) for optional inline keyboards
     telegram_inline_keyboard_rows: tuple[tuple[tuple[str, str], ...], ...] | None = None
+    # Gateway-only: override intent in NexaGateway._try_host_executor_turn (e.g. command_completed).
+    intent_override: str | None = None
 
 
 def clear_next_action_state(cctx: ConversationContext) -> None:

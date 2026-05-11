@@ -366,6 +366,53 @@ async def execute_command(
     return await asyncio.to_thread(_execute_command_sync, command, cwd, timeout, user_id)
 
 
+def read_workspace_text_file(filepath: str, user_id: str | None = None) -> dict[str, Any]:
+    """Read a UTF-8 text file under ``NEXA_COMMAND_WORK_ROOT`` (or command work dir)."""
+    _ = user_id
+    root = _command_work_dir()
+    max_bytes = min(max(int(getattr(_host_settings(), "host_executor_max_file_bytes", 262_144)), 1024), 2_000_000)
+    raw = (filepath or "").strip().strip('`"\'')
+    if not raw:
+        return {"success": False, "error": "Empty path", "content": None}
+    p = Path(raw)
+    if not p.is_absolute():
+        full_path = (root / raw.replace("\\", "/").lstrip("/")).resolve()
+    else:
+        full_path = p.expanduser().resolve()
+    try:
+        full_path.relative_to(root)
+    except ValueError:
+        return {
+            "success": False,
+            "error": f"Access denied: {filepath} is outside workspace",
+            "content": None,
+        }
+    try:
+        _path_allowed_for_io(full_path)
+    except ValueError as e:
+        return {"success": False, "error": str(e), "content": None}
+    try:
+        data = full_path.read_bytes()
+    except FileNotFoundError:
+        return {"success": False, "error": f"File not found: {filepath}", "content": None}
+    except OSError as e:
+        return {"success": False, "error": str(e), "content": None}
+    if len(data) > max_bytes:
+        return {"success": False, "error": f"File too large (max {max_bytes} bytes)", "content": None}
+    text = data.decode("utf-8", errors="replace")
+    return {
+        "success": True,
+        "content": text,
+        "path": str(full_path),
+        "size": len(text.encode("utf-8", errors="replace")),
+    }
+
+
+async def read_file(filepath: str, user_id: str | None = None) -> dict[str, Any]:
+    """Async wrapper for :func:`read_workspace_text_file`."""
+    return await asyncio.to_thread(read_workspace_text_file, filepath, user_id)
+
+
 def _format_command_result(result: dict[str, Any]) -> str:
     pieces: list[str] = []
     stdout = str(result.get("stdout") or "")

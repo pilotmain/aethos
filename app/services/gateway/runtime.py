@@ -343,7 +343,9 @@ class NexaGateway:
             return None
 
         db.refresh(cctx)
-        intent = self._host_action_intent_from_state(db, cctx, result.related_job_ids)
+        intent = result.intent_override or self._host_action_intent_from_state(
+            db, cctx, result.related_job_ids
+        )
         out: dict[str, Any] = {
             "mode": "chat",
             "text": result.early_assistant or result.inject_ack or "",
@@ -905,6 +907,12 @@ class NexaGateway:
                     ),
                     "intent": "config_query",
                 }
+
+            from app.services.gateway.early_nl_host_actions import try_early_nl_host_actions
+
+            early_nl = try_early_nl_host_actions(gctx, raw_gate, db_inner)
+            if early_nl is not None:
+                return early_nl
 
             host_out = self._try_host_executor_turn(gctx, raw_gate, db_inner)
             if host_out is not None:

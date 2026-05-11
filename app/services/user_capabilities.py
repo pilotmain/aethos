@@ -136,7 +136,7 @@ def is_privileged_owner_for_web_mutations(db: Session, app_user_id: str) -> bool
 
     from app.core.config import get_settings
 
-    raw = (get_settings().aethos_owner_ids or "").strip()
+    raw = (getattr(get_settings(), "aethos_owner_ids", None) or "").strip()
     if raw:
         allow = {x.strip()[:64] for x in raw.split(",") if x.strip()}
         if uid in allow:

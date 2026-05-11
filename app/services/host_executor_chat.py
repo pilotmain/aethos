@@ -18,7 +18,12 @@ from app.schemas.agent_job import AgentJobCreate
 from app.services.agent_job_service import AgentJobService
 from app.services.content_provenance import InstructionSource, apply_trusted_instruction_source
 from app.services.custom_agent_routing import custom_agent_message_blocks_folder_heuristics
-from app.services.host_executor import ALLOWED_RUN_COMMANDS, proposed_risk_level
+from app.services.host_executor import (
+    ALLOWED_RUN_COMMANDS,
+    execute_payload,
+    is_command_safe,
+    proposed_risk_level,
+)
 from app.services.host_executor_intent import (
     infer_host_executor_action,
     safe_relative_path,
@@ -190,6 +195,14 @@ def _validate_enqueue_payload(payload: dict[str, Any]) -> dict[str, Any] | None:
         rn = (payload.get("run_name") or "").strip().lower()
         if rn in ALLOWED_RUN_COMMANDS:
             return _attach_cwd({"host_action": "run_command", "run_name": rn})
+        cmd = str(payload.get("command") or "").strip()
+        if cmd and is_command_safe(cmd):
+            out_rc = {
+                "host_action": "run_command",
+                "command": cmd,
+                "command_type": str(payload.get("command_type") or "").strip()[:80],
+            }
+            return _attach_cwd(out_rc)
         return None
     if act == "file_read":
         rel = safe_relative_path(str(payload.get("relative_path") or ""))
@@ -604,7 +617,7 @@ def evaluate_deterministic_host_permission_turn(
         )
 
     if simulate_mode:
-        from app.services.host_executor import build_simulation_plan, execute_payload
+        from app.services.host_executor import build_simulation_plan
 
         if not bool(getattr(get_settings(), "nexa_simulation_enabled", True)):
             return None
@@ -684,6 +697,39 @@ def evaluate_deterministic_host_permission_turn(
             None,
             telegram_inline_keyboard_rows=kb_rows,
         )
+
+    from app.services.user_capabilities import is_privileged_owner_for_web_mutations
+
+    if bool(getattr(get_settings(), "nexa_auto_approve_owner", True)) and is_privileged_owner_for_web_mutations(
+        db, uid
+    ):
+        stamped_try = stamp_host_payload(dict(inferred))
+        safe_now = _validate_enqueue_payload(stamped_try)
+        if safe_now:
+
+            class _UidJob:
+                user_id = uid
+                payload_json: dict[str, Any] = {}
+
+            try:
+                text_out = execute_payload(safe_now, db=db, job=_UidJob())
+            except ValueError as exc:
+                return NextActionApplicationResult(
+                    f"I couldn’t run that on the host: {exc}"[:4000],
+                    t0,
+                    False,
+                    True,
+                    None,
+                )
+            reply = (text_out or "").strip()[:12000] or "(no output)"
+            return NextActionApplicationResult(
+                reply,
+                t0,
+                False,
+                True,
+                None,
+                intent_override="command_completed",
+            )
 
     _set_host_pending(cctx, inferred, title)
     db.add(cctx)

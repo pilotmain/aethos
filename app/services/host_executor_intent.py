@@ -222,6 +222,30 @@ def _command_from_intent(intent_type: str, match: re.Match[str]) -> tuple[str, s
     return first, None
 
 
+_READ_NL_PATTERNS: list[tuple[str, str]] = [
+    (r"^(?:read|show|cat|open)\s+(?:file\s+)?(.+)$", "read_file"),
+    (r"^(?:what\'s|what is|show me)\s+in\s+(.+)$", "read_file"),
+]
+
+
+def parse_read_intent(text: str) -> dict[str, Any] | None:
+    """Parse natural-language read-file intent (paths resolved under command workspace root)."""
+    if not text or not isinstance(text, str):
+        return None
+    line = text.strip().splitlines()[0].strip()
+    if not line:
+        return None
+    text_lower = line.lower()
+    for pattern, _kind in _READ_NL_PATTERNS:
+        match = re.search(pattern, text_lower, re.IGNORECASE)
+        if match:
+            fp = (match.group(1) or "").strip().strip(",.;")
+            if not fp:
+                return None
+            return {"intent": "read_file", "filepath": fp, "raw_text": text}
+    return None
+
+
 def parse_command_intent(text: str) -> dict[str, Any] | None:
     """Parse natural language command intent."""
     if not text or not isinstance(text, str):
