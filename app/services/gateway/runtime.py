@@ -964,6 +964,12 @@ class NexaGateway:
             if early_nl is not None:
                 return early_nl
 
+            from app.services.gateway.deploy_nl import try_gateway_deploy_turn
+
+            deploy_nl = try_gateway_deploy_turn(gctx, raw_gate, db_inner)
+            if deploy_nl is not None:
+                return deploy_nl
+
             from app.services.gateway.goal_nl_actions import try_goal_planning_gateway_turn
 
             goal_nl = try_goal_planning_gateway_turn(gctx, raw_gate, db_inner)

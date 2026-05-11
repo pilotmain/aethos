@@ -723,6 +723,9 @@ class Settings(BaseSettings):
         "npm,yarn,pnpm,pip,python,python3,node,npx,git,gh,ls,cat,echo,mkdir,touch,cp,mv,cd,pwd"
     )
     nexa_command_work_root: str = Field(default_factory=lambda: str(_PROJECT_ROOT))
+    # Generic CLI deploy (vercel/railway/fly/netlify/gcloud) — gateway NL; owner-only in deploy_nl module.
+    nexa_generic_deploy_enabled: bool = False
+    nexa_deploy_timeout_seconds: float = 300.0
     # Cap for bundling file text into on-demand LLM analysis (no storage / indexing).
     host_executor_intel_max_prompt_chars: int = 48_000
     # Workspace registry: when strict, paths must fall under explicit /workspace roots (no compat default root).

@@ -33,6 +33,8 @@ _INTENT_PRESENTATION: dict[str, tuple[str, ResponseType]] = {
     "config_query": ("Configuration", ResponseType.INFO),
     "operator_execution": ("Operator", ResponseType.SUCCESS),
     "execution_loop": ("Execution", ResponseType.INFO),
+    "deployment_complete": ("Deployment", ResponseType.DEPLOYMENT),
+    "deployment_failed": ("Deployment", ResponseType.ERROR),
 }
 
 

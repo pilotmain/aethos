@@ -390,3 +390,37 @@ def infer_host_executor_action(user_text: str) -> dict[str, Any] | None:
         return {"host_action": "vercel_projects_list"}
 
     return None
+
+
+def parse_deploy_intent(text: str) -> dict[str, Any] | None:
+    """
+    Detect generic deploy phrases (gateway NL → :mod:`app.services.deployment`).
+
+    Returns ``intent: deploy`` and optional ``provider`` slug (``vercel``, ``railway``, …).
+    """
+    if not text or not isinstance(text, str):
+        return None
+    line = text.strip().splitlines()[0].strip()
+    if not line:
+        return None
+
+    low = line.lower()
+
+    m = re.match(r"(?is)^deploy\s+to\s+([\w.-]+)\s*$", line)
+    if m:
+        return {"intent": "deploy", "provider": m.group(1).strip(), "raw_text": text}
+
+    if re.match(r"(?is)^deploy(?:\s+this)?(?:\s+project)?\s*$", line):
+        return {"intent": "deploy", "provider": None, "raw_text": text}
+
+    if re.match(r"(?is)^push\s+to\s+production\s*$", low):
+        return {"intent": "deploy", "provider": None, "raw_text": text}
+
+    if re.match(r"(?is)^go\s+live\s*$", low):
+        return {"intent": "deploy", "provider": None, "raw_text": text}
+
+    m = re.match(r"(?is)^publish\s+([\w.-]+)\s*$", low)
+    if m:
+        return {"intent": "deploy", "provider": m.group(1).strip(), "raw_text": text}
+
+    return None
