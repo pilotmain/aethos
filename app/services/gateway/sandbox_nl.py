@@ -39,6 +39,173 @@ _AFFIRMATIVE = frozenset(
 )
 _NEGATIVE = frozenset({"no", "n", "cancel", "cancelled", "abort", "stop"})
 
+_MAX_DEV_READ_CHARS = 100_000
+
+_RE_DEV_READ = re.compile(
+    r"^(?:development|dev)\s+(read|show|cat|display)\s+(.+)$",
+    re.IGNORECASE | re.DOTALL,
+)
+_RE_DEV_WRITE = re.compile(
+    r"^(?:development|dev)\s+write\s+(\S+)\s+with\s+(.+)$",
+    re.IGNORECASE | re.DOTALL,
+)
+
+
+def _resolve_workspace_read_path(root: Path, spec: str, todo: Path | None) -> Path | None:
+    """Resolve ``spec`` to a single file under ``root`` (todo project preferred for bare names)."""
+    rel = spec.strip().replace("\\", "/").lstrip("/")
+    if not rel or ".." in Path(rel).parts:
+        return None
+    root = root.resolve()
+    candidates: list[Path] = []
+    if todo is not None:
+        candidates.append((todo / rel).resolve())
+    candidates.append((root / rel).resolve())
+    seen: set[str] = set()
+    for p in candidates:
+        key = str(p)
+        if key in seen:
+            continue
+        seen.add(key)
+        try:
+            p.relative_to(root)
+        except ValueError:
+            continue
+        if p.is_file():
+            return p
+    return None
+
+
+def try_sandbox_development_file_fastpath(
+    gctx: GatewayContext,
+    raw_message: str,
+    db: Session,
+) -> dict[str, Any] | None:
+    """
+    ``Development read|show|cat|display <path>`` — read a workspace file without LLM.
+
+    Runs when sandbox execution is enabled and the caller is a privileged owner (same gate as
+    other sandbox NL). Intended to run **before** :func:`try_development_nl_gateway_turn` in the gateway.
+    """
+    s = get_settings()
+    if not bool(getattr(s, "nexa_sandbox_execution_enabled", False)):
+        return None
+    raw = (raw_message or "").strip()
+    uid = (gctx.user_id or "").strip()
+    if not raw or not uid or raw.startswith("/"):
+        return None
+    if not is_privileged_owner_for_web_mutations(db, uid):
+        return None
+    if not bool(getattr(s, "nexa_auto_approve_owner", True)):
+        return None
+
+    first = raw.splitlines()[0].strip()
+    root_str = _workspace_root_for_sandbox()
+    if not root_str:
+        return None
+    root = Path(root_str).expanduser().resolve()
+    if not root.is_dir():
+        return None
+
+    from app.services.gateway.development_nl import _latest_todo_project
+
+    todo = _latest_todo_project(root)
+
+    wm = _RE_DEV_WRITE.match(first)
+    if wm:
+        rel = wm.group(1).strip().strip("`\"'")
+        content = (wm.group(2) or "").strip()
+        if not rel or ".." in Path(rel.replace("\\", "/")).parts:
+            return None
+        mx = int(getattr(s, "nexa_sandbox_execution_max_file_bytes", 1_048_576))
+        if len(content.encode("utf-8", errors="replace")) > mx:
+            from app.services.gateway.runtime import gateway_finalize_chat_reply
+
+            return {
+                "mode": "chat",
+                "text": gateway_finalize_chat_reply(
+                    f"Content exceeds sandbox max file size ({mx} bytes).",
+                    source="sandbox_dev_write_too_large",
+                    user_text=raw,
+                ),
+                "intent": "sandbox_dev_write_too_large",
+            }
+        dest = (root / rel.replace("\\", "/").lstrip("/")).resolve()
+        try:
+            dest.relative_to(root)
+        except ValueError:
+            from app.services.gateway.runtime import gateway_finalize_chat_reply
+
+            return {
+                "mode": "chat",
+                "text": gateway_finalize_chat_reply(
+                    "Path must stay under the configured workspace root.",
+                    source="sandbox_dev_write_bad_path",
+                    user_text=raw,
+                ),
+                "intent": "sandbox_dev_write_bad_path",
+            }
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_text(content, encoding="utf-8")
+        from app.services.gateway.runtime import gateway_finalize_chat_reply
+
+        body = (
+            f"**Wrote file** `{rel}` ({len(content)} chars).\n\n"
+            f"_Resolved path:_ `{dest}`"
+        )
+        return {
+            "mode": "chat",
+            "text": gateway_finalize_chat_reply(body.strip(), source="sandbox_dev_write", user_text=raw),
+            "intent": "sandbox_dev_write",
+        }
+
+    m = _RE_DEV_READ.match(first)
+    if not m:
+        return None
+    spec = (m.group(2) or "").strip().strip("`\"'")
+    if not spec:
+        return None
+
+    path = _resolve_workspace_read_path(root, spec, todo)
+    from app.services.gateway.runtime import gateway_finalize_chat_reply
+
+    if path is None:
+        tried = f"`{spec}`"
+        if todo is not None:
+            tried += f" (also under latest scaffold `{todo.name}`)"
+        return {
+            "mode": "chat",
+            "text": gateway_finalize_chat_reply(
+                f"**File not found** — {tried}\n\n"
+                "Use a path relative to your workspace root or a file inside the latest todo-style folder.",
+                source="sandbox_dev_read_not_found",
+                user_text=raw,
+            ),
+            "intent": "sandbox_dev_read_not_found",
+        }
+
+    try:
+        data = path.read_text(encoding="utf-8", errors="replace")
+    except OSError as e:
+        return {
+            "mode": "chat",
+            "text": gateway_finalize_chat_reply(
+                f"Could not read file: {e}",
+                source="sandbox_dev_read_error",
+                user_text=raw,
+            ),
+            "intent": "sandbox_dev_read_error",
+        }
+    if len(data) > _MAX_DEV_READ_CHARS:
+        data = data[:_MAX_DEV_READ_CHARS] + "\n\n… [truncated]"
+    rel_disp = str(path.relative_to(root)) if path.is_relative_to(root) else path.name
+    body = f"**{path.name}** (`{rel_disp}`)\n\n```\n{data}\n```"
+    return {
+        "mode": "chat",
+        "text": gateway_finalize_chat_reply(body.strip(), source="sandbox_dev_read", user_text=raw),
+        "intent": "sandbox_dev_read",
+    }
+
 
 def _workspace_root_for_sandbox() -> str:
     s = get_settings()
@@ -278,4 +445,8 @@ def try_sandbox_plan_gateway_turn(
     }
 
 
-__all__ = ["try_sandbox_approve_gateway_turn", "try_sandbox_plan_gateway_turn"]
+__all__ = [
+    "try_sandbox_approve_gateway_turn",
+    "try_sandbox_development_file_fastpath",
+    "try_sandbox_plan_gateway_turn",
+]

@@ -538,6 +538,7 @@ class NexaGateway:
             return approval
         from app.services.gateway.sandbox_nl import (
             try_sandbox_approve_gateway_turn,
+            try_sandbox_development_file_fastpath,
             try_sandbox_plan_gateway_turn,
         )
 
@@ -545,6 +546,10 @@ class NexaGateway:
         sbx_apr = try_sandbox_approve_gateway_turn(gctx, raw_c, db)
         if sbx_apr is not None:
             return sbx_apr
+
+        dev_sbx = try_sandbox_development_file_fastpath(gctx, raw_c, db)
+        if dev_sbx is not None:
+            return dev_sbx
 
         sbx_plan = try_sandbox_plan_gateway_turn(gctx, raw_c, db)
         if sbx_plan is not None:
@@ -992,6 +997,12 @@ class NexaGateway:
             early_nl = try_early_nl_host_actions(gctx, raw_gate, db_inner)
             if early_nl is not None:
                 return early_nl
+
+            from app.services.gateway.sandbox_nl import try_sandbox_development_file_fastpath
+
+            dev_sbx = try_sandbox_development_file_fastpath(gctx, raw_gate, db_inner)
+            if dev_sbx is not None:
+                return dev_sbx
 
             from app.services.gateway.development_nl import try_development_nl_gateway_turn
 
