@@ -536,9 +536,20 @@ class NexaGateway:
         approval = self._try_approval_route(gctx, text, db)
         if approval is not None:
             return approval
-        from app.services.gateway.llm_fallback import try_gateway_llm_fallback_turn
+        from app.services.gateway.sandbox_nl import (
+            try_sandbox_approve_gateway_turn,
+            try_sandbox_plan_gateway_turn,
+        )
 
         raw_c = (text or "").strip()
+        sbx_apr = try_sandbox_approve_gateway_turn(gctx, raw_c, db)
+        if sbx_apr is not None:
+            return sbx_apr
+
+        sbx_plan = try_sandbox_plan_gateway_turn(gctx, raw_c, db)
+        if sbx_plan is not None:
+            return sbx_plan
+        from app.services.gateway.llm_fallback import try_gateway_llm_fallback_turn
         llm_fb = try_gateway_llm_fallback_turn(gctx, raw_c, db)
         if llm_fb is not None:
             return llm_fb
@@ -950,6 +961,12 @@ class NexaGateway:
                     "intent": "config_query",
                 }
 
+            from app.services.gateway.sandbox_nl import try_sandbox_approve_gateway_turn
+
+            sbx_apr = try_sandbox_approve_gateway_turn(gctx, raw_gate, db_inner)
+            if sbx_apr is not None:
+                return sbx_apr
+
             from app.services.gateway.intelligence_nl import try_gateway_llm_intelligence_turn
 
             intel_nl = try_gateway_llm_intelligence_turn(gctx, raw_gate, db_inner)
@@ -981,6 +998,12 @@ class NexaGateway:
             dev_nl = try_development_nl_gateway_turn(gctx, raw_gate, db_inner)
             if dev_nl is not None:
                 return dev_nl
+
+            from app.services.gateway.sandbox_nl import try_sandbox_plan_gateway_turn
+
+            sbx_plan = try_sandbox_plan_gateway_turn(gctx, raw_gate, db_inner)
+            if sbx_plan is not None:
+                return sbx_plan
 
             from app.services.gateway.deployment_status_nl import (
                 try_gateway_deployment_status_turn,

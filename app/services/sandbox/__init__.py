@@ -1,13 +1,6 @@
-"""Sandbox policy MVP (Phase 54)."""
+"""Owner-gated LLM plan → user approval → bounded workspace execution."""
 
-from app.services.sandbox.policy import docker_cli_available, resolve_sandbox_policy
-from app.services.sandbox.runner import run_with_sandbox
-from app.services.sandbox.types import SandboxMode, SandboxPolicy
+from app.services.sandbox.action_allowlist import is_action_allowed, validate_plan_actions
+from app.services.sandbox.plan_executor import SandboxExecutor
 
-__all__ = [
-    "SandboxMode",
-    "SandboxPolicy",
-    "docker_cli_available",
-    "resolve_sandbox_policy",
-    "run_with_sandbox",
-]
+__all__ = ["SandboxExecutor", "is_action_allowed", "validate_plan_actions"]

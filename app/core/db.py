@@ -762,6 +762,20 @@ def _migrate_conversation_context_simulate_execute_pending() -> None:
             )
 
 
+def _migrate_conversation_context_sandbox_pending_plan() -> None:
+    """Pending LLM sandbox plan JSON awaiting explicit yes/no in chat."""
+    insp = inspect(engine)
+    if "conversation_contexts" not in insp.get_table_names():
+        return
+    cols = {c["name"] for c in insp.get_columns("conversation_contexts")}
+    tt = "TEXT"
+    with engine.begin() as conn:
+        if "sandbox_pending_plan_json" not in cols:
+            conn.execute(
+                text(f"ALTER TABLE conversation_contexts ADD COLUMN sandbox_pending_plan_json {tt} NULL")
+            )
+
+
 def _migrate_agent_jobs_simulation_result() -> None:
     """Phase 76 — optional JSON snapshot from approvals simulate endpoint."""
     insp = inspect(engine)
@@ -870,6 +884,7 @@ def ensure_schema() -> None:
     _migrate_aethos_workspace_projects()
     _migrate_conversation_context_blocked_host()
     _migrate_conversation_context_simulate_execute_pending()
+    _migrate_conversation_context_sandbox_pending_plan()
     _migrate_agent_jobs_simulation_result()
     _migrate_aethos_missions_input_text()
     _migrate_aethos_tasks_timing()

@@ -105,6 +105,8 @@ def _clear_web_chat_rollups(row: ConversationContext) -> None:
     row.last_injected_action_json = None
     row.current_flow_state_json = None
     row.blocked_host_executor_json = None
+    row.simulate_execute_pending_json = None
+    row.sandbox_pending_plan_json = None
     row.pending_project_json = None
     row.manual_topic_override = False
     row.active_topic_confidence = 0.5
@@ -216,6 +218,8 @@ def _mutate_topic_set(ctx: ConversationContext, new_topic: str) -> None:
     ctx.last_suggested_actions_json = None
     ctx.next_action_pending_inject_json = None
     ctx.blocked_host_executor_json = None
+    ctx.simulate_execute_pending_json = None
+    ctx.sandbox_pending_plan_json = None
 
 
 def set_manual_topic(db: Session, ctx: ConversationContext, new_topic: str) -> None:
@@ -243,6 +247,8 @@ def _mutate_topic_clear(ctx: ConversationContext) -> None:
     ctx.last_suggested_actions_json = None
     ctx.next_action_pending_inject_json = None
     ctx.blocked_host_executor_json = None
+    ctx.simulate_execute_pending_json = None
+    ctx.sandbox_pending_plan_json = None
 
 
 def hard_clear_conversation_state(ctx: ConversationContext) -> None:
@@ -261,6 +267,8 @@ def hard_clear_conversation_state(ctx: ConversationContext) -> None:
     ctx.last_suggested_actions_json = None
     ctx.next_action_pending_inject_json = None
     ctx.blocked_host_executor_json = None
+    ctx.simulate_execute_pending_json = None
+    ctx.sandbox_pending_plan_json = None
 
 
 def hard_clear_conversation_state_commit(db: Session, ctx: ConversationContext) -> None:

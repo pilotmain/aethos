@@ -348,6 +348,12 @@ class Settings(BaseSettings):
     # Phase 54 — sandbox / vault / egress / resource caps (MVP policy gates).
     nexa_sandbox_mode: str = "process"
     nexa_require_sandbox_for_skills: bool = False
+    # Gateway LLM sandbox (opt-in): JSON plan → user yes/no → allowlisted workspace actions only.
+    nexa_sandbox_execution_enabled: bool = False
+    # Optional absolute workspace override; empty uses NEXA_WORKSPACE_ROOT.
+    nexa_sandbox_execution_workspace: str = ""
+    nexa_sandbox_execution_max_file_bytes: int = 1_048_576
+    nexa_sandbox_execution_command_timeout_seconds: int = 60
     # Phase 6 — pluggable skills (ClawHub-style); see docs/SKILLS_SYSTEM.md
     nexa_clawhub_api_base: str = "https://clawhub.com/api/v1"
     # Phase 17 — marketplace installs (ZIP/yaml under this directory)
