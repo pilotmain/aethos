@@ -2,7 +2,7 @@
 # Copyright (c) 2025 AethOS AI
 
 """
-Terminal UI helpers for the Nexa CLI setup experience (Phase 25 / Phase 32).
+Terminal UI helpers for the AethOS CLI setup experience (Phase 25 / Phase 32).
 
 Uses stdlib only (no Rich/Click) so ``pip install -r requirements.txt`` stays minimal.
 """
@@ -45,24 +45,12 @@ def _c(code: str, text: str) -> str:
 
 
 def print_header() -> None:
-    """ASCII banner + tagline."""
+    """ASCII banner + tagline (AethOS wordmark)."""
+    from aethos_cli.banner import BANNER
+
     cyan = Colors.CYAN if supports_color() else ""
     reset = Colors.RESET if supports_color() else ""
-    banner = rf"""
-{cyan}╔══════════════════════════════════════════════════════════════════════════════╗
-║                                                                              ║
-║   ███╗   ██╗███████╗██╗  ██╗ █████╗                                         ║
-║   ████╗  ██║██╔════╝╚██╗██╔╝██╔══██╗                                        ║
-║   ██╔██╗ ██║█████╗   ╚███╔╝ ███████║                                        ║
-║   ██║╚██╗██║██╔══╝   ██╔██╗ ██╔══██║                                        ║
-║   ██║ ╚████║███████╗██╔╝ ██╗██║  ██║                                        ║
-║   ╚═╝  ╚═══╝╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝                                        ║
-║                                                                              ║
-║                         Next-Gen AI Agent Framework                          ║
-║                              v{NEXA_CLI_VERSION}                               ║
-╚══════════════════════════════════════════════════════════════════════════════╝{reset}
-"""
-    print(banner, file=sys.stdout)
+    print(f"{cyan}{BANNER}{reset}\n", file=sys.stdout)
 
 
 def print_environment_tag(pinfo_line: str) -> None:
@@ -129,9 +117,18 @@ def print_warn(message: str) -> None:
     print(f"   {_c(Colors.YELLOW, '!')} {message}")
 
 
+def _cli_noninteractive() -> bool:
+    return (os.environ.get("NEXA_NONINTERACTIVE") or "").strip().lower() in ("1", "true", "yes")
+
+
 def confirm(question: str, default: bool = True) -> bool:
+    if _cli_noninteractive() or not sys.stdin.isatty():
+        return default
     yn = "Y/n" if default else "y/N"
-    raw = input(f"   {question} [{yn}]: ").strip().lower()
+    try:
+        raw = input(f"   {question} [{yn}]: ").strip().lower()
+    except EOFError:
+        return default
     if not raw:
         return default
     return raw in ("y", "yes", "1", "true")
@@ -144,12 +141,20 @@ def select(
     default_index: int = 1,
 ) -> str:
     """Return the *value* (second element) of the chosen option (1-based menu)."""
+    if _cli_noninteractive() or not sys.stdin.isatty():
+        di = default_index if 1 <= default_index <= len(options) else 1
+        return options[di - 1][1]
+
     print(f"\n   {prompt}")
     for i, (label, _value, desc) in enumerate(options, 1):
         extra = f" — {desc}" if desc else ""
         print(f"   [{i}] {label}{extra}")
     while True:
-        raw = input(f"   > (default {default_index}) ").strip()
+        try:
+            raw = input(f"   > (default {default_index}) ").strip()
+        except EOFError:
+            di = default_index if 1 <= default_index <= len(options) else 1
+            return options[di - 1][1]
         if not raw:
             idx = default_index
         else:
@@ -176,6 +181,8 @@ def interactive_feature_toggle(
     default_enabled = tuple(default_enabled or (1, 2, 3))
     n = len(options)
     on: set[int] = {i for i in default_enabled if 1 <= i <= n}
+    if _cli_noninteractive() or not sys.stdin.isatty():
+        return [options[i - 1][1] for i in sorted(on)]
 
     def render() -> None:
         print(f"\n   {title}")
@@ -187,7 +194,10 @@ def interactive_feature_toggle(
 
     while True:
         render()
-        raw = input("\n   Toggle # (empty = done): ").strip().lower()
+        try:
+            raw = input("\n   Toggle # (empty = done): ").strip().lower()
+        except EOFError:
+            break
         if not raw:
             break
         if raw.isdigit():
@@ -219,6 +229,9 @@ def multi_select_indices(
     default_enabled = tuple(default_enabled or (1, 2, 3))
     enabled = {i for i in default_enabled if 1 <= i <= len(options)}
 
+    if _cli_noninteractive() or not sys.stdin.isatty():
+        return [options[i - 1][1] for i in sorted(enabled)]
+
     print(f"\n   {prompt}")
     print("   Enter comma-separated numbers to toggle on (e.g. 1,3,5), or 'all' / 'none'.")
     for i, (label, _value, desc) in enumerate(options, 1):
@@ -226,7 +239,10 @@ def multi_select_indices(
         extra = f" — {desc}" if desc else ""
         print(f"   [{on}] [{i}] {label}{extra}")
 
-    raw = input("   > ").strip().lower()
+    try:
+        raw = input("   > ").strip().lower()
+    except EOFError:
+        return [options[i - 1][1] for i in sorted(enabled)]
     if raw == "all":
         return [options[i][1] for i in range(len(options))]
     if raw == "none":
@@ -253,10 +269,18 @@ def get_input(
 ) -> str:
     tail = f" [{default}]" if default else ""
     prompt = f"   {label}{tail}: "
+    if _cli_noninteractive() or not sys.stdin.isatty():
+        return (default or "").strip()
     if hide:
-        first = getpass.getpass(prompt)
+        try:
+            first = getpass.getpass(prompt)
+        except EOFError:
+            return (default or "").strip()
         return first.strip() if first.strip() else (default or "").strip()
-    line = input(prompt).strip()
+    try:
+        line = input(prompt).strip()
+    except EOFError:
+        return (default or "").strip()
     return line if line else (default or "")
 
 

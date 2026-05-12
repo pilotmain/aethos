@@ -13,8 +13,9 @@ NEXA_REPO_URL="${NEXA_REPO_URL:-https://github.com/pilotmain/aethos.git}"
 NEXA_INSTALL_DIR="${NEXA_INSTALL_DIR:-${HOME}/.aethos}"
 PYTHON="${PYTHON:-python3}"
 
-# Non-interactive: no TTY on stdin, or explicit NEXA_NONINTERACTIVE=1 (e.g. curl | bash).
-if [[ ! -t 0 ]]; then
+# Non-interactive only when explicitly requested or in CI (do not infer from piped stdin alone —
+# we reopen /dev/tty for prompts so ``curl | bash`` can stay interactive).
+if [[ -n "${CI:-}" || -n "${GITHUB_ACTIONS:-}" ]]; then
   NEXA_NONINTERACTIVE="${NEXA_NONINTERACTIVE:-1}"
 fi
 
@@ -35,6 +36,16 @@ BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 DIM='\033[2m'
 NC='\033[0m'
+
+# Reattach keyboard when stdin is a pipe (e.g. curl | bash) but the user did not opt out of prompts.
+force_tty_input() {
+  if [[ "${NEXA_NONINTERACTIVE:-0}" == "1" ]]; then
+    return 0
+  fi
+  if [[ ! -t 0 ]] && [[ -r /dev/tty ]]; then
+    exec < /dev/tty
+  fi
+}
 
 banner() {
   echo -e "${CYAN}"
@@ -166,7 +177,8 @@ if [[ "${NEXA_NONINTERACTIVE:-0}" == "1" ]]; then
   echo "│  Non-interactive: using ${NEXA_INSTALL_DIR}"
 else
   echo "│  Press Enter to use default, or type a path:"
-  read -r -p "│  > " DIR_INPUT
+  force_tty_input
+  read -r -p "│  > " DIR_INPUT || true
   if [[ -n "${DIR_INPUT:-}" ]]; then
     NEXA_INSTALL_DIR="${DIR_INPUT/#\~/${HOME}}"
   fi
@@ -185,7 +197,8 @@ if [[ -d "${NEXA_INSTALL_DIR}/.git" ]] || [[ -f "${NEXA_INSTALL_DIR}/aethos_cli/
     EXIST_CHOICE="${NEXA_EXISTING_ACTION:-1}"
     echo "   Non-interactive: using action [${EXIST_CHOICE}] (set NEXA_EXISTING_ACTION to override)"
   else
-    read -r -p "   > " EXIST_CHOICE
+    force_tty_input
+    read -r -p "   > " EXIST_CHOICE || true
   fi
   case "${EXIST_CHOICE:-}" in
     1)
@@ -249,9 +262,9 @@ else
   exit 1
 fi
 
-echo "│  🔗 Registering \`aethos\` + \`nexa\` CLI aliases (\`pip install -e .\`)…"
+echo "│  🔗 Registering \`aethos\` CLI (editable \`pip install -e .\`)…"
 if python -m pip install -e . -q; then
-  echo -e "│  ${GREEN}✓${NC} Run \`aethos setup\`, \`aethos serve\`, \`aethos status\` from this venv (or \`nexa …\` alias)"
+  echo -e "│  ${GREEN}✓${NC} Run \`aethos setup\`, \`aethos serve\`, \`aethos status\` from this venv"
 else
   echo -e "│  ${YELLOW}!${NC} Editable install failed — wizard will use \`python -m aethos_cli setup\`"
 fi

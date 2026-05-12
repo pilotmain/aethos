@@ -28,7 +28,7 @@ def print_welcome_screen(
     banner = f"""{green}
 ╔══════════════════════════════════════════════════════════════════════════════╗
 ║                                                                              ║
-║   ✅ Nexa installed successfully!                                           ║
+║   ✅ AethOS installed successfully!                                         ║
 ║                                                                              ║
 ╚══════════════════════════════════════════════════════════════════════════════╝{reset}
 """
@@ -45,7 +45,7 @@ def print_welcome_screen(
     print("\n   🌐 After `serve`, open API docs at:")
     print(f"      {api_base.rstrip('/')}/docs")
     print("\n   🖥️  Full stack + Next.js Mission Control:")
-    print("      ./scripts/nexa_next_local_all.sh start")
+    print("      docs/NATIVE_SETUP.md — local stack (shell orchestration under scripts/)")
     print("\n   📱 Mobile app: point API_BASE_URL at your machine (LAN IP + port).")
     print(f"\n{cyan}   Docs: docs/NATIVE_SETUP.md{reset}\n")
 
