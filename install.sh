@@ -81,7 +81,8 @@ export NEXA_REPO_URL="${NEXA_REPO_URL:-$REPO_DEFAULT}"
 export NEXA_INSTALL_DIR="${NEXA_INSTALL_DIR:-$INSTALL_DEFAULT}"
 
 if [[ ! -t 0 ]]; then
-  export NEXA_NONINTERACTIVE="${NEXA_NONINTERACTIVE:-1}"
+  # Default existing-dir policy when stdin is a pipe (curl | bash). Do **not** force
+  # NEXA_NONINTERACTIVE here — install_aethos.sh reopens /dev/tty so prompts still work.
   export NEXA_EXISTING_ACTION="${NEXA_EXISTING_ACTION:-1}"
 fi
 

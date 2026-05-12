@@ -17,7 +17,7 @@ def _repo_root() -> Path:
 
 def cmd_config(*, edit: bool = False) -> int:
     env_path = (_repo_root() / ".env").resolve()
-    print(f"Nexa environment file:\n  {env_path}\n")
+    print(f"AethOS environment file:\n  {env_path}\n")
     if not env_path.is_file():
         print("File does not exist yet — run `python -m aethos_cli setup` first.", file=sys.stderr)
         return 1

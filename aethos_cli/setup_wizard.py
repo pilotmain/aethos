@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import subprocess
@@ -85,6 +86,47 @@ def _feat_human(names: list[str]) -> list[str]:
         "scraping": "Web scraping",
     }
     return [m.get(x, x) for x in names]
+
+
+_SETUP_STATE_VERSION = 1
+SETUP_STATE_FILE = Path.home() / ".aethos" / ".setup_state.json"
+# Resume checkpoints (ascending): kind chosen → LLM chosen → keys done → features + URLs done.
+STEP_AFTER_KIND = 1
+STEP_AFTER_LLM = 2
+STEP_AFTER_KEYS = 3
+STEP_AFTER_FEATURES = 4
+
+
+def _noninteractive_setup() -> bool:
+    return (os.environ.get("NEXA_NONINTERACTIVE") or "").strip().lower() in ("1", "true", "yes")
+
+
+def save_setup_state(step: int, data: dict) -> None:
+    """Persist wizard progress for resume after interrupt."""
+    SETUP_STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+    merged = dict(data)
+    merged["repo_root"] = str(_repo_root())
+    blob = {"v": _SETUP_STATE_VERSION, "step": step, "data": merged}
+    SETUP_STATE_FILE.write_text(json.dumps(blob, indent=2), encoding="utf-8")
+
+
+def load_setup_state() -> dict | None:
+    if not SETUP_STATE_FILE.exists():
+        return None
+    try:
+        blob = json.loads(SETUP_STATE_FILE.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if blob.get("v") != _SETUP_STATE_VERSION:
+        return None
+    return blob
+
+
+def clear_setup_state() -> None:
+    try:
+        SETUP_STATE_FILE.unlink(missing_ok=True)
+    except OSError:
+        pass
 
 
 def _configure_primary_llm(
@@ -186,6 +228,9 @@ def run_setup_wizard(*, install_kind: str | None = None) -> int:
 
     When ``NEXA_SETUP_FROM_INSTALLER=1``, steps 1–2 + dependency install were handled by the shell;
     this run covers steps 3–5 (LLM, keys, features) plus saving configuration.
+
+    Interactive progress is saved under ``~/.aethos/.setup_state.json`` so you can resume after Ctrl+C
+    or a dropped connection. Non-interactive installs (``NEXA_NONINTERACTIVE``) ignore saved state.
     """
     if install_kind is None:
         install_kind = (os.environ.get("NEXA_SETUP_KIND") or "").strip() or None
@@ -193,186 +238,241 @@ def run_setup_wizard(*, install_kind: str | None = None) -> int:
         install_kind = None
 
     from_installer = os.environ.get("NEXA_SETUP_FROM_INSTALLER") == "1"
-    kind: str = install_kind or "fresh"
-
     root = _repo_root()
     env_path = root / ".env"
     pinfo = detect()
     ok_o, _omsg, omodels = _ollama_status()
 
+    resume_step = 0
+    bag: dict = {}
+    if not _noninteractive_setup():
+        raw_state = load_setup_state()
+        if raw_state and isinstance(raw_state.get("data"), dict):
+            d = raw_state["data"]
+            if d.get("repo_root") == str(root):
+                if confirm("Found an incomplete setup. Resume from where you left off?", default=True):
+                    resume_step = int(raw_state.get("step", 0))
+                    bag = dict(d)
+                else:
+                    clear_setup_state()
+            else:
+                clear_setup_state()
+
     print_header()
     print_environment_tag(human_os_line(pinfo))
 
-    if not from_installer:
-        # --- Step 1/6 ---
-        print_step("1/6", "Checking prerequisites")
-        lines1: list[str] = []
-        py_line = f"Python {pinfo.get('python_version', sys.version.split()[0])}"
-        lines1.append(f"✓ {py_line}")
-        git_v = detect_optional_tool("git")
-        if git_v:
-            lines1.append(f"✓ Git found ({git_v[:48]}…)" if len(git_v) > 50 else f"✓ Git found ({git_v})")
-        else:
-            lines1.append("✗ Git not found — install Git to clone/update.")
-        node_v = detect_optional_tool("node")
-        if node_v:
-            lines1.append(f"✓ Node.js optional — {node_v[:56]}")
-        else:
-            lines1.append("○ Node.js not found (optional, for Next.js / tooling)")
-        if ok_o:
-            lines1.append(f"✓ Ollama detected ({len(omodels)} model(s) in `ollama list`)")
-        else:
-            hint = ollama_install_hint()
-            lines1.append(f"⚠️ Ollama not installed (optional) — try: {hint}")
-        if _detect_docker():
-            lines1.append("✓ Docker CLI present")
-        print_box("Step 1/6: Prerequisites", lines1)
-
-        # --- Step 2/6 ---
-        print_step("2/6", "Installation directory")
-        ds_line, ds_ok = disk_space_line(root)
-        lines2 = [
-            f"Repository: {root}",
-            "Typical need: ~500 MB for venv + dependencies.",
-            ds_line,
-        ]
-        if not ds_ok:
-            lines2.append("⚠️ Low disk space — free space before large installs.")
-        print_box("Step 2/6: Paths & disk", lines2)
-        print_info(f"Using Nexa repo at: {root}")
-        if get_input("Continue with this directory?", "y").lower() not in ("", "y", "yes"):
-            print_warn("Cancelled.")
-            return 1
-
-        print_step("2/6", "Installation type")
-        kind_options = [
-            ("Fresh install — configure .env from scratch", "fresh", "Recommended for new clones"),
-            ("Update — merge new keys into existing .env", "update", "Keeps unrelated lines"),
-            ("Repair — reinstall deps + rewrite core keys", "repair", "Runs pip install again"),
-        ]
-        default_kind = 1
-        if install_kind in ("fresh", "update", "repair"):
-            kind = install_kind
-            print_info(f"Installation type: {kind} (from environment)")
-        else:
-            kind = select("Choose installation type", kind_options, default_index=default_kind)
-    else:
-        if install_kind in ("fresh", "update", "repair"):
-            kind = install_kind
-        print_info("Continuing setup (steps 3–6 of 6) — clone and Python deps finished in the installer.")
-        time.sleep(0.15)
-
-    # --- Step 3/6 LLM ---
-    print_step("3/6", "Select LLM provider")
-    prov_opts: list[tuple[str, str, str]] = []
-    if ok_o and omodels:
-        prov_opts.append(("Ollama (local, private)", "ollama", f"{len(omodels)} model(s) listed ✅"))
-    elif ok_o:
-        prov_opts.append(("Ollama (local, private)", "ollama", "`ollama list` OK"))
-    else:
-        prov_opts.append(("Ollama (local, private)", "ollama", "Install Ollama for offline models"))
-    prov_opts.extend(
-        [
-            ("OpenAI (GPT-4 / GPT-4o)", "openai", "Requires API key"),
-            ("Anthropic (Claude)", "anthropic", "Requires API key"),
-            ("DeepSeek", "deepseek", "Requires API key"),
-            ("Skip LLM for now", "skip", "Configure later in .env"),
-        ]
-    )
-    default_idx = 1 if ok_o else 2
-    llm = select("LLM provider", prov_opts, default_index=default_idx)
-
-    # --- Step 4/6 keys ---
-    print_step("4/6", "Configure API keys")
-    updates, llm_summary = _configure_primary_llm(llm, omodels=omodels, ok_o=ok_o)
-    _optional_extra_provider_keys(updates, llm)
-
-    # --- Step 5/6 workspace + features ---
-    print_step("5/6", "Workspace & features")
-    default_ws = str(Path.home() / "nexa-workspace")
-    workspace_s = get_input("Workspace directory for projects", default_ws) or default_ws
-    ws_path = Path(workspace_s).expanduser().resolve()
-    ws_path.mkdir(parents=True, exist_ok=True)
-    updates["NEXA_WORKSPACE_ROOT"] = str(ws_path)
-    updates["HOST_EXECUTOR_WORK_ROOT"] = str(ws_path)
-
-    feat_opts = [
-        ("Git automation & chain actions", "git", "README / commit / push flows"),
-        ("Browser automation", "browser", "Playwright browser control"),
-        ("Cron scheduling", "cron", "Scheduled tasks"),
-        ("Social media posting", "social", "Twitter, LinkedIn, …"),
-        ("PR reviews", "pr_review", "Automated GitHub review"),
-        ("Web scraping", "scraping", "Extract data from websites"),
-    ]
-    chosen = interactive_feature_toggle(
-        "Select features (type a number to toggle, Enter when done)",
-        feat_opts,
-        default_enabled=(1, 2, 3),
-    )
-    updates["NEXA_HOST_EXECUTOR_ENABLED"] = "true" if "git" in chosen else "false"
-    updates["NEXA_NL_TO_CHAIN_ENABLED"] = "true" if "git" in chosen else "false"
-    updates["NEXA_BROWSER_ENABLED"] = "true" if "browser" in chosen else "false"
-    updates["NEXA_CRON_ENABLED"] = "true" if "cron" in chosen else "false"
-    updates["NEXA_SOCIAL_ENABLED"] = "true" if "social" in chosen else "false"
-    updates["NEXA_PR_REVIEW_ENABLED"] = "true" if "pr_review" in chosen else "false"
-    updates["NEXA_SCRAPING_ENABLED"] = "true" if "scraping" in chosen else "false"
-
-    api_base = get_input("API base URL (for CLI + tools)", "http://127.0.0.1:8010") or "http://127.0.0.1:8010"
-    updates["API_BASE_URL"] = api_base.rstrip("/")
-    updates["NEXA_API_BASE"] = api_base.rstrip("/")
-
-    # --- Save ---
-    print_step("6/6", "Saving configuration")
-    print_progress_bar("Writing environment", 40)
-    if kind == "repair":
-        print_info("Repair: reinstalling Python dependencies…")
-        print_progress_bar("pip install", 55)
-        rc1 = subprocess.run(
-            [sys.executable, "-m", "pip", "install", "--upgrade", "pip"],
-            cwd=str(root),
-            timeout=180,
-        ).returncode
-        rc2 = subprocess.run(
-            [sys.executable, "-m", "pip", "install", "-r", "requirements.txt"],
-            cwd=str(root),
-            timeout=900,
-        ).returncode
-        if rc1 != 0 or rc2 != 0:
-            print_warn(f"pip returned non-zero ({rc1}, {rc2}) — check output above.")
-        print_progress_bar("pip install", 100)
-
-    backup = env_path.with_name(env_path.name + ".bak")
-    if env_path.exists():
-        try:
-            backup.write_text(env_path.read_text(encoding="utf-8"), encoding="utf-8")
-            print_success(f"Backed up .env → {backup.name}")
-        except OSError as exc:
-            print_warn(f"Could not backup .env: {exc}")
-
-    upsert_env_file(env_path, updates)
-    print_progress_bar("Writing environment", 100)
-
-    feat_labels = _feat_human(chosen)
-    print_welcome_screen(
-        install_dir=root,
-        workspace=ws_path,
-        llm_summary=llm_summary,
-        feature_labels=feat_labels,
-        api_base=api_base.rstrip("/"),
-    )
+    kind: str = install_kind or str(bag.get("kind") or "fresh")
 
     try:
-        from aethos_cli.cli_status import try_post_install_health_hint
+        if resume_step < STEP_AFTER_KIND:
+            if not from_installer:
+                # --- Step 1/6 ---
+                print_step("1/6", "Checking prerequisites")
+                lines1: list[str] = []
+                py_line = f"Python {pinfo.get('python_version', sys.version.split()[0])}"
+                lines1.append(f"✓ {py_line}")
+                git_v = detect_optional_tool("git")
+                if git_v:
+                    lines1.append(f"✓ Git found ({git_v[:48]}…)" if len(git_v) > 50 else f"✓ Git found ({git_v})")
+                else:
+                    lines1.append("✗ Git not found — install Git to clone/update.")
+                node_v = detect_optional_tool("node")
+                if node_v:
+                    lines1.append(f"✓ Node.js optional — {node_v[:56]}")
+                else:
+                    lines1.append("○ Node.js not found (optional, for Next.js / tooling)")
+                if ok_o:
+                    lines1.append(f"✓ Ollama detected ({len(omodels)} model(s) in `ollama list`)")
+                else:
+                    hint = ollama_install_hint()
+                    lines1.append(f"⚠️ Ollama not installed (optional) — try: {hint}")
+                if _detect_docker():
+                    lines1.append("✓ Docker CLI present")
+                print_box("Step 1/6: Prerequisites", lines1)
 
-        try_post_install_health_hint()
-    except Exception:
-        pass
+                # --- Step 2/6 ---
+                print_step("2/6", "Installation directory")
+                ds_line, ds_ok = disk_space_line(root)
+                lines2 = [
+                    f"Repository: {root}",
+                    "Typical need: ~500 MB for venv + dependencies.",
+                    ds_line,
+                ]
+                if not ds_ok:
+                    lines2.append("⚠️ Low disk space — free space before large installs.")
+                print_box("Step 2/6: Paths & disk", lines2)
+                print_info(f"Using AethOS repository at: {root}")
+                if get_input("Continue with this directory?", "y").lower() not in ("", "y", "yes"):
+                    print_warn("Cancelled.")
+                    return 1
 
-    rc_db = run_database_setup()
-    if rc_db != 0:
-        print_warn("Database init failed — fix errors above, then run: aethos init-db")
+                print_step("2/6", "Installation type")
+                kind_options = [
+                    ("Fresh install — configure .env from scratch", "fresh", "Recommended for new clones"),
+                    ("Update — merge new keys into existing .env", "update", "Keeps unrelated lines"),
+                    ("Repair — reinstall deps + rewrite core keys", "repair", "Runs pip install again"),
+                ]
+                default_kind = 1
+                if install_kind in ("fresh", "update", "repair"):
+                    kind = install_kind
+                    print_info(f"Installation type: {kind} (from environment)")
+                else:
+                    kind = select("Choose installation type", kind_options, default_index=default_kind)
+            else:
+                if install_kind in ("fresh", "update", "repair"):
+                    kind = install_kind
+                print_info("Continuing setup (steps 3–6 of 6) — clone and Python deps finished in the installer.")
+                time.sleep(0.15)
+            bag["kind"] = kind
+            bag["from_installer"] = from_installer
+            save_setup_state(STEP_AFTER_KIND, bag)
+        else:
+            kind = str(bag.get("kind", kind))
+            print_info("Resuming setup — skipping completed early steps.")
 
-    return 0
+        if resume_step < STEP_AFTER_LLM:
+            print_step("3/6", "Select LLM provider")
+            prov_opts: list[tuple[str, str, str]] = []
+            if ok_o and omodels:
+                prov_opts.append(("Ollama (local, private)", "ollama", f"{len(omodels)} model(s) listed ✅"))
+            elif ok_o:
+                prov_opts.append(("Ollama (local, private)", "ollama", "`ollama list` OK"))
+            else:
+                prov_opts.append(("Ollama (local, private)", "ollama", "Install Ollama for offline models"))
+            prov_opts.extend(
+                [
+                    ("OpenAI (GPT-4 / GPT-4o)", "openai", "Requires API key"),
+                    ("Anthropic (Claude)", "anthropic", "Requires API key"),
+                    ("DeepSeek", "deepseek", "Requires API key"),
+                    ("Skip LLM for now", "skip", "Configure later in .env"),
+                ]
+            )
+            default_idx = 1 if ok_o else 2
+            llm = select("LLM provider", prov_opts, default_index=default_idx)
+            bag["llm"] = llm
+            save_setup_state(STEP_AFTER_LLM, bag)
+        else:
+            llm = str(bag.get("llm", "skip"))
+            print_info(f"Resuming with LLM provider choice: {llm}")
+
+        if resume_step < STEP_AFTER_KEYS:
+            print_step("4/6", "Configure API keys")
+            updates, llm_summary = _configure_primary_llm(llm, omodels=omodels, ok_o=ok_o)
+            _optional_extra_provider_keys(updates, llm)
+            bag["updates"] = updates
+            bag["llm_summary"] = llm_summary
+            save_setup_state(STEP_AFTER_KEYS, bag)
+        else:
+            updates = dict(bag.get("updates") or {})
+            llm_summary = str(bag.get("llm_summary") or "configure later")
+
+        if resume_step < STEP_AFTER_FEATURES:
+            print_step("5/6", "Workspace & features")
+            default_ws = str(Path.home() / "aethos-workspace")
+            workspace_s = get_input("Workspace directory for projects", default_ws) or default_ws
+            ws_path = Path(workspace_s).expanduser().resolve()
+            ws_path.mkdir(parents=True, exist_ok=True)
+            updates["NEXA_WORKSPACE_ROOT"] = str(ws_path)
+            updates["HOST_EXECUTOR_WORK_ROOT"] = str(ws_path)
+
+            feat_opts = [
+                ("Git automation & chain actions", "git", "README / commit / push flows"),
+                ("Browser automation", "browser", "Playwright browser control"),
+                ("Cron scheduling", "cron", "Scheduled tasks"),
+                ("Social media posting", "social", "Twitter, LinkedIn, …"),
+                ("PR reviews", "pr_review", "Automated GitHub review"),
+                ("Web scraping", "scraping", "Extract data from websites"),
+            ]
+            chosen = interactive_feature_toggle(
+                "Select features (type a number to toggle, Enter when done)",
+                feat_opts,
+                default_enabled=(1, 2, 3),
+            )
+            updates["NEXA_HOST_EXECUTOR_ENABLED"] = "true" if "git" in chosen else "false"
+            updates["NEXA_NL_TO_CHAIN_ENABLED"] = "true" if "git" in chosen else "false"
+            updates["NEXA_BROWSER_ENABLED"] = "true" if "browser" in chosen else "false"
+            updates["NEXA_CRON_ENABLED"] = "true" if "cron" in chosen else "false"
+            updates["NEXA_SOCIAL_ENABLED"] = "true" if "social" in chosen else "false"
+            updates["NEXA_PR_REVIEW_ENABLED"] = "true" if "pr_review" in chosen else "false"
+            updates["NEXA_SCRAPING_ENABLED"] = "true" if "scraping" in chosen else "false"
+
+            api_base = get_input("API base URL (for CLI + tools)", "http://127.0.0.1:8010") or "http://127.0.0.1:8010"
+            updates["API_BASE_URL"] = api_base.rstrip("/")
+            updates["NEXA_API_BASE"] = api_base.rstrip("/")
+
+            bag["workspace_s"] = workspace_s
+            bag["chosen"] = chosen
+            bag["api_base"] = api_base
+            bag["updates"] = updates
+            save_setup_state(STEP_AFTER_FEATURES, bag)
+        else:
+            updates = dict(bag.get("updates") or {})
+            workspace_s = str(bag.get("workspace_s") or str(Path.home() / "aethos-workspace"))
+            chosen = list(bag.get("chosen") or [])
+            api_base = str(bag.get("api_base") or "http://127.0.0.1:8010")
+            ws_path = Path(workspace_s).expanduser().resolve()
+            try:
+                ws_path.mkdir(parents=True, exist_ok=True)
+            except OSError:
+                pass
+            print_info("Resuming — applying saved workspace, features, and API URL.")
+
+        # --- Save ---
+        print_step("6/6", "Saving configuration")
+        print_progress_bar("Writing environment", 40)
+        if kind == "repair":
+            print_info("Repair: reinstalling Python dependencies…")
+            print_progress_bar("pip install", 55)
+            rc1 = subprocess.run(
+                [sys.executable, "-m", "pip", "install", "--upgrade", "pip"],
+                cwd=str(root),
+                timeout=180,
+            ).returncode
+            rc2 = subprocess.run(
+                [sys.executable, "-m", "pip", "install", "-r", "requirements.txt"],
+                cwd=str(root),
+                timeout=900,
+            ).returncode
+            if rc1 != 0 or rc2 != 0:
+                print_warn(f"pip returned non-zero ({rc1}, {rc2}) — check output above.")
+            print_progress_bar("pip install", 100)
+
+        backup = env_path.with_name(env_path.name + ".bak")
+        if env_path.exists():
+            try:
+                backup.write_text(env_path.read_text(encoding="utf-8"), encoding="utf-8")
+                print_success(f"Backed up .env → {backup.name}")
+            except OSError as exc:
+                print_warn(f"Could not backup .env: {exc}")
+
+        upsert_env_file(env_path, updates)
+        print_progress_bar("Writing environment", 100)
+        clear_setup_state()
+
+        feat_labels = _feat_human(chosen)
+        print_welcome_screen(
+            install_dir=root,
+            workspace=ws_path,
+            llm_summary=llm_summary,
+            feature_labels=feat_labels,
+            api_base=api_base.rstrip("/"),
+        )
+
+        try:
+            from aethos_cli.cli_status import try_post_install_health_hint
+
+            try_post_install_health_hint()
+        except Exception:
+            pass
+
+        rc_db = run_database_setup()
+        if rc_db != 0:
+            print_warn("Database init failed — fix errors above, then run: aethos init-db")
+
+        return 0
+    except KeyboardInterrupt:
+        print_warn("\nInterrupted — progress is saved. Run `aethos setup` again to resume.")
+        return 130
 
 
 def run_database_setup() -> int:

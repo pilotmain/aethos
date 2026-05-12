@@ -318,7 +318,7 @@ def main() -> int:
     cr_res = cr_sub.add_parser("resume")
     cr_res.add_argument("job_id")
 
-    sub.add_parser("run-dev", help="Deprecated alias; use: nexa dev run …")
+    sub.add_parser("run-dev", help="Deprecated alias; use: aethos dev run …")
 
     sp_setup = sub.add_parser(
         "setup",

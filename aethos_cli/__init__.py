@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2025 AethOS AI
 
-"""Nexa CLI package — ``nexa`` entrypoint maps to :func:`aethos_cli.__main__.main`."""
+"""AethOS CLI package — ``aethos`` / ``nexa`` entrypoints map to :func:`aethos_cli.__main__.main`."""
 
 from __future__ import annotations
 
