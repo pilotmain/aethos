@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 52D — installer script sanity (no execution)."""
 
 from __future__ import annotations

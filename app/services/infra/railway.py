@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Railway CLI helper — deploy / auth probes (fixed argv only).
 
 Supports **`RAILWAY_TOKEN`** / **`RAILWAY_API_TOKEN`** so CI-style deploys work without `railway link`.

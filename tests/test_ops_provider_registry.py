@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 import os
 
 from app.services.ops.provider_registry import get_provider, list_provider_names

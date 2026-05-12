@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """LLM key resolution for custom agents (user BYOK + system env)."""
 
 from __future__ import annotations

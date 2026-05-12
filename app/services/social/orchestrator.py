@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Unified social posting / reads with hourly rate limiting (Phase 22 + Phase 24)."""
 
 from __future__ import annotations

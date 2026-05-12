@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Central execution loop router — bounded real work before generic LLM guidance (P0).
 

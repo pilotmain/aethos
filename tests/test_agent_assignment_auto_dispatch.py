@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 67 — POST /agent-assignments auto-runs dispatch_assignment when payload omits ``auto_dispatch``."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Idea intake, project workflow, and context resolution."""
 
 from types import SimpleNamespace

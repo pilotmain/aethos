@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Greeting path, weak-input skips, ops status routing, and worktree copy."""
 
 import re

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Tests for user-facing list/bullet response cleanup."""
 from app.services.response_formatter import clean_response_formatting
 

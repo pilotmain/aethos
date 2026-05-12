@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Telegram — workspaces (organizations), invites, and team switcher (Phase 29).
 

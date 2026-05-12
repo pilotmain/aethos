@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Run allowlisted CLIs through the user's login shell so ``nvm.sh`` and rc files apply like Terminal/Cursor.
 

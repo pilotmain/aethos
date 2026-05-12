@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """BYOK: encrypted user keys, merged LLM selection, and role invariants."""
 from __future__ import annotations
 

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Phase 70 — :mod:`app.services.llm.cost_aware_router` unit tests.
 

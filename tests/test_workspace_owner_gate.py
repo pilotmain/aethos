@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Workspace root registration aligns with unified owner gates (AETHOS_OWNER_IDS)."""
 
 from __future__ import annotations

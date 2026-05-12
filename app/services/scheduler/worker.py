@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Execute a stored scheduler job through :class:`~app.services.gateway.runtime.NexaGateway`."""
 
 from __future__ import annotations

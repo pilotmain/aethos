@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Deterministic custom-agent lifecycle routing — must win over folder/host/next-action heuristics.
 

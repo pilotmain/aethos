@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Draft skills from natural language — installation requires explicit approval."""
 
 from __future__ import annotations

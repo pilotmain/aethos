@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Platform detection for macOS, Windows, Linux (Phase 25 native setup UX).
 """

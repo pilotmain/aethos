@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 from __future__ import annotations
 
 from app.services.skills.draft import draft_skill_from_prompt, validate_skill_manifest

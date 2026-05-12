@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 REST API for orchestration sub-agents (spawn / list / CRUD / CEO lifecycle).
 

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 from app.services.agent_registry import resolve_mention_key
 from app.services.agent_router import parse_leading_mention, route_agent
 from app.services.mention_control import parse_mention

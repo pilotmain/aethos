@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Enterprise governance: organizations, memberships, org-scoped policies."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Thin HTTP clients for deployment visibility (Vercel API + Railway CLI fallback)."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 42 — dev mission retries until tests pass (bounded)."""
 
 from __future__ import annotations

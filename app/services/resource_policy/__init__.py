@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Host resource limits policy (Phase 54 MVP — validation + Mission Control exposure)."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 51 — gateway scrub, legacy-copy guards on key surfaces, OIDC scenario shape."""
 
 from __future__ import annotations

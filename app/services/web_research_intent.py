@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Detect public URLs in user text and resolve role for web-access policy (SSRF, internal).
 """

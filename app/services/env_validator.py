@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Static checks for environment combinations that often break the Nexa dev stack."""
 
 from __future__ import annotations

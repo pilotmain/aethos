@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """``nexa features`` — summarize enabled capability flags from repo ``.env``."""
 
 from __future__ import annotations

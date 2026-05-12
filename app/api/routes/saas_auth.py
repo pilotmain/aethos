@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Cloud SaaS registration and login (email + password, JWT bearer)."""
 
 from __future__ import annotations

@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Phase 36 — Rewrite ``NEXA_*`` variable names to ``AETHOS_*`` in a ``.env`` file.
 

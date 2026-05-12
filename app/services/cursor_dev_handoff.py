@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Finalize dev_executor jobs when `.agent_tasks/dev_job_{id}.done.md` appears:
 build a `.review.md`, move DB to ready_for_review, optional Telegram push.

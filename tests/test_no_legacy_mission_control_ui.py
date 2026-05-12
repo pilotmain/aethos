@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 29 — block legacy Mission Control dashboard copy from reappearing in web sources."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 4: channel origin merged into audit/trust metadata."""
 
 from __future__ import annotations

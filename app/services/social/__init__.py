@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Social media automation — Twitter/X, LinkedIn, Facebook, Instagram feed, TikTok video."""
 
 from app.services.social.facebook import FacebookClient

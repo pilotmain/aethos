@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 7 / 15 — streamable bus, timeline API, WebSocket delivery, normalized schema."""
 
 from __future__ import annotations

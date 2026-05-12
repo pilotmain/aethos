@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Lightweight skill-chain hints from natural-language goals (keyword-based)."""
 
 from __future__ import annotations

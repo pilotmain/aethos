@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 28 — OpenAPI includes core paths aligned with docs/API_CONTRACT.md."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Skills: user JSON docs (Phase 22) + optional packaged manifests (Phase 53) + plugin runtime (Phase 6)."""
 
 from app.services.skills.clawhub_client import ClawHubClient

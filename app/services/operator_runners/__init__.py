@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Provider-scoped read-only CLIs for operator-mode orchestration (expandable)."""
 
 from app.services.operator_runners.base import (

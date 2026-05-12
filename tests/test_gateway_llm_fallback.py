@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Gateway LLM fallback (imperative lines before full chat)."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """External execution session — user can reply after access/prompt without dead-ending."""
 
 from __future__ import annotations

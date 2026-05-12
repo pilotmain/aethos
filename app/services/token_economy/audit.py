@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """In-memory token audit trail for transparency (Phase 38); no raw secrets."""
 
 from __future__ import annotations

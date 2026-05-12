@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Governed agent runtime: tool manifest, session spawn, heartbeats, workspace files."""
 
 from app.services.agent_runtime.heartbeat import background_heartbeat

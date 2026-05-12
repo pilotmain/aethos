@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Nexa capability registry for mention routing and help copy."""
 
 AGENTS: dict[str, dict[str, object]] = {

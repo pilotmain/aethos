@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Telegram-shaped adapter — same gateway admission as web."""
 
 from __future__ import annotations

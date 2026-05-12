@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 SQLite persistence for Mission Control projects and tasks (Phase 27).
 

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 56 — Mission Control snapshot exposes dev run progress for Active Work."""
 
 from __future__ import annotations

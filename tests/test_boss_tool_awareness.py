@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """@boss: tool list messaging and prompt strings (no stale text-only refusals when tools exist)."""
 
 from __future__ import annotations

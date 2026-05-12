@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Focus-task loop detection and task-pattern stats for adaptive nudge/unstick copy."""
 
 from __future__ import annotations

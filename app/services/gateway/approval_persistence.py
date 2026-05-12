@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Persist approval wait state on agent jobs (Phase 38) — survives API restart."""
 
 from __future__ import annotations

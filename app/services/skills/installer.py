@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 17 — install / update / remove ClawHub skill packages (ZIP → skill.yaml → registry).
 
 Phase 75 extends this module with:

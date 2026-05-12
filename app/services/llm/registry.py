@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Singleton registry for Phase 11 :class:`~app.services.llm.base.LLMProvider` instances."""
 
 from __future__ import annotations

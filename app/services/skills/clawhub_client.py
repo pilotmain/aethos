@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """ClawHub HTTP client (Phase 17) — search, metadata, download."""
 
 from __future__ import annotations

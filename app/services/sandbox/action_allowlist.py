@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Allowlisted actions and commands for approved sandbox execution (workspace-scoped)."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 44A — autonomous decision loop: signals → prioritized NexaTask candidates → persistence."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 44–45 — classify dev run outcomes and suggest remediation strategies."""
 
 from __future__ import annotations

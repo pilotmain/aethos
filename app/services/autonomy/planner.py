@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Autonomous planning hook — follow-ups and system ticks when NEXA_AUTONOMOUS_MODE (Phase 43–44)."""
 
 from __future__ import annotations

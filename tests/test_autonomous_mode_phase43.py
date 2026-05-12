@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 43 — autonomous planner and optional long-running gateway ticks."""
 
 from __future__ import annotations

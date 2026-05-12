@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Human-readable explanations for privacy detection outcomes (Phase 19)."""
 
 from __future__ import annotations

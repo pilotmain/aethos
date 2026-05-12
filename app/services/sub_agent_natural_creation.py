@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Natural-language creation of orchestration sub-agents (registry), distinct from LLM custom agents.
 

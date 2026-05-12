@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Per-user queued banners when orchestration sub-agents are spawned (next gateway reply)."""
 
 from __future__ import annotations

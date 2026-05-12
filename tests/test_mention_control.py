@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 from app.services.mention_control import MENTION_ALIASES, parse_mention, map_catalog_key_to_internal
 from app.services.agent_catalog import AGENTS
 from app.services.agent_telegram_copy import format_command_center, format_agents_list

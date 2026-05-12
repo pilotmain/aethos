@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Terminal UI helpers for the Nexa CLI setup experience (Phase 25 / Phase 32).
 

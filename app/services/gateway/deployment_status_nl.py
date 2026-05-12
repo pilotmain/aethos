@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Gateway NL: list Vercel / Railway projects when the user asks for deployment visibility."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """P0 — follow-up turns recognize local CLI auth + permission to run read-only probes."""
 
 from __future__ import annotations

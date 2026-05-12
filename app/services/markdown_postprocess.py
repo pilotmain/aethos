@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Lightweight cleanup for LLM/agent Markdown artifacts (no full parser)."""
 
 from __future__ import annotations

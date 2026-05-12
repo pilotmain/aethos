@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Encrypt a single file for private artifact packaging (optional Fernet; dev utility).
 
 Requires: ``pip install cryptography`` (not part of minimal OSS runtime).

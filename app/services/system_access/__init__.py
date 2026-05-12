@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Workspace-scoped system access (Phase 39) — safe defaults; extend with governance."""
 
 from app.services.system_access.files import read_text_file

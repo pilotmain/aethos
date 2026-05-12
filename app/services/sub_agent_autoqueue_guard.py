@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Restrict in-process autoqueue (``execute_payload``) for sub-agents (Week 5).
 

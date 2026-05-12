@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Operator mode — CLI locally does not require duplicate prefs (session-level)."""
 
 from __future__ import annotations

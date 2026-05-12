@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Abstract channel interface for Nexa multi-channel support (Phase 12)."""
 
 from __future__ import annotations

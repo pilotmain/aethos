@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """infer_host_executor_action maps safe short phrases only."""
 
 from __future__ import annotations

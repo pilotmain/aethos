@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Shared enforcement for privileged execution — call at every trust boundary (host, tools, orchestration hooks).
 

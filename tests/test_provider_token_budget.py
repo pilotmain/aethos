@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 38 — provider gateway respects token budget."""
 
 from __future__ import annotations

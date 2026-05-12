@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Anthropic model presets from ``NEXA_LLM_INTELLIGENCE_LEVEL`` (cost vs capability)."""
 
 from __future__ import annotations

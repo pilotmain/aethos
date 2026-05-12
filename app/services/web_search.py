@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Optional tool-based web search (Brave, Tavily, SerpAPI). Read-only: snippets + URLs only.
 No scraping of result pages, no API keys in logs.

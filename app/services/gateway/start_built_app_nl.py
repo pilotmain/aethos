@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Gateway NL: start scaffolded workspace apps (static todo bundle, optional Node backend, React)."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 22 — NEXA_LOCAL_FIRST prefers local_stub when tool maps to remote."""
 
 from __future__ import annotations

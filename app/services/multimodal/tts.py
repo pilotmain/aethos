@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Text-to-speech — OpenAI Speech API or ElevenLabs (Phase 18c)."""
 
 from __future__ import annotations

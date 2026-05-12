@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 User-friendly **roles** (maps to orchestration ``domain`` keys on :class:`~app.services.sub_agent_registry.SubAgent`).
 

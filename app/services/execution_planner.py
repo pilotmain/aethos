@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Extended NL matching and multi-step *workspace file* plans (no shell from gateway)."""
 
 from __future__ import annotations

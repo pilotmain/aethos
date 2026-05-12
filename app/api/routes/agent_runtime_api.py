@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """HTTP API for sessions_spawn and background_heartbeat (governed tool calls)."""
 
 from __future__ import annotations

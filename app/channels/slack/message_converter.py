@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Convert Slack Bolt payloads into the ``raw_event`` shape expected by :class:`~app.services.channel_gateway.slack_adapter.SlackAdapter`."""
 
 from __future__ import annotations

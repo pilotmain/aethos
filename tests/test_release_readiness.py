@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Release readiness: env checks, job diagnostics, doctor, queue, startup log (no secrets)."""
 
 from __future__ import annotations

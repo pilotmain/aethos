@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """User-scoped Nexa workspace projects — labeled folders inside approved roots (no scanning)."""
 
 from __future__ import annotations

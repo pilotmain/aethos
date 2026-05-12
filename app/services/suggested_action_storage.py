@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Persist the last 'Next steps' list on ConversationContext (co-pilot)."""
 
 from __future__ import annotations

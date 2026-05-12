@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 46E / 47F — usage-aware efficiency signals for Mission Control."""
 
 from __future__ import annotations

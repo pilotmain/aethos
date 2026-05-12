@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Offline / strict privacy runtime hints and gateway behavior (Phase 13)."""
 
 from __future__ import annotations

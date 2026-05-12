@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Report watcher API and safe report file reads."""
 
 from __future__ import annotations

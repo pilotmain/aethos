@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """User session handles for gateway — durable session ids keyed by channel + user."""
 
 from __future__ import annotations

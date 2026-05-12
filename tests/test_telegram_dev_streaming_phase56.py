@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 56 — Telegram progress hook schedules replies on the bot loop."""
 
 from __future__ import annotations

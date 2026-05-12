@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Per-request and daily token/cost budgets (Phase 38)."""
 
 from __future__ import annotations

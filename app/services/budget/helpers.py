@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Budget toggles without LLM / :class:`~app.services.llm.base.Message` imports (import-cycle safe)."""
 
 from __future__ import annotations

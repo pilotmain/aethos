@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 77 — configuration Q&A intent and handler."""
 
 from __future__ import annotations

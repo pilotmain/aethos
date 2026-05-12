@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Phase 70 — ``execute_payload(simulate=True)`` returns a planned-actions
 summary instead of running anything.

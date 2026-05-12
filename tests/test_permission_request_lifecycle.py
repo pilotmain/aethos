@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """End-to-end permission request: store payload, grant, resume enqueue, once consumption (P0)."""
 
 from __future__ import annotations

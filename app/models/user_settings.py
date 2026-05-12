@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Per-user Nexa preferences (Phase 20) — privacy mode + UI prefs persisted in DB."""
 
 from __future__ import annotations

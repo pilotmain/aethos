@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Batch file creation helpers for NL gateway shortcuts (workspace-scoped)."""
 
 from __future__ import annotations

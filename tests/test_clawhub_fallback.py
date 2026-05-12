@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """ClawHub client falls back to bundled catalog when the remote registry fails."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 43 — scheduler dev missions route through :meth:`NexaGateway.handle_message`."""
 
 from __future__ import annotations

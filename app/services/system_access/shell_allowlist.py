@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Expanded argv allowlists for safe host tooling (Phase 42).
 
 Wire these into approval flows — :func:`~app.services.system_access.shell.run_allowlisted_shell`

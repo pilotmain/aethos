@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 23–24 — dev workspaces + runs API."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Parse ``skill.yaml`` manifests for the Phase 6 pluggable skill runtime."""
 
 from __future__ import annotations

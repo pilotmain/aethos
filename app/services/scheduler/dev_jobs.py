@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Bounded dev jobs dispatched from scheduler rows (Phase 24–25)."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """P0 — Railway-shaped asks route through execution loop with investigation framing."""
 
 from __future__ import annotations

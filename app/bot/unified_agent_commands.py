@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 48 — unified orchestration roster listing (Telegram + web chat)."""
 
 from __future__ import annotations

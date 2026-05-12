@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 **Team roster** — user-facing API over :class:`~app.services.sub_agent_registry.AgentRegistry`.
 

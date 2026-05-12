@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """AethOS interactive setup wizard — first-run and re-run with backup + validation."""
 
 from __future__ import annotations

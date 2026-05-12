@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """General question detection, correction strip, and answer service."""
 
 from unittest.mock import MagicMock, patch

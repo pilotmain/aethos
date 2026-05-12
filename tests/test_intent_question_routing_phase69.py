@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 69 — interrogative messages must not be hijacked by the dev pipeline.
 
 Verifies that ``looks_like_informational_question`` (and the ``get_intent`` fast-path

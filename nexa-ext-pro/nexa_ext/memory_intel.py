@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Pro memory ranking — rerank semantic hits using query overlap + recency hints."""
 
 from __future__ import annotations

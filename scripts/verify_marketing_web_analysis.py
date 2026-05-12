@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Verify public URL read (and supplemental site: search when search is enabled) for marketing-style analysis.
 Loads .env from the repo root; no LLM calls. Exits 1 if the public fetch has no usable text.

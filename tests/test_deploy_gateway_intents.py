@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Deploy gateway NL helpers: cancel, reset, available-clouds intent."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Cursor agent adapter — policy-gated; no remote execution wired in Phase 24."""
 
 from __future__ import annotations

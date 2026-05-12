@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 20 — missions and exports scoped by user_id."""
 
 from __future__ import annotations

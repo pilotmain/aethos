@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Browser Web UI — Phase 1: sessions, chat, jobs, keys, system status. Reuses core services."""
 from __future__ import annotations
 

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 19 — user privacy modes (strict / paranoid)."""
 
 from __future__ import annotations

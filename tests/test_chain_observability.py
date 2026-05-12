@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Week 3: chain observability logs (no execution semantics changes)."""
 
 from __future__ import annotations

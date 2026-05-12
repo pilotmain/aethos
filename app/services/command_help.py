@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Intent-first reference when users ask what they can do (plain language, no slash roster)."""
 
 

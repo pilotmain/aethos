@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 16a — REST delegation (Mission Control auth: ``X-User-Id`` + optional ``NEXA_WEB_API_TOKEN``)."""
 
 from __future__ import annotations

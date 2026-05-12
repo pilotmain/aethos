@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Primary completion chain for :mod:`app.services.llm_service` (Phase 11).
 """

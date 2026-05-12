@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """User capability modes, env lists, and access gating (no real secrets)."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Structured extraction — CSS, XPath, regex, tables, metadata, JSON-LD (Phase 21)."""
 
 from __future__ import annotations

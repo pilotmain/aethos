@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Redact dev command output for persistence; gate outbound dicts through the privacy firewall."""
 
 from __future__ import annotations

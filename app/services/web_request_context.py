@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Request-scoped web chat session id (so deep call chains can load the right ConversationContext)."""
 
 from __future__ import annotations

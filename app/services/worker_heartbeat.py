@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Host worker heartbeat (JSON) for /dev health checks."""
 from __future__ import annotations
 

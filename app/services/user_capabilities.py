@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Multi-user capability modes for the Telegram bot (env + DB bootstrap; no PII in replies)."""
 
 from __future__ import annotations

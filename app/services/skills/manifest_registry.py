@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Load packaged skills from data/nexa_skill_packages/ (Phase 53)."""
 
 from __future__ import annotations

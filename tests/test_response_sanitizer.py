@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Unit tests for execution/assignment reply sanitization (hallucination guard)."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Governed agent organization: teams, roles, durable assignments, deterministic planner."""
 
 from app.services.agent_team.chat import (

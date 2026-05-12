@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Operator Vercel runner — bounded CLI behavior."""
 
 from __future__ import annotations

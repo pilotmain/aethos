@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """P0 — execution loop runs before structured routing / LLM on gateway admission."""
 
 from __future__ import annotations

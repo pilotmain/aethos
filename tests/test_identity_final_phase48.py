@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 48 — identity lock using ``legacy_identity_violations`` on interaction surfaces.
 
 Uses the same scoped paths as ``test_system_identity_locked`` (web, bot, gateway,

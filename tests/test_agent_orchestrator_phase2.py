@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 2: assignment ↔ permission lifecycle, host bridge, Mission Control fields, chat guard."""
 
 from __future__ import annotations

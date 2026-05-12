@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Non-destructive stub — default fallback when no other adapter is available."""
 
 from __future__ import annotations

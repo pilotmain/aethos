@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Ingress for outbound payloads — worker dict gate + legacy string gate for providers."""
 
 # DO NOT MODIFY WITHOUT SECURITY REVIEW — privacy ingress path.

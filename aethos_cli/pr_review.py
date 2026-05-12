@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """CLI entry for automated GitHub PR review (calls in-process orchestrator)."""
 
 from __future__ import annotations

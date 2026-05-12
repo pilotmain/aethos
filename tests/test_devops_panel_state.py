@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 24 — DevOpsPanel data contract (keys from Mission Control snapshot)."""
 
 

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Phase 73e — small key/value store for system-wide signals that don't
 naturally belong on a per-agent or per-proposal row.

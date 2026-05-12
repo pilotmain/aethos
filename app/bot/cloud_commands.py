@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Telegram commands for universal cloud provider discovery (Phase 52c / 52d)."""
 
 from __future__ import annotations

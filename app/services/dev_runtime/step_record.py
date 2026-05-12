@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Persist NexaDevStep rows with Phase 25 iteration metadata."""
 
 from __future__ import annotations

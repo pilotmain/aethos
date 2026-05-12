@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Tests for optional ``aethos_pro`` plugin loader (OSS repo has no commercial package)."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Persistent long-running agent sessions (Phase 42)."""
 
 from __future__ import annotations

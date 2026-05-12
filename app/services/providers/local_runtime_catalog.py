@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Catalog of local / OpenAI-compatible inference endpoints (documentation + discovery helpers)."""
 
 from __future__ import annotations

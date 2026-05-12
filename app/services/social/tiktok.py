@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """TikTok Content Posting API — Direct Post video via FILE_UPLOAD (Phase 24)."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Mandatory outbound HTTP wrapper — product code should not call httpx/raw sockets directly.
 

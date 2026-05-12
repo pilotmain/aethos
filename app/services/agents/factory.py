@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Create lightweight agent specs for orchestration (handles unknown user-defined agents)."""
 
 from __future__ import annotations

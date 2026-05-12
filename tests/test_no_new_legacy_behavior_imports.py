@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 51D — only approved modules may import legacy_behavior_utils directly."""
 
 from __future__ import annotations

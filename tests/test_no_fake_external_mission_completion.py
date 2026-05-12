@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """P0 — hosted Railway/deploy asks must not become generic missions with fake https agents."""
 
 from __future__ import annotations

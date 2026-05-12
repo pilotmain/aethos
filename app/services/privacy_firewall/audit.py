@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Audit hooks for privacy decisions (ties into ``audit_logs`` / trust stream)."""
 
 # DO NOT MODIFY WITHOUT SECURITY REVIEW — audit trail wiring.

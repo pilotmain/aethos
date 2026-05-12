@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Rewrite legacy identity leaks in user-visible gateway output (Phase 51)."""
 
 from __future__ import annotations

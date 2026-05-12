@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 27 — pytest loads SQLite via NEXA_NEXT_LOCAL_SIDECAR (see tests/conftest.py)."""
 
 from __future__ import annotations

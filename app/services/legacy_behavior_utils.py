@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Legacy behavior / LLM reply composition (``build_response`` and helpers).
 
 Phase 36: user-facing entry is :class:`~app.services.gateway.runtime.NexaGateway`; this module

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Nexa Ops: approval-gated jobs (worker_type=ops_worker) and on-approve execution."""
 
 from __future__ import annotations

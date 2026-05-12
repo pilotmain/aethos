@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 38 — provider token/cost usage summaries (no raw payloads).
 
 Budget tab + Mission Control use GET ``/providers/usage``. Roll-ups **must** match

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 # DO NOT MODIFY WITHOUT SECURITY REVIEW — payload immutability after firewall gate.
 
 """Frozen dict — blocks mutation after the privacy firewall prepares outbound payloads."""

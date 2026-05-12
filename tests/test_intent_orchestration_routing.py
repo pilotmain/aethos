@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Orchestration / external infra intents — do not downgrade to local file path UX."""
 
 from __future__ import annotations

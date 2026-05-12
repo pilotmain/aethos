@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """In-process task/status dashboard for Agentic OS UX (best-effort; single-worker scope)."""
 
 from __future__ import annotations

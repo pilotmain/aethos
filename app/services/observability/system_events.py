@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Cross-cutting structured log lines for major subsystems (Phase 28)."""
 
 from __future__ import annotations

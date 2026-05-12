@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Google Gemini generateContent (REST) — vision-capable, Phase 18b."""
 
 from __future__ import annotations

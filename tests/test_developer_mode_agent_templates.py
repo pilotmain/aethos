@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Developer workspace: custom agents default to Base Operator, not legal templates."""
 
 from __future__ import annotations

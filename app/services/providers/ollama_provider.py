@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Local Ollama HTTP provider — invoke only via :func:`~app.services.providers.gateway.call_provider`."""
 
 from __future__ import annotations

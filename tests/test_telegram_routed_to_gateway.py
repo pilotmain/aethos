@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 35 — Telegram structured turns first; full chat matches web via gateway."""
 
 from __future__ import annotations

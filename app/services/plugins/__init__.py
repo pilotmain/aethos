@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Plugin registry — tools load once at startup and extend ``TOOLS``."""
 
 from app.services.plugins.registry import (

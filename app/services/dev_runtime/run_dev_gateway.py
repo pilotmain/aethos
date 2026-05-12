@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Gateway shortcut: ``run dev`` / ``run dev: …`` → :func:`run_dev_mission` when unambiguous."""
 
 from __future__ import annotations

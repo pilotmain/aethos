@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 11: Apple Messages for Business (provider) adapter, webhook, audit, status."""
 
 from __future__ import annotations

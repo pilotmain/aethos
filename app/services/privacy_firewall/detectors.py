@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Heuristic detectors for secrets, PII, and policy triggers (expand over time)."""
 
 # DO NOT MODIFY WITHOUT SECURITY REVIEW — detector heuristics affect outbound safety.

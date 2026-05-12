@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Workspace intelligence — structured file-backed context without heavy infra."""
 
 from __future__ import annotations

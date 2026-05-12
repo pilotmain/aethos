@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Future: automated code review stage (Phase 23 placeholder)."""
 
 from __future__ import annotations

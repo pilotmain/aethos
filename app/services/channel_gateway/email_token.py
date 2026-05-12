@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """HMAC tokens for email permission links (no cookies / X-User-Id in mail clients)."""
 
 from __future__ import annotations

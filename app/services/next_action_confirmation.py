@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Parse 'yes' / 'first' / 'option 2' and map to stored co-pilot next steps. Chat-first, no new UI.
 """

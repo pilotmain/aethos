@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Market/topic assignments must not trigger local folder clarification or host synthetic paths."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 26 — legacy static persona chips must not ship in Nexa-Next UI."""
 
 from __future__ import annotations

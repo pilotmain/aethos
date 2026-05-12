@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Route authority: classify inbound turns → gateway intents (missions, tools, chat).
 
 Concrete routing logic will delegate to mission parser, onboarding, and channel adapters."""

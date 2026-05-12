@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Retry/backoff helpers for argv/subprocess paths (distinct from Phase 73 agent Genesis Loop)."""
 
 from __future__ import annotations

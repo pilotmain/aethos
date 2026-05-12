@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Sandbox audit hooks (structured logging only)."""
 
 from __future__ import annotations

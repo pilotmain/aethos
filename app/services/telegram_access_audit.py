@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Audit trail for access denials (no long message bodies, no secrets)."""
 
 from __future__ import annotations

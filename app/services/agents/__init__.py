@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Agent runtime helpers — long-running sessions, checkpoints (Phase 41)."""
 
 from app.services.agents.long_running import (

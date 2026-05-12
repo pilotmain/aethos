@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Next-step confirmation parser and apply logic."""
 
 from __future__ import annotations

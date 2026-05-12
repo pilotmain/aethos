@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Lightweight in-process traces/metrics/alerts (optional; gateway NL hooks)."""
 
 from __future__ import annotations

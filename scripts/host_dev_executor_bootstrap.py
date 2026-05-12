@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Exec the bash implementation with a clean environment. Python is the *first* interpreter
 (zsh/IDE cannot run tset/reset in preexec *before* Python starts — unlike bash(1) + $BASH_ENV).

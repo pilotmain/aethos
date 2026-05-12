@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """One-shot health and release-readiness text for /dev doctor and /dev git."""
 
 from __future__ import annotations

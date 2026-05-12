@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 10 — admin introspection (disabled unless ``NEXA_ADMIN_ENDPOINTS_ENABLED``)."""
 
 from __future__ import annotations

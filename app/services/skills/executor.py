@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Execute pluggable skills (Python entrypoints; shell reserved).
 
 Phase 75 added a small "sandbox" layer that the registry calls into before

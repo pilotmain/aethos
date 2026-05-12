@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 49 — soften robotic LLM phrasing and bound reply length (natural UX layer)."""
 
 from __future__ import annotations

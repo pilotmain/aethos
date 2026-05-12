@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Interactive native setup wizard — Phase 25 + Phase 32 (boxed steps, welcome screen)."""
 
 from __future__ import annotations

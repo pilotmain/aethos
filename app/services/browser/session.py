@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Singleton async Playwright browser session (Phase 14)."""
 
 from __future__ import annotations

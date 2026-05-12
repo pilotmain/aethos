@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """CLI executor wraps subprocess with backend resolution."""
 
 from __future__ import annotations

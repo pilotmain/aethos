@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Run resolved CLI argv via :func:`~app.services.cli_backends.get_cli_command`.
 

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Heuristic selection of workspace files for the current user turn."""
 
 from __future__ import annotations

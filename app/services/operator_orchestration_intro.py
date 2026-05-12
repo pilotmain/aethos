@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 OpenClaw-style proactive copy when operator mode is on (enhanced orchestration slice).
 

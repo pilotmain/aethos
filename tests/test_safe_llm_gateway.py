@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Tests for :mod:`app.services.safe_llm_gateway`."""
 
 from pathlib import Path

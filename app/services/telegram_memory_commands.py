@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Telegram /memory commands for repo-root soul.md and memory.md."""
 
 from __future__ import annotations

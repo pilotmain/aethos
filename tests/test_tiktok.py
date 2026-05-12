@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 24 — TikTok upload client (mocked HTTP)."""
 
 from __future__ import annotations

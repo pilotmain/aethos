@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Natural-language host executor offers: confirm once, then enqueue approved jobs only."""
 
 from __future__ import annotations

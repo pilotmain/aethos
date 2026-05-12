@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Append-only audit log for dev jobs and policy events."""
 from __future__ import annotations
 

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 from app.core.db import SessionLocal
 from app.repositories.checkin_repo import CheckInRepository
 from app.services.checkin_service import CheckInService

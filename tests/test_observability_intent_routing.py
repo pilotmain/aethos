@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Observability NL must not be mistaken for host read-file intents."""
 
 from __future__ import annotations

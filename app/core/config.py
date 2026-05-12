@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Settings load from environment variables. Project `.env` is read from the repo
 root (next to this package), not the process cwd, so Uvicorn/bot work from any directory.

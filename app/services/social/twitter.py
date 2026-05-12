@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Twitter / X API v2 — OAuth 1.0a for writes, Bearer for reads (Phase 22)."""
 
 from __future__ import annotations

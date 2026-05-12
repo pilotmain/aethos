@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Resolve the directory that should be treated as the deployable project root."""
 
 from __future__ import annotations

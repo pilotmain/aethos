@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Tests for mission control graph_builder."""
 
 from app.services.mission_control.graph_builder import build_graph

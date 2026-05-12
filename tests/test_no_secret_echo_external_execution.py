@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """P0 — credential flows never echo pasted material."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Direct LLM answers for normal questions (AethOS is not only static fallbacks)."""
 
 from __future__ import annotations

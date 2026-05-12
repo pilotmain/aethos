@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Unified agent creation (barrel).
 
 Implementation lives in :mod:`app.services.sub_agent_natural_creation` (Phase 48/49 NL parsing +

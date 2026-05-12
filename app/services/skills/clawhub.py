@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """HTTP-facing helpers for ClawHub-compatible skill registry (Phase 6 + 17)."""
 
 from __future__ import annotations

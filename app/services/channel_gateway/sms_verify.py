@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Twilio webhook request validation (X-Twilio-Signature)."""
 
 from __future__ import annotations

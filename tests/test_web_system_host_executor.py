@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Web system status exposes host executor panel (safe fields only)."""
 
 from __future__ import annotations

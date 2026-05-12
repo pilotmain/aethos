@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """P0 — executable infra asks must not fall through to generic coaching phrases."""
 
 from __future__ import annotations

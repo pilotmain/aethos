@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Abstract LLM provider interface (Phase 11) — implementations live under ``providers/``.
 

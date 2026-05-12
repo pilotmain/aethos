@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Channel Gateway Phase 2: ChannelUser mapping and normalized metadata."""
 
 from __future__ import annotations

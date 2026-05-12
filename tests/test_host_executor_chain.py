@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """``host_action: chain`` — flag, allowlist, stop_on_failure (sync steps)."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 27 — no frontend references to deprecated Mission Control summary path."""
 
 from __future__ import annotations

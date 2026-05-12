@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 42 — Discord bot helpers (no live Discord network)."""
 
 from __future__ import annotations

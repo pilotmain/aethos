@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Controlled host executor: allowlists, paths, timeouts (no unrestricted shell)."""
 from __future__ import annotations
 

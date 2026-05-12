@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Encrypt and decrypt per-user values with a server-side secret.
 Uses Fernet with a key derived from NEXA_SECRET_KEY (never log it).

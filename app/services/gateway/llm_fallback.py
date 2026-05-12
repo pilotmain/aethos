@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Gateway NL: LLM interpretation for imperative text that missed structured handlers.
 
 This path is **advisory only** — it does not execute shell, write files, or open URLs from model

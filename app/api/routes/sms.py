@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Twilio SMS inbound webhook — Channel Gateway (Phase 10)."""
 
 from __future__ import annotations

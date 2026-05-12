@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 In-memory analysis of bundled file reads — no indexing, no persistence.
 

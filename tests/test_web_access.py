@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 1: public read-only URL fetch, SSRF blocks, and research wiring."""
 
 from __future__ import annotations

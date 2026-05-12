@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Lightweight markdown shells for client-ready exports (no LLM)."""
 
 from __future__ import annotations

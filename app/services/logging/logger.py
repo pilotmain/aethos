@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Central ``nexa`` logger — use for mission, provider, and privacy audit lines."""
 
 from __future__ import annotations

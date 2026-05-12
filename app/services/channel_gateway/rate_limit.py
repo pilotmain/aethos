@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """In-memory per-channel and per-user outbound pacing (Phase 12)."""
 
 from __future__ import annotations

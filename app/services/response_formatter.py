@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """User-facing response cleanup — implemented by the ``aethos-core`` package (see requirements.txt)."""
 
 from __future__ import annotations

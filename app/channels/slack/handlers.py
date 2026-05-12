@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Slack Bolt event handlers — Socket Mode (Phase 12.1)."""
 
 from __future__ import annotations

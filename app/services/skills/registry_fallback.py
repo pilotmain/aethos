@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Offline / bundled marketplace catalog when the remote ClawHub registry is unreachable."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Telegram-first copy for onboarding, help, and weak-input handling — natural language first."""
 
 from __future__ import annotations

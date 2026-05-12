@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 27 — /agents duplicate alias removed (use /custom-agents only)."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Preflight checks before the host runs the dev agent (git, aider, paths, API keys, notify)."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Secure Railway / hosted credential guidance — chat pastes are not worker env (P0).
 

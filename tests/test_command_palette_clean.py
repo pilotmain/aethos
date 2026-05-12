@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 26 — command hints must not reference legacy Nexa v1 slash strings."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 53 — install_check.sh present and safe."""
 
 from __future__ import annotations

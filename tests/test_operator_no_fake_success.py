@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Operator truth — no definitive deploy success without verification."""
 
 from __future__ import annotations

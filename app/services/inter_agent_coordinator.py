@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Natural-language agent-to-agent task chaining (registry sub-agents)."""
 
 from __future__ import annotations

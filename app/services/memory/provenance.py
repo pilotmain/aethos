@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Memory entry provenance fields (stored inside ``value_json`` / client payloads)."""
 
 from __future__ import annotations

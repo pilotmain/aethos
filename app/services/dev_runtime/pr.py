@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """PR preparation (V1 — summary text only, no GitHub API)."""
 
 from __future__ import annotations

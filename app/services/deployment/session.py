@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Deployment session tracking — remembers recent deploys per chat for autonomous status/logs.
 

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """User-facing copy for research / public web / live search (runtime from settings)."""
 
 from __future__ import annotations

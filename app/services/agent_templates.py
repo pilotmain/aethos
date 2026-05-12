@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Predefined agent presets for Mission Control / orchestration (documentation + future UI).
 
 These are **hints** for spawn payloads — the orchestration registry still validates

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Railway operator diagnostics — delegates to bounded Phase 58 runner."""
 
 from __future__ import annotations

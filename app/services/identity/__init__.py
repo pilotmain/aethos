@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 48 — single-system identity; legacy persona/command patterns."""
 
 from app.services.identity.legacy_strings import (

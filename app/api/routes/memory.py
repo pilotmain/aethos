@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Legacy REST prefix ``/api/v1/memory`` — removed (HTTP 410).
 
 Agent memory (preferences, soul, notes) lives under ``/api/v1/web/memory/…``.

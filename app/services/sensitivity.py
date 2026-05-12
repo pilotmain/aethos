@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Single source of truth for payload / text sensitivity tier (avoid recompute drift).
 

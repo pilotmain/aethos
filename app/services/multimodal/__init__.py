@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 18 — multi-modal services (18a: config + skeleton; providers in 18b+)."""
 
 from app.services.multimodal.models import MediaKind, MediaRef, MultimodalPhase18APlaceholder

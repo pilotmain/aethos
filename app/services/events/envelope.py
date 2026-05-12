@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Standard runtime event envelope for Mission Control (Phase 14–15)."""
 
 from __future__ import annotations

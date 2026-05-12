@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """P0 — pasted Railway tokens trigger credential setup flow (no echo)."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Aggregate Mission Control dashboard data from existing Nexa services (no duplicate logic)."""
 
 from __future__ import annotations

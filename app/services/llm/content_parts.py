@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """OpenAI-style multimodal content blocks (Phase 18b) — shared by providers."""
 
 from __future__ import annotations

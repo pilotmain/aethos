@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Detect multi-agent *capability* questions so they route to clarification, not custom-agent creation.
 """

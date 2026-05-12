@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Deterministic V1 planner — keyword routing to agent handles (no LLM)."""
 
 from __future__ import annotations

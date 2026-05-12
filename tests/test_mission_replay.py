@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 10 — replay stored mission input through the gateway."""
 
 from __future__ import annotations

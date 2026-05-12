@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Optional ``LLMProvider`` wrapper that enforces Phase 28 per-member budgets.
 """

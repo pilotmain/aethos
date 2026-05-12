@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Simple sliding-window rate limit for provider calls (per user_id)."""
 
 from __future__ import annotations

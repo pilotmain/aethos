@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Universal cloud provider registry + CLI executor (Phase 52b)."""
 
 from app.services.cloud.executor import UniversalCloudExecutor, get_universal_cloud_executor

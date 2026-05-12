@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Week 4 Phase 3 + Week 5 hardening — sync sub-agent execution (domain dispatch).
 

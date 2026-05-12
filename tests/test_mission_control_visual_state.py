@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Mission Control V2 UI contract: ready-loop phrases + routing helpers stay stable for the web layer."""
 
 from __future__ import annotations

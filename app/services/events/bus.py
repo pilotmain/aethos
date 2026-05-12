@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Streamable in-process event bus — deque history + optional subscriber push (WebSocket/SSE)."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Gateway ``run dev`` prefix — parse + ordering before loose mission parser."""
 
 from __future__ import annotations

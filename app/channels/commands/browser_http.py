@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """HTTP client for Phase 14 browser API (Telegram / Slack — Bearer ``NEXA_CRON_API_TOKEN``)."""
 
 from __future__ import annotations

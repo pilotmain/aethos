@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Mission Control dashboard API (V1) — summary + developer cleanup actions.
 
 Phase 15 — locked contracts (stable JSON/WebSocket; do not rename or remove):

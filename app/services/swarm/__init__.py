@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Deterministic multi-agent mission parsing and worker orchestration (V1)."""
 
 from app.services.swarm.mission_parser import parse_mission

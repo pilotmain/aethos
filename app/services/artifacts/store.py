@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """DB-backed artifact store — mission-scoped outputs for agent handoff."""
 
 from __future__ import annotations

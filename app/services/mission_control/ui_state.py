@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Persist per-user Mission Control UI dismissals (attention rows without durable rows)."""
 
 from __future__ import annotations

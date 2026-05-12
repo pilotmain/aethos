@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Ensure third-party SDK usage stays confined to ``app/services/providers/``."""
 
 from __future__ import annotations

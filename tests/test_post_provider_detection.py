@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 18 — post-provider egress scan vs gateway behavior."""
 
 from __future__ import annotations

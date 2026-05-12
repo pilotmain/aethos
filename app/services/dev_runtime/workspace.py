@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Register and validate dev workspaces (path confinement)."""
 
 from __future__ import annotations

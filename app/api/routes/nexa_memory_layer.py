@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 22 persistent memory documents — GET/POST `/api/v1/nexa-memory`."""
 
 from __future__ import annotations

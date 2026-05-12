@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Phase 54A — deep memory in dev + mission planning, workspace guidance, regression cases.
 """

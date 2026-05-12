@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Explicit CLI backend registry (OpenClaw-style): resolve ``vercel``, ``gh``, etc. to concrete binaries.
 

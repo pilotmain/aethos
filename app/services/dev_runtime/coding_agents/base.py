@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Coding agent adapter interface — Phase 24."""
 
 from __future__ import annotations

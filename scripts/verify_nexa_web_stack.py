@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Smoke check: API health, web system status, public URL script, optional doctor.
 Run from repo root: python scripts/verify_nexa_web_stack.py [--api-base URL]

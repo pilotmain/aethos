@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 26 — lightweight UI source guards for legacy Nexa strings."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Allowlisted one-shot shell helpers (no arbitrary user shell)."""
 
 from __future__ import annotations

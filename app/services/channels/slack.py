@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Slack channel adapter (canonical import path for Phase 41 channel expansion)."""
 
 from __future__ import annotations

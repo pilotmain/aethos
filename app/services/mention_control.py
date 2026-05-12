@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Explicit @agent mention parsing (Telegram and routing). Does not run on non-@ messages."""
 
 from __future__ import annotations

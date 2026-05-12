@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Gateway NL: autonomous goal planning (owner-only; gated by Settings)."""
 
 from __future__ import annotations

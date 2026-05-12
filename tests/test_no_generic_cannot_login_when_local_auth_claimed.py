@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """P0 — scrub generic cloud-login refusal when user claims local CLI auth."""
 
 from __future__ import annotations

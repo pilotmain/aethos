@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Scoped access grants for local tools (permissioned computer access)."""
 
 from __future__ import annotations

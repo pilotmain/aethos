@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Narrow natural-language → ``host_action: chain`` (README + commit + push).
 

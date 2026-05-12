@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Named commercial tier features — OSS core ignores these unless a valid license is loaded."""
 
 from __future__ import annotations

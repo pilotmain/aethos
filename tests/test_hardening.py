@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 from app.services.dev_agent_policy import evaluate_dev_job_policy
 from app.services.secret_scan import scan_text_for_secrets
 from app.services.aider_autonomous_loop import approval_inline_markup

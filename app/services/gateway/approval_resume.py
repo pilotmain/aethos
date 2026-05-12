@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Deterministic post-approval summary for workers/UI (Phase 37).
 
 Execution continues through the existing host worker + job locks; this payload is the

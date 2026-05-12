@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 33 — identity strings frozen on user-facing and gateway surfaces.
 
 Full-repo purge of legacy persona hints lives in routing modules; this guard locks

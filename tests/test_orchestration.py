@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 16a — orchestration policy, REST delegate auth, gateway parse."""
 
 from __future__ import annotations

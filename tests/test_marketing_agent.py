@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Marketing agent: public URL + web search should inform replies (not deny tools)."""
 
 from __future__ import annotations

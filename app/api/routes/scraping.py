@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 21 — web scraping API (Bearer ``NEXA_CRON_API_TOKEN``, same as cron / browser)."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Channel gateway admin: configuration visibility (read-only, no secrets)."""
 
 from __future__ import annotations

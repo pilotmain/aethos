@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Operator CLI auth guidance (Vercel / gh not logged in)."""
 
 from __future__ import annotations

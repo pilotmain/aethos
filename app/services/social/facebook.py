@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Facebook Page feed via Graph API (Phase 22). Instagram uses :mod:`app.services.social.instagram`."""
 
 from __future__ import annotations

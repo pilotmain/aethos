@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Discord inbound adapter — text fans into :func:`~app.services.channels.router.route_inbound`."""
 
 from __future__ import annotations

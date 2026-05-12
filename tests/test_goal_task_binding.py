@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 47B — goals persist with execution children linked via goal_id."""
 
 from __future__ import annotations

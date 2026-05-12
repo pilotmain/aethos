@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """On-demand local file intent (paths relative to host work root)."""
 
 from __future__ import annotations

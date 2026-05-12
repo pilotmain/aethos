@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Shared paths for Cursor/dev handoff marker files (payload, cursor_task_path, or default .agent_tasks)."""
 from __future__ import annotations
 

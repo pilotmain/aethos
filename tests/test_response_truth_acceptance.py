@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Acceptance-style checks from docs/response truth finalization (integration + focused unit tests).
 

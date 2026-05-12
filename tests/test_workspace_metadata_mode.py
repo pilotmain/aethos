@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """workspace_metadata.json defaults track regulated vs developer posture."""
 
 from __future__ import annotations

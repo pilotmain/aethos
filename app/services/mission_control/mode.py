@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Mission Control dashboard-mode detection — configuration, not executable spawn."""
 
 from __future__ import annotations

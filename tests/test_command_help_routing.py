@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 from app.services.legacy_behavior_utils import build_response, Context
 from app.services.intent_classifier import is_command_question
 from app.services.command_help import format_command_help_response

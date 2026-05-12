@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 44–45 — rank memory for task context; adaptive weights from feedback (Phase 45D)."""
 
 from __future__ import annotations

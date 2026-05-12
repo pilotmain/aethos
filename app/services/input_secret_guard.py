@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Detect accidental secret pastes before host executor / path routing (Phase 51+ routing hardening)."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 10 — persistent audit rows for outbound provider attempts."""
 
 from __future__ import annotations

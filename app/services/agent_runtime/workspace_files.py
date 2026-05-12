@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Create and update workspace files under reports/config/memory with safe path rules."""
 
 from __future__ import annotations

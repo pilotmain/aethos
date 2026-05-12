@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Anthropic Messages API backend (Phase 11) — Phase 18b vision blocks."""
 
 from __future__ import annotations

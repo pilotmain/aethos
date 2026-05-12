@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 from app.core.db import SessionLocal, ensure_schema
 from app.schemas.agent_job import AgentJobCreate
 from app.services.agent_job_service import AgentJobService

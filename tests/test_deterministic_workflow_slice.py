@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Light deterministic multi-step runner (NexaForge slice)."""
 
 from __future__ import annotations

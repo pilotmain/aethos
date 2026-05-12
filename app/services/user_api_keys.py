@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Store and load per-telegram-user API keys (BYOK). Never log raw keys.
 Keys do not grant role or Dev/Ops — only LLM access when merged in :mod:`app.services.llm_key_resolution`.

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Select a registered OpsProvider by key (`Project.provider_key` or env fallback for legacy).
 """

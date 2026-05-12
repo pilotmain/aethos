@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Host executor chat path: confirm in context, enqueue job (no shell)."""
 
 from __future__ import annotations

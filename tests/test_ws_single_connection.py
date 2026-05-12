@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 14 — Mission Control events WebSocket delivers bus events to a single subscriber stream."""
 
 from __future__ import annotations

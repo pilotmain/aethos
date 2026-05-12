@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """ClawHub marketplace API — Bearer ``NEXA_CRON_API_TOKEN`` (same gate as cron automation)."""
 
 from __future__ import annotations

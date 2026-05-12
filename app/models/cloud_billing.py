@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 51 — AethOS Cloud billing tables (Stripe); keyed by governance :class:`~app.models.governance.Organization`."""
 
 from __future__ import annotations

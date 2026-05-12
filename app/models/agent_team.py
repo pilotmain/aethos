@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Durable agent organization, roles, and assignments (orchestration layer V1)."""
 
 from __future__ import annotations

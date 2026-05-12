@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Run a one-shot web search using Nexa config (reads project .env). Does not print API keys.
   python scripts/verify_web_search.py "latest open source AI coding agents"

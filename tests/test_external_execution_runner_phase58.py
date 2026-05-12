@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 58 — bounded Railway/repo runner (truth-first, never auto-deploy)."""
 
 from __future__ import annotations

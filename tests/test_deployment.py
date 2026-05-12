@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Tests for generic CLI deployment detector / executor."""
 
 from __future__ import annotations

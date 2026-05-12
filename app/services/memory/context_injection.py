@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Per-turn memory bundle for gateway / compose paths (Phase 52)."""
 
 from __future__ import annotations

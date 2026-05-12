@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 26 — dev_runtime must not depend on swarm or legacy mission_control stacks."""
 
 from __future__ import annotations

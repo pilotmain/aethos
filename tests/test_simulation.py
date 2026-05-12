@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 76 — Blue-Green simulation helpers and plumbing."""
 
 from __future__ import annotations

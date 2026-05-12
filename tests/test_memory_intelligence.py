@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 44D — memory ranked for task context, not raw dumps."""
 
 from __future__ import annotations

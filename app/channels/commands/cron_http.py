@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """HTTP client for Phase 13 cron API (Telegram/Slack/CLI share the same token)."""
 
 from __future__ import annotations

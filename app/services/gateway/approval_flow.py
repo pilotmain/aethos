@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Natural-language job approval routes — invoked from NexaGateway only (Phase 37 ctx)."""
 
 from __future__ import annotations

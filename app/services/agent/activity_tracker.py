@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 SQLite-backed audit trail for orchestration sub-agent actions (Phase 37).
 """

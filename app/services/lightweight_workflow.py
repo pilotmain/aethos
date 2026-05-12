@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Lightweight multi-step flow: remember goal + step list in ConversationContext, chat only.
 No auto-chains, no new UI, no background execution. User-driven; dev jobs still use normal approval.

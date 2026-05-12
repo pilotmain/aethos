@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Merge organization policy rows and answer policy questions (repos, grant modes)."""
 
 from __future__ import annotations

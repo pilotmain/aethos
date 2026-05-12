@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Blocked legacy Nexa phrases — prompts and outgoing copy must stay identity-clean."""
 
 from __future__ import annotations

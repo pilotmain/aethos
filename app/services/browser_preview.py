@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Owner-only, optional Playwright-based preview of *public* pages (JS-rendered text + screenshot).
 Disabled by default. Install: pip install playwright && playwright install chromium

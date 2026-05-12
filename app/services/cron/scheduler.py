@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """APScheduler (asyncio) driver for Phase 13 cron jobs."""
 
 from __future__ import annotations

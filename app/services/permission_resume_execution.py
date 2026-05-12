@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Approve-time resume: re-run enforcement, then enqueue the pending host_executor job."""
 
 from __future__ import annotations

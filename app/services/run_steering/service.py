@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """DB-backed steering for :class:`~app.models.dev_runtime.NexaDevRun`."""
 
 from __future__ import annotations

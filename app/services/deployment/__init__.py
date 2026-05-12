@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Generic CLI-based deployment detection and execution."""
 
 from app.services.deployment.detector import DeploymentDetector

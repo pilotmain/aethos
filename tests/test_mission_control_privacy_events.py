@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Mission Control execution state includes privacy + provider event streams."""
 
 from __future__ import annotations

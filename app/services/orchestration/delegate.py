@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Create assignments and dispatch (sequential or bounded parallel). Phase 16a."""
 
 from __future__ import annotations

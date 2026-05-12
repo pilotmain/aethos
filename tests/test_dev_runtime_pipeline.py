@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 23 — end-to-end dev mission with local stub."""
 
 from __future__ import annotations

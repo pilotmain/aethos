@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Append-only in-memory activity ledger with verifiable hash chain."""
 
 from __future__ import annotations

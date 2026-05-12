@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Post-install success screen (Phase 32)."""
 
 from __future__ import annotations

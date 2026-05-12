@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 16 — AST scan: no direct ``openai`` / ``anthropic`` imports outside ``app/services/providers``."""
 
 from __future__ import annotations

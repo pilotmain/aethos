@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """File vs directory host routing and local file intent (read /path)."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Telegram @ops high-level: route to parse_ops_command, then execute or queue for approval.
 """

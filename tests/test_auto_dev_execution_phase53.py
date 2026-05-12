@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 53 — auto dev execution policy and gateway copy."""
 
 from __future__ import annotations

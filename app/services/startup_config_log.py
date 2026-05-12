@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Sanitized process startup config (no API keys, tokens, or full DB credentials)."""
 
 from __future__ import annotations

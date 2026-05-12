@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 **Skills** — user-facing wording for capability tokens stored on sub-agents.
 

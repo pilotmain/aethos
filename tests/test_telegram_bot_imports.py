@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Regression: telegram bot must import without channel_gateway / audit cycles."""
 
 

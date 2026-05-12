@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Detect installed deployment CLIs and infer hints from project files / frameworks."""
 
 from __future__ import annotations

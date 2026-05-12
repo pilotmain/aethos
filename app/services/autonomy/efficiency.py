@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 45F — shrink autonomy payloads before gateway/provider paths."""
 
 from __future__ import annotations

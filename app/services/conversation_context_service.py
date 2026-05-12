@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Rolling per-chat conversation state (topic, last agent, short recent turns)."""
 
 from __future__ import annotations

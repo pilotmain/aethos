@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Database location helpers — Phase 60 unified SQLite for API + Telegram bot.
 

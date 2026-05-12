@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 43 — canonical event shape with optional ``task_id`` for Mission Control / SSE."""
 
 from __future__ import annotations

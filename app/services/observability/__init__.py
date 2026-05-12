@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Operational logging (system events) + gateway observability (traces/metrics/alerts)."""
 
 from app.services.observability.runtime_store import (

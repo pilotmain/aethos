@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Current work summary + light artifact pointers for the Web UI (no dashboards)."""
 from __future__ import annotations
 

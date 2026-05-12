@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """P0 — retry response must not instruct the user to repeat the same phrase in a tight loop."""
 
 from __future__ import annotations

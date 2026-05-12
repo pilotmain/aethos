@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Verify Slack Events API / Interactivity requests (signing secret v0)."""
 
 from __future__ import annotations

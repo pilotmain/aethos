@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Send outbound Telegram messages (e.g. dev job completion) using the bot token."""
 
 from __future__ import annotations

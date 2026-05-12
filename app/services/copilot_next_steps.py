@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Heuristics for when to show co-pilot 'Next steps' (chat-only; no new UI)."""
 
 from __future__ import annotations

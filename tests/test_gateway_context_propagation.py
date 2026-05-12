@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 37 — GatewayContext is the single carrier through NexaGateway routing."""
 
 from __future__ import annotations

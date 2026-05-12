@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """``nexa config`` — show repo ``.env`` path and optionally open in ``$EDITOR``."""
 
 from __future__ import annotations

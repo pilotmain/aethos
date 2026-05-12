@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Meta WhatsApp webhook POST signature (X-Hub-Signature-256)."""
 
 from __future__ import annotations

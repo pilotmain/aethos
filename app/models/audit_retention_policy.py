@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Organization audit log retention (Phase 13; storage only — no deletion worker in v1)."""
 
 from __future__ import annotations

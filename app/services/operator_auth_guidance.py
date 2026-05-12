@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Guided CLI login copy for operator flows when Vercel / GitHub CLI are installed but not authenticated.
 

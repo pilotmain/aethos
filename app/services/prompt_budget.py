@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Prompt budget tiers for main chat — reduce input tokens on simple turns."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Optional standing orders from ``PULSE.md`` (OpenClaw-style continuity hint).
 

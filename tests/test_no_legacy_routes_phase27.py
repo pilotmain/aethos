@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 27 — deprecated REST aliases removed or return HTTP 410."""
 
 from __future__ import annotations

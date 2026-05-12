@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Subscription tier gate for FastAPI routes (Phase 51 cloud)."""
 
 from __future__ import annotations

@@ -17,7 +17,10 @@
     <img src="https://img.shields.io/github/issues/pilotmain/aethos" alt="GitHub issues">
   </a>
   <a href="https://github.com/pilotmain/aethos/blob/main/LICENSE">
-    <img src="https://img.shields.io/github/license/pilotmain/aethos" alt="License">
+    <img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="Apache 2.0">
+  </a>
+  <a href="https://github.com/pilotmain/aethos/blob/main/LICENSE.commercial">
+    <img src="https://img.shields.io/badge/License-Commercial-red.svg" alt="Commercial License">
   </a>
   <a href="https://github.com/sponsors/pilotmain">
     <img src="https://img.shields.io/badge/Sponsor-GitHub-%23EA4AAA" alt="Sponsor on GitHub">
@@ -247,3 +250,22 @@ Then: open Telegram, `/start`, and (to use your own model keys) `/key set openai
 ---
 
 This is an **actively evolving** system: production hardening, scaling, and compliance are deployment-specific—see [docs/DEVELOPMENT_HANDOFF.md](docs/DEVELOPMENT_HANDOFF.md) and the developer notes under `docs/` for how we ship and verify.
+
+## License
+
+AethOS is **dual-licensed**:
+
+- **Open source:** [Apache License 2.0](LICENSE)
+- **Commercial:** Pro features, enterprise deployments, and support — see [LICENSE.commercial](LICENSE.commercial)
+
+| Feature | Apache 2.0 (open source) | Commercial license |
+| --- | --- | --- |
+| Core agent functionality | Yes | Yes |
+| File operations | Yes | Yes |
+| Command execution | Yes | Yes |
+| Sandbox execution | Yes | Yes |
+| Pro features (GoalPlanner, SelfHealingEngine, packaged Pro negotiation, etc.) | No | Yes |
+| Enterprise-oriented features (SSO, advanced audit, compliance packages) | No | Yes |
+| Priority support / SLA | No | Yes (when purchased) |
+
+Commercial inquiries: **[license@aethos.ai](mailto:license@aethos.ai)**

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Slack Block Kit for permission cards (interactions call Nexa grant/deny, not raw URLs)."""
 
 from __future__ import annotations

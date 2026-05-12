@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Truth gate for claims about real-world external execution (deployments, cloud consoles, etc.).
 

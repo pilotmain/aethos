@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Deterministic templates for common custom-agent requests (MVP, no free-form model invention).
 """

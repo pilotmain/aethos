@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Post-mission memory hygiene — scoring, pruning, optional consolidation (Phase 41)."""
 
 from __future__ import annotations

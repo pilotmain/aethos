@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Remove persisted Agent Graph rows whose handle is a URL scheme (``http``/``https``), not a real agent."""
 
 from __future__ import annotations

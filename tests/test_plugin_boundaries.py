@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 16 — plugins register tools only; no DB or provider imports."""
 
 from __future__ import annotations

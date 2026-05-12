@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 from app.models.aethos_orchestration_sub_agent import AethosOrchestrationSubAgent
 from app.models.access_permission import AccessPermission
 from app.models.agent_definition import AgentDefinition

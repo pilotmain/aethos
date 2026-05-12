@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Bounded Railway CLI invocations for Phase 58 — read-only / diagnostic only.
 

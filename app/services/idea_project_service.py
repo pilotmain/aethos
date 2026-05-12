@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Create Nexa projects from idea intake and optional repo-scaffold jobs."""
 
 from __future__ import annotations

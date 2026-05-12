@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Autonomous schedules (Phase 22) — persisted jobs + APScheduler."""
 
 from __future__ import annotations

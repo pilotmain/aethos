@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Static security heuristics over a repo tree (secrets-ish patterns, unsafe calls).
 

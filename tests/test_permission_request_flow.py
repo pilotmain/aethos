@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Chat-first permission requests for host executor (unified format + resume)."""
 
 from __future__ import annotations

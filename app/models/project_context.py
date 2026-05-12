@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """User-defined Nexa workspace projects — folders inside approved workspace roots.
 
 Not to be confused with ``Project`` (Ops/cloud registry). Each row is a labeled path

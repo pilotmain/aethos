@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 7: Email channel adapter, router, SMTP, permission links, audit."""
 
 from __future__ import annotations

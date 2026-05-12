@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 28 — JSON error envelope from global exception handlers."""
 
 from __future__ import annotations

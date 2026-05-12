@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 28 — per-member token budgets (work hours)."""
 
 from app.services.budget.helpers import budget_enabled

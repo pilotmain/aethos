@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 27 — Mission Control projects, tasks, checkout, mission tree."""
 
 from __future__ import annotations

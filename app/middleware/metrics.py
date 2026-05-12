@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Count HTTP requests for Phase 11 metrics."""
 
 from __future__ import annotations

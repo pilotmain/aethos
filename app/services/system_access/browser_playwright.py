@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Playwright-backed browser automation — gated; public URLs only (Phase 41).
 
 Requires ``pip install playwright`` and ``playwright install chromium`` on the host.

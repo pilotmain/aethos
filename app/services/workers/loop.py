@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Topological-ish worker loop: ready queued agents when dependencies are satisfied."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Controlled public HTTP(S) read-only access. No arbitrary browsing — fixed pipeline only.
 Never log full URLs with credentials in query; never log request bodies.

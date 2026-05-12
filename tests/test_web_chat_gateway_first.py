@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Web chat uses :meth:`NexaGateway.handle_message` on the main path (Phase 51)."""
 
 from __future__ import annotations

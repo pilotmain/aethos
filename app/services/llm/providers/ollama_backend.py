@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Ollama /api/chat backend (Phase 11) — local HTTP, no OpenAI SDK."""
 
 from __future__ import annotations

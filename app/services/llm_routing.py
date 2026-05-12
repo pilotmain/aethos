@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Pro smart routing — optional ``nexa_ext.routing`` + ``smart_routing`` license."""
 
 from __future__ import annotations

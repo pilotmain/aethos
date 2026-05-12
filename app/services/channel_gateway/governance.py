@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Enterprise channel policy enforcement before Gateway Router → core (Phase 13)."""
 
 from __future__ import annotations

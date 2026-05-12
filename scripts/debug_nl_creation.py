@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Debug orchestration NL spawn detection (no DB writes unless spawn succeeds)."""
 
 from __future__ import annotations

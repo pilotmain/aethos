@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Persisted generated documents (per-user; files live under .runtime/generated_documents/)."""
 
 from __future__ import annotations

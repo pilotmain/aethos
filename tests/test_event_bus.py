@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 6 — in-process event bus records mission and task lifecycle."""
 
 from __future__ import annotations

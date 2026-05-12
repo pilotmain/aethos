@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Governance organizations, policies, and request context."""
 
 from app.services.governance import context, policies, service

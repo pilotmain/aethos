@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 35 — REST agent spawn / list / status under /api/v1/agents."""
 
 from __future__ import annotations

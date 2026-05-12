@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """P0 — hosted / URL paste must not create Agent Graph tasks (no @https nodes)."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """handle_runtime_tool_turn executes sessions_spawn without LLM (bounded mission dict path)."""
 
 from __future__ import annotations

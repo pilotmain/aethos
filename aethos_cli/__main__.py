@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """CLI entrypoint: ``python -m aethos_cli`` — AethOS HTTP API client (Phase 21)."""
 
 from __future__ import annotations

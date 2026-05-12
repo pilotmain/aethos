@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 # Future: Telegram voice and web microphone — transcribe then run normal Nexa message pipeline.
 # Env (planned): NEXA_AUDIO_INPUT_ENABLED, NEXA_TRANSCRIPTION_PROVIDER, NEXA_TRANSCRIPTION_API_KEY
 # Not implemented in the document-generation milestone.

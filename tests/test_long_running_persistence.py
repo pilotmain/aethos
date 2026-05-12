@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 42 — DB-backed long-running sessions survive tick scheduling."""
 
 from __future__ import annotations

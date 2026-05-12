@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Cursor Cloud Agents API integration (Phase 1 — additive executor backend)."""
 
 from __future__ import annotations

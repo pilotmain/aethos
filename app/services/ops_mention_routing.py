@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Map @ops … messages to the same view as dev health and the job queue."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Resolve governance organization id from headers and settings."""
 
 from __future__ import annotations

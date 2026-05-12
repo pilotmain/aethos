@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Static policy gate for dev job instructions (no user-controlled shell)."""
 from __future__ import annotations
 

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Cursor Cloud integration (Phase 1) — dispatch hook and client helpers."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Mini-doc style hints and gating; marketing/research section keywords."""
 from app.services.structured_response_style import (
     GENERAL_MINI_DOC_SECTIONS,

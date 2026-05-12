@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Apply Stripe subscription objects to :class:`~app.models.cloud_billing.CloudOrgBilling`."""
 
 from __future__ import annotations

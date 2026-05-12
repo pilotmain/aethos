@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Multi-project workspace registry: safe roots per owner."""
 
 from __future__ import annotations

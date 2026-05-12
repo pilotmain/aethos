@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 from fastapi import APIRouter, Depends, Header
 from sqlalchemy.orm import Session
 from typing import Optional

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Slack → Nexa gateway funnel via :func:`~app.services.channels.router.route_inbound` (Phase 42)."""
 
 from __future__ import annotations

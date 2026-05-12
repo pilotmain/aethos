@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Heuristics for dev jobs that look stuck or need attention."""
 
 from __future__ import annotations

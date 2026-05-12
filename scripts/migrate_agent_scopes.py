@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """CLI wrapper — optional Phase 61 parent_chat_id normalization (see aethos_cli.migrate_agent_scopes)."""
 
 from __future__ import annotations

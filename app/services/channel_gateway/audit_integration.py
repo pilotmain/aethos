@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Merge channel gateway ContextVar into audit metadata (Phase 4 — trust lineage)."""
 
 from __future__ import annotations

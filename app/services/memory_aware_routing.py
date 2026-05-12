@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Use durable memory + conversation context to refine agent routing for ambiguous work phrases."""
 
 from __future__ import annotations

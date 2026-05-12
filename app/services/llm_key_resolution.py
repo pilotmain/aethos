@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Merge per-user API keys (BYOK) with system env keys for LLM calls.
 User key wins per provider, then system; never logged.

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Safe path for text sent to external LLM providers: sanitize, minimize, optional file allowlist.
 

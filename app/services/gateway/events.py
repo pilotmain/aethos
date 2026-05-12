@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Gateway-level event helpers — publish/list/subscribe will wrap the durable event bus (Phase 6)."""
 
 from __future__ import annotations

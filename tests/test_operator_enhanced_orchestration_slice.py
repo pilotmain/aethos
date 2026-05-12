@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Slice tests for enhanced orchestration: proactive intro + PULSE.md surfacing."""
 
 from __future__ import annotations

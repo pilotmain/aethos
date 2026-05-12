@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """GitHub PR webhook + manual review trigger (Phase 23 — automated PR reviews)."""
 
 from __future__ import annotations

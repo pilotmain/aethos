@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 import re
 
 # Longer prefixes first so /improve wins over /in if that were ever an issue, etc.

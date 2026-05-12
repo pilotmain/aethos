@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Baseline tools — deterministic outputs for gateway missions (no external providers)."""
 
 from __future__ import annotations

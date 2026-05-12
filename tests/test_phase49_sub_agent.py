@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 49 — natural multi-agent parse, QA path scan helpers."""
 
 from __future__ import annotations

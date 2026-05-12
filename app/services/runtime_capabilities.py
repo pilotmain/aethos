@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Backend capability truth for prompts (avoid LLM “legal mode” contradicting real flags)."""
 
 from __future__ import annotations

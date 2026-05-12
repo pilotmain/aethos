@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """License status and validation (Ed25519 ``nexa_lic_v1`` tokens — see app/services/licensing)."""
 
 from __future__ import annotations

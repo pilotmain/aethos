@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Lightweight app user id parsing — keep free of web_chat_service to avoid import cycles."""
 
 from __future__ import annotations

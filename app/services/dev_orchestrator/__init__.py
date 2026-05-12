@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Development orchestration: project signals, task classification, execution decisions."""
 
 from app.services.dev_orchestrator.dev_job_planner import (

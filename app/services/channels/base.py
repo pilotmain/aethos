@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Abstract channel — outbound stubs; inbound always delegates to the Nexa gateway."""
 
 from __future__ import annotations

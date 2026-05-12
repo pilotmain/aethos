@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """PULSE.md injection flag and ``get_pulse_context`` helper."""
 
 from __future__ import annotations

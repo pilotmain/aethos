@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Fail if OpenAI / Anthropic SDK imports appear outside ``app/services/providers/``.
 

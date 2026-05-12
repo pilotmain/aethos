@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Worker helper for executing approved command jobs."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Tests for :mod:`app.core.branding` — product name and legacy ``Nexa`` substitution."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Optional ``aethos_pro`` extensions via ``aethos-core`` :class:`~aethos_core.plugin_manager.PluginManager`.
 
 Does **not** replace in-repo components such as :class:`~app.services.inter_agent_coordinator.AgentNegotiator`

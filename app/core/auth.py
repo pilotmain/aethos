@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Shared API auth dependencies (cron token, web user, etc.)."""
 
 from __future__ import annotations

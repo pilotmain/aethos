@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 49 — intent routing favors action paths (stuck_dev vs stuck)."""
 
 from __future__ import annotations

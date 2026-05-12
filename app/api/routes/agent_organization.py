@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """REST API for agent organizations and assignments (orchestration layer)."""
 
 from __future__ import annotations

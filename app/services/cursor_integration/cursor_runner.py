@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Orchestrator hook: run development assignments via Cursor Cloud Agents when enabled."""
 
 from __future__ import annotations

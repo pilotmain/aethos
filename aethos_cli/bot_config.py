@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Phase 62 — write ``~/.aethos/.env`` keys so the Telegram bot uses the same SQLite + orchestration
 flags as the API (loaded by :mod:`app.core.config` after the repo ``.env``).

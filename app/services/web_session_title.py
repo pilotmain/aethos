@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Derive a short chat title from the first user line (no LLM). Used for the web session list."""
 
 from __future__ import annotations

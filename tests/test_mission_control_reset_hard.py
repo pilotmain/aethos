@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """After SQL purge + reset-hard alias, Mission Control summary has no assignments."""
 
 from __future__ import annotations

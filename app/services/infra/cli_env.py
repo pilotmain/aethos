@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Merge Railway / Vercel token env vars for CLI subprocesses (explicit inheritance)."""
 
 from __future__ import annotations

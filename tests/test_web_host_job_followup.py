@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Deterministic host job status lines in Web chat (no LLM)."""
 
 from __future__ import annotations

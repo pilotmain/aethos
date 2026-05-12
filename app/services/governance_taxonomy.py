@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Stable governance audit event types (Phase 13)."""
 
 EVENT_CHANNEL_ACCESS_DENIED = "channel.access_denied"

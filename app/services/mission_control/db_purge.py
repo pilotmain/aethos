@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Mission Control — what is stored where, and optional SQL purge for one user.
 
 The Mission Control dashboard slice (`build_mission_control_dashboard`) aggregates:

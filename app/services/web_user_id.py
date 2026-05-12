@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Validation for the Nexa web API X-User-Id header — reject bot tokens and malformed ids."""
 from __future__ import annotations
 

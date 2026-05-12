@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Co-pilot heuristics: goal/trivial detection and next-step appends."""
 
 from __future__ import annotations

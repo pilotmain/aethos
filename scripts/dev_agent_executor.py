@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Pick up an approved queued dev job, create a branch, write a Cursor prompt, optionally run
 a CLI agent, then test / commit (and optionally push + PR).

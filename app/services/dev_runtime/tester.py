@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Pick an allowlisted test command for the repo layout + parse failures (Phase 25)."""
 
 from __future__ import annotations

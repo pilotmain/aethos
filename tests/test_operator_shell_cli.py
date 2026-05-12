@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Profile-shell CLI runner (login $SHELL + nvm/rc sources)."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Optional Pro memory reranking (``nexa_ext.memory_intel`` + license)."""
 
 from __future__ import annotations

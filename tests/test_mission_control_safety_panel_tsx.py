@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Regression: SafetyAndReadinessPanel must bind `d` before JSX uses `d.*` (avoid ReferenceError)."""
 
 from __future__ import annotations

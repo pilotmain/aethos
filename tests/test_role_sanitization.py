@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """sanitize_agent_roles.py heuristics (legal/read-only template cleanup)."""
 
 from __future__ import annotations

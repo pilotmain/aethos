@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """In-memory agent catalog; rows in `agent_definitions` are synced on startup."""
 
 # Canonical primary assistant handle (Phase 38 — AethOS rebrand).

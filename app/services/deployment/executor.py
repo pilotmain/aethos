@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Run deployment using detected CLIs (subprocess; gateway-safe synchronous API)."""
 
 from __future__ import annotations

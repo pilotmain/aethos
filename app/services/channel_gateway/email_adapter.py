@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Inbound email adapter — identity + normalization for Channel Gateway (Phase 7)."""
 
 from __future__ import annotations

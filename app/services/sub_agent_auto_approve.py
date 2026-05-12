@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Trusted chat/domain/agent auto-approval for host payloads (Week 5.5).
 

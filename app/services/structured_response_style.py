@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Hints for mini-document style (scannable ## sections) on substantial replies only.
 Not applied to one-line or trivial chat — see :func:`should_use_structured_style`.

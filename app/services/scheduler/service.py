@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """CRUD + APScheduler registration for :class:`~app.models.nexa_scheduler_job.NexaSchedulerJob`."""
 
 from __future__ import annotations

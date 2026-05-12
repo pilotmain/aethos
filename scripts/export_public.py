@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Copy an explicit allowlist of paths into the sibling ``aethos-core`` clone and optionally commit/push."""
 
 from __future__ import annotations

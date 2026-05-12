@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Early NL shortcuts for gateway (read file, owner-only batch / React) before host confirmation."""
 
 from __future__ import annotations

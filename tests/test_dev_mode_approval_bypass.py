@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Developer autonomy mode: approval bypass only when workspace is developer + approvals off."""
 
 from __future__ import annotations

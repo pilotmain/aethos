@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Detect 'create a project plan PDF for …' style requests; build templated markdown bodies."""
 
 from __future__ import annotations

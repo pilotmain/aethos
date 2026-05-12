@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Project and Task models for Mission Control (Phase 27). User-friendly names, stable enums.
 """

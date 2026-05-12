@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 40 — identity strings stay aligned with Nexa-next execution positioning."""
 
 from __future__ import annotations

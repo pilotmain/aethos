@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Execution-layer permission reply guard (stale LLM / System → Permissions)."""
 
 from __future__ import annotations

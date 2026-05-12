@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Lookup and continue spawn groups from persisted AgentAssignment rows."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Channel adapters — every inbound path fans into :class:`~app.services.gateway.runtime.NexaGateway`."""
 
 from app.services.channels.router import route_inbound

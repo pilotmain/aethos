@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Reliability layer: locks, preflight, worker state, commit guards."""
 
 import json

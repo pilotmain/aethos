@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Emit a single 'set -a' + safe 'export KEY=...' block for the repo's .env.
 Values come from python-dotenv (one line = one var; spaces in unquoted values stay in the value).

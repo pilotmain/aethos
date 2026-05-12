@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Shorthand ``make a file X says Y`` must parse for host executor."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 from app.services.ops_actions import get_action
 from app.services.ops_executor import MAX_OUT, sanitize_log_text, execute_action
 from app.services.ops_router import parse_ops_command

@@ -1,15 +1,15 @@
-AethOS Pro / Enterprise — commercial license (reference)
-=========================================================
+# AethOS Commercial License
 
-Proprietary features (advanced planning, self-healing extensions packaged separately,
-enterprise gates, etc.) are **not** licensed under the open-source terms that apply to this
-repository’s default distribution.
+For commercial licensing options, including:
 
-Commercial customers receive a separate agreement covering:
+- **Pro features** (GoalPlanner, SelfHealingEngine, AgentNegotiator and related packaged capabilities)
+- **Enterprise features** (SSO, audit logs, compliance-oriented deployments)
+- **Priority support and SLA**
 
-- permitted use, seats, and deployment scope  
-- support and SLA (if purchased)  
-- termination and audit (as applicable)
+**Contact:** [license@aethos.ai](mailto:license@aethos.ai)
 
-**Contact:** use your commercial contact channel (e.g. ``license@aethos.ai`` or your contract
-manager). This file is **not** a binding contract — it only documents where terms live.
+By purchasing a commercial license, you are granted additional rights not covered by the [Apache License, Version 2.0](LICENSE).
+
+---
+
+This file is a **summary pointer only** — it is **not** a binding contract. Commercial customers receive a separate written agreement covering permitted use, seats, deployment scope, support, termination, and audit as applicable.

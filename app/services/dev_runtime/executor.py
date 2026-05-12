@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Allowlisted subprocess execution inside a workspace repo."""
 
 from __future__ import annotations

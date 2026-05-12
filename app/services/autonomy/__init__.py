@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Autonomy and background planning (Phase 43–45)."""
 
 from app.services.autonomy.decision import autonomous_decision_loop

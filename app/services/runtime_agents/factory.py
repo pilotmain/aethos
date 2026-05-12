@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Build in-memory agent rows from a parsed mission dict."""
 
 from __future__ import annotations

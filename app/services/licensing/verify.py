@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Offline verification for signed license payloads (Ed25519)."""
 
 from __future__ import annotations

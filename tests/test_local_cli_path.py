@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """nvm / user-local PATH enrichment for operator and host subprocesses."""
 
 from __future__ import annotations

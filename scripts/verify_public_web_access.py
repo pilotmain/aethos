@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Manual / CI helper: one-shot public URL read (Phase 1). Run from repo root with .env loaded.
 Example:  python scripts/verify_public_web_access.py https://pilotmain.com

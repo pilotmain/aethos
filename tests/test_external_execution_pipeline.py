@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Deterministic external execution pipeline — composes access + runner + summary."""
 
 from __future__ import annotations

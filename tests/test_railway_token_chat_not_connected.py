@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """P0 — access copy explains env not loaded; chat paste ≠ worker credentials."""
 
 from __future__ import annotations

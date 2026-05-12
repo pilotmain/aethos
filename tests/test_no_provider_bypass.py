@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 10 — CI guard matches pytest rule for provider isolation."""
 
 from __future__ import annotations

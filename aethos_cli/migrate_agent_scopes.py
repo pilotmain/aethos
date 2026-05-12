@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Phase 61 — optional SQLite migration: normalize ``parent_chat_id`` from bare ``tg_<digits>`` to
 ``web:tg_<digits>:default``. Usually unnecessary once :func:`~app.services.web_user_id.orchestration_registry_scopes`

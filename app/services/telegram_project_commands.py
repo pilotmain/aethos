@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Text handlers for /projects and /project (multi-project workspace)."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Full autonomous / dynamic routing slice — prefs, credential UX dedup, multi-host scores."""
 
 from __future__ import annotations

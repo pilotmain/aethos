@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Chat-first permission requests for host enqueue (aligned Web + Telegram copy)."""
 
 from __future__ import annotations

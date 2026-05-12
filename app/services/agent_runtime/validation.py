@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Lightweight payload validation (no jsonschema dependency)."""
 
 from __future__ import annotations

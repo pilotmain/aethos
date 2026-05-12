@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Concrete LLM backends for Phase 11."""
 
 from app.services.llm.providers.anthropic_backend import AnthropicBackend

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Aider (or any fixed DEV_AGENT_COMMAND) autonomous loop: run agent, tests, approval, commit.
 Never passes user text to shell; only env-driven commands and fixed git.

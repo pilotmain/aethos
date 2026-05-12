@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Phase 11 — multi-provider LLM layer (registry + primary completion for :mod:`app.services.llm_service`).
 

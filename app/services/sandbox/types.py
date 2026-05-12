@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Sandbox mode declarations — unsupported modes must never report as active."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """POST /agent-assignments payload coercion (legacy ``task`` / ``agent_id``)."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 # DO NOT MODIFY WITHOUT SECURITY REVIEW — single outbound path for LLM/tool providers.
 
 """

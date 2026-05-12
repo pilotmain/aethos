@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 35/36 — NexaGateway owns chat; legacy behavior utils are not called from Telegram text paths."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Pronoun / identity: memory + post-pass + owner FAQ."""
 from app.services.memory_preferences import (
     extract_memory_preferences,

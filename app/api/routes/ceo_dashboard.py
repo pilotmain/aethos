@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 CEO dashboard JSON API — orchestration agents scoped to the authenticated web user.
 """

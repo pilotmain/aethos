@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 10 — per-policy PII handling (allow / redact / block)."""
 
 from __future__ import annotations

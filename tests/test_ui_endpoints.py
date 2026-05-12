@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Smoke tests for Mission Control JSON endpoints used by the web UI (Phase 12)."""
 
 from __future__ import annotations

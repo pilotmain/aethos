@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 5–6 — artifacts propagate between dependent agents (DB-backed)."""
 
 from __future__ import annotations

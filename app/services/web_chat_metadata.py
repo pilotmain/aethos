@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Optional metadata for web chat: research + public URL / browser preview (Phase 1)."""
 from __future__ import annotations
 

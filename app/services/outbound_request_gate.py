@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Single choke point for outbound HTTP bodies — secret detection + optional hard block.
 

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Permission request approve / deny + pending list (API path: /api/v1/permissions/...)."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """CLI helpers for orchestration agent maintenance (Phase 61)."""
 
 from __future__ import annotations

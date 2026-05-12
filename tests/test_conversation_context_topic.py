@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Topic authority: explicit user instructions over inferred memory."""
 
 from app.services.conversation_context_service import (

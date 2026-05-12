@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Mission Control–style budget caps (Settings + SQLite usage rollups).
 
 Daily/monthly UI targets still live under POST ``/user/settings`` (``ui_preferences``).

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Browser automation API — Phase 14 (Bearer ``NEXA_CRON_API_TOKEN``, same as cron)."""
 
 from __future__ import annotations

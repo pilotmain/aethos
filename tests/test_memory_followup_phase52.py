@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 52A — memory bundle includes user notes on follow-up turns."""
 
 from __future__ import annotations

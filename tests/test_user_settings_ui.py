@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 21 — API contract expected by Mission Control settings UI."""
 
 from __future__ import annotations

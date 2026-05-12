@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Optional UX: when a turn looks like “local git workspace” work, mention host action chains.
 

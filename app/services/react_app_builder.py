@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """One-shot React app scaffolding (argv-only subprocesses; never shell=True)."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Vision completion chain (Phase 18b) — routes multimodal :class:`Message` turns to providers."""
 
 from __future__ import annotations

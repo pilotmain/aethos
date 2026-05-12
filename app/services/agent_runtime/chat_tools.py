@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Structured bounded-mission detection for deterministic sessions_spawn (no LLM confirmation loop).
 

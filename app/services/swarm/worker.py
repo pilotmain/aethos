@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Deterministic assignment worker for developer testing — completes queued spawn work without LLM.
 

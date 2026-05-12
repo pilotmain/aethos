@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Week 4 — sub-agent routing (Phase 2) and execution dispatch (Phase 3).
 

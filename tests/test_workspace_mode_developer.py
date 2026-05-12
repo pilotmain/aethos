@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """NEXA_WORKSPACE_MODE developer vs regulated prompts and runtime capability truth."""
 
 from __future__ import annotations

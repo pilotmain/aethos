@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Execution wrappers — Phase 54 MVP delegates to local process unless Docker mode is wired."""
 
 from __future__ import annotations

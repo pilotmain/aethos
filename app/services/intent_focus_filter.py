@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Ruthless focus on the user’s explicit ask — suppress unrelated provider noise in replies.
 

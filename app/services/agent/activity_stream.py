@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Mission Control activity feed — delegates to :class:`~app.services.agent.activity_tracker.AgentActivityTracker`."""
 
 from __future__ import annotations

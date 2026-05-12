@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """In-memory outbound health signals for channel admin (Phase 12 — no DB)."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Context for LLM usage metadata (per asyncio task / thread). No prompts or secrets.
 """

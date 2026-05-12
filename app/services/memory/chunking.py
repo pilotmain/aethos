@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Split long memory text into overlapping chunks for vector recall (Phase 15)."""
 
 from __future__ import annotations

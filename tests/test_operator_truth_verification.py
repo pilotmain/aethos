@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Truth states for operator orchestration (Mission Control wiring is incremental)."""
 
 from __future__ import annotations

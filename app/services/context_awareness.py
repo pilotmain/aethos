@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 50 — lightweight infra / stack hints from user text (no network I/O)."""
 
 from __future__ import annotations

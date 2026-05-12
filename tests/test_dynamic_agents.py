@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 9 — user-defined agent handles in mission text."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 32 — legacy Telegram slash handlers removed; no stray legacy path hints outside HTTP routes."""
 
 from __future__ import annotations

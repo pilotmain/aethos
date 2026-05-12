@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """P0 — gated / blocked paths surface exact access blockers (no vague refusal)."""
 
 from __future__ import annotations

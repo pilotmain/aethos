@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Default stages for turning an idea into execution (AethOS execution system)."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 46C — lightweight persistence for per-handle agent performance (JSON beside memory index)."""
 
 from __future__ import annotations

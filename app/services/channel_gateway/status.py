@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Read-only channel configuration / health for admin surfaces (Phase 8)."""
 
 from __future__ import annotations

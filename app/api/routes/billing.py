@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Stripe billing integration for AethOS Cloud (checkout, portal, webhooks, usage)."""
 
 from __future__ import annotations

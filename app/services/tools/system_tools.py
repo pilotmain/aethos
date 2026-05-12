@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Sandboxed local file/shell helpers — privacy-gated (Phase 22)."""
 
 from __future__ import annotations

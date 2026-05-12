@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Mission Control execution snapshot builders — DB-backed missions/tasks plus live event streams."""
 
 from __future__ import annotations

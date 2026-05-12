@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Universal chat response layout helpers (opt-in via Settings ``nexa_response_format``)."""
 
 from __future__ import annotations

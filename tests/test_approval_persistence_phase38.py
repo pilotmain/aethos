@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 38 — approval_context_json survives reload and finalize clears wait state."""
 
 from __future__ import annotations

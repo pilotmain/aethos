@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Telegram commands for Phase 22 social automation."""
 
 from __future__ import annotations

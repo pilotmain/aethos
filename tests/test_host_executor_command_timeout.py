@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Regression: command timeouts must honor env and long scaffold steps."""
 
 from __future__ import annotations

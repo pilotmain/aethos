@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Merge key=value updates into a ``.env`` file (native setup wizard)."""
 
 from __future__ import annotations

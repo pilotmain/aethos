@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Pluggable skill CLI helpers (Phase 6) — used by ``python -m aethos_cli``."""
 
 from __future__ import annotations

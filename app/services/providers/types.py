@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Provider request/response shapes for the outbound gateway."""
 
 from __future__ import annotations

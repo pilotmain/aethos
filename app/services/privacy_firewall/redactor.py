@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Redact known patterns from text prior to external transmission."""
 
 # DO NOT MODIFY WITHOUT SECURITY REVIEW — redaction behavior.

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Image generation — OpenAI DALL-E, Replicate (SD/FLUX), optional local A1111 (Phase 18d)."""
 
 from __future__ import annotations

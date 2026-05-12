@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Tool/skill consent records (mobile-style permission grants)."""
 
 from __future__ import annotations

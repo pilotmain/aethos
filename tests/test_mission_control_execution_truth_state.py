@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """P0 — Mission Control snapshot reflects execution truth (heartbeat ≠ verified)."""
 
 from __future__ import annotations

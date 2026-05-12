@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Mission parser — strict vs loose ``parse_mission`` and gateway smoke."""
 
 from __future__ import annotations

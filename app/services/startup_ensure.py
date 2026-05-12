@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Runtime self-heal: ensure NEXA_SECRET_KEY, print env validation, optional .venv notice.
 No secrets in logs. Used by API and Telegram bot on startup.

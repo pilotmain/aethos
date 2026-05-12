@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 47A — agent selection scores adapters using intel-shaped payloads."""
 
 from __future__ import annotations

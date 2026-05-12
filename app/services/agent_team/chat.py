@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Conversational routing for agent organization (runs before host executor)."""
 
 from __future__ import annotations

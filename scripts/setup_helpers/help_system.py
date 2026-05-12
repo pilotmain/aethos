@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Built-in help topics for the setup wizard (type ``help`` or ``?`` at prompts)."""
 
 from __future__ import annotations

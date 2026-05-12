@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Detect non-verifying mission agent outputs (e.g. heartbeat stubs) — P0 execution truth.
 """

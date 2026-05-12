@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 31 — user-facing copy stays intent-first; block legacy slash/persona hints in scoped paths."""
 
 from __future__ import annotations

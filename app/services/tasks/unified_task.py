@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Unified task model — missions, dev runs, scheduler jobs, and system hooks share one shape."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Parse @ops / ops-agent text into a whitelisted action name and a small JSON-safe payload.
 Never passes raw user text to subprocess — only allowlisted service keys and name=value for set env.

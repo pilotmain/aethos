@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 23 — developer workspace runtime."""
 
 from app.services.dev_runtime.service import run_dev_mission

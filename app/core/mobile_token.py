@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 JWT access tokens for the Phase 30 mobile app (HS256, ``NEXA_SECRET_KEY``).
 """

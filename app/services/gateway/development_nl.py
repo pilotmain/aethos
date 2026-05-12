@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Gateway NL: ``Development …`` / ``Dev …`` — best-effort workspace patches (todo scaffold)."""
 
 from __future__ import annotations

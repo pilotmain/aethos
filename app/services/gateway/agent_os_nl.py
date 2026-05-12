@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Gateway NL hooks for Agentic OS status dashboard."""
 
 from __future__ import annotations

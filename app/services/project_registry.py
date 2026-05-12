@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Read registered projects; resolve per-key and default. Used by Ops, Dev, Telegram."""
 
 from __future__ import annotations

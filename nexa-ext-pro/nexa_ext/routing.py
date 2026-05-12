@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Pro model routing — symbolic tier selection (core maps to real model IDs)."""
 
 from __future__ import annotations

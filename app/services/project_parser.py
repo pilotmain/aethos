@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Lightweight, deterministic project / env / service token extraction (no free-form shell)."""
 
 from __future__ import annotations

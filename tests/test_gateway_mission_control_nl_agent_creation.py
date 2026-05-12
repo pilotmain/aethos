@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Mission Control ``POST …/mission-control/gateway/run`` must spawn NL sub-agents like ``/web/chat``."""
 
 from __future__ import annotations

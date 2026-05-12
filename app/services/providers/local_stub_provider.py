@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Deterministic local provider — no external HTTP (Phase 4 default)."""
 
 from __future__ import annotations

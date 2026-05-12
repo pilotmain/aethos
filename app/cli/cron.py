@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Cron CLI — thin wrapper around HTTP cron API (Phase 13)."""
 
 from __future__ import annotations

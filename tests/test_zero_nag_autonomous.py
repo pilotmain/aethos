@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Operator zero-nag — compact access copy, phrase scrubbing, gate bypass."""
 
 from __future__ import annotations

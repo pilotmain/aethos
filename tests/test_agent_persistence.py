@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 46C — agent intel JSON persistence beside memory."""
 
 from __future__ import annotations

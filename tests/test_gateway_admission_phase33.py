@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 33 — dev-runtime gateway shortcut is only invoked from NexaGateway."""
 
 from __future__ import annotations

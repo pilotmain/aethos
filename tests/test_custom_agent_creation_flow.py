@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """End-to-end custom agent primitive: routing, parse, create, no host misroute."""
 
 from __future__ import annotations

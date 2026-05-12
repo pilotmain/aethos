@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Per-job artifact directory under .runtime/dev_jobs/."""
 
 from __future__ import annotations

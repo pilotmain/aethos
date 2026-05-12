@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Read-only access to workspace report files (mission_control.md, watcher events)."""
 
 from __future__ import annotations

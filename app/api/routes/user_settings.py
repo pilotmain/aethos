@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """User settings API (Phase 20) — persisted preferences + identity headers."""
 
 from __future__ import annotations

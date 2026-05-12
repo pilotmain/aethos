@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Owner-only chat hints for self-improvement / PR workflow (no auto-write, no direct push)."""
 
 from __future__ import annotations

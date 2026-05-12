@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 47A — score agent candidates using persisted performance and task text."""
 
 from __future__ import annotations

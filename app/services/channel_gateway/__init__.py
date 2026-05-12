@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Channel Gateway package.
 
 Keep this module lightweight. Do not import router, governance, or modules

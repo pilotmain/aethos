@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Registered projects for multi-cloud / multi-repo Nexa Ops and Dev agents."""
 
 from __future__ import annotations

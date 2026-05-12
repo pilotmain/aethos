@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """FastAPI dependencies for AethOS Cloud (JWT + governance org + billing row)."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """SQLite-backed daily usage rollups for billing-style metering (tokens / requests)."""
 
 from __future__ import annotations

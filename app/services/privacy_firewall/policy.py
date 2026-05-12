@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Policy modes for outbound content: block | redact | ask | allow_local_only | allow."""
 
 # DO NOT MODIFY WITHOUT SECURITY REVIEW — policy semantics drive firewall outcomes.

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Per-organization channel enablement and roles (Phase 13)."""
 
 from __future__ import annotations

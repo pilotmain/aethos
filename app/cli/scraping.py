@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Scraping CLI — calls Phase 21 fetcher/extractor locally (no API required)."""
 
 from __future__ import annotations

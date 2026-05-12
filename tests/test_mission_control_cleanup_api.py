@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Mission Control cleanup API — assignments, spawn groups, reports, jobs, reset."""
 
 from __future__ import annotations

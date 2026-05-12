@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Whitelisted infrastructure actions for Nexa Ops. No user-controlled argv beyond allowlisted keys.
 Execution uses `Project` → registered `OpsProvider` (not NEXA_OPS_* alone).

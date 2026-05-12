@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Built-in Phase 14 browser plugin skill handlers (async)."""
 
 from __future__ import annotations

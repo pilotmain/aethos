@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Media pipeline stubs — STT/TTS/images/docs (Phase 22 extension points)."""
 
 from __future__ import annotations

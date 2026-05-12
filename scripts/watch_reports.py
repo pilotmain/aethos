@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Poll the reports directory and emit ui_update_event.json when files change (UI bridge)."""
 
 from __future__ import annotations

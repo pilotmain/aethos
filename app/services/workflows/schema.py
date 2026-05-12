@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """YAML workflow schema (Phase 54 MVP)."""
 
 from __future__ import annotations

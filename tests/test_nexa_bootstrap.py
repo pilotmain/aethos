@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Tests for scripts/nexa_bootstrap and app.services.nexa_bootstrap."""
 from __future__ import annotations
 

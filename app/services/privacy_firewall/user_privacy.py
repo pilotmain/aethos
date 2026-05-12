@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """User-facing privacy mode (Phase 19) — normalize env / settings values."""
 
 from __future__ import annotations

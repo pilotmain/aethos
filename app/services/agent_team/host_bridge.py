@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Host-executor bridge for agent assignments: infer payload, validate paths, permission, enqueue."""
 
 from __future__ import annotations

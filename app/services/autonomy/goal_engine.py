@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 46D / 47B — higher-level goals and bound execution tasks per goal."""
 
 from __future__ import annotations

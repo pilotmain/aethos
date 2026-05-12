@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Resolve a filesystem root for orchestration / QA scans without repeatedly asking the user.
 

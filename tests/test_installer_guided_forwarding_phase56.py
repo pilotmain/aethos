@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 56 — root install.sh forwards CLI args (e.g. --guided) to scripts/install.sh."""
 
 from __future__ import annotations

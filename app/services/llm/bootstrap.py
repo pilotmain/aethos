@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Register :class:`~app.services.llm.base.LLMProvider` instances from settings and BYOK merge.
 """

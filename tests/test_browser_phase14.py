@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Phase 14 — browser NL inference + plugin_skill registration."""
 
 from __future__ import annotations

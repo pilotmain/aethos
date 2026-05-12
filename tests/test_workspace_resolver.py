@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Workspace path resolution for QA scans."""
 
 from __future__ import annotations

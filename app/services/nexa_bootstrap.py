@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 One-command setup: detect environment, create .env, venv, optional Docker stack, health check.
 :func:`main` is the entry for ``python scripts/nexa_bootstrap.py``. No secret values in stdout.

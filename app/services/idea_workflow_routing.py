@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Natural-language and scoped workflows for the idea-to-project pipeline (strategy, marketing, development)."""
 
 from __future__ import annotations

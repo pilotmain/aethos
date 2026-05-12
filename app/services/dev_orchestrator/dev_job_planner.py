@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Central development job planning and creation (orchestrator + payload + policy)."""
 
 from __future__ import annotations

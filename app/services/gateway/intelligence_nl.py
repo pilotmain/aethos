@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Gateway NL: show Anthropic intelligence preset / effective model."""
 
 from __future__ import annotations

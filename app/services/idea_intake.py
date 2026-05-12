@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Detect raw product ideas and draft Nexa project profiles (not tied to one repo)."""
 
 from __future__ import annotations

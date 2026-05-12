@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Vercel CLI helper — projects list / deploy (fixed argv only).
 
 Set **`VERCEL_TOKEN`** or **`VERCEL_API_TOKEN`** for non-interactive use (no `vercel login`).

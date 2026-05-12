@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Smart async web fetcher — retry, timeout, rate limit, UA rotation (Phase 21)."""
 
 from __future__ import annotations

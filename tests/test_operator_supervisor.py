@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """Operator supervisor: auto-approve of queued dev jobs (optional)."""
 
 from app.core import config

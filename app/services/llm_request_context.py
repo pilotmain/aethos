@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright (c) 2025 AethOS AI
+
 """
 Per-request context for Telegram-originated LLM calls: optional DB + telegram user id.
 Set by the Telegram message handler; read by :mod:`app.services.llm_key_resolution` and
