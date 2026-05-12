@@ -17,6 +17,9 @@
 #
 set -euo pipefail
 
+# Must be defined before any use with ``set -u`` (e.g. ``EXTRA_ARGS+=`` / ``"${EXTRA_ARGS[@]}"``).
+EXTRA_ARGS=()
+
 REPO_DEFAULT="https://github.com/pilotmain/aethos.git"
 INSTALL_DEFAULT="${HOME}/.aethos"
 
@@ -48,7 +51,6 @@ EOF
 }
 
 LICENSE_KEY=""
-EXTRA_ARGS=()
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --help | -h)
