@@ -5,7 +5,25 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import patch
 
-from app.services.host_executor_intent import infer_host_executor_action
+from app.services.host_executor_intent import infer_host_executor_action, parse_start_app_intent
+
+
+def test_parse_start_app_intent() -> None:
+    assert parse_start_app_intent("start the todo app") == {
+        "intent": "start_app",
+        "kind": "todo",
+        "slug": None,
+        "raw_text": "start the todo app",
+    }
+    assert parse_start_app_intent("Run my react app")["kind"] == "react"
+    assert parse_start_app_intent("launch the app")["kind"] == "recent"
+    assert parse_start_app_intent("start the demo-widget app") == {
+        "intent": "start_app",
+        "kind": "named",
+        "slug": "demo-widget",
+        "raw_text": "start the demo-widget app",
+    }
+    assert parse_start_app_intent("start the") is None
 
 
 def test_git_status_variants() -> None:

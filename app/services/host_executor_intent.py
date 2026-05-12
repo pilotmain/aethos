@@ -233,6 +233,57 @@ def _command_from_intent(intent_type: str, match: re.Match[str]) -> tuple[str, s
     return first, None
 
 
+_START_GENERIC = re.compile(
+    r"^(?:start|run|launch)\s+(?:the\s+|my\s+)?(todo|react)(?:\s+app)?\s*$",
+    re.IGNORECASE,
+)
+_START_VAGUE = re.compile(
+    r"^(?:start|run|launch)\s+(?:the\s+|my\s+)?(app|project)\s*$",
+    re.IGNORECASE,
+)
+_START_NAMED = re.compile(
+    r"^(?:start|run|launch)\s+(?:the\s+|my\s+)?([\w-]+)(?:\s+app|\s+project)?\s*$",
+    re.IGNORECASE,
+)
+
+_RESERVED_START_SLUGS = frozenset(
+    {"the", "my", "a", "an", "it", "up", "this", "that", "our", "your"}
+)
+
+
+def parse_start_app_intent(text: str) -> dict[str, Any] | None:
+    """
+    Parse short phrases like ``start the todo app`` / ``run my react app`` / ``launch the foo-bar app``.
+
+    Detection only; execution is in :mod:`app.services.gateway.start_built_app_nl`.
+    """
+    if not text or not isinstance(text, str):
+        return None
+    line = text.strip().splitlines()[0].strip()
+    if not line:
+        return None
+    low = line.lower()
+
+    m = _START_GENERIC.match(low)
+    if m:
+        return {"intent": "start_app", "kind": m.group(1).lower(), "slug": None, "raw_text": text}
+
+    m = _START_VAGUE.match(low)
+    if m:
+        return {"intent": "start_app", "kind": "recent", "slug": None, "raw_text": text}
+
+    m = _START_NAMED.match(low)
+    if m:
+        slug = (m.group(1) or "").strip().lower()
+        if not slug or slug in _RESERVED_START_SLUGS:
+            return None
+        if slug in ("todo", "react"):
+            return {"intent": "start_app", "kind": slug, "slug": None, "raw_text": text}
+        return {"intent": "start_app", "kind": "named", "slug": slug, "raw_text": text}
+
+    return None
+
+
 _STATUS_PATTERNS: list[tuple[str, str]] = [
     (r"^(?:what\'s|what is)\s+(?:the\s+)?(?:status|progress)$", "get_status"),
     (r"^(?:show|list)\s+(?:my\s+)?(?:tasks|work|progress)$", "list_tasks"),

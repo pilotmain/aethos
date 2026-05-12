@@ -984,6 +984,12 @@ class NexaGateway:
             if deploy_nl is not None:
                 return deploy_nl
 
+            from app.services.gateway.start_built_app_nl import try_start_built_app_gateway_turn
+
+            start_app_nl = try_start_built_app_gateway_turn(gctx, raw_gate, db_inner)
+            if start_app_nl is not None:
+                return start_app_nl
+
             from app.services.gateway.goal_nl_actions import try_goal_planning_gateway_turn
 
             goal_nl = try_goal_planning_gateway_turn(gctx, raw_gate, db_inner)
