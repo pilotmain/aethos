@@ -250,13 +250,13 @@ def _aider_str() -> str:
 
 def _creator_in_soul(raw: str) -> bool:
     t = (raw or "").lower()
-    return "creator" in t and "nexa" in t
+    return "creator" in t and ("nexa" in t or "aethos" in t)
 
 
 def _soul_read_status() -> tuple[str, str]:
     p = soul_path()
     if not p.is_file():
-        return "missing", "— (optional; Nexa still runs without soul.md on disk)"
+        return "missing", "— (optional; AethOS still runs without soul.md on disk)"
     try:
         raw = p.read_text(encoding="utf-8", errors="replace")
         c = _creator_in_soul(raw)
@@ -294,8 +294,11 @@ def format_git_brief() -> str:
     )
     rurl = (rr.stdout or "").splitlines()[0] if rr.returncode == 0 and (rr.stdout or "") else "— (no origin)"
     solw = _soul_uncommitted_note(pr)
+    from app.core.branding import display_product_name
+
+    n = display_product_name()
     lines: list[str] = [
-        "**Nexa git (brief)**",
+        f"**{n} git (brief)**",
         f"- branch: `{br}`",
         f"- status: `{st!s}`"[:2000],
         f"- last commit: `{lastc!s}`"[:2000],
@@ -342,8 +345,11 @@ def build_nexa_doctor_text(
         if not is_owner_ids_configured():
             acc_block += "\n• Warning: set `TELEGRAM_OWNER_IDS` in production so the first /start is not the only “owner”."
     ullm = doctor_user_llm_block(db, telegram_user_id=telegram_user_id)
+    from app.core.branding import display_product_name
+
+    n = display_product_name()
     lines: list[str] = [
-        "**Nexa Doctor**",
+        f"**{n} Doctor**",
     ]
     if acc_block:
         lines += ["", acc_block, ""]
@@ -389,7 +395,8 @@ def build_nexa_doctor_text(
         lines += [
             "",
             "**Branch (merge safety)**",
-            f"- you are on **`{br!s}`**  —  next: run tests, open a PR, merge to main, restart API and bot. Nexa will not auto-merge this branch.",
+            f"- you are on **`{br!s}`**  —  next: run tests, open a PR, merge to main, restart API and bot. "
+            "AethOS will not auto-merge this branch.",
         ]
 
     lines += [

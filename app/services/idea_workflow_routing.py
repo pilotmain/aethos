@@ -70,7 +70,7 @@ def try_marketing_workflow(
         return None
     pr, err = _load_project(m.group(1), db=db, cctx=cctx)
     if err or pr is None:
-        return f"📣 **Marketing** (Nexa)\n\n{err or 'Could not load project.'}"
+        return f"📣 **Marketing** (AethOS)\n\n{err or 'Could not load project.'}"
     cctx.active_project = pr.key
     db.add(cctx)
     try:

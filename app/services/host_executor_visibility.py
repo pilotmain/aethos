@@ -72,7 +72,7 @@ def format_host_confirmation(payload: dict[str, Any], title: str) -> str:
             "Content is processed only for this answer (not stored).\n\n"
         )
     return intel_intro + (
-        "I can run this locally through Nexa's host executor.\n\n"
+        "I can run this locally through AethOS's host executor.\n\n"
         f"Action: {title}\n"
         "Approval: required\n"
         f"Allowed tool: {tool}\n"

@@ -22,7 +22,7 @@ AGENT_TEMPLATES: dict[str, dict[str, Any]] = {
         ],
         "capabilities": ["create", "modify", "execute", "test"],
         "system_prompt": (
-            "You are a developer agent with access to the user's registered Nexa workspace roots. "
+            "You are a developer agent with access to the user's registered AethOS workspace roots. "
             "Prefer concrete actions: create files, run commands, and run tests via approved host jobs "
             "rather than only pasting code. Confirm before destructive actions (rm -rf, git push --force)."
         ),

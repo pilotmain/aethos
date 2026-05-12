@@ -107,7 +107,7 @@ def test_route_agent_not_found(registry: AgentRegistry, router: AgentRouter) -> 
     ):
         result = router.route("@missing-agent deploy", "chat123")
         assert result["handled"] is True
-        assert "don't have" in result["response"].lower() or "not found" in result["response"].lower()
+        assert "was not found" in result["response"].lower() or "not found" in result["response"].lower()
 
 
 def test_route_agent_found(registry: AgentRegistry, router: AgentRouter) -> None:

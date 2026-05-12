@@ -87,7 +87,7 @@ def set_user_api_key(
         enc = secret_manager.encrypt(raw_key.strip())
     except ValueError as e:
         logger.error("user_api_key encrypt not configured: %s", e)
-        return False, "Encryption is not available on this server. Ask the Nexa owner to set NEXA_SECRET_KEY."
+        return False, "Encryption is not available on this server. Ask the AethOS owner to set NEXA_SECRET_KEY."
 
     row = db.scalar(
         select(UserApiKey).where(
@@ -194,7 +194,7 @@ def list_user_providers(
 
 
 def format_key_list_telegram(db: Session, telegram_user_id: int) -> str:
-    lines: list[str] = ["Nexa API keys (your account)", ""]
+    lines: list[str] = ["AethOS API keys (your account)", ""]
     for m in list_user_providers(db, int(telegram_user_id)):
         if m.has_key and m.last4:
             pl = f"{m.provider}: set (…{m.last4})"

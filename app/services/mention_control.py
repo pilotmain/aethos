@@ -95,9 +95,12 @@ def parse_mention(text: str) -> MentionRoute:
 
 def format_unknown_mention_message(raw_mention: str) -> str:
     """User-facing list when an @ handle is not in the built-in catalog."""
+    from app.core.branding import display_product_name
+
     who = f"@{raw_mention}" if not raw_mention.startswith("@") else raw_mention
+    n = display_product_name()
     return (
-        f"`{who}` isn’t one of Nexa’s **built-in** agents.\n\n"
+        f"`{who}` isn’t one of {n}’s **built-in** agents.\n\n"
         "You can **create a custom agent** with that handle (role, instructions, tools when enabled, and "
         "safety boundaries). Say for example:\n"
         "• Create an agent called **@"

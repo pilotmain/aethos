@@ -349,8 +349,11 @@ class AgentRouter:
                 return {
                     "handled": True,
                     "response": (
-                        f"I don't have an agent called **{agent_name}** yet.\n\n"
-                        f"💡 Create one by saying: \"Create a {agent_name} agent\""
+                        f"Agent **@{agent_name}** was not found in this chat.\n\n"
+                        "**Options:**\n"
+                        f"1. Create it: `create a {agent_name} agent`\n"
+                        "2. List existing agents: `/subagent list`\n"
+                        "3. Use built-in flows: **Development**, **QA Agent**, etc."
                     ),
                     "agent_id": None,
                     "agent_name": agent_name,
