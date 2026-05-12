@@ -41,6 +41,59 @@ class SandboxExecutor:
             return None
         return full
 
+    def _resolve_read_file_path(self, rel: str) -> Path | None:
+        """Resolve paths for ``read_file``: workspace root, latest todo-style folder, then basename search."""
+        direct = self._resolve_rel_file(rel)
+        if direct is not None and direct.is_file():
+            return direct
+        raw = (rel or "").strip().replace("\\", "/").lstrip("/")
+        if not raw or ".." in Path(raw).parts:
+            return None
+        from app.services.gateway.development_nl import _latest_todo_project
+
+        todo = _latest_todo_project(self.workspace)
+        if todo is not None:
+            tp = (todo / raw).resolve()
+            try:
+                tp.relative_to(self.workspace)
+            except ValueError:
+                pass
+            else:
+                if tp.is_file():
+                    return tp
+
+        # Single path segment (e.g. ``styles.css``): bounded search under workspace.
+        if "/" not in raw:
+            name = Path(raw).name
+            if not name:
+                return None
+            matches: list[Path] = []
+            for i, cand in enumerate(self.workspace.rglob(name)):
+                if i >= 200:
+                    break
+                if ".git" in cand.parts:
+                    continue
+                if not cand.is_file():
+                    continue
+                try:
+                    cr = cand.resolve()
+                    cr.relative_to(self.workspace)
+                except ValueError:
+                    continue
+                matches.append(cr)
+            if len(matches) == 1:
+                return matches[0]
+            if len(matches) > 1 and todo is not None:
+                tdr = todo.resolve()
+                for m in matches:
+                    try:
+                        m.relative_to(tdr)
+                        return m
+                    except ValueError:
+                        continue
+                return matches[0]
+        return None
+
     def execute_plan(self, plan: dict[str, Any], *, user_id: str) -> dict[str, Any]:
         _ = user_id
         ok_pre, errs = validate_plan_actions(
@@ -94,15 +147,26 @@ class SandboxExecutor:
                 params = act.get("params") if isinstance(act.get("params"), dict) else {}
                 if typ == "read_file":
                     rel = str(params.get("path") or "")
-                    path = self._resolve_rel_file(rel)
+                    path = self._resolve_read_file_path(rel)
                     if path is None or not path.is_file():
-                        results.append({"action": typ, "status": "failed", "path": rel, "error": "not found"})
+                        results.append(
+                            {
+                                "action": typ,
+                                "status": "failed",
+                                "path": rel,
+                                "error": f"not found (tried workspace and todo-style subfolders for {rel!r})",
+                            }
+                        )
                         all_ok = False
                         continue
                     data = path.read_text(encoding="utf-8", errors="replace")
                     if len(data) > 50_000:
                         data = data[:50_000] + "\n… [truncated]"
-                    results.append({"action": typ, "status": "ok", "path": rel, "preview": data})
+                    try:
+                        rel_disp = path.relative_to(self.workspace).as_posix()
+                    except ValueError:
+                        rel_disp = rel
+                    results.append({"action": typ, "status": "ok", "path": rel_disp, "preview": data})
 
                 elif typ == "write_file":
                     rel = str(params.get("path") or "")

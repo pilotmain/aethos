@@ -50,3 +50,24 @@ def test_executor_write_and_rollback(tmp_path: Path) -> None:
     out = ex.execute_plan(plan, user_id="u1")
     assert out["success"] is False
     assert f.read_text(encoding="utf-8") == "old"
+
+
+def test_executor_read_file_resolves_todo_subfolder(tmp_path: Path) -> None:
+    root = tmp_path / "ws"
+    root.mkdir()
+    proj = root / "my-todo-demo"
+    proj.mkdir()
+    (proj / "index.html").write_text("<html/>", encoding="utf-8")
+    (proj / "app.js").write_text("// app", encoding="utf-8")
+    (proj / "styles.css").write_text("body { color: red; }", encoding="utf-8")
+
+    plan = {
+        "explanation": "read css",
+        "actions": [{"type": "read_file", "params": {"path": "styles.css"}}],
+    }
+    ex = SandboxExecutor(root, max_file_bytes=10_000, command_timeout_seconds=5)
+    out = ex.execute_plan(plan, user_id="u1")
+    assert out["success"] is True, out
+    previews = [r.get("preview", "") for r in out["results"] if r.get("action") == "read_file"]
+    assert previews and "color: red" in previews[0]
+    assert any("my-todo-demo" in str(r.get("path", "")) for r in out["results"])

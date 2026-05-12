@@ -358,6 +358,22 @@ def try_sandbox_plan_gateway_turn(
     if not root:
         return None
 
+    root_path = Path(root).expanduser().resolve()
+    todo_hint = ""
+    try:
+        from app.services.gateway.development_nl import _latest_todo_project
+
+        todo = _latest_todo_project(root_path)
+        if todo is not None:
+            rel_todo = todo.resolve().relative_to(root_path).as_posix()
+            todo_hint = (
+                f"Detected todo-style app folder (relative to workspace): `{rel_todo}/`\n"
+                f"Prefer read/write paths like `{rel_todo}/styles.css` when changing that app "
+                "(still relative to workspace — never use host absolute paths or `..`).\n"
+            )
+    except ValueError:
+        todo_hint = ""
+
     schema = """{
   "explanation": "string",
   "actions": [
@@ -371,6 +387,7 @@ def try_sandbox_plan_gateway_turn(
     system = (
         "You are AethOS sandbox planner. Output ONLY valid JSON matching the requested shape.\n"
         "All file paths must be relative to the workspace root (no absolute paths, no '..').\n"
+        f"{todo_hint}"
         "Prefer the smallest sequence: read only if needed, then writes, then at most one run_command.\n"
         "Commands: first token must be one of npm, npx, yarn, pnpm, git, python, python3, node, "
         "ls, cat, echo, mkdir, touch, cp, mv, pwd, head, tail, wc. No pipes, no semicolons, no rm, "
