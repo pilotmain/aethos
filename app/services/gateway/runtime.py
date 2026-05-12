@@ -536,6 +536,12 @@ class NexaGateway:
         approval = self._try_approval_route(gctx, text, db)
         if approval is not None:
             return approval
+        from app.services.gateway.llm_fallback import try_gateway_llm_fallback_turn
+
+        raw_c = (text or "").strip()
+        llm_fb = try_gateway_llm_fallback_turn(gctx, raw_c, db)
+        if llm_fb is not None:
+            return llm_fb
         return self.handle_full_chat(gctx, text, db=db)
 
     def handle_full_chat(self, gctx: GatewayContext, text: str, *, db: Session) -> dict[str, Any]:
@@ -1075,6 +1081,11 @@ class NexaGateway:
             if approval is not None:
                 return approval
             gctx.extras["gateway_structured_ran"] = True
+            from app.services.gateway.llm_fallback import try_gateway_llm_fallback_turn
+
+            llm_fb = try_gateway_llm_fallback_turn(gctx, raw_gate, db_inner)
+            if llm_fb is not None:
+                return llm_fb
             return self.handle_full_chat(gctx, text, db=db_inner)
 
         if db is not None:
