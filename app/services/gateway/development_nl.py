@@ -16,6 +16,19 @@ from app.services.host_executor_intent import parse_development_task_intent
 from app.services.user_capabilities import is_privileged_owner_for_web_mutations
 
 
+def _sandbox_plan_can_take_handoff(settings: Any) -> bool:
+    """True when owner-facing sandbox LLM plans are enabled.
+
+    Uses strict ``bool`` checks so unit tests that use bare ``MagicMock`` settings do not
+    accidentally treat unspecified flags as enabled.
+    """
+    en = getattr(settings, "nexa_sandbox_execution_enabled", False)
+    llm = getattr(settings, "use_real_llm", False)
+    if not isinstance(en, bool) or not isinstance(llm, bool):
+        return False
+    return bool(en) and bool(llm)
+
+
 def _latest_todo_project(workspace: Path) -> Path | None:
     """Pick a todo-ish folder under the NL workspace (prefers ``*todo*`` in the name)."""
     if not workspace.is_dir():
@@ -190,6 +203,13 @@ def try_development_nl_gateway_turn(
         files_out.append({"filename": f"{rel_dir}/index.html", "content": html_txt})
 
     if not files_out:
+        # Let the sandbox planner handle broader "Development …" edits (change/update/…); it runs
+        # after this turn in the gateway when we return None.
+        if _sandbox_plan_can_take_handoff(settings):
+            from app.services.gateway.sandbox_nl import _EXEC_WORD as _sandbox_plan_exec_hint
+
+            if _sandbox_plan_exec_hint.search(raw):
+                return None
         return {
             "mode": "chat",
             "text": (

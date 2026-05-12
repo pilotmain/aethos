@@ -148,3 +148,68 @@ def test_development_nl_vague_task_handoff(tmp_path: Path) -> None:
     assert out is not None
     assert out.get("intent") == "development_nl_handoff"
     assert "/subagent list" in (out.get("text") or "")
+
+
+def test_development_nl_defers_change_to_sandbox_when_enabled(tmp_path: Path) -> None:
+    proj = tmp_path / "my-todo-demo"
+    proj.mkdir()
+    (proj / "index.html").write_text("<html/>", encoding="utf-8")
+    (proj / "app.js").write_text(_MIN_APP_JS, encoding="utf-8")
+    (proj / "styles.css").write_text("body {}", encoding="utf-8")
+
+    gctx = GatewayContext(user_id="tg_owner")
+    with (
+        patch(
+            "app.services.gateway.development_nl._workspace_root_for_nl",
+            return_value=str(tmp_path),
+        ),
+        patch(
+            "app.services.gateway.development_nl.is_privileged_owner_for_web_mutations",
+            return_value=True,
+        ),
+        patch("app.services.gateway.development_nl.get_settings") as gs,
+    ):
+        gs.return_value = MagicMock(
+            nexa_auto_approve_owner=True,
+            nexa_sandbox_execution_enabled=True,
+            use_real_llm=True,
+        )
+        out = try_development_nl_gateway_turn(
+            gctx,
+            "Development change background to lightblue",
+            MagicMock(),
+        )
+    assert out is None
+
+
+def test_development_nl_handoff_when_sandbox_disabled_even_with_change(tmp_path: Path) -> None:
+    proj = tmp_path / "my-todo-demo"
+    proj.mkdir()
+    (proj / "index.html").write_text("<html/>", encoding="utf-8")
+    (proj / "app.js").write_text(_MIN_APP_JS, encoding="utf-8")
+    (proj / "styles.css").write_text("body {}", encoding="utf-8")
+
+    gctx = GatewayContext(user_id="tg_owner")
+    with (
+        patch(
+            "app.services.gateway.development_nl._workspace_root_for_nl",
+            return_value=str(tmp_path),
+        ),
+        patch(
+            "app.services.gateway.development_nl.is_privileged_owner_for_web_mutations",
+            return_value=True,
+        ),
+        patch("app.services.gateway.development_nl.get_settings") as gs,
+    ):
+        gs.return_value = MagicMock(
+            nexa_auto_approve_owner=True,
+            nexa_sandbox_execution_enabled=False,
+            use_real_llm=True,
+        )
+        out = try_development_nl_gateway_turn(
+            gctx,
+            "Development change background to lightblue",
+            MagicMock(),
+        )
+    assert out is not None
+    assert out.get("intent") == "development_nl_handoff"

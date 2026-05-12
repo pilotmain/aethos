@@ -16,7 +16,7 @@ from app.services.sandbox.plan_executor import SandboxExecutor, format_sandbox_r
 from app.services.user_capabilities import is_privileged_owner_for_web_mutations
 
 _EXEC_WORD = re.compile(
-    r"\b(add|remove|change|update|modify|delete|create|install|refactor|migrate|fix|apply)\b",
+    r"\b(add|remove|change|update|modify|set|replace|delete|create|install|refactor|migrate|fix|apply)\b",
     re.IGNORECASE,
 )
 
