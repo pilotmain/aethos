@@ -52,11 +52,29 @@ For **commercial licensing**, contact your vendor channel (placeholder: **licens
 
 ## One-command install
 
+**Recommended (no custom domain yet):** clone + venv + dependencies + `aethos setup` wizard:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/pilotmain/aethos/main/install.sh | bash
+```
+
+**Same flow, explicit script path:**
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/pilotmain/aethos/main/scripts/install_aethos.sh | bash
 ```
 
-Then: `aethos setup` → `aethos serve`. Deeper bootstrap: [docs/SETUP.md](docs/SETUP.md). Short guides: [docs/API.md](docs/API.md) · [docs/AGENTS.md](docs/AGENTS.md) · [docs/SECURITY_SCAN.md](docs/SECURITY_SCAN.md).
+Optional **Pro license string** (writes into your session for the wizard / `.env`; still needs a vendor **signed** key flow when you use commercial builds):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/pilotmain/aethos/main/install.sh | bash -s -- --license 'YOUR_KEY'
+```
+
+Then: `aethos setup` → `aethos serve` (if the wizard did not already run). Deeper bootstrap: [docs/SETUP.md](docs/SETUP.md). Short guides: [docs/API.md](docs/API.md) · [docs/AGENTS.md](docs/AGENTS.md) · [docs/SECURITY_SCAN.md](docs/SECURITY_SCAN.md).
+
+**Legacy / alternate** Docker-first bootstrap (different code path): [scripts/install.sh](scripts/install.sh) and `python scripts/nexa_bootstrap.py` — see [docs/SETUP.md](docs/SETUP.md).
+
+**Aspirational “three URL” docs:** some decks describe separate `aethos-core` (PyPI) + `aethos-pro` wheels + this repo. Until those packages and indexes are published for end users, **this installer is not less capable for OSS**: it installs **this monorepo** (full API, bots, CLI). Adding `pip install aethos-pro --extra-index-url …` belongs in a **vendor** fork or a follow-up when the index is live. **Pretty URL:** once you own DNS, redirect `https://aethos.ai/install` → the `raw.githubusercontent.com/.../install.sh` URL above.
 
 ## What is AethOS?
 

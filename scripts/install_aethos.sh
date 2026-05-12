@@ -1,18 +1,22 @@
 #!/usr/bin/env bash
 # AethOS — Phase 32 native installer (step-by-step UX + wizard steps 3–6).
 #
-#   curl -fsSL https://raw.githubusercontent.com/pilotmain/nexa-next/main/scripts/install_aethos.sh | bash
-#
-# Legacy URL still works (forwards here): scripts/install_nexa_next_native.sh
+#   curl -fsSL https://raw.githubusercontent.com/pilotmain/aethos/main/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/pilotmain/aethos/main/scripts/install_aethos.sh | bash
 #
 # Private GitHub repo (403/404 on raw): clone with auth first, then:
 #   NEXA_USE_CURRENT_REPO=1 bash scripts/install_aethos.sh
 #
 set -euo pipefail
 
-NEXA_REPO_URL="${NEXA_REPO_URL:-https://github.com/pilotmain/nexa-next.git}"
-NEXA_INSTALL_DIR="${NEXA_INSTALL_DIR:-${HOME}/.nexa}"
+NEXA_REPO_URL="${NEXA_REPO_URL:-https://github.com/pilotmain/aethos.git}"
+NEXA_INSTALL_DIR="${NEXA_INSTALL_DIR:-${HOME}/.aethos}"
 PYTHON="${PYTHON:-python3}"
+
+# Non-interactive: no TTY on stdin, or explicit NEXA_NONINTERACTIVE=1 (e.g. curl | bash).
+if [[ ! -t 0 ]]; then
+  NEXA_NONINTERACTIVE="${NEXA_NONINTERACTIVE:-1}"
+fi
 
 SCRIPT_PATH=""
 if [[ -n "${BASH_SOURCE[0]:-}" ]]; then
@@ -158,22 +162,31 @@ else
   echo "│  Space available: (could not detect)"
 fi
 echo "│"
-echo "│  Press Enter to use default, or type a path:"
-read -r -p "│  > " DIR_INPUT
-if [[ -n "${DIR_INPUT:-}" ]]; then
-  NEXA_INSTALL_DIR="${DIR_INPUT/#\~/${HOME}}"
+if [[ "${NEXA_NONINTERACTIVE:-0}" == "1" ]]; then
+  echo "│  Non-interactive: using ${NEXA_INSTALL_DIR}"
+else
+  echo "│  Press Enter to use default, or type a path:"
+  read -r -p "│  > " DIR_INPUT
+  if [[ -n "${DIR_INPUT:-}" ]]; then
+    NEXA_INSTALL_DIR="${DIR_INPUT/#\~/${HOME}}"
+  fi
 fi
 echo -e "│  ${GREEN}✓${NC} Using: ${NEXA_INSTALL_DIR}"
 step_frame_bottom
 
 export NEXA_SETUP_KIND=""
 if [[ -d "${NEXA_INSTALL_DIR}/.git" ]] || [[ -f "${NEXA_INSTALL_DIR}/aethos_cli/__main__.py" ]]; then
-  echo -e "${YELLOW}Existing Nexa directory detected.${NC}"
+  echo -e "${YELLOW}Existing AethOS directory detected.${NC}"
   echo "   [1] Update — git pull + configure"
   echo "   [2] Fresh — delete folder and clone again"
   echo "   [3] Repair — reinstall deps + configure"
   echo "   [4] Cancel"
-  read -r -p "   > " EXIST_CHOICE
+  if [[ "${NEXA_NONINTERACTIVE:-0}" == "1" ]]; then
+    EXIST_CHOICE="${NEXA_EXISTING_ACTION:-1}"
+    echo "   Non-interactive: using action [${EXIST_CHOICE}] (set NEXA_EXISTING_ACTION to override)"
+  else
+    read -r -p "   > " EXIST_CHOICE
+  fi
   case "${EXIST_CHOICE:-}" in
     1)
       export NEXA_SETUP_KIND="update"
