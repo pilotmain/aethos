@@ -51,3 +51,24 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 - **Commercial:** Pro / enterprise — [LICENSE.commercial](LICENSE.commercial)  
 
 Contact: [license@aethos.ai](mailto:license@aethos.ai)
+
+## Legal notice (read before use)
+
+**Disclaimer of warranty**
+
+AETHOS IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+**User responsibility**
+
+By using AethOS, you acknowledge that:
+
+- You are solely responsible for the configuration, deployment, and actions of any AI agents you create  
+- You assume risks associated with autonomous or semi-autonomous agent operations  
+- The software may perform file operations, run commands, or take other actions that could affect your systems and data  
+- You should review and approve planned actions before execution when approval gates are available  
+
+**No liability for AI agent actions**
+
+The AethOS maintainers and contributors are **not** responsible for damages, data loss, or system issues resulting from use of AI agents deployed with this software, **to the extent permitted by law**. You are responsible for monitoring, approving, and managing agent activities in your environment.
+
+Additional terms: see [LICENSE.disclaimer](LICENSE.disclaimer) and [docs/legal.md](docs/legal.md).

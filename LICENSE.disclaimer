@@ -1,0 +1,45 @@
+# AETHOS software — additional disclaimer and liability notice
+
+This notice supplements the [Apache License 2.0](LICENSE) and any separate commercial agreement. It is not a substitute for legal advice.
+
+## 1. Disclaimer of warranties
+
+TO THE FULLEST EXTENT PERMITTED BY APPLICABLE LAW, AETHOS IS PROVIDED "AS IS" AND "AS AVAILABLE", WITH ALL FAULTS AND WITHOUT WARRANTY OF ANY KIND. THE ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE OF THE SOFTWARE IS WITH YOU.
+
+THE AETHOS CONTRIBUTORS EXPRESSLY DISCLAIM ALL WARRANTIES, WHETHER EXPRESS, IMPLIED, STATUTORY, OR OTHERWISE, INCLUDING BUT NOT LIMITED TO:
+
+- THE IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE, AND NON-INFRINGEMENT
+- WARRANTIES THAT THE SOFTWARE WILL MEET YOUR REQUIREMENTS, OPERATE WITHOUT INTERRUPTION, BE SECURE, OR BE ERROR-FREE
+- WARRANTIES THAT RESULTS OBTAINED FROM USE OF THE SOFTWARE WILL BE ACCURATE OR RELIABLE
+
+## 2. Limitation of liability
+
+TO THE FULLEST EXTENT PERMITTED BY APPLICABLE LAW:
+
+**A. No consequential damages.** IN NO EVENT SHALL THE AETHOS CONTRIBUTORS BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR EXEMPLARY DAMAGES, INCLUDING BUT NOT LIMITED TO DAMAGES FOR LOSS OF PROFITS, GOODWILL, USE, DATA, OR OTHER INTANGIBLE LOSSES, ARISING OUT OF OR RELATING TO THE USE OF OR INABILITY TO USE THE SOFTWARE.
+
+**B. Limitation of liability for direct damages.** TO THE EXTENT NOT PROHIBITED BY LAW, THE TOTAL LIABILITY OF THE AETHOS CONTRIBUTORS FOR DIRECT DAMAGES ARISING OUT OF OR RELATING TO THE SOFTWARE, WHETHER BASED ON WARRANTY, CONTRACT, TORT (INCLUDING NEGLIGENCE), OR ANY OTHER LEGAL THEORY, SHALL NOT EXCEED THE AMOUNT OF ONE HUNDRED U.S. DOLLARS ($100.00 USD).
+
+**C. AI agent actions.** THE AETHOS CONTRIBUTORS SHALL NOT BE LIABLE FOR ANY ACTIONS TAKEN BY AI AGENTS CREATED, CONFIGURED, OR DEPLOYED USING THE SOFTWARE. YOU ACKNOWLEDGE THAT AI AGENTS MAY ACT AUTONOMOUSLY AND THAT YOU BEAR SOLE RESPONSIBILITY FOR MONITORING, APPROVING, AND CONTROLLING AGENT ACTIVITIES.
+
+## 3. Acknowledgment
+
+By using this software, you acknowledge that:
+
+- You have read and understood this disclaimer (and the applicable open-source or commercial license terms)
+- You agree to assume risks associated with AI agent operations
+- You will not hold the AethOS contributors liable for damages resulting from agent actions to the extent permitted by law
+- You are solely responsible for backing up critical data before allowing agents to modify files or run commands
+- You will review and approve planned actions where approval gates are available
+
+## 4. Severability
+
+If any provision of this disclaimer is found to be unenforceable or invalid, that provision shall be limited or eliminated to the minimum extent necessary so that this disclaimer shall otherwise remain in full force and effect and enforceable.
+
+## 5. Governing law
+
+This disclaimer shall be governed by and construed in accordance with the laws of **[Your State/Country]**, without regard to its conflict of laws principles. **Replace the bracketed text** with the jurisdiction your counsel recommends.
+
+---
+
+**Last updated:** 2026-05-10

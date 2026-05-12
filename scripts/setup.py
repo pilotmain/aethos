@@ -40,6 +40,55 @@ TOTAL_STEPS = 9
 CREDS_FILE_HOME = Path.home() / ".aethos_credentials"
 
 
+def display_legal_notice(*, force: bool, accept_disclaimer: bool) -> None:
+    """Show warranty / liability summary; require acknowledgment unless bypassed."""
+    if (os.environ.get("AETHOS_SETUP_SKIP_LEGAL") or "").strip().lower() in ("1", "true", "yes"):
+        return
+
+    env_accept = (os.environ.get("AETHOS_SETUP_ACCEPT_DISCLAIMER") or "").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+    )
+    if force or accept_disclaimer or env_accept:
+        print(
+            f"\n{Colors.YELLOW}{'═' * 60}{Colors.RESET}\n"
+            f"{Colors.BOLD}Legal notice{Colors.RESET}\n"
+            f"{Colors.DIM}AethOS is provided AS IS without warranty. You are responsible for AI agent "
+            f"actions, backups, and approvals. See {Colors.CYAN}LICENSE.disclaimer{Colors.DIM} in the repo root.{Colors.RESET}\n"
+            f"{Colors.DIM}(Continuing: --force, --accept-disclaimer, or AETHOS_SETUP_ACCEPT_DISCLAIMER=1.){Colors.RESET}\n"
+            f"{Colors.YELLOW}{'═' * 60}{Colors.RESET}\n"
+        )
+        return
+
+    print(f"\n{Colors.YELLOW}{'═' * 60}{Colors.RESET}")
+    print(f"{Colors.BOLD}Legal notice{Colors.RESET}")
+    print(f"{Colors.YELLOW}{'═' * 60}{Colors.RESET}")
+    print(
+        """
+By using AethOS, you acknowledge that:
+• This software is provided "AS IS" without warranty
+• You are solely responsible for AI agent actions and data backups
+• Maintainer liability is limited; see LICENSE.disclaimer in the repo root
+"""
+    )
+    print(f"{Colors.YELLOW}{'═' * 60}{Colors.RESET}\n")
+
+    if not sys.stdin.isatty():
+        print(
+            Colors.error(
+                "Non-interactive shell: read LICENSE.disclaimer, then set "
+                "AETHOS_SETUP_ACCEPT_DISCLAIMER=1, or pass --accept-disclaimer, or use --force."
+            )
+        )
+        sys.exit(1)
+
+    response = prompt_line(f"{Colors.question('Do you accept these terms? (yes/no)')} ").strip().lower()
+    if response not in ("yes", "y"):
+        print(Colors.error("Setup cancelled. Accept the terms to continue (see LICENSE.disclaimer)."))
+        sys.exit(1)
+
+
 def _parse_help_argv(argv: list[str]) -> bool:
     """Handle ``--help``, ``-h``, and ``help [topic]``. Returns True if handled."""
     if not argv:
@@ -108,6 +157,7 @@ class SetupWizard:
         skip_services: bool,
         full_reset: bool,
         force: bool = False,
+        accept_disclaimer: bool = False,
     ) -> None:
         self.repo_root = _REPO_ROOT
         self.env_path = self.repo_root / ".env"
@@ -117,6 +167,7 @@ class SetupWizard:
         self.resume = resume
         self.skip_services = skip_services
         self.full_reset = full_reset
+        self.accept_disclaimer = accept_disclaimer
         env_force = (os.environ.get("AETHOS_SETUP_FORCE") or "").strip().lower() in (
             "1",
             "true",
@@ -761,6 +812,7 @@ HOST_EXECUTOR_WORK_ROOT={Path.home() / "aethos-workspace"}
 
     def run(self) -> None:
         self.print_banner()
+        display_legal_notice(force=self.force, accept_disclaimer=self.accept_disclaimer)
         if self.full_reset and STATE_FILE.exists():
             STATE_FILE.unlink()
         state = self._load_state()
@@ -879,6 +931,11 @@ def main() -> None:
         action="store_true",
         help="Skip overwrite confirmation when .env exists (non-interactive)",
     )
+    parser.add_argument(
+        "--accept-disclaimer",
+        action="store_true",
+        help="Acknowledge LICENSE.disclaimer without interactive prompt (for automation)",
+    )
     args, _rest = parser.parse_known_args(argv)
 
     # Allow ``python scripts/setup.py help llm`` after argparse
@@ -890,6 +947,7 @@ def main() -> None:
         skip_services=args.skip_services,
         full_reset=args.full_reset,
         force=args.force,
+        accept_disclaimer=args.accept_disclaimer,
     )
     try:
         wizard.run()

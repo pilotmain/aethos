@@ -22,6 +22,7 @@
 
 ## Legal
 
+- [Legal overview (disclaimer, privacy, terms summary)](legal.md)
 - [Trademark](legal/TRADEMARK.md)
 
 ## Business
