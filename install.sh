@@ -17,6 +17,10 @@
 #
 set -euo pipefail
 
+# Bash 3.2 (macOS /bin/bash): with ``set -u``, ``"${EXTRA_ARGS[@]}"`` errors when the array
+# is empty. Use ``${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"}`` for safe expansion (POSIX parameter form).
+EXTRA_ARGS=()
+
 REPO_DEFAULT="https://github.com/pilotmain/aethos.git"
 INSTALL_DEFAULT="${HOME}/.aethos"
 
@@ -48,7 +52,6 @@ EOF
 }
 
 LICENSE_KEY=""
-EXTRA_ARGS=()
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --help | -h)
@@ -90,7 +93,7 @@ _inner_from_bash_source() {
   fi
   _dir="$(cd "$(dirname "$_src")" && pwd)"
   if [[ -f "$_dir/scripts/install_aethos.sh" ]]; then
-    exec bash "$_dir/scripts/install_aethos.sh" "${EXTRA_ARGS[@]}"
+    exec bash "$_dir/scripts/install_aethos.sh" ${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"}
   fi
   return 1
 }
@@ -118,4 +121,4 @@ if [[ ! -f "${DEST}/aethos_cli/__main__.py" ]]; then
   fi
 fi
 
-exec bash "${DEST}/scripts/install_aethos.sh" "${EXTRA_ARGS[@]}"
+exec bash "${DEST}/scripts/install_aethos.sh" ${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"}
