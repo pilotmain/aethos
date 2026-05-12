@@ -171,7 +171,9 @@ def require_personal_workspace_mutation_allowed(db: Session, app_user_id: str) -
 
     - Non-Telegram-shaped app user ids (``web_*``, ``local_*``, email, etc.) are treated as
       the sole operator of that id and may manage their own rows.
-    - Telegram-linked ``tg_*`` users need **owner** or **trusted** (guest cannot register paths).
+    - Telegram-linked ``tg_*`` users: allow if :func:`is_privileged_owner_for_web_mutations`
+      (``AETHOS_OWNER_IDS``, governance owner/admin, Telegram **owner** role) **or** Telegram
+      **trusted** role (guest cannot register paths).
     """
     from fastapi import HTTPException, status
 
@@ -179,6 +181,8 @@ def require_personal_workspace_mutation_allowed(db: Session, app_user_id: str) -
 
     uid = (app_user_id or "").strip()
     if not parse_telegram_id_from_app_user_id(uid):
+        return
+    if is_privileged_owner_for_web_mutations(db, uid):
         return
     role = get_telegram_role_for_app_user(db, uid)
     if is_trusted_or_owner(role):
