@@ -4,7 +4,7 @@ Thank you for contributing to AethOS.
 
 ## Code of conduct
 
-Be respectful, constructive, and assume good intent.
+Please read [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). Be respectful, constructive, and assume good intent.
 
 ## How to contribute
 

@@ -1,12 +1,9 @@
 # AethOS documentation
 
-Welcome to the AethOS documentation index.
-
 ## Getting started
 
 - [Installation](installation.md)
 - [Configuration](configuration.md)
-- [Setup (long form)](SETUP.md) — Docker, bootstrap, local URLs
 
 ## Features
 
@@ -23,18 +20,14 @@ Welcome to the AethOS documentation index.
 - [Architecture](development/architecture.md)
 - [Contributing](development/contributing.md)
 
+## Legal
+
+- [Trademark](legal/TRADEMARK.md)
+
 ## Business
 
 - [Open core model](open-core.md)
 
-## Deep dives (existing)
+## More (long-form)
 
-| Topic | Doc |
-| --- | --- |
-| LLM providers | [LLM_PROVIDERS.md](LLM_PROVIDERS.md) |
-| API surface | [API.md](API.md) |
-| Agents (product) | [AGENTS.md](AGENTS.md) |
-| Operations | [OPERATIONS.md](OPERATIONS.md) |
-| Dev jobs | [DEV_JOBS.md](DEV_JOBS.md) |
-| Web UI | [WEB_UI.md](WEB_UI.md) |
-| Security scan | [SECURITY_SCAN.md](SECURITY_SCAN.md) |
+Operational and phase-specific guides (API, LLM, operations, roadmap) remain as separate files in this `docs/` directory — browse the folder or your editor’s file tree.

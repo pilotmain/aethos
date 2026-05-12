@@ -1,25 +1,8 @@
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="github-banner-dark.svg">
-    <img src="github-banner-light.svg" alt="AethOS — The Agentic Operating System" width="100%">
-  </picture>
-</p>
-
-<p align="center">
-  <a href="https://github.com/pilotmain/aethos/blob/main/LICENSE">
-    <img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="Apache 2.0">
-  </a>
-  <a href="https://github.com/pilotmain/aethos/blob/main/LICENSE.commercial">
-    <img src="https://img.shields.io/badge/License-Commercial-red.svg" alt="Commercial License">
-  </a>
-  <a href="https://github.com/pilotmain/aethos/stargazers">
-    <img src="https://img.shields.io/github/stars/pilotmain/aethos" alt="GitHub stars">
-  </a>
-</p>
-
 # AethOS — The Agentic Operating System
 
-> **Repository:** [github.com/pilotmain/aethos](https://github.com/pilotmain/aethos)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+[![Commercial License](https://img.shields.io/badge/License-Commercial-red.svg)](LICENSE.commercial)
+[![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
 
 ## One-curl install
 
@@ -27,13 +10,13 @@
 curl -fsSL https://raw.githubusercontent.com/pilotmain/aethos/main/install.sh | bash
 ```
 
-With a **license string** for the wizard / runtime (optional):
+With a Pro / license string for the installer (optional):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/pilotmain/aethos/main/install.sh | bash -s -- --license 'YOUR_KEY'
 ```
 
-Default clone/install path is often **`~/.aethos`**. From a **git clone** of this repo, use [docs/installation.md](docs/installation.md) instead.
+Default install path is often `~/.aethos`. For a manual clone of this repo, see [docs/installation.md](docs/installation.md).
 
 ## Quick start
 
@@ -43,20 +26,20 @@ source .venv/bin/activate
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8010
 ```
 
-Open the web UI when you run the frontend (often [http://localhost:3000](http://localhost:3000)); API defaults vary — see [docs/WEB_UI.md](docs/WEB_UI.md) and [docs/SETUP.md](docs/SETUP.md).
+When the web app is running locally, open [http://localhost:3000](http://localhost:3000) (or the port shown in your setup). See [docs/WEB_UI.md](docs/WEB_UI.md) and [docs/SETUP.md](docs/SETUP.md) for URLs and auth.
 
 ## Features
 
-- Natural-language **agents** and sub-agent workflows  
-- **File** read/write and host-executor flows (policy-gated)  
-- **Command** execution (allowlisted / supervised paths)  
-- **Sandbox** plans with explicit approval and rollback  
-- **Deploy** helpers (Vercel, Railway, …) when CLIs and tokens are configured  
-- **Observability** and usage surfaces where enabled  
+- **Natural language agents** — create and orchestrate specialists from chat  
+- **File operations** — read, write, and modify files within policy  
+- **Command execution** — allowlisted / supervised shell flows  
+- **Safe sandbox** — approval-based plans with rollback where enabled  
+- **Deploy helpers** — Vercel, Railway, Fly.io, and others when CLIs and tokens are configured  
+- **Observability** — status, metrics, and health surfaces where enabled  
 
 ## Documentation
 
-**Index:** [docs/README.md](docs/README.md) — installation, configuration, feature guides, architecture, and links to long-form docs (LLM, API, operations, dev jobs).
+Full index: [docs/README.md](docs/README.md)
 
 ## Contributing
 
@@ -64,9 +47,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-Dual-licensed:
-
 - **Open source:** [Apache License 2.0](LICENSE)  
-- **Commercial:** Pro / enterprise / support — [LICENSE.commercial](LICENSE.commercial)  
+- **Commercial:** Pro / enterprise — [LICENSE.commercial](LICENSE.commercial)  
 
-Contact: **[license@aethos.ai](mailto:license@aethos.ai)**
+Contact: [license@aethos.ai](mailto:license@aethos.ai)

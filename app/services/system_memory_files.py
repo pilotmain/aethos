@@ -41,12 +41,17 @@ def project_root() -> Path:
     return Path(__file__).resolve().parents[2]
 
 
+def system_memory_dir() -> Path:
+    """Directory for repo-local soul.md + memory.md (docs/development after Phase 4)."""
+    return project_root() / "docs" / "development"
+
+
 def soul_path() -> Path:
-    return project_root() / "soul.md"
+    return system_memory_dir() / "soul.md"
 
 
 def memory_path() -> Path:
-    return project_root() / "memory.md"
+    return system_memory_dir() / "memory.md"
 
 
 def default_soul_md() -> str:
@@ -103,6 +108,7 @@ def ensure_soul_creator_section() -> None:
 
 
 def ensure_system_memory_files() -> None:
+    system_memory_dir().mkdir(parents=True, exist_ok=True)
     if not soul_path().exists():
         soul_path().write_text(default_soul_md(), encoding="utf-8")
 

@@ -155,3 +155,8 @@ docs/WEEK*.md
 # Local sibling clones (do not nest inside this repo)
 aethos-core/
 aethos-pro/
+
+# Documentation backups (local only — do not commit)
+aethos-docs-backup/
+*.backup
+backup/

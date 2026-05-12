@@ -7,6 +7,8 @@ import re
 
 import pytest
 
+from pathlib import Path
+
 from app.services import system_memory_files as smf
 from app.services.general_answer_service import answer_general_question
 from app.services.telegram_memory_commands import (
@@ -23,24 +25,33 @@ def mem_root(tmp_path, monkeypatch):
     return tmp_path
 
 
+def _soul_mem(mem_root: Path) -> tuple[Path, Path]:
+    d = mem_root / "docs" / "development"
+    return d / "soul.md", d / "memory.md"
+
+
 def test_ensure_system_memory_files_creates_soul_and_memory(mem_root) -> None:
     smf.ensure_system_memory_files()
-    assert (mem_root / "soul.md").is_file()
-    assert (mem_root / "memory.md").is_file()
+    soul, mem = _soul_mem(mem_root)
+    assert soul.is_file()
+    assert mem.is_file()
 
 
 def test_default_soul_includes_aethos_identity_and_creator(mem_root) -> None:
     smf.ensure_system_memory_files()
-    soul = (mem_root / "soul.md").read_text(encoding="utf-8")
-    assert "AethOS Soul" in soul or "AethOS" in soul
-    assert "## Creator" in soul
-    assert "Raya Ameha Meresa" in soul
+    sp, _ = _soul_mem(mem_root)
+    text = sp.read_text(encoding="utf-8")
+    assert "AethOS Soul" in text or "AethOS" in text
+    assert "## Creator" in text
+    assert "Raya Ameha Meresa" in text
 
 
 def test_ensure_soul_creator_section_appends_once(mem_root) -> None:
-    (mem_root / "soul.md").write_text("# Custom\n\nNo creator here.\n", encoding="utf-8")
+    soul, _ = _soul_mem(mem_root)
+    soul.parent.mkdir(parents=True, exist_ok=True)
+    soul.write_text("# Custom\n\nNo creator here.\n", encoding="utf-8")
     smf.ensure_soul_creator_section()
-    text = (mem_root / "soul.md").read_text(encoding="utf-8")
+    text = soul.read_text(encoding="utf-8")
     assert text.count("## Creator") == 1
     assert "Raya Ameha Meresa" in text
 
@@ -48,14 +59,16 @@ def test_ensure_soul_creator_section_appends_once(mem_root) -> None:
 def test_ensure_soul_creator_section_idempotent(mem_root) -> None:
     smf.ensure_system_memory_files()
     smf.ensure_soul_creator_section()
-    text = (mem_root / "soul.md").read_text(encoding="utf-8")
+    soul, _ = _soul_mem(mem_root)
+    text = soul.read_text(encoding="utf-8")
     assert text.count("## Creator") == 1
 
 
 def test_append_memory_entry_writes_timestamped_block(mem_root) -> None:
     smf.ensure_system_memory_files()
     smf.append_memory_entry("Prefers concise answers.", source="test")
-    mem = (mem_root / "memory.md").read_text(encoding="utf-8")
+    _, mem = _soul_mem(mem_root)
+    mem = mem.read_text(encoding="utf-8")
     assert "Prefers concise answers." in mem
     assert " — test" in mem
 
@@ -83,7 +96,8 @@ def test_memory_command_help_and_soul_and_reload(mem_root) -> None:
 def test_memory_add_writes_and_secret_rejected(mem_root) -> None:
     smf.ensure_system_memory_files()
     assert "Added" in handle_memory_add("/memory add User prefers short answers.")
-    mem = (mem_root / "memory.md").read_text(encoding="utf-8")
+    _, mem = _soul_mem(mem_root)
+    mem = mem.read_text(encoding="utf-8")
     assert "User prefers short answers." in mem
     assert "won’t store" in handle_memory_add("/memory add sk-deadbeef")
 
@@ -96,9 +110,8 @@ def test_build_system_prompt_includes_memory_block(mem_root, monkeypatch) -> Non
     from app.services.response_composer import ResponseContext, _build_system_prompt
 
     smf.ensure_system_memory_files()
-    (mem_root / "soul.md").write_text(
-        "# AethOS Soul\n\nCreator: Raya Ameha Meresa\n", encoding="utf-8"
-    )
+    soul, _ = _soul_mem(mem_root)
+    soul.write_text("# AethOS Soul\n\nCreator: Raya Ameha Meresa\n", encoding="utf-8")
 
     def _root():
         return mem_root
@@ -129,9 +142,8 @@ def test_build_system_prompt_includes_memory_block(mem_root, monkeypatch) -> Non
 
 def test_general_answer_system_includes_memory_block(mem_root, monkeypatch) -> None:
     smf.ensure_system_memory_files()
-    (mem_root / "soul.md").write_text(
-        "## Creator\n\nName: Raya Ameha Meresa\n", encoding="utf-8"
-    )
+    soul, _ = _soul_mem(mem_root)
+    soul.write_text("## Creator\n\nName: Raya Ameha Meresa\n", encoding="utf-8")
 
     monkeypatch.setattr(smf, "project_root", lambda: mem_root)
     monkeypatch.setattr(

@@ -83,8 +83,12 @@ def _git_porcelain_counts(project_root: str) -> tuple[int, int]:
 
 def _soul_uncommitted_note(project_root: str) -> str | None:
     try:
+        rel = str(soul_path().relative_to(Path(project_root)))
+    except ValueError:
+        rel = "docs/development/soul.md"
+    try:
         r = subprocess.run(
-            ["git", "status", "--porcelain", "--", "soul.md"],
+            ["git", "status", "--porcelain", "--", rel],
             cwd=project_root,
             capture_output=True,
             text=True,
@@ -92,15 +96,15 @@ def _soul_uncommitted_note(project_root: str) -> str | None:
         )
     except (OSError, subprocess.SubprocessError) as e:
         logger.info("nexa doctor _soul_uncommitted_note: %s", e)
-        return f"soul.md git check skipped ({type(e).__name__})"
+        return f"{rel} git check skipped ({type(e).__name__})"
     st = (r.stdout or "").strip() if r.returncode == 0 else ""
     if not st:
         return None
     if st.startswith(" M") or st.startswith("M "):
-        return "soul.md is modified and uncommitted (keeps identity local)."
+        return f"{rel} is modified and uncommitted (keeps identity local)."
     if st.startswith("??"):
-        return "soul.md is untracked (local only)."
-    return "soul.md has local changes not in the last commit."
+        return f"{rel} is untracked (local only)."
+    return f"{rel} has local changes not in the last commit."
 
 
 def _public_web_access_section() -> str:
@@ -409,11 +413,13 @@ def build_nexa_doctor_text(
     lines += ["", _web_search_section()]
     lines += ["", _documents_section(db, s)]
 
+    sm_soul = soul_path().relative_to(PROJECT_ROOT)
+    sm_mem = memory_path().relative_to(PROJECT_ROOT)
     lines += [
         "",
         "**Memory**",
-        f"- `soul.md`: {soul_t}  ·  git: {soul_git!s}"[:2000],
-        f"- `memory.md`: {'**found**' if mp_ex else '**missing**'}" + f"  ·  last line (trimmed): `{lastm[:200]!s}`",
+        f"- `{sm_soul}`: {soul_t}  ·  git: {soul_git!s}"[:2000],
+        f"- `{sm_mem}`: {'**found**' if mp_ex else '**missing**'}" + f"  ·  last line (trimmed): `{lastm[:200]!s}`",
         f"- durable preferences detected (heuristic, max few): {dct}",
     ]
 
@@ -438,8 +444,10 @@ def build_nexa_doctor_text(
         "**Next actions (optional)**",
         f"- If something looks off: re-run this report after you fix the host, DB, and `.env`.",
     ]
-    if snote and "soul" in snote:
-        lines.append("- Commit or stash `soul.md` only if you want it in git; it is often kept local for identity text.")
+    if snote and "soul" in snote.lower():
+        lines.append(
+            f"- Commit or stash `{sm_soul}` only if you want it in git; it is often kept local for identity text."
+        )
     if _is_agent_branch(br):
         lines.append(
             f"- For branch **{br}** — finish work, then merge to **main** and restart services so the bot runs the new code."

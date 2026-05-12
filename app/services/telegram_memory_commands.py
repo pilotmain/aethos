@@ -26,7 +26,7 @@ def normalize_memory_command_text(text: str) -> str:
 
 
 def format_memory_help() -> str:
-    return """Nexa memory files:
+    return """Nexa memory files (repo paths: `docs/development/soul.md`, `docs/development/memory.md`):
 
 soul.md — identity, mission, creator, principles
 memory.md — durable operating memory

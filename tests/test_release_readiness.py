@@ -13,6 +13,7 @@ from datetime import datetime, timedelta
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
+from app.core.branding import display_product_name
 from app.core.config import get_settings
 from app.services.env_validator import collect_env_validation_issues, format_env_validation_report
 from app.services.job_diagnostics import collect_job_diagnostics, task_prompt_path_for_job
@@ -158,7 +159,8 @@ def test_doctor_output_has_core_sections():
                             return_value=2,
                         ):
                             t = build_nexa_doctor_text(mdb, "u1", telegram_user_id=1)
-    assert "Nexa Doctor" in t
+    brand = display_product_name()
+    assert f"**{brand} Doctor**" in t
     assert "User LLM" in t
     assert "**Runtime**" in t
     assert "Public web access" in t
@@ -172,7 +174,7 @@ def test_doctor_output_has_core_sections():
 
 def test_format_git_brief_includes_branch_or_repo():
     g = format_git_brief()
-    assert "Nexa" in g
+    assert display_product_name() in g
     assert "git" in g.lower()
 
 

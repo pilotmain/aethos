@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -34,6 +36,10 @@ def mem_root(tmp_path, monkeypatch):
     return tmp_path
 
 
+def _mem_file(mem_root: Path, name: str) -> Path:
+    return mem_root / "docs" / "development" / name
+
+
 def test_extract_cursor_plain_block_preference() -> None:
     mem = "User prefers Cursor instructions as one strict plain text block."
     p = extract_memory_preferences(mem, "")
@@ -60,8 +66,9 @@ def test_user_requests_cursor_instructions() -> None:
 
 def test_memory_status_and_search(mem_root) -> None:
     smf.ensure_system_memory_files()
-    (mem_root / "memory.md").write_text(
-        (mem_root / "memory.md").read_text(encoding="utf-8")
+    mem_path = _mem_file(mem_root, "memory.md")
+    mem_path.write_text(
+        mem_path.read_text(encoding="utf-8")
         + "\n### 2099-01-01T00:00:00Z — test\n\nhello cursor world\n",
         encoding="utf-8",
     )
@@ -139,7 +146,7 @@ def test_approved_learning_appends_to_memory_md(mem_root) -> None:
         apply_to_memory=True,
         memory_service=_Mem(),
     )
-    mem_txt = (mem_root / "memory.md").read_text(encoding="utf-8")
+    mem_txt = _mem_file(mem_root, "memory.md").read_text(encoding="utf-8")
     assert "concise" in mem_txt.lower() or "learning" in mem_txt.lower()
     db.close()
     engine.dispose()
@@ -153,8 +160,9 @@ def test_append_still_rejects_secrets(mem_root) -> None:
 
 def test_get_memory_preferences_reads_files(mem_root, monkeypatch) -> None:
     smf.ensure_system_memory_files()
-    (mem_root / "memory.md").write_text(
-        (mem_root / "memory.md").read_text(encoding="utf-8")
+    mem_path = _mem_file(mem_root, "memory.md")
+    mem_path.write_text(
+        mem_path.read_text(encoding="utf-8")
         + "\nUser wants one strict plain text block for Cursor.\n",
         encoding="utf-8",
     )
