@@ -463,6 +463,56 @@ def parse_deploy_intent(text: str) -> dict[str, Any] | None:
     return None
 
 
+def parse_deploy_from_intent(text: str) -> dict[str, Any] | None:
+    """
+    ``deploy from <path>`` / ``deploy this folder <path>`` — set project root then run deploy flow.
+
+    Path is first-line only; strip wrapping quotes/backticks.
+    """
+    if not text or not isinstance(text, str):
+        return None
+    line = text.strip().splitlines()[0].strip()
+    if not line:
+        return None
+
+    m = re.match(r"(?is)^deploy\s+from\s+(.+)$", line)
+    if m:
+        return {"intent": "set_deploy_root_and_deploy", "folder": m.group(1).strip(), "raw_text": text}
+
+    m2 = re.match(r"(?is)^deploy\s+this\s+folder\s+(.+)$", line)
+    if m2:
+        return {"intent": "set_deploy_root_and_deploy", "folder": m2.group(1).strip(), "raw_text": text}
+
+    m3 = re.match(r"(?is)^deploy\s+folder\s+(.+)$", line)
+    if m3:
+        return {"intent": "set_deploy_root_and_deploy", "folder": m3.group(1).strip(), "raw_text": text}
+
+    return None
+
+
+def parse_deploy_root_intent(text: str) -> dict[str, Any] | None:
+    """
+    Change deploy directory while a cloud choice is pending (e.g. ``change deploy root to /path``).
+    """
+    if not text or not isinstance(text, str):
+        return None
+    line = text.strip().splitlines()[0].strip()
+    if not line:
+        return None
+
+    patterns = (
+        r"(?is)^(?:change|set)\s+deploy\s+root\s+to\s+(.+)$",
+        r"(?is)^use\s+deploy\s+root\s+(.+)$",
+        r"(?is)^deploy\s+root\s+to\s+(.+)$",
+        r"(?is)^deploy\s+from\s+folder\s+(.+)$",
+    )
+    for pat in patterns:
+        m = re.match(pat, line)
+        if m:
+            return {"intent": "change_deploy_root", "folder": m.group(1).strip(), "raw_text": text}
+    return None
+
+
 def parse_deployment_status_intent(text: str) -> dict[str, Any] | None:
     """NL intent to list cloud projects / deployments (gateway deployment-status hook)."""
     if not text or not isinstance(text, str):

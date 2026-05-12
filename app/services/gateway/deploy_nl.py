@@ -18,7 +18,9 @@ from app.services.host_executor_intent import (
     is_cancel_deploy_intent,
     is_reset_deploy_intent,
     parse_available_clouds_intent,
+    parse_deploy_from_intent,
     parse_deploy_intent,
+    parse_deploy_root_intent,
 )
 from app.services.user_capabilities import is_privileged_owner_for_web_mutations
 
@@ -36,6 +38,17 @@ _DEPLOY_DISPLAY: dict[str, str] = {
 _PENDING_KEY = "nexa:deploy_choice_pending"
 _PREF_KEY = "nexa:deploy_preferred_provider"
 _PENDING_TTL_SEC = 900
+
+
+def _resolve_deploy_folder_token(token: str) -> Path | None:
+    """Strip quotes and resolve ``~`` / relative paths for deploy-root NL."""
+    s = (token or "").strip().strip('"`\'')
+    if not s:
+        return None
+    try:
+        return Path(s).expanduser().resolve()
+    except OSError:
+        return None
 
 
 def _deploy_workspace_root() -> str:
@@ -218,6 +231,7 @@ def format_cloud_choice_prompt(project_root: Path) -> str:
     lines.append("")
     lines.append("Reply with the **number** or **`deploy to <name>`**.")
     lines.append("Say **`cancel`** to abort, or **`reset deploy`** to clear this prompt.")
+    lines.append("To use a different folder: **`change deploy root to /path`** (while this prompt is open).")
     lines.append("_Your choice is remembered for the next plain `deploy`._")
     return "\n".join(lines)
 
@@ -353,7 +367,11 @@ def try_gateway_deploy_turn(
 
     workspace0 = _deploy_workspace_root()
     root0 = find_project_root(Path(workspace0))
-    if parse_available_clouds_intent(raw) and parse_deploy_intent(raw) is None:
+    if (
+        parse_available_clouds_intent(raw)
+        and parse_deploy_intent(raw) is None
+        and parse_deploy_from_intent(raw) is None
+    ):
         body = format_available_clouds_reply(root0)
         return {
             "mode": "chat",
@@ -361,7 +379,35 @@ def try_gateway_deploy_turn(
             "intent": "available_clouds",
         }
 
-    parsed = parse_deploy_intent(raw)
+    from_int = parse_deploy_from_intent(raw)
+    if from_int:
+        tok = str(from_int.get("folder") or "")
+        pth = _resolve_deploy_folder_token(tok)
+        if pth is None or not pth.is_dir():
+            return {
+                "mode": "chat",
+                "text": gateway_finalize_chat_reply(
+                    (
+                        f"**Folder not found**\n\n`{tok}` is not an existing directory.\n\n"
+                        + install_instructions_text()
+                    ).strip(),
+                    source="deploy_from_bad_path",
+                    user_text=raw,
+                ),
+                "intent": "deploy_root_error",
+            }
+        _clear_pending(db, uid)
+        pending = None
+        workspace_start = str(find_project_root(pth))
+        parsed: dict[str, Any] | None = {
+            "intent": "deploy",
+            "deploy_type": "deploy",
+            "provider": None,
+            "raw_text": raw,
+        }
+    else:
+        workspace_start = _deploy_workspace_root()
+        parsed = parse_deploy_intent(raw)
 
     if parsed and parsed.get("provider"):
         _clear_pending(db, uid)
@@ -369,6 +415,40 @@ def try_gateway_deploy_turn(
     if parsed is None:
         if not pending:
             return None
+        root_int = parse_deploy_root_intent(raw)
+        if root_int:
+            tok = str(root_int.get("folder") or "")
+            new_base = _resolve_deploy_folder_token(tok)
+            opts = list(pending.get("options") or [])
+            preview_b = bool(pending.get("preview"))
+            cur_ws = str(pending.get("workspace") or _deploy_workspace_root())
+            cur_root = find_project_root(Path(cur_ws))
+            if new_base is None or not new_base.is_dir():
+                body = (
+                    f"**Folder not found**\n\n`{tok}` is not a directory.\n\n"
+                    + format_cloud_choice_prompt(cur_root)
+                )
+                return {
+                    "mode": "chat",
+                    "text": gateway_finalize_chat_reply(
+                        body.strip(),
+                        source="deploy_root_error_pending",
+                        user_text=raw,
+                    ),
+                    "intent": "deploy_root_error_pending",
+                }
+            new_root = find_project_root(new_base)
+            _save_pending(db, uid, options=opts, workspace=str(new_root), preview=preview_b)
+            body = "**Deploy root updated.**\n\n" + f"New root: `{new_root}`\n\n" + format_cloud_choice_prompt(new_root)
+            return {
+                "mode": "chat",
+                "text": gateway_finalize_chat_reply(
+                    body.strip(),
+                    source="deploy_root_changed_pending",
+                    user_text=raw,
+                ),
+                "intent": "deploy_root_changed_pending",
+            }
         choice = parse_deploy_choice_reply(raw, list(pending.get("options") or []))
         if not choice:
             opts = list(pending.get("options") or [])
@@ -377,6 +457,7 @@ def try_gateway_deploy_turn(
                 "",
                 "Reply with the **number** or say **`deploy to <tool>`**.",
                 "Say **`cancel`** to abort, or **`reset deploy`** to clear state.",
+                "You can say **`change deploy root to /path`** to point at another folder first.",
                 "",
             ]
             for i, name in enumerate(opts, 1):
@@ -403,8 +484,7 @@ def try_gateway_deploy_turn(
     assert parsed is not None
 
     timeout = float(getattr(settings, "nexa_deploy_timeout_seconds", 300.0) or 300.0)
-    workspace = _deploy_workspace_root()
-    root = find_project_root(Path(workspace))
+    root = find_project_root(Path(workspace_start))
     preview = str(parsed.get("deploy_type") or "deploy") == "deploy_preview"
     explicit = str(parsed.get("provider") or "").strip() or None
 

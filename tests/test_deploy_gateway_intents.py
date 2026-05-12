@@ -13,6 +13,8 @@ from app.services.host_executor_intent import (
     is_cancel_deploy_intent,
     is_reset_deploy_intent,
     parse_available_clouds_intent,
+    parse_deploy_from_intent,
+    parse_deploy_root_intent,
 )
 
 
@@ -51,3 +53,17 @@ def test_get_cloud_choices_shape(tmp_path: Path) -> None:
     assert isinstance(rows, list)
     for r in rows:
         assert "name" in r and "display" in r and "command" in r
+
+
+def test_parse_deploy_from_intent() -> None:
+    r = parse_deploy_from_intent("deploy from /tmp/foo")
+    assert r is not None
+    assert r.get("folder") == "/tmp/foo"
+    assert parse_deploy_from_intent("deploy to vercel") is None
+
+
+def test_parse_deploy_root_intent() -> None:
+    r = parse_deploy_root_intent("change deploy root to /Users/me/app")
+    assert r is not None
+    assert "/Users/me/app" in (r.get("folder") or "")
+    assert parse_deploy_root_intent("deploy") is None
