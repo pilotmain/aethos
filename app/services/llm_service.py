@@ -11,6 +11,7 @@ import json
 import logging
 import re
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from app.core.config import get_settings
 from app.services.intent_service import is_valid_task, normalize_task, preprocess_for_fallback
@@ -453,3 +454,17 @@ class LLMService:
         if planning_style == "direct":
             return f"Next step: spend 10 minutes on '{task_title}'."
         return f"Let's reduce the pressure: take one tiny step on '{task_title}' for just 10 minutes."
+
+
+def get_llm_intelligence_info() -> dict[str, Any]:
+    """Public dict for UI / gateway (tier, effective Anthropic model id, cost hint)."""
+    from app.services.llm_intelligence import build_intelligence_public_dict
+
+    return build_intelligence_public_dict()
+
+
+def get_llm_model_for_anthropic_primary() -> str:
+    """Anthropic model id used for primary registry completions (respects tier + env)."""
+    from app.services.llm_intelligence import resolve_effective_anthropic_model_id
+
+    return resolve_effective_anthropic_model_id()

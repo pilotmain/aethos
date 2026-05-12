@@ -24,11 +24,14 @@ def call_anthropic(payload: dict[str, Any]) -> dict[str, Any]:
     if not task.strip():
         return {"error": "empty_task"}
 
+    from app.services.llm_intelligence import resolve_effective_anthropic_model_id
+
+    model_id = resolve_effective_anthropic_model_id(s)
     try:
         timeout = float(s.nexa_provider_timeout_seconds or 15.0)
         client = build_anthropic_client(api_key=key, timeout=timeout)
         msg = client.messages.create(
-            model=s.anthropic_model,
+            model=model_id,
             max_tokens=2048,
             messages=[{"role": "user", "content": task}],
         )
@@ -39,7 +42,7 @@ def call_anthropic(payload: dict[str, Any]) -> dict[str, Any]:
         text = "".join(parts).strip()
         return {
             "text": text,
-            "model": getattr(msg, "model", None) or s.anthropic_model,
+            "model": getattr(msg, "model", None) or model_id,
             "provider": "anthropic",
         }
     except Exception as exc:

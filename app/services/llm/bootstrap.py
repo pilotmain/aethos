@@ -35,7 +35,9 @@ def _resolve_model(provider_id: str, s: Settings, *, is_primary_target: bool) ->
     if is_primary_target and (s.nexa_llm_model or "").strip() and primary == provider_id:
         return s.nexa_llm_model.strip()
     if provider_id == "anthropic":
-        return s.anthropic_model
+        from app.services.llm_intelligence import resolve_effective_anthropic_model_id
+
+        return resolve_effective_anthropic_model_id(s)
     if provider_id == "openai":
         return s.openai_model
     if provider_id == "deepseek":

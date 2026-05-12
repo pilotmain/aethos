@@ -7,12 +7,13 @@ from typing import Any
 from app.core.config import get_settings
 from app.services.extensions import get_extension
 from app.services.licensing.features import FEATURE_SMART_ROUTING, has_pro_feature
+from app.services.llm_intelligence import resolve_effective_anthropic_model_id
 
 
 def map_pro_routing_model_key(symbolic: str) -> str:
     """Map extension symbolic tier → Anthropic model id from settings."""
     s = get_settings()
-    default = (s.anthropic_model or "").strip() or "claude-haiku-4-5-20251001"
+    default = resolve_effective_anthropic_model_id(s)
     key = (symbolic or "").strip().lower().replace("_", "-")
 
     if key in ("claude-strong", "claude_strong", "strong", "dev"):
@@ -42,7 +43,7 @@ def _infer_complexity(user_message: str | None) -> str:
 def resolve_anthropic_model_for_composer(ctx: Any | None) -> str:
     """Anthropic model id for composer LLM calls."""
     s = get_settings()
-    default = (s.anthropic_model or "").strip() or "claude-haiku-4-5-20251001"
+    default = resolve_effective_anthropic_model_id(s)
     if ctx is None:
         return default
     mod = get_extension("routing")

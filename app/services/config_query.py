@@ -23,11 +23,17 @@ def _effective_llm_summary(settings: Settings) -> tuple[str, str, str]:
 
     # Typical composer chain: Anthropic first when key present, else OpenAI, etc.
     if settings.anthropic_api_key:
-        return (
-            prov,
-            (settings.anthropic_model or "").strip() or "(anthropic default)",
-            "Composer uses `ANTHROPIC_MODEL` when `ANTHROPIC_API_KEY` is set.",
-        )
+        from app.services.llm_intelligence import resolve_effective_anthropic_model_id
+
+        mid = resolve_effective_anthropic_model_id(settings)
+        if bool(getattr(settings, "nexa_llm_intelligence_apply_to_anthropic", True)):
+            hint = (
+                f"Anthropic model from `NEXA_LLM_INTELLIGENCE_LEVEL={settings.nexa_llm_intelligence_level}` "
+                "(set `NEXA_LLM_INTELLIGENCE_APPLY_TO_ANTHROPIC=false` to use `ANTHROPIC_MODEL` only)."
+            )
+        else:
+            hint = "Composer uses `ANTHROPIC_MODEL` when `ANTHROPIC_API_KEY` is set."
+        return (prov, mid, hint)
     if settings.openai_api_key:
         return (
             prov,

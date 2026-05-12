@@ -66,6 +66,8 @@ def test_registry_registers_openai_when_key_present(m_merge, m_settings):
         openai_api_key="",
         anthropic_api_key="",
         anthropic_model="claude-haiku-4-5-20251001",
+        nexa_llm_intelligence_level="balanced",
+        nexa_llm_intelligence_apply_to_anthropic=False,
         deepseek_api_key="",
         deepseek_model="deepseek-chat",
         deepseek_base_url=None,

@@ -239,6 +239,9 @@ class Settings(BaseSettings):
     nexa_llm_fallback_providers: str = ""
     nexa_llm_temperature: float = 0.7
     nexa_llm_max_tokens: int = 4096
+    # Preset Anthropic chat model (economy / balanced / premium) when tier apply is enabled.
+    nexa_llm_intelligence_level: str = "balanced"
+    nexa_llm_intelligence_apply_to_anthropic: bool = True
     deepseek_api_key: str | None = None
     deepseek_model: str = "deepseek-chat"
     deepseek_base_url: str | None = None
@@ -994,6 +997,12 @@ class Settings(BaseSettings):
         except (TypeError, ValueError):
             return 1
         return max(1, min(28, n))
+
+    @field_validator("nexa_llm_intelligence_level", mode="before")
+    @classmethod
+    def _normalize_nexa_llm_intelligence_level(cls, v: object) -> str:
+        x = (str(v) if v is not None else "balanced").strip().lower()
+        return x if x in ("economy", "balanced", "premium") else "balanced"
 
     @field_validator("nexa_response_format", mode="before")
     @classmethod

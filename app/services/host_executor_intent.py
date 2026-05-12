@@ -513,6 +513,30 @@ def parse_deploy_root_intent(text: str) -> dict[str, Any] | None:
     return None
 
 
+def parse_intelligence_query_intent(text: str) -> dict[str, Any] | None:
+    """User asks which Anthropic preset / model tier is active (gateway NL)."""
+    if not text or not isinstance(text, str):
+        return None
+    if parse_deploy_intent(text) or parse_deploy_from_intent(text):
+        return None
+    line = text.strip().splitlines()[0].strip()
+    if not line:
+        return None
+    low = line.lower()
+    patterns = (
+        r"(?i)\bwhat\s+(?:llm|model|intelligence)\b.*\b(?:level|am i using|using)\b",
+        r"(?i)\bwhat\s+model\b.*\b(?:tier|level)\b",
+        r"(?i)\bshow\s+(?:llm|model|intelligence)\b.*\b(?:level|settings?|config)\b",
+        r"(?i)\bhow\s+smart\s+(?:are you|is\s+aethos|is\s+nexa)\b",
+        r"(?i)\bwhat\s+intelligence\s+level\b",
+        r"(?i)\bwhich\s+claude\b.*\b(model|tier)\b",
+    )
+    for pat in patterns:
+        if re.search(pat, low):
+            return {"intent": "check_intelligence", "raw_text": text}
+    return None
+
+
 def parse_deployment_status_intent(text: str) -> dict[str, Any] | None:
     """NL intent to list cloud projects / deployments (gateway deployment-status hook)."""
     if not text or not isinstance(text, str):

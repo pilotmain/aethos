@@ -17,6 +17,9 @@ PRICING_USD_PER_1M_TOKENS: dict[str, dict[str, dict[str, float]]] = {
         # 4.5+ era — conservative placeholders; verify on Anthropic’s pricing page
         "claude-sonnet-4-5": {"input": 3.0, "output": 15.0},
         "claude-haiku-4-5": {"input": 0.8, "output": 4.0},
+        "claude-haiku-4-5-20251001": {"input": 0.8, "output": 4.0},
+        "claude-opus-4-1": {"input": 15.0, "output": 75.0},
+        "claude-opus-4-1-20250805": {"input": 15.0, "output": 75.0},
     },
     "openai": {
         "gpt-4o": {"input": 5.0, "output": 15.0},

@@ -944,6 +944,12 @@ class NexaGateway:
                     "intent": "config_query",
                 }
 
+            from app.services.gateway.intelligence_nl import try_gateway_llm_intelligence_turn
+
+            intel_nl = try_gateway_llm_intelligence_turn(gctx, raw_gate, db_inner)
+            if intel_nl is not None:
+                return intel_nl
+
             from app.services.gateway.owner_self_improvement_nl import (
                 try_owner_self_improvement_nl_turn,
             )

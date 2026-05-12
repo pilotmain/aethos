@@ -67,7 +67,13 @@ def main() -> int:
     print("\nNotes:")
     print("  - LLM features need real keys in .env (Anthropic/OpenAI/nexa_llm_*).")
     print("  - Optional integrations (GitHub, Vercel, Redis, S3) are documented in .env.example.")
+    from app.services.llm_intelligence import resolve_effective_anthropic_model_id
+
     print("  - Set NEXA_SELF_IMPROVEMENT_ENABLED=true to enable self-improvement proposals.")
+    print(
+        f"  - LLM intelligence: {s.nexa_llm_intelligence_level} "
+        f"(effective Anthropic model: {resolve_effective_anthropic_model_id(s)})"
+    )
     print()
 
     critical = checks["Database URL"] and checks["NEXA_SECRET_KEY (web/crypto)"]
