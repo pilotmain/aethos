@@ -200,6 +200,9 @@ class Settings(BaseSettings):
     nexa_max_concurrent_tasks: int = 5
     # Agentic OS — autonomous NL goal decomposition + workspace execution (gateway; owner-only).
     nexa_autonomous_goal_planning: bool = False
+    # Broader ``build/create/make a …`` NL + multi-step file plans (still workspace files only; no shell).
+    nexa_execution_planner_enabled: bool = False
+    nexa_max_concurrent_plans: int = 3
     # Host subprocess retries for approved argv commands (distinct from Phase 73 agent Genesis Loop).
     nexa_host_command_retry_enabled: bool = False
     nexa_host_command_max_attempts: int = 3

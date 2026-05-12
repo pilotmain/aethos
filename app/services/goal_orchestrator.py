@@ -9,7 +9,9 @@ from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
+from app.core.config import get_settings
 from app.services.batch_executor import create_batch_files
+from app.services.execution_templates import todo_static_bundle
 
 _GOAL_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"^build\s+(?:a|an)\s+(\w+)\s+app$", re.I), "goal_build_app"),
@@ -62,80 +64,17 @@ def parse_goal_intent(text: str) -> dict[str, Any] | None:
             continue
         groups = m.groups()
         return {"intent_type": name, "groups": groups, "line": line}
+    if bool(getattr(get_settings(), "nexa_execution_planner_enabled", False)):
+        from app.services.execution_planner import parse_extended_build_intent
+
+        ext = parse_extended_build_intent(raw)
+        if ext:
+            return ext
     return None
 
 
 def _todo_app_files(slug: str) -> list[dict[str, Any]]:
-    safe = slug.lower().replace(" ", "-")[:48] or "app"
-    base = f"{safe}-app"
-    html = f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>{safe} todo</title>
-  <link rel="stylesheet" href="styles.css" />
-</head>
-<body>
-  <main class="wrap">
-    <h1>{safe} — todos</h1>
-    <form id="add-form">
-      <input id="task" type="text" placeholder="New task" autocomplete="off" />
-      <button type="submit">Add</button>
-    </form>
-    <ul id="list"></ul>
-  </main>
-  <script src="app.js"></script>
-</body>
-</html>
-"""
-    css = """body { font-family: system-ui, sans-serif; margin: 2rem; background: #0f172a; color: #e2e8f0; }
-.wrap { max-width: 520px; margin: 0 auto; }
-input { width: 70%; padding: 0.5rem; border-radius: 6px; border: 1px solid #334155; background: #020617; color: inherit; }
-button { padding: 0.5rem 0.75rem; border-radius: 6px; border: 0; background: #38bdf8; color: #0f172a; cursor: pointer; }
-ul { list-style: none; padding: 0; }
-li { padding: 0.5rem 0; border-bottom: 1px solid #1e293b; display: flex; justify-content: space-between; gap: 0.5rem; }
-.done { text-decoration: line-through; opacity: 0.6; }
-"""
-    js = """const form = document.getElementById("add-form");
-const input = document.getElementById("task");
-const list = document.getElementById("list");
-const storageKey = "nexa-todo-items";
-let items = [];
-try { items = JSON.parse(localStorage.getItem(storageKey) || "[]"); } catch { items = []; }
-function save() { localStorage.setItem(storageKey, JSON.stringify(items)); render(); }
-function render() {
-  list.innerHTML = "";
-  items.forEach((text, i) => {
-    const li = document.createElement("li");
-    const span = document.createElement("span");
-    span.textContent = text;
-    span.className = "";
-    const toggle = document.createElement("button");
-    toggle.textContent = "Done";
-    toggle.onclick = () => { items.splice(i, 1); save(); };
-    li.appendChild(span);
-    li.appendChild(toggle);
-    list.appendChild(li);
-  });
-}
-form.addEventListener("submit", (e) => {
-  e.preventDefault();
-  const v = (input.value || "").trim();
-  if (!v) return;
-  items.push(v);
-  input.value = "";
-  save();
-});
-render();
-"""
-    readme = f"# {safe} todo\n\nOpen `index.html` in a browser (or serve statically).\n"
-    return [
-        {"filename": f"{base}/index.html", "content": html},
-        {"filename": f"{base}/styles.css", "content": css},
-        {"filename": f"{base}/app.js", "content": js},
-        {"filename": f"{base}/README.md", "content": readme},
-    ]
+    return list(todo_static_bundle(slug))
 
 
 class GoalOrchestrator:
@@ -159,6 +98,23 @@ class GoalOrchestrator:
                     meta={"files": _todo_app_files(slug)},
                 )
             )
+        elif intent == "goal_build_multi":
+            from app.services.execution_planner import build_multi_step_specs
+
+            tail = str(groups[0] if groups else "app")
+            hints = dict(parsed.get("hints") or {})
+            for spec in build_multi_step_specs(hints, tail):
+                subs.append(
+                    SubGoal(
+                        id=str(spec.get("id") or "sg"),
+                        description=str(spec.get("description") or "step"),
+                        assigned_agent="workspace",
+                        dependencies=[],
+                        status=GoalStatus.PLANNING,
+                        step_kind=str(spec.get("step_kind") or "batch_files"),
+                        meta=dict(spec.get("meta") or {}),
+                    )
+                )
         elif intent == "goal_create_project":
             slug = str(groups[0] if groups else "project")
             subs.append(
@@ -258,19 +214,21 @@ class GoalOrchestrator:
 
 
 def format_goal_result(payload: dict[str, Any], goal: Goal) -> str:
+    results = list(payload.get("results") or [])
+    n = len(results)
     lines = [
         "## Autonomous goal",
         "",
         f"**Goal id:** `{payload.get('goal_id')}`",
         f"**Status:** {'completed' if payload.get('ok') else 'failed'}",
         "",
-        "### Steps",
+        f"### Steps ({n})",
         "",
     ]
-    for r in payload.get("results") or []:
+    for i, r in enumerate(results, 1):
         res = r.get("result") or {}
         sg = r.get("sub_goal")
-        lines.append(f"- **{sg}:** `{res.get('success')}`")
+        lines.append(f"**Step {i}/{n}** — `{sg}` → `{res.get('success')}`")
         if res.get("note"):
             lines.append(f"  - {res['note']}")
         if res.get("count") is not None:
@@ -279,7 +237,7 @@ def format_goal_result(payload: dict[str, Any], goal: Goal) -> str:
             for f in res.get("files") or []:
                 fn = f.get("filename") if isinstance(f, dict) else str(f)
                 lines.append(f"    - `{fn}`")
-    lines.append("")
+        lines.append("")
     lines.append(f"_Intent:_ {goal.intent_type or 'unknown'}")
     return "\n".join(lines)
 

@@ -40,7 +40,23 @@ def try_goal_planning_gateway_turn(
     orch = GoalOrchestrator()
     goal = orch.plan_sync(parsed, raw)
     root = _workspace_root_for_nl()
-    payload = orch.execute_goal_sync(goal, workspace_root=root, owner_user_id=uid)
+    from app.core.config import get_settings
+    from app.services.execution_planner import acquire_plan_slot, release_plan_slot
+
+    max_p = int(getattr(get_settings(), "nexa_max_concurrent_plans", 3) or 3)
+    if not acquire_plan_slot(uid, max_p):
+        return {
+            "mode": "chat",
+            "text": (
+                f"**Too many concurrent goal plans** for this user (max {max_p}). "
+                "Finish or wait for one to complete, then try again."
+            ),
+            "intent": "goal_throttled",
+        }
+    try:
+        payload = orch.execute_goal_sync(goal, workspace_root=root, owner_user_id=uid)
+    finally:
+        release_plan_slot(uid)
     text = format_goal_result(payload, goal)
     return {
         "mode": "chat",
