@@ -49,9 +49,7 @@ def save_suggested_actions_if_shown(
     """Replaces any prior list when a new 'Next steps' block was shown to the user."""
     if not db or not (app_user_id or "").strip():
         return
-        cctx = get_or_create_context(
-            db, app_user_id, web_session_id=get_web_session_id()
-        )
+    cctx = get_or_create_context(db, app_user_id, web_session_id=get_web_session_id())
     if not shown_lines:
         return
     clean = [str(x).strip() for x in shown_lines if str(x).strip()][:4]

@@ -107,7 +107,7 @@ from app.services.telegram_onboarding import (
     start_message_for_role,
     weak_input_response,
 )
-from app.services.telegram_service import TelegramService
+from app.repositories.telegram_repo import TelegramRepository
 from app.services.user_capabilities import (
     ACCESS_RESTRICTED,
     BLOCKED_MSG,
@@ -250,7 +250,7 @@ async def _try_handle_orchestration_sub_agent_mention(
 
 
 settings = get_settings()
-telegram_service = TelegramService()
+_telegram_link_repo = TelegramRepository()
 orchestrator = OrchestratorService()
 checkin_service = CheckInService()
 memory_service = MemoryService()
@@ -588,7 +588,7 @@ async def handle_what_can_you_do(update: Update, context: ContextTypes.DEFAULT_T
 async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     db = SessionLocal()
     try:
-        link = telegram_service.get_link(db, update.effective_user.id)
+        link = _telegram_link_repo.get_by_telegram_user(db, update.effective_user.id)
         if link:
             ctx = build_context(db, link.app_user_id, memory_service, orchestrator)
             body = help_message(ctx.has_active_plan, ctx.focus_task)
@@ -1879,7 +1879,7 @@ async def users_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             )
             await update.message.reply_text(ACCESS_RESTRICTED)
             return
-        rows = telegram_service.repo.list_recent(db, limit=30)
+        rows = _telegram_link_repo.list_recent(db, limit=30)
         lines: list[str] = ["AethOS — recent Telegram user links (this instance):", ""]
         for r in rows:
             role = get_telegram_role(int(r.telegram_user_id), db)
@@ -3770,12 +3770,12 @@ async def poll_due_checkins(app: Application) -> None:
         try:
             due = checkin_service.process_due(db)
             for row in due:
-                link = telegram_service.repo.get_by_app_user(db, row.user_id)
+                link = _telegram_link_repo.get_by_app_user(db, row.user_id)
                 if link:
                     await app.bot.send_message(chat_id=link.chat_id, text=f"Check-in #{row.id}: {row.prompt_text}")
             handoff_updates = handoff_service.process_waiting_handoffs(db)
             for job in handoff_updates:
-                link = telegram_service.repo.get_by_app_user(db, job.user_id)
+                link = _telegram_link_repo.get_by_app_user(db, job.user_id)
                 if link:
                     await app.bot.send_message(
                         chat_id=link.chat_id,
@@ -3784,7 +3784,7 @@ async def poll_due_checkins(app: Application) -> None:
                 job_service.mark_notified(db, job)
             notifiable_jobs = job_service.jobs_needing_notification(db)
             for job in notifiable_jobs:
-                link = telegram_service.repo.get_by_app_user(db, job.user_id)
+                link = _telegram_link_repo.get_by_app_user(db, job.user_id)
                 if link:
                     await app.bot.send_message(
                         chat_id=link.chat_id,
@@ -3812,7 +3812,7 @@ async def permission_inline_callback(update: Update, context: ContextTypes.DEFAU
 
     db = SessionLocal()
     try:
-        link = telegram_service.get_link(db, q.from_user.id)
+        link = _telegram_link_repo.get_by_telegram_user(db, q.from_user.id)
         if not link:
             if q.message:
                 await q.message.reply_text("Link your account with /start first.")
@@ -3856,7 +3856,7 @@ async def job_inline_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
     jid, action = int(m.group(1)), m.group(2)
     db = SessionLocal()
     try:
-        link = telegram_service.get_link(db, q.from_user.id)
+        link = _telegram_link_repo.get_by_telegram_user(db, q.from_user.id)
         if not link:
             if q.message:
                 await q.message.reply_text("Link your account with /start first.")
