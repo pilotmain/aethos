@@ -1,3 +1,33 @@
+# Open core business model
+
+## Overview
+
+AethOS uses an **open core** model:
+
+- **Open source:** [Apache License 2.0](../LICENSE) — core agent functionality, file operations, command execution, and sandbox basics ship in this repository.
+- **Commercial:** [LICENSE.commercial](../LICENSE.commercial) — Pro features, enterprise deployments, and support agreements.
+
+## What is open source (typical)
+
+- Core agents and gateway routing
+- File operations and host executor (within policy)
+- Command execution (allowlisted)
+- Sandbox planning and execution (with approval)
+- Licensing hooks and optional `nexa_ext` integration points
+
+## What is commercial (Pro / enterprise)
+
+- Advanced packaged capabilities (e.g. GoalPlanner, SelfHealingEngine, Pro negotiation modules) when shipped as `aethos_pro` wheels
+- Enterprise-oriented features (SSO, advanced audit, compliance packages) under separate agreement
+- Priority support and SLA when purchased
+
+## Licensing contact
+
+- **Commercial:** [license@aethos.ai](mailto:license@aethos.ai)
+- **Technical split:** this file continues with repository and packaging notes below.
+
+---
+
 # Open core vs proprietary split (implementation guide)
 
 This document complements **[OPEN_CORE_EXTENSIONS.md](OPEN_CORE_EXTENSIONS.md)** with a **repository and packaging** plan: AGPL-class core (public trust), commercial **Pro** layer (private package), plus optional encrypted artifacts.

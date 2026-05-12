@@ -36,4 +36,4 @@ This tree is released under **Apache-2.0** — see `LICENSE`. Closed-source laye
 
 ## `aethos_pro.*` plugins (optional wheel)
 
-The **`aethos_core.plugin_manager.PluginManager`** helper loads `aethos_pro.<module>` when a commercial package is installed (private PyPI). OSS deployments omit that package; callers pass an **open-source fallback**. See **[OPEN_CORE_COMMERCIAL_SPLIT.md](OPEN_CORE_COMMERCIAL_SPLIT.md)** for repository split and publishing notes.
+The **`aethos_core.plugin_manager.PluginManager`** helper loads `aethos_pro.<module>` when a commercial package is installed (private PyPI). OSS deployments omit that package; callers pass an **open-source fallback**. See **[open-core.md](open-core.md)** for repository split and publishing notes.
