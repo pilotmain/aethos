@@ -17,7 +17,8 @@
 #
 set -euo pipefail
 
-# Must be defined before any use with ``set -u`` (e.g. ``EXTRA_ARGS+=`` / ``"${EXTRA_ARGS[@]}"``).
+# Bash 3.2 (macOS /bin/bash): with ``set -u``, ``"${EXTRA_ARGS[@]}"`` errors when the array
+# is empty. Use ``${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"}`` (no outer quotes) so extra args split correctly.
 EXTRA_ARGS=()
 
 REPO_DEFAULT="https://github.com/pilotmain/aethos.git"
@@ -92,7 +93,7 @@ _inner_from_bash_source() {
   fi
   _dir="$(cd "$(dirname "$_src")" && pwd)"
   if [[ -f "$_dir/scripts/install_aethos.sh" ]]; then
-    exec bash "$_dir/scripts/install_aethos.sh" "${EXTRA_ARGS[@]}"
+    exec bash "$_dir/scripts/install_aethos.sh" ${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"}
   fi
   return 1
 }
@@ -120,4 +121,4 @@ if [[ ! -f "${DEST}/aethos_cli/__main__.py" ]]; then
   fi
 fi
 
-exec bash "${DEST}/scripts/install_aethos.sh" "${EXTRA_ARGS[@]}"
+exec bash "${DEST}/scripts/install_aethos.sh" ${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"}
