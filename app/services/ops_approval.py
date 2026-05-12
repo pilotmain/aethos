@@ -30,7 +30,7 @@ def build_ops_approval_message(
 ) -> str:
     extra = f"\n{project_block}\n" if (project_block or "").strip() else ""
     return (
-        f"⚠️ **Nexa Ops** — this action needs approval (job `#{job_id}`):\n\n"
+        f"⚠️ **AethOS Ops** — this action needs approval (job `#{job_id}`):\n\n"
         f"**{action.name}** — {action.description}\n"
         f"{extra}\n"
         f"Reply: `approve job #{job_id}`  or  `deny job #{job_id}`"
@@ -69,8 +69,8 @@ def process_ops_job_decision(
         j = job_service.mark_failed(
             db,
             job,
-            "Invalid or missing ops_action in job payload for Nexa.",
-            result="Nexa could not read this job's ops action.",
+            "Invalid or missing ops_action in job payload for AethOS.",
+            result="AethOS could not read this job's ops action.",
         )
         return f"Job #{j.id} failed: invalid payload."
     try:
@@ -87,12 +87,12 @@ def process_ops_job_decision(
             job,
             str(exc)[:2000] or "Execution error",
         )
-        return "Something went wrong while executing this action. Check logs or try again in Nexa."
+        return "Something went wrong while executing this action. Check logs or try again in AethOS."
     j2 = job_service.mark_completed(
         db,
         job,
-        f"Nexa Ops (approved)\n\n{out}"[:10_000],
+        f"AethOS Ops (approved)\n\n{out}"[:10_000],
     )
-    return f"**Nexa Ops** — job #{j2.id} done.\n\n{out[:3500]}" + (
+    return f"**AethOS Ops** — job #{j2.id} done.\n\n{out[:3500]}" + (
         "…" if len(out) > 3500 else ""
     )

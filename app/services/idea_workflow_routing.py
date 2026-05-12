@@ -49,7 +49,7 @@ def try_strategy_workflow(
         return None
     pr, err = _load_project(m.group(1), db=db, cctx=cctx)
     if err or pr is None:
-        return f"🧭 **Strategy** (Nexa)\n\n{err or 'Could not load project.'}"
+        return f"🧭 **Strategy** (AethOS)\n\n{err or 'Could not load project.'}"
     cctx.active_project = pr.key
     db.add(cctx)
     try:
@@ -91,7 +91,7 @@ def try_dev_scope_workflow(
         return None
     pr, err = _load_project(m.group(1), db=db, cctx=cctx)
     if err or pr is None:
-        return f"💻 **Development** (Nexa)\n\n{err or 'Could not load project.'}"
+        return f"💻 **Development** (AethOS)\n\n{err or 'Could not load project.'}"
     cctx.active_project = pr.key
     db.add(cctx)
     try:

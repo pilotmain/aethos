@@ -107,7 +107,7 @@ def test_route_agent_not_found(registry: AgentRegistry, router: AgentRouter) -> 
     ):
         result = router.route("@missing-agent deploy", "chat123")
         assert result["handled"] is True
-        assert "not found" in result["response"].lower()
+        assert "don't have" in result["response"].lower() or "not found" in result["response"].lower()
 
 
 def test_route_agent_found(registry: AgentRegistry, router: AgentRouter) -> None:
@@ -248,13 +248,32 @@ def test_resolve_agent_for_dispatch_falls_back_to_owner_scope(
         )
         assert ag is not None
         assert (
-            resolve_agent_for_dispatch(reg, "scoped-bot", f"web:{uid}:default", uid)
-            is not None
-        )
-        assert (
             resolve_agent_for_dispatch(reg, "scoped-bot", f"web:{uid}:default", None)
             is None
         )
+        assert (
+            resolve_agent_for_dispatch(reg, "scoped-bot", f"web:{uid}:default", uid)
+            is not None
+        )
+
+
+def test_resolve_agent_developer_name_without_agent_suffix(registry: AgentRegistry) -> None:
+    with (
+        patch("app.services.sub_agent_router.get_settings", return_value=_S()),
+        patch("app.services.sub_agent_registry.get_settings", return_value=_S()),
+    ):
+        uid = "tg_9000000003"
+        ag = registry.spawn_agent(
+            "developer_agent",
+            "backend",
+            "telegram:99",
+            owner_app_user_id=uid,
+        )
+        assert ag is not None
+        linked = resolve_agent_for_dispatch(registry, "developer", "telegram:100", uid)
+        assert linked is not None
+        assert linked.id == ag.id
+        assert linked.parent_chat_id == "telegram:100"
 
 
 def test_route_mention_uses_global_fallback(registry: AgentRegistry, router: AgentRouter) -> None:

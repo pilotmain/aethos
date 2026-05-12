@@ -284,6 +284,32 @@ def parse_start_app_intent(text: str) -> dict[str, Any] | None:
     return None
 
 
+_DEV_TASK_LINE = re.compile(
+    r"^(?:Development|Dev)\s+(.+)$",
+    re.IGNORECASE,
+)
+
+
+def parse_development_task_intent(text: str) -> dict[str, Any] | None:
+    """
+    Lines like ``Development add a button …`` / ``Dev fix the API …``.
+
+    Routed by the gateway before deploy NL so short-lived LLM mislabels do not hijack the turn.
+    """
+    if not text or not isinstance(text, str):
+        return None
+    line = text.strip().splitlines()[0].strip()
+    if not line:
+        return None
+    m = _DEV_TASK_LINE.match(line)
+    if not m:
+        return None
+    task = (m.group(1) or "").strip()
+    if not task:
+        return None
+    return {"intent": "development_task", "task": task, "raw_text": text}
+
+
 _STATUS_PATTERNS: list[tuple[str, str]] = [
     (r"^(?:what\'s|what is)\s+(?:the\s+)?(?:status|progress)$", "get_status"),
     (r"^(?:show|list)\s+(?:my\s+)?(?:tasks|work|progress)$", "list_tasks"),

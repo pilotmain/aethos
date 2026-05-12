@@ -11,13 +11,13 @@ from app.services.safe_llm_gateway import safe_llm_json_call
 
 logger = logging.getLogger(__name__)
 
-INTENT_CLASSIFIER_PROMPT = """You are an intent classifier for Nexa.
+INTENT_CLASSIFIER_PROMPT = """You are an intent classifier for AethOS.
 Classify the user's message into exactly one intent.
 
 Valid intents:
-- orchestrate_system: user wants a Nexa-wide status report — Mission Control, missions, dev runs, what succeeded/failed, act as orchestrator (not asking for a disk path)
+- orchestrate_system: user wants an AethOS-wide status report — Mission Control, missions, dev runs, what succeeded/failed, act as orchestrator (not asking for a disk path)
 - external_execution: user wants an end-to-end pipeline on hosted infra — check logs/service, fix code in repo, push, redeploy, verify production (not “explain Railway” alone)
-- external_execution_continue: user is replying to Nexa’s Railway/deploy access or preferences questions (short confirmation, not a new unrelated topic)
+- external_execution_continue: user is replying to AethOS’s Railway/deploy access or preferences questions (short confirmation, not a new unrelated topic)
 - external_investigation: user is asking about a hosted provider/service (Railway, Render, deploy health, production outage) without necessarily naming local files
 - brain_dump: user is listing tasks, responsibilities, errands, or things they need to organize
 - create_sub_agent: user wants to spawn an orchestration sub-agent (registry; natural language or ``subagent create`` style)
@@ -246,7 +246,7 @@ def _looks_like_local_git_workspace_without_hosted_provider(message: str) -> boo
 
 def looks_like_external_execution(message: str) -> bool:
     """
-    User wants Nexa to coordinate real steps: hosted provider + repo + push/deploy.
+    User wants AethOS to coordinate real steps: hosted provider + repo + push/deploy.
 
     Narrower than external_investigation (diagnose/triage). Must stay after orchestrate_system.
     """

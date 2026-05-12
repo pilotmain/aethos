@@ -105,5 +105,5 @@ def format_available_agents_block() -> str:
             line += f" — {desc}"
         parts.append(line)
     parts.append("")
-    parts.append("(You can also ask Nexa to **create a custom role** with instructions and safety boundaries.)")
+    parts.append("(You can also ask AethOS to **create a custom role** with instructions and safety boundaries.)")
     return "\n".join(parts)

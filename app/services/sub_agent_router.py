@@ -91,6 +91,12 @@ def resolve_agent_for_dispatch(
     if not uid:
         return None
     global_agent = registry.get_agent_by_name_for_app_user(name, uid)
+    if global_agent is None and uid:
+        nm = (name or "").strip().lower()
+        if nm and not nm.endswith("_agent"):
+            global_agent = registry.get_agent_by_name_for_app_user(f"{nm}_agent", uid)
+        if global_agent is None and nm.endswith("_agent"):
+            global_agent = registry.get_agent_by_name_for_app_user(nm[: -len("_agent")], uid)
     if global_agent:
         # Auto-link to current chat for future mentions
         registry.patch_agent(global_agent.id, parent_chat_id=chat_id)

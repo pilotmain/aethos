@@ -970,6 +970,12 @@ class NexaGateway:
             if early_nl is not None:
                 return early_nl
 
+            from app.services.gateway.development_nl import try_development_nl_gateway_turn
+
+            dev_nl = try_development_nl_gateway_turn(gctx, raw_gate, db_inner)
+            if dev_nl is not None:
+                return dev_nl
+
             from app.services.gateway.deployment_status_nl import (
                 try_gateway_deployment_status_turn,
             )

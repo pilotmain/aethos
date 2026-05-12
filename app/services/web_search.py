@@ -33,7 +33,7 @@ class WebSearchDisabled(Exception):
 
 class MissingWebSearchKey(Exception):
     def __str__(self) -> str:  # noqa: D105
-        return "Web search needs NEXA_WEB_SEARCH_PROVIDER and NEXA_WEB_SEARCH_API_KEY (see Nexa doctor)."
+        return "Web search needs NEXA_WEB_SEARCH_PROVIDER and NEXA_WEB_SEARCH_API_KEY (see AethOS doctor)."
 
 
 @dataclass

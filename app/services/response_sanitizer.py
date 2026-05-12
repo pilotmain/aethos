@@ -52,7 +52,7 @@ _RE_USER_SESSIONS_SPAWN = re.compile(
 )
 
 _FAKE_SESSIONS_SPAWN_REPLY = (
-    "That reply looked like a **simulated** **sessions_spawn** (no **`spawn_…`** group id from Nexa). "
+    "That reply looked like a **simulated** **sessions_spawn** (no **`spawn_…`** group id from AethOS). "
     "Ask with a deterministic phrase such as **create a bounded agent swarm with @agent-a and @agent-b to …** "
     "while **`NEXA_AGENT_TOOLS_ENABLED=true`**, or say **what tools do you have?**"
 )
@@ -160,7 +160,7 @@ _FAKE_ASYNC = (
 
 _TRACKING_NOTE = (
     "\n\n—\n_Note: I don’t have a **tracked assignment id** or **host job id** for this reply yet. "
-    "Ask Nexa to **record this as assigned work** or describe what you want queued so you can check "
+    "Ask AethOS to **record this as assigned work** or describe what you want queued so you can check "
     "**status of assignment N** later._"
 )
 
@@ -248,7 +248,7 @@ def sanitize_execution_and_assignment_reply(
         if reply_has_fake_async_tone(out):
             return (
                 "I can’t confirm tracked work without an assignment id or job on this turn. "
-                "Use **assign @agent …** so Nexa records an assignment, then check **status of assignment N**."
+                "Use **assign @agent …** so AethOS records an assignment, then check **status of assignment N**."
             )
         if reply_claims_assignment_without_evidence(out):
             out = out + _TRACKING_NOTE

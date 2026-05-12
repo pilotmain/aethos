@@ -5,7 +5,11 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import patch
 
-from app.services.host_executor_intent import infer_host_executor_action, parse_start_app_intent
+from app.services.host_executor_intent import (
+    infer_host_executor_action,
+    parse_development_task_intent,
+    parse_start_app_intent,
+)
 
 
 def test_parse_start_app_intent() -> None:
@@ -24,6 +28,13 @@ def test_parse_start_app_intent() -> None:
         "raw_text": "start the demo-widget app",
     }
     assert parse_start_app_intent("start the") is None
+
+
+def test_parse_development_task_intent() -> None:
+    p = parse_development_task_intent("Development add a delete button")
+    assert p and p["intent"] == "development_task" and "delete" in p["task"]
+    assert parse_development_task_intent("dev fix the API timeout")["task"].startswith("fix")
+    assert parse_development_task_intent("deploy to vercel") is None
 
 
 def test_git_status_variants() -> None:
