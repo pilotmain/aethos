@@ -1,0 +1,22 @@
+# Path-based labels for actions/labeler@v5 (label names must exist or grant issues:write).
+documentation:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'docs/**'
+      - '**/*.md'
+
+ci:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '.github/**'
+
+backend:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'app/**'
+      - 'tests/**'
+
+web:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'web/**'
