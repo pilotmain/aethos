@@ -811,8 +811,8 @@ HOST_EXECUTOR_WORK_ROOT={Path.home() / "aethos-workspace"}
         return out == "y"
 
     def run(self) -> None:
-        self.print_banner()
         display_legal_notice(force=self.force, accept_disclaimer=self.accept_disclaimer)
+        self.print_banner()
         if self.full_reset and STATE_FILE.exists():
             STATE_FILE.unlink()
         state = self._load_state()
