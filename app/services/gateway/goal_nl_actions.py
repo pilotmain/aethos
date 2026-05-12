@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.services.gateway.context import GatewayContext
 from app.services.gateway.early_nl_host_actions import _workspace_root_for_nl
+from app.services.execution_planner import acquire_plan_slot, release_plan_slot
 from app.services.goal_orchestrator import GoalOrchestrator, format_goal_result, parse_goal_intent
 from app.services.user_capabilities import is_privileged_owner_for_web_mutations
 
@@ -40,8 +41,6 @@ def try_goal_planning_gateway_turn(
     orch = GoalOrchestrator()
     goal = orch.plan_sync(parsed, raw)
     root = _workspace_root_for_nl()
-    from app.core.config import get_settings
-    from app.services.execution_planner import acquire_plan_slot, release_plan_slot
 
     max_p = int(getattr(get_settings(), "nexa_max_concurrent_plans", 3) or 3)
     if not acquire_plan_slot(uid, max_p):
