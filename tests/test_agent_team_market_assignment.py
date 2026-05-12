@@ -37,7 +37,7 @@ def test_topic_market_intent_detects_summarize_market_prompt() -> None:
 
 
 def test_explicit_folder_still_filesystem_kind() -> None:
-    t = "analyze folder /Users/raya/lifeos"
+    t = "analyze folder /Users/example/lifeos"
     assert classify_assignment_instruction_kind(t) == "file_folder"
     assert assignment_skips_host_path_inference(t) is False
 

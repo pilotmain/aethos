@@ -394,7 +394,7 @@ class SetupWizard:
                 break
             print(f"  {Colors.error(err)}")
             print(
-                f"  {Colors.DIM}Examples: web_alice  ·  tg_8272800795{Colors.RESET}"
+                f"  {Colors.DIM}Examples: web_alice  ·  tg_EXAMPLE0000000001{Colors.RESET}"
             )
 
         self._update_env_key("TEST_X_USER_ID", user_id)

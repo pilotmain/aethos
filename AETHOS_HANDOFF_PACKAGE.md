@@ -24,7 +24,7 @@ This document contains everything needed to audit and fix the file write capabil
 ## Part 2: Terminal Commands To Run
 
 ```bash
-cd /Users/raya/aethos
+cd /path/to/your/aethos/checkout
 
 echo "========================================="
 echo "AETHOS FILE WRITE CAPABILITY AUDIT"
@@ -61,7 +61,7 @@ echo -e "\n[6] Environment Configuration:"
 grep -E "HOST_EXECUTOR|WORKSPACE|WORK_ROOT" .env 2>/dev/null || echo "No host executor config in .env"
 
 echo -e "\n[7] Workspace Directory Status:"
-ls -la /Users/raya/aethos_workspace 2>/dev/null || echo "Directory does not exist"
+ls -la "$HOME/aethos_workspace" 2>/dev/null || echo "Directory does not exist"
 
 echo -e "\n[8] Searching entire codebase for write_file:"
 grep -rn "write_file\|writeFile\|create_file" app/ --include="*.py" 2>/dev/null | head -20
@@ -124,7 +124,7 @@ Possible blocking issues:
 Enable agent to create a file with content on local filesystem.
 
 ## Success Criteria
-User says: "Create a file called test.txt with content 'Hello AethOS' in /Users/raya/aethos_workspace"
+User says: "Create a file called test.txt with content 'Hello AethOS' in $HOME/aethos_workspace"
 Result: File exists with correct content.
 
 ## Files to Modify
@@ -142,8 +142,8 @@ Result: File exists with correct content.
 
 ```bash
 NEXA_HOST_EXECUTOR_ENABLED=true
-NEXA_WORKSPACE_ROOT=/Users/raya/aethos_workspace
-HOST_EXECUTOR_WORK_ROOT=/Users/raya
+NEXA_WORKSPACE_ROOT=$HOME/aethos_workspace
+HOST_EXECUTOR_WORK_ROOT=$HOME
 ```
 
 ## Testing Plan
@@ -172,7 +172,7 @@ class TestFileWriteE2E:
     @pytest.fixture
     def workspace(self):
         """Ensure workspace exists and return path."""
-        workspace = Path("/Users/raya/aethos_workspace")
+        workspace = Path.home() / "aethos_workspace"
         workspace.mkdir(parents=True, exist_ok=True)
         yield workspace
         for test_file in workspace.glob("test_*.txt"):
@@ -182,7 +182,7 @@ class TestFileWriteE2E:
     def auth_headers(self):
         """Get authentication headers from .env."""
         return {
-            "X-User-Id": "tg_8272800795",
+            "X-User-Id": "tg_EXAMPLE0000000001",
             "Authorization": f"Bearer {os.getenv('NEXA_WEB_API_TOKEN', 'test-token')}",
         }
 
@@ -236,7 +236,7 @@ class TestFileWriteE2E:
 ## Part 5: Quick Diagnostic
 
 ```bash
-cd /Users/raya/aethos
+cd /path/to/your/aethos/checkout
 
 echo "=== CRITICAL CHECKS ==="
 
@@ -252,10 +252,10 @@ else
     echo "HOST_EXECUTOR_ENABLED not set to true"
 fi
 
-if [ -d "/Users/raya/aethos_workspace" ]; then
+if [ -d "$HOME/aethos_workspace" ]; then
     echo "Workspace directory exists"
 else
-    echo "Workspace directory missing - create with: mkdir -p /Users/raya/aethos_workspace"
+    echo "Workspace directory missing - create with: mkdir -p \"$HOME/aethos_workspace\""
 fi
 
 if grep -r "def write_file" app/ --include="*.py" 2>/dev/null; then
@@ -272,11 +272,11 @@ echo "python scripts/audit_file_write.py 2>/dev/null || echo 'Audit script not f
 
 ```bash
 curl -X POST http://127.0.0.1:8010/api/v1/mission-control/gateway/run \
-  -H "X-User-Id: tg_8272800795" \
+  -H "X-User-Id: tg_EXAMPLE0000000001" \
   -H "Authorization: Bearer $TOKEN" \
-  -d '{"raw":"Create a file called test.txt with content Hello World in /Users/raya/aethos_workspace"}'
+  -d '{"raw":"Create a file called test.txt with content Hello World in '"$HOME"'/aethos_workspace"}'
 
-ls /Users/raya/aethos_workspace/test.txt && cat /Users/raya/aethos_workspace/test.txt
+ls "$HOME/aethos_workspace/test.txt" && cat "$HOME/aethos_workspace/test.txt"
 ```
 
 ## Next Action

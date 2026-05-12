@@ -10,7 +10,7 @@
 # Environment:
 #   NEXA_TEST_API_BASE   API origin (default: http://127.0.0.1:8010)
 #   NEXA_WEB_API_TOKEN   Optional override (else read from repo-root .env safely)
-#   TEST_X_USER_ID       Required web user id (e.g. tg_8272800795), unless set in .env as NEXA_TEST_X_USER_ID
+#   TEST_X_USER_ID       Required web user id (e.g. tg_EXAMPLE0000000001), unless set in .env as NEXA_TEST_X_USER_ID
 #
 set -euo pipefail
 

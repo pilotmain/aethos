@@ -51,7 +51,7 @@ describe("AssignTaskDialog", () => {
     expect(submit).not.toBeDisabled();
 
     const description = screen.getByLabelText(/Description/i);
-    fireEvent.change(description, { target: { value: "scan /Users/raya/aethos" } });
+    fireEvent.change(description, { target: { value: "scan /Users/example/aethos" } });
 
     fireEvent.click(screen.getByLabelText("High"));
 
@@ -61,7 +61,7 @@ describe("AssignTaskDialog", () => {
     expect(createAgentAssignmentMock).toHaveBeenCalledWith({
       assigned_to_handle: "security_agent",
       title: "Run security scan",
-      description: "scan /Users/raya/aethos",
+      description: "scan /Users/example/aethos",
       priority: "high",
     });
     await waitFor(() => expect(onAssigned).toHaveBeenCalledTimes(1));

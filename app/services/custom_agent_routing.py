@@ -47,12 +47,12 @@ def reply_for_custom_agent_path_clarification(agent_key: str, lf: Any) -> str:
     if ax == "file":
         base = (
             f"What file should {dh} read? Please provide a full path like "
-            f"`/Users/raya/lifeos/README.md`."
+            f"`/Users/example/lifeos/README.md`."
         )
     elif ax == "folder":
         base = (
             f"Which folder should {dh} read? Please provide the full path, "
-            f"for example `/Users/raya/lifeos`."
+            f"for example `/Users/example/lifeos`."
         )
     else:
         base = f"What path should {dh} use? Please provide a full file or folder path."

@@ -84,16 +84,20 @@ pytest tests/test_file_write_intent.py -v
 pytest tests/test_host_executor_intent.py tests/test_gateway_host_executor_file_write.py tests/test_host_executor_chat.py -q
 ```
 
-Test via API:
+Test via API (use a **private** shell; do not paste real tokens into tickets, CI logs, or screen recordings):
 
 ```bash
-TOKEN=$(grep NEXA_WEB_API_TOKEN .env | cut -d '=' -f2 | tr -d '"' | xargs)
+# Prefer loading the token into this shell without piping .env through `cut` (that embeds
+# secrets in shell history). Example: `set -a && source .env && set +a` only on your machine.
+# Then run:
 curl -X POST http://127.0.0.1:8010/api/v1/mission-control/gateway/run \
-  -H "X-User-Id: tg_8272800795" \
-  -H "Authorization: Bearer $TOKEN" \
+  -H "X-User-Id: tg_EXAMPLE0000000001" \
+  -H "Authorization: Bearer ${NEXA_WEB_API_TOKEN}" \
   -H "Content-Type: application/json" \
   -d '{"raw":"write test.txt with Hello World"}'
 ```
+
+If `NEXA_WEB_API_TOKEN` is not in the environment, export it manually for this session—**avoid** `grep NEXA_WEB_API_TOKEN .env | cut …` patterns in shared or logged environments.
 
 Expected response: not `general_chat`; the turn should route to the host executor file write confirmation/approval flow.
 

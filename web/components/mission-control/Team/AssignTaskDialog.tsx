@@ -141,7 +141,7 @@ export function AssignTaskDialog({
               id="mc-assign-title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Run security scan on /Users/raya/aethos"
+              placeholder="e.g. Run security scan on /path/to/your/aethos/checkout"
               required
               autoComplete="off"
               maxLength={500}

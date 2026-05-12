@@ -61,7 +61,7 @@ def test_stale_substring_detection() -> None:
 
 
 def test_privileged_user_text_heuristic() -> None:
-    assert user_message_suggests_privileged_host_action("list files in /Users/raya/lifeos")
+    assert user_message_suggests_privileged_host_action("list files in /Users/example/lifeos")
     assert not user_message_suggests_privileged_host_action("Thanks, that helps")
 
 

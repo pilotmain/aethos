@@ -269,10 +269,10 @@ _EXPLICIT_FOLDER_OR_LIST = re.compile(
 
 _MSG_FILE_CLARIFY = (
     "What file should I read? Please provide the full path, for example "
-    "/Users/raya/lifeos/README.md."
+    "/Users/example/lifeos/README.md."
 )
 _MSG_FOLDER_CLARIFY = (
-    "Which folder should I read? Please provide the full path, for example /Users/raya/lifeos."
+    "Which folder should I read? Please provide the full path, for example /Users/example/lifeos."
 )
 _MSG_NEUTRAL_CLARIFY = "What path should I use? Please provide a full file or folder path."
 _VAGUE_PATH_SUFFIX = (
