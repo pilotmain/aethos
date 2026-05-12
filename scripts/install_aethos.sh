@@ -255,6 +255,29 @@ if python -m pip install -e . -q; then
 else
   echo -e "│  ${YELLOW}!${NC} Editable install failed — wizard will use \`python -m aethos_cli setup\`"
 fi
+
+# Optional PyPI / vendor wheels (three-package split — off by default until packages exist).
+# Set e.g. AETHOS_PYPI_INSTALL_CORE=aethos-core after publishing; Pro needs a private index URL.
+if [[ -n "${AETHOS_PYPI_INSTALL_CORE:-}" ]]; then
+  echo "│  📦 Optional PyPI: installing core spec \`${AETHOS_PYPI_INSTALL_CORE}\` …"
+  if python -m pip install "${AETHOS_PYPI_INSTALL_CORE}"; then
+    echo -e "│  ${GREEN}✓${NC} Core wheel/spec installed"
+  else
+    echo -e "│  ${YELLOW}!${NC} Core pip install failed (optional — continuing with monorepo deps)"
+  fi
+fi
+if [[ -n "${AETHOS_PYPI_INSTALL_PRO:-}" ]]; then
+  if [[ -z "${AETHOS_PRO_EXTRA_INDEX_URL:-}" ]]; then
+    echo -e "│  ${YELLOW}!${NC} AETHOS_PYPI_INSTALL_PRO is set but AETHOS_PRO_EXTRA_INDEX_URL is empty — skipping Pro wheel"
+  else
+    echo "│  📦 Optional PyPI: installing Pro spec (private index) …"
+    if python -m pip install "${AETHOS_PYPI_INSTALL_PRO}" --extra-index-url "${AETHOS_PRO_EXTRA_INDEX_URL}"; then
+      echo -e "│  ${GREEN}✓${NC} Pro wheel/spec installed"
+    else
+      echo -e "│  ${YELLOW}!${NC} Pro pip install failed (optional — continuing)"
+    fi
+  fi
+fi
 step_frame_bottom
 
 echo ""

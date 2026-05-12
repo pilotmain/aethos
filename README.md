@@ -74,7 +74,30 @@ Then: `aethos setup` → `aethos serve` (if the wizard did not already run). Dee
 
 **Legacy / alternate** Docker-first bootstrap (different code path): [scripts/install.sh](scripts/install.sh) and `python scripts/nexa_bootstrap.py` — see [docs/SETUP.md](docs/SETUP.md).
 
-**Aspirational “three URL” docs:** some decks describe separate `aethos-core` (PyPI) + `aethos-pro` wheels + this repo. Until those packages and indexes are published for end users, **this installer is not less capable for OSS**: it installs **this monorepo** (full API, bots, CLI). Adding `pip install aethos-pro --extra-index-url …` belongs in a **vendor** fork or a follow-up when the index is live. **Pretty URL:** once you own DNS, redirect `https://aethos.ai/install` → the `raw.githubusercontent.com/.../install.sh` URL above.
+### Optional three-package / PyPI hooks (maintainers)
+
+Today’s **default** installer still **clones this monorepo** and runs `pip install -r requirements.txt` + `pip install -e .` — that is the supported OSS path and is **not** replaced until published wheels cover the same runtime.
+
+When **`aethos-core`** is on PyPI and **`aethos-pro`** is on a **private index** (Google Artifact Registry, AWS CodeArtifact, etc.), you can layer wheels **without** forking the script:
+
+| Environment variable | Purpose |
+| ---------------------- | ------- |
+| `AETHOS_PYPI_INSTALL_CORE` | pip spec for the public core wheel, e.g. `aethos-core` or `aethos-core==0.1.0` |
+| `AETHOS_PYPI_INSTALL_PRO` | pip spec for Pro, e.g. `aethos-pro` |
+| `AETHOS_PRO_EXTRA_INDEX_URL` | Required for Pro: passed to `pip install … --extra-index-url …` |
+
+Example (non-interactive, after you have real package names and index URL):
+
+```bash
+export AETHOS_PYPI_INSTALL_CORE='aethos-core'
+export AETHOS_PYPI_INSTALL_PRO='aethos-pro'
+export AETHOS_PRO_EXTRA_INDEX_URL='https://YOUR_INDEX/simple/'
+curl -fsSL https://raw.githubusercontent.com/pilotmain/aethos/main/install.sh | bash
+```
+
+`--license` / `NEXA_LICENSE_KEY` still feed the **wizard and runtime** licensing hooks; **pip** to a private index usually needs **its own** auth (token in the index URL or `PIP_INDEX_URL` / netrc) — configure that in your CI or operator docs.
+
+**Maintainer checklist (not automated here):** publish `aethos-core` to PyPI → stand up private index for `aethos-pro` → smoke-test the three env vars above → optionally point **`https://aethos.ai/install`** at the raw GitHub `install.sh` URL via DNS / CDN redirect.
 
 ## What is AethOS?
 

@@ -9,8 +9,9 @@
 # in the same tree (no second clone).
 #
 # Maintainer notes (vs a “three-package” doc):
-# - Canonical install is this monorepo (API, bots, CLI). Optional Pro wheels / extra PyPI
-#   indexes are not hard-coded; set NEXA_LICENSE_KEY and vendor index in .env when provided.
+# - Canonical install is this monorepo (API, bots, CLI). Optional wheels: set
+#   AETHOS_PYPI_INSTALL_CORE / AETHOS_PYPI_INSTALL_PRO + AETHOS_PRO_EXTRA_INDEX_URL
+#   before running (see README). NEXA_LICENSE_KEY is for runtime / wizard, not pip auth alone.
 # - Private GitHub: use SSH or https://TOKEN@github.com/pilotmain/aethos.git in NEXA_REPO_URL.
 # - Pretty URL: point https://aethos.ai/install → this raw URL once DNS exists.
 #
@@ -37,6 +38,12 @@ Environment (common):
   NEXA_INSTALL_DIR    Same as --dir
   NEXA_NONINTERACTIVE=1   No prompts (also auto when stdin is not a TTY)
   NEXA_EXISTING_ACTION=1|2|3|4   When install dir exists: 1=update 2=fresh 3=repair 4=cancel
+
+Optional PyPI split (after publishing aethos-core / private Pro index):
+
+  AETHOS_PYPI_INSTALL_CORE   pip requirement, e.g. aethos-core or aethos-core==0.1.0
+  AETHOS_PYPI_INSTALL_PRO    pip requirement, e.g. aethos-pro
+  AETHOS_PRO_EXTRA_INDEX_URL URL for pip --extra-index-url (CodeArtifact / Artifact Registry)
 EOF
 }
 
