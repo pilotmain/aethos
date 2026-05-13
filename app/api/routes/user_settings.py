@@ -6,7 +6,6 @@
 from __future__ import annotations
 
 import os
-import secrets
 from typing import Any
 
 from fastapi import APIRouter, Depends, Header, HTTPException, status
@@ -18,6 +17,7 @@ from app.core.db import get_db
 from app.core.env_file_patch import update_repo_env_key
 from app.core.security import get_valid_web_user_id
 from app.core.setup_creds_file import read_setup_creds_dict, write_setup_creds
+from app.core.web_api_token import generate_web_api_token
 from app.services.user_capabilities import is_privileged_owner_for_web_mutations
 from app.services.user_settings.service import get_settings_document, upsert_settings
 
@@ -103,7 +103,7 @@ def post_regenerate_web_bearer_token(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Token rotation requires TEST_X_USER_ID match or owner privileges.",
         )
-    new_token = secrets.token_urlsafe(32)
+    new_token = generate_web_api_token()
     update_repo_env_key("NEXA_WEB_API_TOKEN", new_token)
     os.environ["NEXA_WEB_API_TOKEN"] = new_token
     get_settings.cache_clear()

@@ -51,8 +51,9 @@ def test_regenerate_token_ok_for_test_x_user(monkeypatch, db_session) -> None:
         )
         assert r.status_code == 200
         new_tok = r.json().get("token")
-        assert isinstance(new_tok, str) and len(new_tok) > 8
+        assert isinstance(new_tok, str) and len(new_tok) == 32
         assert new_tok != "secret_rotate_me"
+        assert all(c.isascii() and (c.isalnum() or c in "-_") for c in new_tok)
         assert recorded == [("NEXA_WEB_API_TOKEN", new_tok)]
         assert (get_settings().nexa_web_api_token or "") == new_tok
     finally:

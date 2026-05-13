@@ -36,6 +36,11 @@ from setup_helpers import (  # noqa: E402
     backup_env_file,
 )
 
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+from app.core.web_api_token import generate_web_api_token  # noqa: E402
+
 
 STATE_FILE = _REPO_ROOT / ".aethos_setup_state.json"
 BACKUP_SUBDIR = _REPO_ROOT / ".setup" / "backups"
@@ -503,7 +508,7 @@ class SetupWizard:
 
         tok = self._get_env_value("NEXA_WEB_API_TOKEN")
         if not tok:
-            wt = secrets.token_urlsafe(32)
+            wt = generate_web_api_token()
             self._update_env_key("NEXA_WEB_API_TOKEN", wt)
             print(f"  {Colors.success('Generated NEXA_WEB_API_TOKEN (for Mission Control auth)')}")
 
@@ -612,7 +617,7 @@ class SetupWizard:
 
         web_token = (self._get_env_value("NEXA_WEB_API_TOKEN") or "").strip()
         if not web_token:
-            web_token = secrets.token_urlsafe(32)
+            web_token = generate_web_api_token()
             self._update_env_key("NEXA_WEB_API_TOKEN", web_token)
 
         print(f"\n  {Colors.success('Web API bearer token (Mission Control)')}")
@@ -636,7 +641,7 @@ APP_ENV=development
 API_BASE_URL=http://127.0.0.1:8010
 DATABASE_URL={default_sqlite_database_url()}
 NEXA_SECRET_KEY={secrets.token_urlsafe(32)}
-NEXA_WEB_API_TOKEN={secrets.token_urlsafe(32)}
+NEXA_WEB_API_TOKEN={generate_web_api_token()}
 NEXA_AGENT_ORCHESTRATION_ENABLED=true
 USE_REAL_LLM=false
 NEXA_WORKSPACE_ROOT={Path.home() / "aethos-workspace"}
