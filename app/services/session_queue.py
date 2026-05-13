@@ -1,25 +1,29 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2025 AethOS AI
 
-"""Per-lane serialization for gateway turns (OpenClaw-style lane queue, in-process).
+"""Per-lane serialization for gateway turns (OpenClaw-style lane queue).
 
-Each ``gateway_lane_id`` maps to one :class:`threading.Lock`. Only one thread may
-execute a full gateway turn for that lane at a time. Different lanes run concurrently.
+Single-process: each ``gateway_lane_id`` maps to a :class:`threading.Lock`.
 
-For multi-instance deployments, replace with a distributed lock / queue (e.g. Redis).
+Multi-worker: set ``NEXA_USE_DISTRIBUTED_QUEUE=true`` and ``REDIS_URL`` to use Redis
+locks (``nexa:lane:*``) so the same session serializes across Uvicorn workers / hosts.
 """
 
 from __future__ import annotations
 
+import logging
 import threading
 from contextlib import contextmanager
 from typing import Dict, Iterator
 
+from app.core.config import get_settings
 from app.services.gateway.context import GatewayContext
+
+logger = logging.getLogger(__name__)
 
 
 class SessionQueueManager:
-    """Serialize gateway work per logical chat/session (thread-safe, in-memory)."""
+    """Serialize gateway work per logical chat/session."""
 
     def __init__(self) -> None:
         self._meta = threading.Lock()
@@ -35,6 +39,27 @@ class SessionQueueManager:
 
     @contextmanager
     def acquire(self, session_id: str) -> Iterator[None]:
+        s = get_settings()
+        use_redis = bool(getattr(s, "nexa_use_distributed_queue", False))
+        url = (getattr(s, "redis_url", None) or "").strip()
+        if use_redis and url:
+            try:
+                from app.services.distributed_lock import lane_lock_acquire
+
+                with lane_lock_acquire(session_id, redis_url=url):
+                    yield
+                return
+            except ImportError:
+                logger.warning("NEXA_USE_DISTRIBUTED_QUEUE is set but redis is not installed; using in-process locks")
+            except TimeoutError:
+                raise
+            except Exception as exc:  # noqa: BLE001
+                logger.warning(
+                    "distributed lane lock failed (%s); falling back to in-process lock — "
+                    "cross-worker serialization is not guaranteed",
+                    exc,
+                )
+
         lk = self._lock_for(session_id)
         lk.acquire()
         try:

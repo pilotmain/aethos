@@ -23,6 +23,8 @@ services:
     environment:
       DATABASE_URL: postgresql://aethos:${DB_PASSWORD}@postgres:5432/aethos
       REDIS_URL: redis://redis:6379
+      # Serialize gateway lane turns across multiple API replicas (see app/services/session_queue.py).
+      NEXA_USE_DISTRIBUTED_QUEUE: "true"
       AETHOS_CLOUD_ENABLED: "true"
       STRIPE_API_KEY: ${STRIPE_API_KEY:-}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}

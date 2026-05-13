@@ -993,6 +993,8 @@ class Settings(BaseSettings):
     cloud_api_url: str = ""
     cloud_web_url: str = ""
     redis_url: str | None = None
+    # When true and REDIS_URL is set, gateway lane serialization uses Redis (multi-worker safe).
+    nexa_use_distributed_queue: bool = False
     access_token_expire_days: int = 30
 
     @field_validator("nexa_user_privacy_mode", mode="before")
