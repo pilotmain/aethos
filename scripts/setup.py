@@ -51,6 +51,20 @@ def _legal_auto_accept_noninteractive() -> bool:
     return False
 
 
+def reattach_tty_stdin_if_needed() -> None:
+    """After legal auto-accept, read prompts from /dev/tty when stdin was a pipe (curl | bash)."""
+    if (os.environ.get("CI") or "").strip() or (os.environ.get("GITHUB_ACTIONS") or "").strip():
+        return
+    if (os.environ.get("NEXA_NONINTERACTIVE") or "").strip().lower() in ("1", "true", "yes"):
+        return
+    if sys.stdin.isatty():
+        return
+    try:
+        sys.stdin = open("/dev/tty", "r", encoding="utf-8", errors="replace")  # noqa: SIM115
+    except OSError:
+        pass
+
+
 def display_legal_notice(*, force: bool, accept_disclaimer: bool) -> None:
     """Show warranty / liability summary; require acknowledgment unless bypassed."""
     if (os.environ.get("AETHOS_SETUP_SKIP_LEGAL") or "").strip().lower() in ("1", "true", "yes"):
@@ -114,7 +128,10 @@ def _parse_help_argv(argv: list[str]) -> bool:
 def prompt_line(prompt: str) -> str:
     """Read input; ``help`` / ``?`` / ``help topic`` shows HelpSystem."""
     while True:
-        raw = input(prompt)
+        try:
+            raw = input(prompt)
+        except EOFError:
+            return ""
         line = raw.strip()
         low = line.lower()
         if low in ("help", "?"):
@@ -821,6 +838,7 @@ HOST_EXECUTOR_WORK_ROOT={Path.home() / "aethos-workspace"}
 
     def run(self) -> None:
         display_legal_notice(force=self.force, accept_disclaimer=self.accept_disclaimer)
+        reattach_tty_stdin_if_needed()
         self.print_banner()
         if self.full_reset and STATE_FILE.exists():
             STATE_FILE.unlink()

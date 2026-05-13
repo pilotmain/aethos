@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # AethOS Beautiful Setup — launches scripts/setup.py inside .venv when present.
 # Usage (from repo root): bash scripts/setup.sh   or   ./scripts/setup.sh
-# Legal disclaimer: handled in scripts/setup.py (auto-accept when stdin is not a TTY or CI).
+# Legal disclaimer + TTY reattach for curl|bash: scripts/setup.py (auto-accept when piped; then /dev/tty for prompts).
 
 set -euo pipefail
 
