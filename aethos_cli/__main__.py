@@ -294,6 +294,13 @@ def main() -> int:
         # `app` not on PYTHONPATH (minimal install / wrong CWD) — skip ClawHub subcommands.
         pass
 
+    try:
+        from app.cli.plugin import register_plugin_parser
+
+        register_plugin_parser(sub)
+    except ModuleNotFoundError:
+        pass
+
     sp_scrape = sub.add_parser(
         "scrape",
         help="Phase 21 web scraping (local fetch/extract; subcommands: fetch, extract, paginate)",
@@ -437,6 +444,11 @@ def main() -> int:
         from app.cli.clawhub import clawhub_dispatch
 
         return clawhub_dispatch(args)
+
+    if args.cmd == "plugin":
+        from app.cli.plugin import plugin_dispatch
+
+        return plugin_dispatch(args)
 
     if args.cmd == "scrape":
         from app.cli.scraping import scraping_main
