@@ -73,6 +73,9 @@ pip-wheel-metadata/
 tmp/
 temp/
 
+# Repo soul versioning snapshots (machine-local; created when docs/development/soul.md changes)
+docs/development/soul_history/
+
 # Local agent / IDE
 .agent_tasks/
 .idea/

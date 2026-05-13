@@ -978,6 +978,12 @@ class NexaGateway:
                     "intent": "config_query",
                 }
 
+            from app.services.gateway.soul_versioning_nl import try_soul_versioning_nl_turn
+
+            soul_nl = try_soul_versioning_nl_turn(gctx, raw_gate, db_inner)
+            if soul_nl is not None:
+                return soul_nl
+
             from app.services.gateway.sandbox_nl import try_sandbox_approve_gateway_turn
 
             sbx_apr = try_sandbox_approve_gateway_turn(gctx, raw_gate, db_inner)

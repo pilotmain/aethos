@@ -104,6 +104,9 @@ def ensure_soul_creator_section() -> None:
     text = p.read_text(encoding="utf-8")
     if "## Creator" in text:
         return
+    from app.services.soul_manager import snapshot_repo_soul_file
+
+    snapshot_repo_soul_file()
     p.write_text(text.rstrip() + "\n\n" + _CREATOR_SECTION + "\n", encoding="utf-8")
 
 

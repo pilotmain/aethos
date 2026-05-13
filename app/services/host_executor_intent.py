@@ -710,3 +710,23 @@ def parse_available_clouds_intent(text: str) -> bool:
         r"\bwhat\s+can\s+i\s+deploy\s+to\b",
     )
     return any(re.search(p, line) for p in patterns)
+
+
+_SOUL_VERSIONING_PATTERNS: list[tuple[re.Pattern, str]] = [
+    (re.compile(r"(?i)(?:show|list)\s+soul\s+(?:version\s+)?history\b"), "soul_history"),
+    (re.compile(r"(?i)rollback\s+soul\s+to\s+(\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}(?:_\d+)?)\b"), "soul_rollback"),
+    (re.compile(r"(?i)undo\s+soul\s+change\b"), "soul_undo"),
+]
+
+
+def match_soul_versioning_intent(text: str) -> tuple[str, re.Match | None]:
+    """Return (kind, match) for gateway soul history / rollback NL (see ``gateway.soul_versioning_nl``)."""
+    t = (text or "").strip()
+    if not t:
+        return "", None
+    line = t.splitlines()[0].strip()
+    for pat, kind in _SOUL_VERSIONING_PATTERNS:
+        m = pat.search(line)
+        if m:
+            return kind, m
+    return "", None

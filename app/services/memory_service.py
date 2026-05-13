@@ -94,10 +94,23 @@ class MemoryService:
             return _DEFAULT_SOUL
         return str((row.value_json or {}).get("content") or _DEFAULT_SOUL)
 
-    def update_soul_markdown(self, db: Session, user_id: str, content: str, source: str = "user") -> str:
+    def update_soul_markdown(
+        self,
+        db: Session,
+        user_id: str,
+        content: str,
+        source: str = "user",
+        *,
+        record_history: bool = True,
+    ) -> str:
+        old = self.get_soul_markdown(db, user_id)
         cleaned = content.strip()
         if not cleaned.startswith("#"):
             cleaned = "# Soul\n\n" + cleaned
+        if record_history and old != cleaned:
+            from app.services.soul_manager import snapshot_user_soul_before_write
+
+            snapshot_user_soul_before_write(user_id, old)
         self.repo.upsert(db, user_id, "agent:soul", {"content": cleaned}, source=source)
         return cleaned
 

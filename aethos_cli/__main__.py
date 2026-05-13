@@ -252,6 +252,25 @@ def main() -> int:
         help="e.g. privacy_mode=strict theme=dark auto_refresh=true",
     )
 
+    sp_soul = sub.add_parser(
+        "soul",
+        help="Soul versioning: snapshots under ~/.aethos/soul_history/<user>/ after soul edits",
+    )
+    soul_sub = sp_soul.add_subparsers(dest="soul_cmd", required=True)
+    soul_sub.add_parser("history", help="List snapshot timestamps (newest first)")
+    ss_add = soul_sub.add_parser("add", help="Append a line to soul (Mission Control memory API)")
+    ss_add.add_argument("text", nargs="+", help="Rule or paragraph text")
+    ss_diff = soul_sub.add_parser("diff", help="Unified diff: snapshot vs current soul from API")
+    ss_diff.add_argument(
+        "version",
+        help="Snapshot stem e.g. 2026-05-13_00-26-31_123456 (see: aethos soul history)",
+    )
+    ss_rb = soul_sub.add_parser("rollback", help="Restore soul from snapshot via API")
+    ss_rb.add_argument(
+        "version",
+        help="Snapshot stem from `aethos soul history`",
+    )
+
     sp_dev = sub.add_parser("dev", help="POST /api/v1/dev/* (workspaces + runs)")
     dev_sub = sp_dev.add_subparsers(dest="dev_cmd", required=True)
     sp_dws = dev_sub.add_parser("workspace-add", help="POST /dev/workspaces")
@@ -429,6 +448,16 @@ def main() -> int:
             return cmd_settings_get(uid)
         if args.settings_cmd == "set":
             return cmd_settings_set(uid, list(args.pairs))
+
+    if args.cmd == "soul":
+        from aethos_cli.soul import soul_dispatch
+
+        av: list[str] = []
+        if args.soul_cmd == "add":
+            av = [" ".join(args.text)]
+        elif args.soul_cmd in ("diff", "rollback"):
+            av = [str(args.version)]
+        return soul_dispatch(str(args.soul_cmd), uid, av)
 
     if args.cmd == "skills":
         from app.cli.skills import cmd_skills_install, cmd_skills_list, cmd_skills_remove

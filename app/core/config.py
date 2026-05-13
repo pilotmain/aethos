@@ -291,6 +291,8 @@ class Settings(BaseSettings):
     audit_enabled: bool = True
     audit_dir: str = Field(default_factory=lambda: str(Path.home() / ".aethos" / "audit"))
     audit_retention_days: int = 90
+    # Max timestamped soul snapshots per user (under ~/.aethos/soul_history/<user>/); repo soul uses docs/development/soul_history/.
+    nexa_soul_history_limit: int = 30
 
     # WhatsApp Cloud API (Meta) — optional channel (Channel Gateway)
     whatsapp_access_token: str | None = None
