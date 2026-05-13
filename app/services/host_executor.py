@@ -63,6 +63,9 @@ DEFAULT_ALLOWED_COMMANDS: tuple[str, ...] = (
     "mv",
     "cd",
     "pwd",
+    "chmod",
+    "grep",
+    "find",
 )
 
 _BLOCKED_COMMAND_SUBSTRINGS: tuple[str, ...] = (
@@ -79,7 +82,6 @@ _BLOCKED_COMMAND_SUBSTRINGS: tuple[str, ...] = (
 )
 
 _SHELL_META_TOKENS: tuple[str, ...] = (
-    "&&",
     "||",
     ";",
     "|",
@@ -91,6 +93,11 @@ _SHELL_META_TOKENS: tuple[str, ...] = (
     "\n",
     "\r",
 )
+
+# Allowed only when validated per-segment (see :func:`is_command_safe`).
+_CHAIN_AND = " && "
+
+_MAX_COMMAND_CHAIN_SEGMENTS = 10
 
 # Optional git_push remote/ref — argv only (no shell).
 _PUSH_REMOTE_RE = re.compile(r"^[a-zA-Z][a-zA-Z0-9_.-]{0,63}$")
@@ -252,7 +259,7 @@ def _command_arg_safe(arg: str) -> bool:
     if any(tok in arg for tok in _SHELL_META_TOKENS):
         return False
     if arg.startswith(("/", "~")):
-        return False
+        return _absolute_arg_allowed(arg)
     if "=/" in arg:
         return False
     normalized = arg.replace("\\", "/")
@@ -261,7 +268,7 @@ def _command_arg_safe(arg: str) -> bool:
     return True
 
 
-def is_command_safe(command: str) -> bool:
+def is_command_safe(command: str, *, _segment: bool = False) -> bool:
     """Validate a command string before converting it to argv execution."""
     command_text = (command or "").strip()
     if not command_text:
@@ -269,6 +276,18 @@ def is_command_safe(command: str) -> bool:
     low = command_text.lower()
     if any(pattern in low for pattern in _BLOCKED_COMMAND_SUBSTRINGS):
         return False
+    if not _segment and _CHAIN_AND in command_text:
+        for tok in _SHELL_META_TOKENS:
+            if tok in command_text:
+                return False
+        parts = re.split(r"\s+&&\s+", command_text)
+        if len(parts) < 2 or len(parts) > _MAX_COMMAND_CHAIN_SEGMENTS:
+            return False
+        for p in parts:
+            seg = p.strip()
+            if not seg or not is_command_safe(seg, _segment=True):
+                return False
+        return True
     argv = _split_command(command_text)
     if not argv:
         return False
@@ -304,6 +323,23 @@ def _resolve_command_cwd(cwd: str | None = None) -> Path:
     return resolved
 
 
+def _absolute_arg_allowed(arg: str) -> bool:
+    """Allow ``/`` or ``~`` path tokens only when they resolve under the command work root."""
+    raw = (arg or "").strip()
+    if not raw or raw.startswith("-"):
+        return False
+    if not (raw.startswith("/") or raw.startswith("~")):
+        return False
+    try:
+        root = _command_work_dir().resolve()
+        p = Path(raw).expanduser().resolve(strict=False)
+        p.relative_to(root)
+        _path_allowed_for_io(p)
+    except (OSError, ValueError):
+        return False
+    return True
+
+
 def _command_timeout(default_timeout: int) -> int:
     """Resolve subprocess timeout from env and per-call hint.
 
@@ -332,6 +368,8 @@ def _execute_command_sync(
     cwd: str | None = None,
     timeout: int = 60,
     user_id: str | None = None,
+    *,
+    _chain_depth: int = 0,
 ) -> dict[str, Any]:
     _ = user_id
     if not bool(getattr(_host_settings(), "nexa_command_execution_enabled", True)):
@@ -348,7 +386,57 @@ def _execute_command_sync(
             "stderr": "This command is not in the allowed list",
             "command": command,
         }
-    argv = _split_command(command)
+    command_text = (command or "").strip()
+    if _chain_depth == 0 and _CHAIN_AND in command_text:
+        parts = re.split(r"\s+&&\s+", command_text)
+        if len(parts) >= 2:
+            stdout_acc: list[str] = []
+            stderr_acc: list[str] = []
+            last_rc = 0
+            for i, seg in enumerate(parts):
+                sub = seg.strip()
+                if not sub:
+                    return {
+                        "success": False,
+                        "error": "Empty chain segment",
+                        "stderr": "Chained command has an empty segment.",
+                        "command": command_text,
+                    }
+                sub_res = _execute_command_sync(
+                    sub,
+                    cwd,
+                    timeout,
+                    user_id,
+                    _chain_depth=_chain_depth + 1,
+                )
+                if sub_res.get("stdout"):
+                    stdout_acc.append(str(sub_res.get("stdout") or ""))
+                if sub_res.get("stderr"):
+                    stderr_acc.append(str(sub_res.get("stderr") or ""))
+                last_rc = int(sub_res.get("return_code") if sub_res.get("return_code") is not None else 1)
+                if not sub_res.get("success"):
+                    scwd = str(sub_res.get("cwd") or "")
+                    return {
+                        "success": False,
+                        "stdout": "\n".join(stdout_acc),
+                        "stderr": "\n".join(stderr_acc),
+                        "return_code": last_rc,
+                        "command": command_text,
+                        "cwd": scwd,
+                    }
+            try:
+                ecwd = str(_resolve_command_cwd(cwd))
+            except ValueError:
+                ecwd = str(_command_work_dir())
+            return {
+                "success": True,
+                "stdout": "\n".join(stdout_acc),
+                "stderr": "\n".join(stderr_acc),
+                "return_code": 0,
+                "command": command_text,
+                "cwd": ecwd,
+            }
+    argv = _split_command(command_text)
     if not argv:
         return {
             "success": False,
@@ -386,9 +474,9 @@ def _execute_command_sync(
     else:
         code, out, err = _run_argv(argv, cwd=exec_cwd, timeout=exec_timeout)
     # Self-heal: missing cwd (race, partial setup, or mkdir skipped) — create once and retry.
-    if code != 0 and exec_cwd:
+    if code != 0 and exec_cwd and cwd:
         combined = f"{out}\n{err}".lower()
-        if "no such file or directory" in combined and not Path(exec_cwd).is_dir():
+        if "no such file or directory" in combined:
             try:
                 root_chk = _command_work_dir()
                 resolved_cwd = Path(exec_cwd).resolve()

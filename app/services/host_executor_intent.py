@@ -54,13 +54,18 @@ _RE_WRITE = re.compile(
 _COMMAND_PATTERNS = [
     (r"^(?:run|execute)\s+(.+?)\s+in\s+([\w.`'\"/\-.~]{1,400})$", "run_command_with_dir"),
     (r"^ls(?:\s.+)?$", "run_command_bare_ls"),
-    (r"^npm\s+install\s+(.+?)$", "npm_install"),
-    (r"^pip\s+install\s+(.+?)$", "pip_install"),
+    (
+        r"^(mkdir|rm|cp|mv|touch|chmod|grep|find|echo)\s+(.+)$",
+        "run_command_bare_shell",
+    ),
+    (r"^pnpm\s+install(?:\s+(.+))?$", "pnpm_install"),
+    (r"^yarn\s+install(?:\s+(.+))?$", "yarn_install"),
+    (r"^npm\s+install(?:\s+(.+))?$", "npm_install"),
+    (r"^pip\s+install(?:\s+(.+))?$", "pip_install"),
     (r"^install\s+(.+?)(?:\s+package)?$", "install_package"),
     (r"^start\s+(?:a|the)\s+(.+?)\s+server(?:\s+on\s+port\s+(\d{2,5}))?$", "start_server"),
     (r"^clone\s+(https?://[^\s]+|git@[^\s]+)$", "git_clone"),
     (r"^create\s+directory\s+(.+?)$", "create_directory"),
-    (r"^mkdir\s+(.+?)$", "create_directory"),
     (r"^create\s+(?:a\s+)?react\s+app\s+called\s+([\w.-]{1,80})(?:\s+and\s+start\s+it)?$", "create_react_app"),
     (r"^(?:run|execute)\s+(.+?)$", "run_command"),
 ]
@@ -109,6 +114,9 @@ def title_for_payload(payload: dict[str, Any]) -> str:
     if act == "run_command":
         cmd = (payload.get("command") or "").strip()
         if cmd:
+            if " && " in cmd:
+                preview = cmd[:80] + ("..." if len(cmd) > 80 else "")
+                return f"Run chained commands: {preview}"
             preview = cmd[:80] + ("..." if len(cmd) > 80 else "")
             return f"Run command: {preview}"
         rn = (payload.get("run_name") or "").strip().lower()
@@ -216,6 +224,57 @@ def _quote_command_arg(raw: str) -> str:
     return shlex.quote((raw or "").strip())
 
 
+_MAX_COMMAND_CHAIN_SEGMENTS = 10
+
+
+def parse_run_install_in_cwd(line: str) -> tuple[str, str] | None:
+    """``npm install in /path`` / ``run npm install in ./sub`` → (``npm install``, directory)."""
+    m = re.match(
+        r"(?i)^(?:(?:run|execute)\s+)?(npm|pip|pnpm|yarn)\s+install\s+in\s+(.+)$",
+        (line or "").strip(),
+    )
+    if not m:
+        return None
+    tool = m.group(1).lower()
+    d = _clean_path_token(m.group(2))
+    if not d:
+        return None
+    return (f"{tool} install", d)
+
+
+def _parse_single_command_line(line: str, *, raw_text: str) -> dict[str, Any] | None:
+    """Parse one executable line (no ``&&`` splitting)."""
+    stripped = (line or "").strip()
+    if not stripped:
+        return None
+    ins = parse_run_install_in_cwd(stripped)
+    if ins:
+        cmd, d = ins
+        return {
+            "intent": "command_execution",
+            "command_type": "run_command_with_cwd_install",
+            "command": cmd,
+            "directory": d,
+            "raw_text": raw_text,
+        }
+    for pattern, intent_type in _COMMAND_PATTERNS:
+        match = re.match(pattern, stripped, re.IGNORECASE)
+        if match:
+            command, cwd = _command_from_intent(intent_type, match)
+            if not command:
+                return None
+            out: dict[str, Any] = {
+                "intent": "command_execution",
+                "command_type": intent_type,
+                "command": command,
+                "raw_text": raw_text,
+            }
+            if cwd:
+                out["directory"] = cwd
+            return out
+    return None
+
+
 def _command_from_intent(intent_type: str, match: re.Match[str]) -> tuple[str, str | None]:
     if intent_type == "run_command_with_dir":
         first = (match.group(1) or "").strip()
@@ -223,14 +282,32 @@ def _command_from_intent(intent_type: str, match: re.Match[str]) -> tuple[str, s
         return first, cwd
     if intent_type == "run_command_bare_ls":
         return (match.group(0) or "").strip(), None
+    if intent_type == "run_command_bare_shell":
+        return (match.group(0) or "").strip(), None
     first = (match.group(1) or "").strip()
     cwd = None
     if intent_type == "run_command":
         return first, None
+    if intent_type == "pnpm_install":
+        rest = (match.group(1) or "").strip()
+        if not rest:
+            return "pnpm install", None
+        return f"pnpm install {_quote_command_arg(rest)}", None
+    if intent_type == "yarn_install":
+        rest = (match.group(1) or "").strip()
+        if not rest:
+            return "yarn install", None
+        return f"yarn install {_quote_command_arg(rest)}", None
     if intent_type == "npm_install":
-        return f"npm install {_quote_command_arg(first)}", None
+        rest = (match.group(1) or "").strip()
+        if not rest:
+            return "npm install", None
+        return f"npm install {_quote_command_arg(rest)}", None
     if intent_type == "pip_install":
-        return f"pip install {_quote_command_arg(first)}", None
+        rest = (match.group(1) or "").strip()
+        if not rest:
+            return "pip install", None
+        return f"pip install {_quote_command_arg(rest)}", None
     if intent_type == "install_package":
         return f"npm install {_quote_command_arg(first)}", None
     if intent_type == "git_clone":
@@ -387,22 +464,41 @@ def parse_command_intent(text: str) -> dict[str, Any] | None:
     if not line:
         return None
 
-    for pattern, intent_type in _COMMAND_PATTERNS:
-        match = re.search(pattern, line, re.IGNORECASE)
-        if match:
-            command, cwd = _command_from_intent(intent_type, match)
-            if not command:
+    if " && " in line:
+        raw_parts = re.split(r"\s+&&\s+", line.strip())
+        parts = [p.strip() for p in raw_parts if p.strip()]
+        if len(parts) >= 2 and len(parts) <= _MAX_COMMAND_CHAIN_SEGMENTS:
+            dirs: list[str] = []
+            normalized: list[str] = []
+            for p in parts:
+                seg = re.sub(r"(?i)^(?:run|execute)\s+", "", p.strip()).strip()
+                if not seg:
+                    return None
+                one = _parse_single_command_line(seg, raw_text=text)
+                if not one or not str(one.get("command") or "").strip():
+                    return None
+                d = str(one.get("directory") or "").strip()
+                if d:
+                    dirs.append(d)
+                normalized.append(str(one.get("command") or "").strip())
+            uniq_dirs = {d for d in dirs if d}
+            if len(uniq_dirs) > 1:
                 return None
-            out: dict[str, Any] = {
+            directory = next(iter(uniq_dirs)) if uniq_dirs else ""
+            join_cmd = " && ".join(normalized)
+            return {
                 "intent": "command_execution",
-                "command_type": intent_type,
-                "command": command,
+                "command_type": "run_chained_commands",
+                "command": join_cmd,
+                "chain_segments": normalized,
+                "directory": directory,
                 "raw_text": text,
             }
-            if cwd:
-                out["directory"] = cwd
-            return out
-    return None
+
+    one = _parse_single_command_line(line, raw_text=text)
+    if not one:
+        return None
+    return one
 
 
 def infer_host_executor_action(user_text: str) -> dict[str, Any] | None:

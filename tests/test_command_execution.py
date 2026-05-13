@@ -74,6 +74,51 @@ class TestCommandExecution:
         assert mkdir is not None
         assert mkdir["command"] == "mkdir -p src/components"
 
+        bare_mk = parse_command_intent("mkdir -p src/widgets")
+        assert bare_mk is not None
+        assert bare_mk["command_type"] == "run_command_bare_shell"
+        assert bare_mk["command"] == "mkdir -p src/widgets"
+
+    def test_parse_command_chain(self) -> None:
+        ch = parse_command_intent("mkdir -p sub/x && npm install")
+        assert ch is not None
+        assert ch["command_type"] == "run_chained_commands"
+        assert ch["command"] == "mkdir -p sub/x && npm install"
+        assert ch["chain_segments"] == ["mkdir -p sub/x", "npm install"]
+
+    def test_parse_npm_install_in_dir(self) -> None:
+        ins = parse_command_intent("run npm install in ./packages/ui")
+        assert ins is not None
+        assert ins["command_type"] == "run_command_with_cwd_install"
+        assert ins["command"] == "npm install"
+        assert ins["directory"].endswith("packages/ui") or "packages/ui" in ins["directory"]
+
+    def test_chain_rejects_mixed_install_cwd(self) -> None:
+        assert parse_command_intent("npm install in ./a && npm install in ./b") is None
+
+    def test_is_command_safe_chain(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        settings = _settings(tmp_path)
+        monkeypatch.setattr(host_executor, "get_settings", lambda: settings)
+        assert host_executor.is_command_safe("mkdir -p nested/a && echo ok") is True
+        assert host_executor.is_command_safe("mkdir -p nested/a && cat /etc/passwd") is False
+
+    def test_infer_run_mkdir_p(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        s = _settings(tmp_path)
+        monkeypatch.setattr("app.services.host_executor_intent.get_settings", lambda: s)
+        pl = infer_host_executor_action("run mkdir -p newdir")
+        assert pl is not None
+        assert pl.get("host_action") == "run_command"
+        assert pl.get("command") == "mkdir -p newdir"
+
+    def test_execute_chained_mkdir_echo(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        settings = _settings(tmp_path)
+        monkeypatch.setattr(host_executor, "get_settings", lambda: settings)
+        out = host_executor.execute_payload(
+            {"host_action": "run_command", "command": "mkdir -p chain_here && echo chained_ok"}
+        )
+        assert "chained_ok" in out
+        assert (tmp_path / "chain_here").is_dir()
+
     def test_infer_host_executor_bare_ls(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         s = _settings(tmp_path)
         monkeypatch.setattr("app.services.host_executor_intent.get_settings", lambda: s)
