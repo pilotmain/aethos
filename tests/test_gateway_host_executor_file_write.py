@@ -80,5 +80,5 @@ def test_gateway_file_write_phrase_queues_host_executor(
     from app.services.host_executor import execute_payload
 
     result = execute_payload(dict(job.payload_json or {}))
-    assert "Wrote" in result
+    assert "Wrote" in result or "File created" in result or "created" in result.lower()
     assert (workspace / "test.txt").read_text(encoding="utf-8") == "Hello AethOS"

@@ -503,8 +503,10 @@ class SetupWizard:
         self._update_env_key(key, value)
         return True
 
-    def _ensure_core_env_flags(self) -> None:
-        """Single place for common feature flags (only if missing / blank — avoids duplicates)."""
+    def _apply_setup_default_env_overlay(self) -> None:
+        """Fill standard keys from the setup template when missing or blank (no duplicate active lines)."""
+        ws = (self._get_env_value("NEXA_WORKSPACE_ROOT") or "").strip() or str(Path.home() / "aethos-workspace")
+        home_s = str(Path.home())
         pairs: list[tuple[str, str]] = [
             ("APP_NAME", "AethOS"),
             ("APP_ENV", "development"),
@@ -515,14 +517,18 @@ class SetupWizard:
             ("NEXA_SELF_IMPROVEMENT_ENABLED", "true"),
             ("NEXA_COMMAND_TIMEOUT_SECONDS", "300"),
             ("NEXA_TASK_TIMEOUT_SECONDS", "300"),
-            ("NEXA_COMMAND_EXECUTION_ENABLED", "false"),
-            ("NEXA_HOST_EXECUTOR_ENABLED", "false"),
+            ("NEXA_COMMAND_EXECUTION_ENABLED", "true"),
+            ("NEXA_HOST_EXECUTOR_ENABLED", "true"),
+            ("NEXA_COMMAND_WORK_ROOT", ws),
+            ("HOST_EXECUTOR_WORK_ROOT", home_s),
+            ("NEXA_WORKSPACE_ROOT", ws),
             ("NEXA_BROWSER_ENABLED", "true"),
-            ("NEXA_BROWSER_HEADLESS", "true"),
+            ("NEXA_BROWSER_HEADLESS", "false"),
             ("NEXA_BROWSER_ALLOWED_DOMAINS", "*"),
             ("NEXA_TELEGRAM_EMBED_WITH_API", "true"),
-            ("NEXA_GENERIC_DEPLOY_ENABLED", "false"),
+            ("NEXA_GENERIC_DEPLOY_ENABLED", "true"),
             ("NEXA_DEPLOY_AUTO_DETECT", "true"),
+            ("NEXA_DEPLOY_TIMEOUT_SECONDS", "300"),
             ("NEXA_OBSERVABILITY_ENABLED", "true"),
             ("NEXA_RESPONSE_FORMAT", "beautiful"),
             ("AETHOS_OWNER_IDS", ""),
@@ -533,6 +539,17 @@ class SetupWizard:
         ]
         for k, v in pairs:
             self._upsert_env_if_unset(k, v)
+
+    def _sync_self_improvement_and_owners_for_user(self, user_id: str) -> None:
+        """Always enable self-improvement; bind owner gates to the Mission Control web user id."""
+        self._update_env_key("NEXA_SELF_IMPROVEMENT_ENABLED", "true")
+        cur = (self._get_env_value("AETHOS_OWNER_IDS") or "").strip()
+        if not cur:
+            self._update_env_key("AETHOS_OWNER_IDS", user_id)
+        if not (self._get_env_value("NEXA_SELF_IMPROVEMENT_OWNER_ID") or "").strip():
+            self._update_env_key("NEXA_SELF_IMPROVEMENT_OWNER_ID", user_id)
+        if user_id.startswith("tg_") and user_id[3:].isdigit():
+            self._merge_telegram_owner_ids(user_id[3:])
 
     def _ensure_playwright_env_defaults(self, *, browser_enabled: bool) -> None:
         """Append browser / host defaults to ``.env`` when keys are unset."""
@@ -656,11 +673,10 @@ class SetupWizard:
         if not wr:
             default_wr = str(Path.home() / "aethos-workspace")
             self._update_env_key("NEXA_WORKSPACE_ROOT", default_wr)
-            self._update_env_key("HOST_EXECUTOR_WORK_ROOT", default_wr)
-            print(f"  {Colors.info(f'Default workspace roots → {default_wr}')}")
+            print(f"  {Colors.info(f'Default workspace root → {default_wr}')}")
 
         self._configure_playwright_after_env()
-        self._ensure_core_env_flags()
+        self._apply_setup_default_env_overlay()
         dedupe_env_assignment_lines(self.env_path)
         print(
             f"\n  {Colors.success('Environment file (deduplicated keys):')} "
@@ -738,6 +754,7 @@ class SetupWizard:
 
         self._update_env_key("TEST_X_USER_ID", user_id)
         print(f"  {Colors.success(f'Saved TEST_X_USER_ID={user_id}')}")
+        self._sync_self_improvement_and_owners_for_user(user_id)
 
         yn = prompt_line(
             f"  {Colors.question('Configure Telegram bot token now? [y/N]')} "
@@ -1158,25 +1175,28 @@ SSO_POST_LOGIN_REDIRECT=http://localhost:3000/login
         print(f"  {Colors.success('Web production build finished')}")
         return True
 
+    def _auto_free_listen_ports(self, ports: set[int]) -> None:
+        """Stop listeners on common dev ports so API / Mission Control can bind (best-effort)."""
+        if (os.environ.get("AETHOS_SETUP_NO_KILL_PORTS") or "").strip().lower() in ("1", "true", "yes"):
+            return
+        for p in sorted(ports):
+            if not self._is_port_in_use(p):
+                continue
+            print(f"  {Colors.info(f'Port {p} is in use — stopping existing listener(s)…')}")
+            self._kill_process_on_port(p)
+
     def _start_web_ui(self, web_dir: Path, *, web_port: int = 3000) -> bool:
         """Start ``npm run dev`` for Mission Control in the background."""
         if not shutil.which("npm"):
             return False
         print(f"  {Colors.info(f'Starting Mission Control (npm run dev) on port {web_port}…')}")
 
+        self._auto_free_listen_ports({web_port})
         if self._is_port_in_use(web_port):
-            print(f"  {Colors.warning(f'Port {web_port} is already in use')}")
-            yn = prompt_line(f"  {Colors.question('Kill existing process and free the port? [y/N]')} ").strip().lower()
-            if yn in ("y", "yes"):
-                if not self._kill_process_on_port(web_port):
-                    print(f"  {Colors.warning('Could not free the port (install lsof or stop the process manually)')}")
-                elif self._is_port_in_use(web_port):
-                    print(f"  {Colors.warning('Port still busy after kill attempt')}")
-            if self._is_port_in_use(web_port):
-                print(
-                    f"  {Colors.DIM}Manual: cd {web_dir} && npm run dev{Colors.RESET}"
-                )
-                return False
+            print(
+                f"  {Colors.DIM}Manual: cd {web_dir} && npm run dev{Colors.RESET}"
+            )
+            return False
 
         log_dir = self.repo_root / ".setup"
         log_dir.mkdir(parents=True, exist_ok=True)
@@ -1303,20 +1323,15 @@ SSO_POST_LOGIN_REDIRECT=http://localhost:3000/login
         port = parse_port_from_api_base(api_base)
         web_port = 3000
 
+        self._auto_free_listen_ports({port, web_port, 8000, 8010})
+
         if self._is_port_in_use(port):
-            print(f"  {Colors.warning(f'API port {port} is already in use')}")
-            yn = prompt_line(f"  {Colors.question('Kill existing process and free the port? [y/N]')} ").strip().lower()
-            if yn in ("y", "yes"):
-                if not self._kill_process_on_port(port):
-                    print(f"  {Colors.warning('Could not free the port (install lsof or stop the process manually)')}")
-                elif self._is_port_in_use(port):
-                    print(f"  {Colors.warning('Port still busy after kill attempt')}")
-            if self._is_port_in_use(port):
-                print(
-                    f"  {Colors.DIM}Manual: {sys.executable} -m uvicorn app.main:app --host 0.0.0.0 --port {port}{Colors.RESET}"
-                )
-                self._write_aethos_setup_creds_file(api_base.rstrip("/"))
-                return True
+            print(f"  {Colors.warning(f'API port {port} is still in use after cleanup — check lsof or pick another port in .env')}")
+            print(
+                f"  {Colors.DIM}Manual: {sys.executable} -m uvicorn app.main:app --host 0.0.0.0 --port {port}{Colors.RESET}"
+            )
+            self._write_aethos_setup_creds_file(api_base.rstrip("/"))
+            return True
 
         print(f"  {Colors.info(f'Starting API on port {port} (logs: .setup/uvicorn.setup.log)')}")
         log_dir = self.repo_root / ".setup"

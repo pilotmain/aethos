@@ -53,9 +53,10 @@ _RE_WRITE = re.compile(
 )
 _COMMAND_PATTERNS = [
     (r"^(?:run|execute)\s+(.+?)\s+in\s+([\w.`'\"/\-.~]{1,400})$", "run_command_with_dir"),
+    (r"(?i)^(npm|pip|pnpm|yarn)\s+install(?:\s+in\s+(.+))?$", "run_install_optional"),
     (r"^ls(?:\s.+)?$", "run_command_bare_ls"),
     (
-        r"^(mkdir|rm|cp|mv|touch|chmod|grep|find|echo)\s+(.+)$",
+        r"^(mkdir|rm|cp|mv|ls|cat|echo|touch|chmod|grep|find)\s+(.+)$",
         "run_command_bare_shell",
     ),
     (r"^pnpm\s+install(?:\s+(.+))?$", "pnpm_install"),
@@ -67,7 +68,7 @@ _COMMAND_PATTERNS = [
     (r"^clone\s+(https?://[^\s]+|git@[^\s]+)$", "git_clone"),
     (r"^create\s+directory\s+(.+?)$", "create_directory"),
     (r"^create\s+(?:a\s+)?react\s+app\s+called\s+([\w.-]{1,80})(?:\s+and\s+start\s+it)?$", "create_react_app"),
-    (r"^(?:run|execute)\s+(.+?)$", "run_command"),
+    (r"(?i)^(?:run|execute)\s+(.+)$", "run_command"),
 ]
 
 
@@ -79,7 +80,10 @@ def _strip_outer_quotes(raw: str) -> str:
 
 
 def _clean_path_token(raw: str) -> str:
-    return (raw or "").strip().strip('`"\'').rstrip(".,;")
+    s = (raw or "").strip().strip('`"\'')
+    if s == ".":
+        return s
+    return s.rstrip(".,;")
 
 
 def _write_target_relative_path(path_raw: str, *, parent_raw: str | None = None) -> str | None:
@@ -280,6 +284,12 @@ def _command_from_intent(intent_type: str, match: re.Match[str]) -> tuple[str, s
         first = (match.group(1) or "").strip()
         cwd = (match.group(2) or "").strip()
         return first, cwd
+    if intent_type == "run_install_optional":
+        tool = (match.group(1) or "").strip().lower()
+        d = (match.group(2) or "").strip() if match.lastindex and match.lastindex >= 2 else ""
+        cmd = f"{tool} install"
+        cwd = _clean_path_token(d) if d else None
+        return cmd, cwd
     if intent_type == "run_command_bare_ls":
         return (match.group(0) or "").strip(), None
     if intent_type == "run_command_bare_shell":

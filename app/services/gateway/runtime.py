@@ -1036,11 +1036,21 @@ class NexaGateway:
             if agent_os_st is not None:
                 return agent_os_st
 
+            from app.services.gateway.goal_nl_actions import try_goal_planning_gateway_turn
+
+            goal_nl = try_goal_planning_gateway_turn(gctx, raw_gate, db_inner)
+            if goal_nl is not None:
+                return goal_nl
+
             from app.services.gateway.early_nl_host_actions import try_early_nl_host_actions
 
             early_nl = try_early_nl_host_actions(gctx, raw_gate, db_inner)
             if early_nl is not None:
                 return early_nl
+
+            host_out = self._try_host_executor_turn(gctx, raw_gate, db_inner)
+            if host_out is not None:
+                return host_out
 
             from app.services.gateway.sandbox_nl import try_sandbox_development_file_fastpath
 
@@ -1080,21 +1090,11 @@ class NexaGateway:
             if start_app_nl is not None:
                 return start_app_nl
 
-            from app.services.gateway.goal_nl_actions import try_goal_planning_gateway_turn
-
-            goal_nl = try_goal_planning_gateway_turn(gctx, raw_gate, db_inner)
-            if goal_nl is not None:
-                return goal_nl
-
             from app.services.inter_agent_coordinator import try_inter_agent_gateway_turn
 
             inter_ag = try_inter_agent_gateway_turn(gctx, raw_gate, db_inner)
             if inter_ag is not None:
                 return inter_ag
-
-            host_out = self._try_host_executor_turn(gctx, raw_gate, db_inner)
-            if host_out is not None:
-                return host_out
 
             from app.services.sub_agent_router import try_sub_agent_gateway_turn
 

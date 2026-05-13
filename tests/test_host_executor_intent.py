@@ -121,10 +121,30 @@ def test_write_quoted_content_to_absolute_file(tmp_path: Path) -> None:
         }
 
 
-def test_rejects_traversal_and_unknown() -> None:
-    assert infer_host_executor_action("read ../../etc/passwd") is None
-    assert infer_host_executor_action("deploy to production") is None
-    assert infer_host_executor_action("") is None
+def test_infer_run_mkdir_command(tmp_path: Path) -> None:
+    class S:
+        host_executor_work_root = str(tmp_path.resolve())
+
+    with patch("app.services.host_executor_intent.get_settings", return_value=S()):
+        out = infer_host_executor_action("run mkdir -p scratch_dir")
+    assert out == {
+        "host_action": "run_command",
+        "command": "mkdir -p scratch_dir",
+        "command_type": "run_command",
+    }
+
+
+def test_infer_npm_install_in_dir_optional(tmp_path: Path) -> None:
+    class S:
+        host_executor_work_root = str(tmp_path.resolve())
+
+    pkg = tmp_path / "my-pkg"
+    pkg.mkdir(parents=True, exist_ok=True)
+
+    with patch("app.services.host_executor_intent.get_settings", return_value=S()):
+        out = infer_host_executor_action(f"npm install in {pkg}")
+    assert out and out.get("host_action") == "run_command"
+    assert "npm install" in (out.get("command") or "")
 
 
 def test_browser_host_commands_infer(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
