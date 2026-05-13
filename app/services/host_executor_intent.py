@@ -730,3 +730,10 @@ def match_soul_versioning_intent(text: str) -> tuple[str, re.Match | None]:
         if m:
             return kind, m
     return "", None
+
+
+def parse_greeting_intent(text: str) -> bool:
+    """True when ``text`` is a bare social greeting (see ``intent_classifier.is_greeting_message``)."""
+    from app.services.intent_classifier import is_greeting_message
+
+    return is_greeting_message(text)

@@ -34,9 +34,11 @@ Valid intents:
 - status_update: user says they completed something
 - correction: user says the assistant misunderstood, asks it to answer the question, or rejects the previous response
 - general_chat: anything else
+- greeting: a short social opener only (hi / hello / hey / good morning / etc.) with no real task yet
 - config_query: user asks about **this deployment's** configuration — LLM provider/model, workspace paths on the host, whether API keys are set (never the secret values)
 
 Important rules:
+- If the message is only a short greeting (hi, hello, hey, good morning, etc.) with no tasks or questions, classify as **greeting**, not general_chat.
 - Do NOT classify as brain_dump just because the message contains "and".
 - Do NOT classify questions as brain_dump.
 - If the message asks "what can you do", "can you do design", "can you code", "what can't you do", or asks about custom agents / user-defined agents / building their own specialist, classify as capability_question.
@@ -81,6 +83,7 @@ VALID_INTENTS = {
     "status_update",
     "correction",
     "general_chat",
+    "greeting",
     "dev_command",
     "config_query",
 }
@@ -105,6 +108,31 @@ def is_config_query(text: str) -> bool:
     if len(t) < 6:
         return False
     return any(re.search(p, t, re.I) for p in CONFIG_QUERY_PATTERNS)
+
+
+def is_greeting_message(text: str) -> bool:
+    """True for short social openers (no substantive task). Used before LLM routing."""
+    raw = (text or "").strip()
+    if not raw or len(raw) > 120:
+        return False
+    tl_one_line = raw.lower().split("\n")[0].strip()
+    tl_one_line = re.sub(r"[\s!.?…,:;]+$", "", tl_one_line).strip()
+    if re.match(r"^(good morning|good afternoon|good evening)\b", tl_one_line):
+        return len(tl_one_line) < 96
+    if re.match(
+        r"^(hi|hello|hey|greetings|sup|howdy|yo|hiya)\b(?:\s+(there|all|everyone|team))?\s*$",
+        tl_one_line,
+    ):
+        return True
+    if re.match(r"^(hi|hello|hey)\b[,!\s]", tl_one_line) and len(tl_one_line) <= 72:
+        if any(
+            k in tl_one_line
+            for k in ("create", "deploy", "fix", "error", "run ", "write", "help me")
+        ):
+            return False
+        return True
+    return False
+
 
 TASK_VERBS = [
     "finish",
@@ -558,6 +586,9 @@ def classify_intent_fallback(
     if is_config_query(message):
         return {"intent": "config_query", "confidence": 0.95, "reason": "configuration / settings question"}
 
+    if is_greeting_message(message):
+        return {"intent": "greeting", "confidence": 0.99, "reason": "short greeting opener"}
+
     if looks_like_orchestrate_system(message):
         return {"intent": "orchestrate_system", "confidence": 0.92, "reason": "mission control / orchestration cues"}
 
@@ -740,6 +771,9 @@ def get_intent(
     # Phase 77 — before registry/orchestration cues so "what model…" is never mistaken for actions.
     if is_config_query(t0):
         return "config_query"
+
+    if is_greeting_message(t0):
+        return "greeting"
 
     if looks_like_registry_agent_creation_nl(t0):
         return "create_sub_agent"

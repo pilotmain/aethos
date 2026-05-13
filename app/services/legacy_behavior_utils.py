@@ -133,6 +133,8 @@ def build_context(
 
 
 def map_intent_to_behavior(intent: str, _context: Context) -> str:
+    if intent == "greeting":
+        return "assist"
     if intent in ("create_custom_agent", "create_sub_agent"):
         return "clarify"
     if intent in ("orchestrate_system", "external_investigation", "external_execution", "external_execution_continue"):

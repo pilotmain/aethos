@@ -776,6 +776,16 @@ class NexaGateway:
                 "intent": "config_query",
             }
 
+        if intent == "greeting":
+            from app.services.gateway.greeting_replies import greeting_reply_for_text
+
+            body = greeting_reply_for_text(raw)
+            return {
+                "mode": "chat",
+                "text": gateway_finalize_chat_reply(body, source="greeting_reply", user_text=raw),
+                "intent": "greeting",
+            }
+
         # Orchestration sub-agents (Mission Control): NL roster → create_sub_agent via intent_classifier +
         # looks_like_registry_agent_creation_nl (Phase 54/59).
         # Web ``/web/chat`` runs this spawn path when ``prefers_registry_sub_agent`` is true before
