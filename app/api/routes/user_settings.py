@@ -5,14 +5,20 @@
 
 from __future__ import annotations
 
+import os
+import secrets
 from typing import Any
 
-from fastapi import APIRouter, Depends, Header
+from fastapi import APIRouter, Depends, Header, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
+from app.core.config import get_settings
 from app.core.db import get_db
+from app.core.env_file_patch import update_repo_env_key
 from app.core.security import get_valid_web_user_id
+from app.core.setup_creds_file import read_setup_creds_dict, write_setup_creds
+from app.services.user_capabilities import is_privileged_owner_for_web_mutations
 from app.services.user_settings.service import get_settings_document, upsert_settings
 
 router = APIRouter(prefix="/user", tags=["user"])
@@ -75,3 +81,35 @@ def post_user_settings(
         "ui_preferences": out["ui_preferences"],
         "identity": {"session_id": None, "device_id": None},
     }
+
+
+@router.post("/regenerate-token")
+def post_regenerate_web_bearer_token(
+    db: Session = Depends(get_db),
+    app_user_id: str = Depends(get_valid_web_user_id),
+) -> dict[str, str]:
+    """
+    Rotate ``NEXA_WEB_API_TOKEN`` in the repo ``.env`` and reload in-process settings.
+
+    Allowed when ``X-User-Id`` matches :envvar:`TEST_X_USER_ID` (wizard / local web user)
+    or when the caller passes the owner gate used for Mission Control mutations.
+    """
+    test_x = (os.environ.get("TEST_X_USER_ID") or "").strip()
+    allowed = bool(test_x and app_user_id == test_x) or is_privileged_owner_for_web_mutations(
+        db, app_user_id
+    )
+    if not allowed:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Token rotation requires TEST_X_USER_ID match or owner privileges.",
+        )
+    new_token = secrets.token_urlsafe(32)
+    update_repo_env_key("NEXA_WEB_API_TOKEN", new_token)
+    os.environ["NEXA_WEB_API_TOKEN"] = new_token
+    get_settings.cache_clear()
+    creds = read_setup_creds_dict()
+    ab = creds.get("api_base", "").strip()
+    uid = creds.get("user_id", "").strip()
+    if ab and uid:
+        write_setup_creds(api_base=ab, user_id=uid, bearer_token=new_token)
+    return {"token": new_token}

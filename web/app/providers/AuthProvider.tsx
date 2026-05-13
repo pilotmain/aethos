@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { DEFAULT_API_BASE, readConfig } from "@/lib/config";
+import { DEFAULT_API_BASE, readConfig, saveConfig } from "@/lib/config";
 
 type AuthContextType = {
   userId: string | null;
@@ -37,30 +37,69 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    const stored = readConfig();
-    const nextUserId = stored.userId.trim() || null;
-    const nextToken = stored.token.trim() || null;
-    const nextApiBase = (stored.apiBase || DEFAULT_API_BASE).trim().replace(/\/$/, "");
-
-    setUserId(nextUserId);
-    setBearerToken(nextToken);
-    setApiBase(nextApiBase);
-
-    if (!nextUserId) {
-      setIsConnected(false);
-      return undefined;
-    }
-
+    let cancelled = false;
     const controller = new AbortController();
-    fetch(`${nextApiBase}/api/v1/user/settings`, {
-      headers: buildAuthHeaders(nextUserId, nextToken),
-      cache: "no-store",
-      signal: controller.signal,
-    })
-      .then((response) => setIsConnected(response.ok))
-      .catch(() => setIsConnected(false));
 
-    return () => controller.abort();
+    const run = async () => {
+      try {
+        const r = await fetch("/api/setup-creds", { cache: "no-store", signal: controller.signal });
+        const creds = (await r.json()) as { api_base?: string; user_id?: string; bearer_token?: string };
+        if (cancelled) {
+          return;
+        }
+        if (creds.user_id && creds.api_base) {
+          const cur = readConfig();
+          const uid = creds.user_id.trim();
+          const apply = !cur.userId.trim() || cur.userId.trim() === uid;
+          if (apply) {
+            saveConfig({
+              apiBase: creds.api_base.trim().replace(/\/$/, "") || cur.apiBase || DEFAULT_API_BASE,
+              userId: uid,
+              token: (creds.bearer_token ?? cur.token ?? "").trim(),
+            });
+          }
+        }
+      } catch {
+        /* ignore */
+      }
+      if (cancelled) {
+        return;
+      }
+      const stored = readConfig();
+      const nextUserId = stored.userId.trim() || null;
+      const nextToken = stored.token.trim() || null;
+      const nextApiBase = (stored.apiBase || DEFAULT_API_BASE).trim().replace(/\/$/, "");
+
+      setUserId(nextUserId);
+      setBearerToken(nextToken);
+      setApiBase(nextApiBase);
+
+      if (!nextUserId) {
+        setIsConnected(false);
+        return;
+      }
+
+      try {
+        const response = await fetch(`${nextApiBase}/api/v1/user/settings`, {
+          headers: buildAuthHeaders(nextUserId, nextToken),
+          cache: "no-store",
+          signal: controller.signal,
+        });
+        if (!cancelled) {
+          setIsConnected(response.ok);
+        }
+      } catch {
+        if (!cancelled) {
+          setIsConnected(false);
+        }
+      }
+    };
+
+    void run();
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
   }, [pathname]);
 
   const value = useMemo(

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { defaultConfig, readConfig, saveConfig } from "@/lib/config";
 import {
   describeAethosWebUserIdProblem,
@@ -19,6 +19,40 @@ export default function LoginPage() {
   const [isTesting, setIsTesting] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [regenBusy, setRegenBusy] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await fetch("/api/setup-creds", { cache: "no-store" });
+        const creds = (await r.json()) as { api_base?: string; user_id?: string; bearer_token?: string };
+        if (cancelled || !creds.user_id || !creds.api_base) {
+          return;
+        }
+        const cur = readConfig();
+        const uid = creds.user_id.trim();
+        const apply = !cur.userId.trim() || cur.userId.trim() === uid;
+        if (!apply) {
+          return;
+        }
+        const next = {
+          apiBase: creds.api_base.trim().replace(/\/$/, "") || cur.apiBase || defaultConfig.apiBase,
+          userId: uid,
+          token: (creds.bearer_token ?? cur.token ?? "").trim(),
+        };
+        saveConfig(next);
+        setApiBase(next.apiBase);
+        setUserId(next.userId);
+        setToken(next.token);
+      } catch {
+        /* ignore */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const trimmedUserId = userId.trim();
   const userIdProblem =
@@ -98,6 +132,46 @@ export default function LoginPage() {
     }
   }
 
+  async function regenerateToken() {
+    setError(null);
+    const base = (apiBase.trim() || defaultConfig.apiBase).replace(/\/$/, "");
+    const nextUserId = userId.trim();
+    if (!nextUserId) {
+      setError("Enter your user id before rotating the token.");
+      return;
+    }
+    setRegenBusy(true);
+    try {
+      const headers: Record<string, string> = {
+        Accept: "application/json",
+        "X-User-Id": nextUserId,
+      };
+      if (token.trim()) {
+        headers.Authorization = `Bearer ${token.trim()}`;
+      }
+      const res = await fetch(`${base}/api/v1/user/regenerate-token`, {
+        method: "POST",
+        headers,
+        cache: "no-store",
+      });
+      if (!res.ok) {
+        const detail = await readErrorDetail(res);
+        throw new Error(detail || res.statusText);
+      }
+      const data = (await res.json()) as { token?: string };
+      const nextTok = (data.token || "").trim();
+      if (!nextTok) {
+        throw new Error("Server did not return a token.");
+      }
+      setToken(nextTok);
+      saveConfig({ apiBase: base, userId: nextUserId, token: nextTok });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Token rotation failed.");
+    } finally {
+      setRegenBusy(false);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-zinc-950 px-4 py-8 text-zinc-100">
       <div className="mx-auto max-w-md">
@@ -112,7 +186,9 @@ export default function LoginPage() {
           Your <code className="text-zinc-300">X-User-Id</code> is your AethOS account id from Telegram (
           <code className="text-zinc-300">tg_…</code>), email channel (<code className="text-zinc-300">em_…</code>),
           Slack (<code className="text-zinc-300">slack_…</code>), SMS, WhatsApp, Apple Messages, or a{" "}
-          <code className="text-zinc-300">web_</code>/<code className="text-zinc-300">local_</code> id.
+          <code className="text-zinc-300">web_</code>/<code className="text-zinc-300">local_</code> id (the setup
+          wizard stores <code className="text-zinc-300">TEST_X_USER_ID</code>, often{" "}
+          <code className="text-zinc-300">web_setup_…</code>).
         </p>
         <form onSubmit={onSubmit} className="mt-6 flex flex-col gap-4">
           <label className="flex flex-col gap-1 text-sm">
@@ -132,7 +208,7 @@ export default function LoginPage() {
               }`}
               value={userId}
               onChange={(e) => setUserId(e.target.value)}
-              placeholder="tg_123456789 or em_… or slack_U01…"
+              placeholder="web_setup_… or tg_123456789 or em_…"
               autoComplete="off"
               aria-invalid={userIdInvalid}
               aria-describedby={userIdInvalid ? "user-id-error" : "user-id-help"}
@@ -157,6 +233,20 @@ export default function LoginPage() {
               placeholder="matches NEXA_WEB_API_TOKEN"
             />
           </label>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => void regenerateToken()}
+              disabled={regenBusy || isTesting}
+              className="rounded-md border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-xs font-medium text-zinc-200 hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {regenBusy ? "Rotating…" : "Regenerate API token"}
+            </button>
+            <span className="text-[11px] text-zinc-500">
+              Writes a new <code className="text-zinc-400">NEXA_WEB_API_TOKEN</code> to the API{" "}
+              <code className="text-zinc-400">.env</code> (requires wizard user or owner).
+            </span>
+          </div>
           {error && (
             <div className="rounded-md border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-200" role="alert">
               {error}

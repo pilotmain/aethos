@@ -850,10 +850,28 @@ HOST_EXECUTOR_WORK_ROOT={Path.home() / "aethos-workspace"}
         print(f"  {Colors.success(f'Mission Control ready — http://localhost:{web_port}')}")
         return True
 
+    def _write_aethos_setup_creds_file(self, api_base: str | None = None) -> None:
+        """Write JSON for Mission Control / Next to auto-load (``AETHOS_SETUP_CREDS_FILE`` overrides path)."""
+        ab = (api_base or self._get_env_value("API_BASE_URL") or "http://127.0.0.1:8010").rstrip("/")
+        uid = (self._get_env_value("TEST_X_USER_ID") or "").strip()
+        tok = (self._get_env_value("NEXA_WEB_API_TOKEN") or "").strip()
+        if not uid or not tok:
+            return
+        try:
+            sys.path.insert(0, str(self.repo_root))
+            from app.core.setup_creds_file import setup_creds_json_path, write_setup_creds
+
+            write_setup_creds(api_base=ab, user_id=uid, bearer_token=tok)
+            dest = setup_creds_json_path()
+            print(f"  {Colors.success(f'Mission Control bootstrap creds → {dest}')}")
+        except Exception as exc:  # noqa: BLE001
+            print(f"  {Colors.warning(f'Could not write setup creds file: {exc!s}')}")
+
     def start_services(self) -> bool:
         print(f"\n{Colors.step(8, TOTAL_STEPS, 'Starting services (API + Mission Control)…')}\n")
         if self.skip_services:
             print(f"  {Colors.info('Skipped (--skip-services)')}")
+            self._write_aethos_setup_creds_file()
             return True
 
         api_base = self._get_env_value("API_BASE_URL") or "http://127.0.0.1:8010"
@@ -872,6 +890,7 @@ HOST_EXECUTOR_WORK_ROOT={Path.home() / "aethos-workspace"}
                 print(
                     f"  {Colors.DIM}Manual: {sys.executable} -m uvicorn app.main:app --host 0.0.0.0 --port {port}{Colors.RESET}"
                 )
+                self._write_aethos_setup_creds_file(api_base.rstrip("/"))
                 return True
 
         print(f"  {Colors.info(f'Starting API on port {port} (logs: .setup/uvicorn.setup.log)')}")
@@ -924,6 +943,7 @@ HOST_EXECUTOR_WORK_ROOT={Path.home() / "aethos-workspace"}
                 f"  {Colors.DIM}Web UI directory not found — skipped (expected web/ with package.json){Colors.RESET}"
             )
 
+        self._write_aethos_setup_creds_file(api_base.rstrip("/"))
         return True
 
     def _register_pending_workspace(self, api_base: str, web_user: str, token: str) -> None:

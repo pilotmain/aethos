@@ -61,6 +61,7 @@ from app.api.routes import (
     report_watcher,
     scraping,
     saas_auth,
+    setup_creds,
     slack,
     social,
     sms,
@@ -349,6 +350,7 @@ app.add_middleware(
 app.add_middleware(MetricsMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(UsageMeterMiddleware)
+app.include_router(setup_creds.router)
 app.include_router(dashboard.router)
 app.include_router(health.router, prefix=settings.api_v1_prefix)
 app.include_router(system.router, prefix=settings.api_v1_prefix)
