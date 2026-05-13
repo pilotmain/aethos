@@ -656,6 +656,8 @@ def _format_simulation_plan(
     elif action == "plugin_skill":
         name = (payload.get("skill_name") or "").strip()
         lines.append(f"Would invoke plugin skill: {name or '(missing skill_name)'}")
+    elif action in ("browser_open", "browser_click", "browser_fill", "browser_screenshot"):
+        lines.append(f"Would run browser host action: {action}")
     elif not action:
         lines.append("Would dispatch (action missing — would have raised ValueError at runtime).")
     else:
@@ -1036,6 +1038,19 @@ def build_simulation_plan(payload: dict[str, Any]) -> dict[str, Any]:
             else None,
         }
 
+    elif action in ("browser_open", "browser_click", "browser_fill", "browser_screenshot"):
+        plan["kind"] = "browser"
+        hs = _host_settings()
+        txt = str(pl.get("text") or "")
+        plan["fields"] = {
+            "action": action,
+            "url": (pl.get("url") or "").strip() or None,
+            "selector": (pl.get("selector") or "").strip() or None,
+            "text_preview": (txt[:120] + ("…" if len(txt) > 120 else "")) if txt else None,
+            "name": (pl.get("name") or "").strip() or None,
+            "screenshot_dir": str(getattr(hs, "nexa_browser_screenshot_dir", "") or ""),
+        }
+
     elif action in _SIMULATION_DEPLOY_HINTS:
         plan["kind"] = "deploy"
         plan["fields"] = {
@@ -1312,6 +1327,12 @@ def execute_payload(
         if inp is not None and not isinstance(inp, dict):
             raise ValueError("plugin_skill input must be an object")
         raw = run_plugin_skill_sync(name, dict(inp or {}))
+        return _finalize_output(str(raw)[:24_000])
+
+    if action in ("browser_open", "browser_click", "browser_fill", "browser_screenshot"):
+        from app.services.browser_automation import run_browser_host_action_sync
+
+        raw = run_browser_host_action_sync(action, dict(payload))
         return _finalize_output(str(raw)[:24_000])
 
     if action == "git_status":
@@ -1646,7 +1667,7 @@ def execute_payload(
     raise ValueError(
         f"unknown host_action {action!r}; try: plugin_skill, chain, git_status, run_command, file_read, file_write, "
         "git_commit, git_push, vercel_projects_list, vercel_remove, list_directory, find_files, "
-        "read_multiple_files"
+        "read_multiple_files, browser_open, browser_click, browser_fill, browser_screenshot"
     )
 
 
@@ -1683,5 +1704,9 @@ def proposed_risk_level(payload: dict[str, Any]) -> str:
     if action in ("list_directory", "find_files"):
         return "low"
     if action == "read_multiple_files":
+        return "normal"
+    if action in ("browser_open",):
+        return "high"
+    if action in ("browser_click", "browser_fill", "browser_screenshot"):
         return "normal"
     return "low"

@@ -57,7 +57,14 @@ async def get_browser_page():
 
     async with _lock:
         s = get_settings()
-        timeout_ms = int(getattr(s, "nexa_browser_timeout", 30000) or 30000)
+        sec = getattr(s, "nexa_browser_timeout_seconds", None)
+        if sec is not None:
+            try:
+                timeout_ms = max(int(sec), 1) * 1000
+            except (TypeError, ValueError):
+                timeout_ms = int(getattr(s, "nexa_browser_timeout", 30000) or 30000)
+        else:
+            timeout_ms = int(getattr(s, "nexa_browser_timeout", 30000) or 30000)
 
         if _browser is not None:
             try:

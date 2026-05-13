@@ -18,6 +18,7 @@ class _Settings:
     host_executor_work_root = ""
     host_executor_timeout_seconds = 120
     host_executor_max_file_bytes = 262_144
+    nexa_browser_enabled = True
 
     def __init__(self, root: Path) -> None:
         self.host_executor_work_root = str(root)
@@ -325,3 +326,20 @@ def test_find_files_extension_filter(tmp_path: Path, monkeypatch: pytest.MonkeyP
         )
     assert "a.py" in out
     assert "b.txt" not in out
+
+
+def test_browser_host_action_routes_to_playwright_bridge(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    with patch.object(host_executor, "get_settings", return_value=_Settings(tmp_path)):
+        with patch(
+            "app.services.browser_automation.run_browser_host_action_sync",
+            return_value="ok: navigated",
+        ) as mock_run:
+            out = host_executor.execute_payload(
+                {"host_action": "browser_open", "url": "https://example.com/foo"}
+            )
+    mock_run.assert_called_once()
+    call_args = mock_run.call_args[0]
+    assert call_args[0] == "browser_open"
+    assert call_args[1]["url"] == "https://example.com/foo"
+    assert "ok: navigated" in out

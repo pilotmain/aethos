@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from app.core.config import get_settings
+from app.services.browser_automation import parse_browser_host_command
 
 
 def safe_relative_path(raw: str) -> str | None:
@@ -146,6 +147,15 @@ def title_for_payload(payload: dict[str, Any]) -> str:
     if act == "plugin_skill":
         sn = (payload.get("skill_name") or "").strip()
         return f"Plugin skill ({sn})" if sn else "Plugin skill"
+    if act == "browser_open":
+        u = (payload.get("url") or "").strip()
+        return f"Open browser URL ({u})" if u else "Open browser URL"
+    if act == "browser_click":
+        return "Browser click"
+    if act == "browser_fill":
+        return "Browser fill form field"
+    if act == "browser_screenshot":
+        return "Browser screenshot"
     return "Host action"
 
 
@@ -400,6 +410,10 @@ def infer_host_executor_action(user_text: str) -> dict[str, Any] | None:
     if not t or len(t) > 2_000:
         return None
     line = t.splitlines()[0].strip()
+
+    host_browser = parse_browser_host_command(line)
+    if host_browser:
+        return host_browser
 
     write_intent = parse_file_write_intent(line)
     if write_intent:

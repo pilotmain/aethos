@@ -125,3 +125,58 @@ def test_rejects_traversal_and_unknown() -> None:
     assert infer_host_executor_action("read ../../etc/passwd") is None
     assert infer_host_executor_action("deploy to production") is None
     assert infer_host_executor_action("") is None
+
+
+def test_browser_host_commands_infer(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("NEXA_HOST_EXECUTOR_ENABLED", "1")
+    monkeypatch.setenv("NEXA_BROWSER_ENABLED", "true")
+    monkeypatch.setenv("HOST_EXECUTOR_WORK_ROOT", str(tmp_path.resolve()))
+    from app.core.config import get_settings
+
+    get_settings.cache_clear()
+    try:
+        assert infer_host_executor_action("open https://example.com/path") == {
+            "host_action": "browser_open",
+            "url": "https://example.com/path",
+        }
+        assert infer_host_executor_action("navigate to https://ex.org") == {
+            "host_action": "browser_open",
+            "url": "https://ex.org",
+        }
+        assert infer_host_executor_action("click #submit") == {
+            "host_action": "browser_click",
+            "selector": "#submit",
+        }
+        assert infer_host_executor_action("type hello into #q") == {
+            "host_action": "browser_fill",
+            "selector": "#q",
+            "text": "hello",
+        }
+        assert infer_host_executor_action("screenshot") == {"host_action": "browser_screenshot"}
+        assert infer_host_executor_action("screenshot page1") == {
+            "host_action": "browser_screenshot",
+            "name": "page1",
+        }
+    finally:
+        monkeypatch.delenv("NEXA_HOST_EXECUTOR_ENABLED", raising=False)
+        monkeypatch.delenv("NEXA_BROWSER_ENABLED", raising=False)
+        monkeypatch.delenv("HOST_EXECUTOR_WORK_ROOT", raising=False)
+        get_settings.cache_clear()
+
+
+def test_browser_host_commands_disabled_without_host_executor(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("NEXA_HOST_EXECUTOR_ENABLED", "0")
+    monkeypatch.setenv("NEXA_BROWSER_ENABLED", "true")
+    monkeypatch.setenv("HOST_EXECUTOR_WORK_ROOT", str(tmp_path.resolve()))
+    from app.core.config import get_settings
+
+    get_settings.cache_clear()
+    try:
+        assert infer_host_executor_action("open https://example.com") is None
+    finally:
+        monkeypatch.delenv("NEXA_HOST_EXECUTOR_ENABLED", raising=False)
+        monkeypatch.delenv("NEXA_BROWSER_ENABLED", raising=False)
+        monkeypatch.delenv("HOST_EXECUTOR_WORK_ROOT", raising=False)
+        get_settings.cache_clear()

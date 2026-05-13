@@ -427,6 +427,10 @@ def host_action_scope_and_risk(
         return SCOPE_GIT_OPERATIONS, RISK_HIGH
     if a == "plugin_skill":
         return SCOPE_COMMAND_RUN, RISK_HIGH
+    if a in ("browser_open",):
+        return SCOPE_BROWSER_ACTION, RISK_HIGH
+    if a in ("browser_click", "browser_fill", "browser_screenshot"):
+        return SCOPE_BROWSER_ACTION, RISK_MEDIUM
     return SCOPE_COMMAND_RUN, RISK_MEDIUM
 
 

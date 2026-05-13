@@ -137,6 +137,15 @@ def reason_for_host_payload(payload: dict[str, Any]) -> str:
     if ha == "plugin_skill":
         sn = (payload.get("skill_name") or "").strip()
         return f"Run registered plugin skill ({sn})" if sn else "Run registered plugin skill"
+    if ha == "browser_open":
+        u = (payload.get("url") or "").strip()
+        return f"Open URL in browser ({u})" if u else "Open URL in browser"
+    if ha == "browser_click":
+        return "Click in the automated browser"
+    if ha == "browser_fill":
+        return "Type into a field in the automated browser"
+    if ha == "browser_screenshot":
+        return "Save a browser screenshot"
     if ha == "run_command":
         rn = (payload.get("run_name") or "").strip().lower()
         if rn == "pytest":
@@ -164,6 +173,8 @@ def card_message_for_host_payload(payload: dict[str, Any]) -> str:
         return "AethOS needs permission to write this file before continuing."
     if ha == "plugin_skill":
         return "AethOS needs permission to run this automation skill before continuing."
+    if ha in ("browser_open", "browser_click", "browser_fill", "browser_screenshot"):
+        return "AethOS needs permission to use the automated browser on this machine before continuing."
     return "AethOS needs permission before continuing."
 
 

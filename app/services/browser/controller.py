@@ -15,6 +15,7 @@ from typing import Any
 
 from app.core.config import get_settings
 from app.services.browser.session import browser_phase14_allowed, get_browser_page
+from app.services.browser_automation import assert_browser_url_allowed
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +38,7 @@ class BrowserController:
 
     async def navigate(self, url: str, wait_until: str = "domcontentloaded") -> BrowserActionResult:
         try:
+            assert_browser_url_allowed(url)
             page = await self._page()
             await page.goto(url, wait_until=wait_until)
             title = await page.title()

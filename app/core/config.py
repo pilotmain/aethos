@@ -629,6 +629,10 @@ class Settings(BaseSettings):
     nexa_browser_enabled: bool = True
     nexa_browser_headless: bool = True
     nexa_browser_timeout: int = 30000  # milliseconds (env: NEXA_BROWSER_TIMEOUT)
+    #: If set, overrides ``nexa_browser_timeout`` for default Playwright timeouts (seconds).
+    nexa_browser_timeout_seconds: int | None = None
+    #: Comma-separated host allowlist for navigations (``*`` = all). Supports ``*.example.com``.
+    nexa_browser_allowed_domains: str = "*"
     nexa_browser_screenshot_dir: str = Field(
         default_factory=lambda: str(REPO_ROOT / "data" / "screenshots"),
     )

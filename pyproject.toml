@@ -10,6 +10,9 @@ readme = "README.md"
 requires-python = ">=3.10"
 # Runtime deps are installed via pip install -r requirements.txt (installer + docs).
 
+[project.optional-dependencies]
+browser = ["playwright>=1.40.0"]
+
 [project.scripts]
 aethos = "aethos_cli.__main__:main"
 nexa = "aethos_cli.__main__:main"
