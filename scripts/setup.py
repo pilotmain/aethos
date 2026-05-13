@@ -40,6 +40,17 @@ TOTAL_STEPS = 9
 CREDS_FILE_HOME = Path.home() / ".aethos_credentials"
 
 
+def _legal_auto_accept_noninteractive() -> bool:
+    """True for piped stdin (e.g. curl | bash), Docker, or CI runners — no extra env vars needed."""
+    if not sys.stdin.isatty():
+        return True
+    if (os.environ.get("CI") or "").strip():
+        return True
+    if (os.environ.get("GITHUB_ACTIONS") or "").strip():
+        return True
+    return False
+
+
 def display_legal_notice(*, force: bool, accept_disclaimer: bool) -> None:
     """Show warranty / liability summary; require acknowledgment unless bypassed."""
     if (os.environ.get("AETHOS_SETUP_SKIP_LEGAL") or "").strip().lower() in ("1", "true", "yes"):
@@ -74,14 +85,12 @@ By using AethOS, you acknowledge that:
     )
     print(f"{Colors.YELLOW}{'═' * 60}{Colors.RESET}\n")
 
-    if not sys.stdin.isatty():
+    if _legal_auto_accept_noninteractive():
         print(
-            Colors.error(
-                "Non-interactive shell: read LICENSE.disclaimer, then set "
-                "AETHOS_SETUP_ACCEPT_DISCLAIMER=1, or pass --accept-disclaimer, or use --force."
-            )
+            f"{Colors.DIM}Non-interactive / CI: continuing as if you accepted the terms above "
+            f"(see LICENSE.disclaimer). For an explicit prompt, run this wizard in a TTY.{Colors.RESET}\n"
         )
-        sys.exit(1)
+        return
 
     response = prompt_line(f"{Colors.question('Do you accept these terms? (yes/no)')} ").strip().lower()
     if response not in ("yes", "y"):
@@ -934,7 +943,7 @@ def main() -> None:
     parser.add_argument(
         "--accept-disclaimer",
         action="store_true",
-        help="Acknowledge LICENSE.disclaimer without interactive prompt (for automation)",
+        help="Acknowledge LICENSE.disclaimer without interactive prompt (optional; non-TTY/CI auto-accepts)",
     )
     args, _rest = parser.parse_known_args(argv)
 
