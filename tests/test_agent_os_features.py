@@ -40,6 +40,16 @@ def test_parse_inter_agent_steps_single() -> None:
     assert steps == [("qa_agent", "run tests")]
 
 
+def test_parse_inter_agent_steps_multi_and_tell() -> None:
+    steps = parse_inter_agent_steps(
+        "ask marketing_agent to draft copy and tell qa_agent to proofread it."
+    )
+    assert steps is not None
+    assert len(steps) == 2
+    assert steps[0][0] == "marketing_agent"
+    assert steps[1][0] == "qa_agent"
+
+
 def test_visibility_feed_roundtrip() -> None:
     clear_visibility_feed_for_tests()
     push_agent_spawn_notice("web_u1", agent_name="foo_agent", domain="qa", agent_id="abc12345")

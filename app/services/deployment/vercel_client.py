@@ -122,4 +122,39 @@ def _railway_normalize(obj: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-__all__ = ["RailwayClient", "VercelClient"]
+def ensure_vercel_cli_on_path() -> dict[str, Any]:
+    """Return ``{ok: True}`` when ``vercel`` is available (``npm install -g vercel`` otherwise)."""
+    if shutil.which("vercel"):
+        return {"ok": True, "message": "vercel on PATH"}
+    return {
+        "ok": False,
+        "error": "cli_missing",
+        "message": "Install the Vercel CLI: npm install -g vercel",
+    }
+
+
+def vercel_cli_whoami() -> dict[str, Any]:
+    """Best-effort ``vercel whoami`` (OAuth / token login must be done out-of-band)."""
+    if not shutil.which("vercel"):
+        return ensure_vercel_cli_on_path()
+    try:
+        proc = subprocess.run(
+            ["vercel", "whoami"],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return {"ok": False, "error": "cli_failed", "message": str(exc)}
+    out = (proc.stdout or "").strip()
+    err = (proc.stderr or "").strip()
+    if proc.returncode != 0:
+        return {
+            "ok": False,
+            "error": "not_logged_in",
+            "message": err or out or "Run `vercel login` once on this machine.",
+        }
+    return {"ok": True, "user": out[:200]}
+
+
+__all__ = ["RailwayClient", "VercelClient", "ensure_vercel_cli_on_path", "vercel_cli_whoami"]

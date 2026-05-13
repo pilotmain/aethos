@@ -18,6 +18,7 @@ INTENT_CLASSIFIER_PROMPT = """You are an intent classifier for AethOS.
 Classify the user's message into exactly one intent.
 
 Valid intents:
+- clarification: the user wants a vague product tweak (e.g. "make my website better") with no URL, stack, or concrete goal — needs a clarifying question first
 - orchestrate_system: user wants an AethOS-wide status report — Mission Control, missions, dev runs, what succeeded/failed, act as orchestrator (not asking for a disk path)
 - external_execution: user wants an end-to-end pipeline on hosted infra — check logs/service, fix code in repo, push, redeploy, verify production (not “explain Railway” alone)
 - external_execution_continue: user is replying to AethOS’s Railway/deploy access or preferences questions (short confirmation, not a new unrelated topic)
@@ -86,6 +87,7 @@ VALID_INTENTS = {
     "greeting",
     "dev_command",
     "config_query",
+    "clarification",
 }
 
 # Phase 77 — questions about this deployment's Settings (.env), not user files or missions.
@@ -369,10 +371,56 @@ def looks_like_external_investigation(message: str, conversation_snapshot: dict 
     t = (message or "").lower()
     if len(t) < 6:
         return False
+    # Vercel: scaffold / first deploy → not hosted "investigation"; pain words → investigation.
+    if re.search(r"\bvercel\b", t):
+        if re.search(
+            r"(?i)\b(create|build|scaffold|make|generate)\b.{0,200}\b(website|web app|portfolio|landing page|landing|site)\b",
+            t,
+        ):
+            return False
+        if re.search(r"(?i)\bdeploy\s+(to\s+)?vercel\b", t) and not any(
+            w in t
+            for w in (
+                "fail",
+                "failed",
+                "failing",
+                "error",
+                "crash",
+                "down",
+                "unhealthy",
+                "broken",
+                "issue",
+                "why ",
+                "won't",
+                "wont",
+            )
+        ):
+            return False
+        vercel_pain = (
+            "fail",
+            "failed",
+            "failing",
+            "error",
+            "crash",
+            "down",
+            "outage",
+            "unhealthy",
+            "broken",
+            "issue",
+            "why ",
+            "won't",
+            "wont",
+            "slow",
+            "timeout",
+            "incident",
+        )
+        if any(w in t for w in vercel_pain):
+            return True
+        return False
     if re.search(r"https?://", t):
         return True
     if re.search(
-        r"\b(railway|render\.com|fly\.io|flyctl|heroku|vercel|netlify|cloudflare)\b",
+        r"\b(railway|render\.com|fly\.io|flyctl|heroku|netlify|cloudflare)\b",
         t,
     ):
         return True
@@ -383,6 +431,31 @@ def looks_like_external_investigation(message: str, conversation_snapshot: dict 
     if "service" in t and any(x in t for x in ("crash", "crashed", "failing", "unhealthy")):
         return True
     return False
+
+
+_AMBIGUOUS_PRODUCT_PATTERNS: tuple[re.Pattern[str], ...] = (
+    re.compile(r"^make my (website|site|app) better[.?!…\s]*$", re.IGNORECASE),
+    re.compile(r"^improve my (website|site|app)[.?!…\s]*$", re.IGNORECASE),
+    re.compile(r"^fix (?:my |the )?(website|site|app)[.?!…\s]*$", re.IGNORECASE),
+)
+
+
+def is_ambiguous_product_request(text: str) -> bool:
+    """Vague product polish with no URL, repo, or concrete goal (gateway asks for specifics)."""
+    raw = (text or "").strip()
+    if not raw or len(raw) > 200:
+        return False
+    line = raw.splitlines()[0].strip()
+    return any(p.search(line) for p in _AMBIGUOUS_PRODUCT_PATTERNS)
+
+
+def ambiguous_product_clarification_reply() -> str:
+    return (
+        "Which website or app should we improve? Share a **URL**, a **local folder path**, "
+        "or the **Mission Control workspace** name.\n\n"
+        "I can help with things like **dark mode**, **performance**, **SEO**, **accessibility**, "
+        "or describe a **custom change** you want."
+    )
 
 
 def looks_like_analysis(message: str) -> bool:
@@ -589,6 +662,9 @@ def classify_intent_fallback(
     if is_greeting_message(message):
         return {"intent": "greeting", "confidence": 0.99, "reason": "short greeting opener"}
 
+    if is_ambiguous_product_request(message):
+        return {"intent": "clarification", "confidence": 0.93, "reason": "vague website/product improvement"}
+
     if looks_like_orchestrate_system(message):
         return {"intent": "orchestrate_system", "confidence": 0.92, "reason": "mission control / orchestration cues"}
 
@@ -774,6 +850,9 @@ def get_intent(
 
     if is_greeting_message(t0):
         return "greeting"
+
+    if is_ambiguous_product_request(t0):
+        return "clarification"
 
     if looks_like_registry_agent_creation_nl(t0):
         return "create_sub_agent"

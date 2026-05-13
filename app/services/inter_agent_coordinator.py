@@ -29,7 +29,7 @@ def parse_inter_agent_steps(text: str) -> list[tuple[str, str]] | None:
     line = raw.splitlines()[0].strip()
 
     m = re.search(
-        r"(?is)^ask\s+@?([\w-]+)\s+to\s+(.+?)\s+and\s+ask\s+@?([\w-]+)\s+to\s+(.+)$",
+        r"(?is)^ask\s+@?([\w-]+)\s+to\s+(.+?)\s+and\s+(?:ask|tell)\s+@?([\w-]+)\s+to\s+(.+?)(?:[.?!]+)?\s*$",
         line,
     )
     if m:
@@ -37,7 +37,7 @@ def parse_inter_agent_steps(text: str) -> list[tuple[str, str]] | None:
         if a1 and t1 and a2 and t2:
             return [(a1, t1), (a2, t2)]
 
-    m2 = re.search(r"(?is)^(?:ask|tell)\s+@?([\w-]+)\s+to\s+(.+)$", line)
+    m2 = re.search(r"(?is)^(?:ask|tell)\s+@?([\w-]+)\s+to\s+(.+?)(?:[.?!]+)?\s*$", line)
     if m2:
         a, t = m2.group(1), m2.group(2).strip()
         if a and t:
@@ -159,10 +159,6 @@ def try_inter_agent_gateway_turn(
     db: Session | None,
 ) -> dict[str, Any] | None:
     """Gateway hook: NL agent-to-agent orchestration."""
-    from app.core.config import get_settings
-
-    if not bool(getattr(get_settings(), "nexa_agent_orchestration_enabled", False)):
-        return None
     uid = (gctx.user_id or "").strip()
     if not uid:
         return None

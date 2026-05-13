@@ -155,6 +155,8 @@ def map_intent_to_behavior(intent: str, _context: Context) -> str:
         return "nudge"
     if intent == "capability_question":
         return "clarify"
+    if intent == "clarification":
+        return "clarify"
     if intent == "correction":
         return "clarify"
     return "clarify"

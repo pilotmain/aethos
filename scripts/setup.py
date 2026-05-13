@@ -332,6 +332,7 @@ class SetupWizard:
         if code != 0:
             print(f"  {Colors.error('pip install failed — check output above or run manually')}")
             return False
+        self._optional_install_vercel_cli()
         if self.pyproject.is_file():
             print(f"  {Colors.info('pip install -e . (editable package)')}")
             r2 = subprocess.run(
@@ -345,6 +346,47 @@ class SetupWizard:
                 print(f"  {Colors.warning('editable install failed — API imports may still work if already installed')}")
         print(f"  {Colors.success('Dependencies installed')}")
         return True
+
+    def _optional_install_vercel_cli(self) -> None:
+        """Best-effort Vercel CLI for local deploy flows (``vercel`` / ``vercel whoami``)."""
+        if not shutil.which("npm"):
+            return
+        if shutil.which("vercel"):
+            return
+        if _legal_auto_accept_noninteractive():
+            print(f"  {Colors.info('Installing Vercel CLI globally (non-interactive setup)…')}")
+            r = subprocess.run(
+                ["npm", "install", "-g", "vercel"],
+                cwd=str(self.repo_root),
+                capture_output=True,
+                text=True,
+                timeout=600,
+            )
+            if r.returncode == 0:
+                print(f"  {Colors.success('Vercel CLI installed')}")
+            else:
+                tail = (r.stderr or r.stdout or "")[-300:]
+                print(f"  {Colors.warning(f'Vercel CLI install skipped: {tail}')}")
+            return
+        yn = prompt_line(
+            f"  {Colors.question('Install Vercel CLI globally for deployments? [y/N]')} "
+        ).strip().lower()
+        if yn not in ("y", "yes"):
+            print(f"  {Colors.DIM}Skip — run: npm install -g vercel{Colors.RESET}")
+            return
+        print(f"  {Colors.info('npm install -g vercel …')}")
+        r = subprocess.run(
+            ["npm", "install", "-g", "vercel"],
+            cwd=str(self.repo_root),
+            capture_output=True,
+            text=True,
+            timeout=600,
+        )
+        if r.returncode == 0:
+            print(f"  {Colors.success('Vercel CLI installed')}")
+        else:
+            tail = (r.stderr or r.stdout or "")[-300:]
+            print(f"  {Colors.warning(f'Vercel CLI install failed: {tail}')}")
 
     def _setup_wants_playwright_browser(self) -> bool:
         """Whether to install Chromium and write browser defaults into ``.env``."""
@@ -1067,6 +1109,74 @@ SSO_POST_LOGIN_REDIRECT=http://localhost:3000/login
             print(f"  {Colors.success(f'Mission Control bootstrap creds → {dest}')}")
         except Exception as exc:  # noqa: BLE001
             print(f"  {Colors.warning(f'Could not write setup creds file: {exc!s}')}")
+        self._register_workspace_roots_via_api(ab)
+
+    def _wait_api_health_ok(self, api_base: str, *, max_wait_sec: int = 30) -> bool:
+        """Poll ``/api/v1/health`` until success or timeout (best-effort)."""
+        health = f"{api_base.rstrip('/')}/api/v1/health"
+        deadline = time.time() + float(max_wait_sec)
+        while time.time() < deadline:
+            try:
+                req = urllib.request.Request(health)
+                with urllib.request.urlopen(req, timeout=3) as resp:
+                    if resp.status < 500:
+                        return True
+            except Exception:
+                pass
+            time.sleep(1)
+        return False
+
+    def _register_workspace_roots_via_api(self, api_base: str) -> None:
+        """POST ``NEXA_WORKSPACE_ROOT`` (or pending wizard path) so agents see a registered root."""
+        if self._workspace_register_done:
+            return
+        token = (self._get_env_value("NEXA_WEB_API_TOKEN") or "").strip()
+        web_user = (
+            (self._get_env_value("TEST_X_USER_ID") or "").strip()
+            or "web_setup_wizard"
+        )
+        if not token:
+            print(
+                f"  {Colors.warning('Skipping workspace API registration (NEXA_WEB_API_TOKEN missing)')}"
+            )
+            return
+        ab = api_base.rstrip("/")
+        if not self._wait_api_health_ok(ab, max_wait_sec=30):
+            print(
+                f"  {Colors.warning('API not reachable yet — workspace registration skipped (retry after API is up)')}"
+            )
+            return
+        if self.pending_workspace:
+            path, label = self.pending_workspace
+        else:
+            path = (self._get_env_value("NEXA_WORKSPACE_ROOT") or "").strip()
+            if not path:
+                path = str(Path.home() / "aethos-workspace")
+            label = "env_workspace"
+        try:
+            Path(path).mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            print(f"  {Colors.warning(f'Could not create workspace directory {path!s}: {exc}')}")
+            return
+        url = f"{ab}/api/v1/web/workspace/roots"
+        body = json.dumps({"path": path, "label": label}).encode("utf-8")
+        req = urllib.request.Request(url, data=body, method="POST")
+        req.add_header("Content-Type", "application/json")
+        req.add_header("X-User-Id", web_user)
+        req.add_header("Authorization", f"Bearer {token}")
+        try:
+            urllib.request.urlopen(req, timeout=20)
+            print(
+                f"  {Colors.success(f'Workspace root registered via API ({path})')}"
+            )
+            self._workspace_register_done = True
+            self.pending_workspace = None
+        except urllib.error.HTTPError as e:
+            print(
+                f"  {Colors.warning(f'Workspace registration HTTP {e.code} — add the root in Mission Control if needed.')}"
+            )
+        except Exception as exc:  # noqa: BLE001
+            print(f"  {Colors.warning(f'Workspace registration skipped: {exc!s}')}")
 
     def start_services(self) -> bool:
         print(f"\n{Colors.step(8, TOTAL_STEPS, 'Starting services (API + Mission Control)…')}\n")
@@ -1147,36 +1257,6 @@ SSO_POST_LOGIN_REDIRECT=http://localhost:3000/login
         self._write_aethos_setup_creds_file(api_base.rstrip("/"))
         return True
 
-    def _register_pending_workspace(self, api_base: str, web_user: str, token: str) -> None:
-        """POST Mission Control workspace root (requires DB + authenticated API)."""
-        if self._workspace_register_done or not self.pending_workspace:
-            return
-        path, label = self.pending_workspace
-        if not token or not web_user:
-            print(
-                f"  {Colors.warning('Skipping workspace registration (missing token or TEST_X_USER_ID)')}"
-            )
-            return
-        url = f"{api_base.rstrip('/')}/api/v1/web/workspace/roots"
-        body = json.dumps({"path": path, "label": label}).encode("utf-8")
-        req = urllib.request.Request(url, data=body, method="POST")
-        req.add_header("Content-Type", "application/json")
-        req.add_header("X-User-Id", web_user)
-        req.add_header("Authorization", f"Bearer {token}")
-        try:
-            urllib.request.urlopen(req, timeout=20)
-            print(
-                f"  {Colors.success('Workspace root registered (POST /api/v1/web/workspace/roots)')}"
-            )
-            self._workspace_register_done = True
-            self.pending_workspace = None
-        except urllib.error.HTTPError as e:
-            print(
-                f"  {Colors.warning(f'Workspace registration HTTP {e.code} — add the root in Mission Control if needed.')}"
-            )
-        except Exception as exc:  # noqa: BLE001
-            print(f"  {Colors.warning(f'Workspace registration skipped: {exc!s}')}")
-
     def verify_installation(self) -> bool:
         print(f"\n{Colors.step(9, TOTAL_STEPS, 'Verifying installation…')}\n")
         api_base = (self._get_env_value("API_BASE_URL") or "http://127.0.0.1:8010").rstrip("/")
@@ -1220,7 +1300,7 @@ SSO_POST_LOGIN_REDIRECT=http://localhost:3000/login
                 continue
             ok, detail = _req(url, needs_auth=needs_auth)
             if ok and name.startswith("Health"):
-                self._register_pending_workspace(api_base, web_user, token)
+                self._register_workspace_roots_via_api(api_base)
             if ok:
                 print(f"  {Colors.success(f'{name} — {detail}')}")
                 continue

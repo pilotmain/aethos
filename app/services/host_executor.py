@@ -385,6 +385,18 @@ def _execute_command_sync(
                     time.sleep(delay)
     else:
         code, out, err = _run_argv(argv, cwd=exec_cwd, timeout=exec_timeout)
+    # Self-heal: missing cwd (race, partial setup, or mkdir skipped) — create once and retry.
+    if code != 0 and exec_cwd:
+        combined = f"{out}\n{err}".lower()
+        if "no such file or directory" in combined and not Path(exec_cwd).is_dir():
+            try:
+                root_chk = _command_work_dir()
+                resolved_cwd = Path(exec_cwd).resolve()
+                resolved_cwd.relative_to(root_chk)
+                resolved_cwd.mkdir(parents=True, exist_ok=True)
+                code, out, err = _run_argv(argv, cwd=exec_cwd, timeout=exec_timeout)
+            except (OSError, ValueError):
+                pass
     try:
         from app.services.observability import get_observability
 

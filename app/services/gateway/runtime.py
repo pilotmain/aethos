@@ -994,6 +994,22 @@ class NexaGateway:
             if soul_nl is not None:
                 return soul_nl
 
+            from app.services.intent_classifier import (
+                ambiguous_product_clarification_reply,
+                is_ambiguous_product_request,
+            )
+
+            if is_ambiguous_product_request(raw_gate):
+                return {
+                    "mode": "chat",
+                    "text": gateway_finalize_chat_reply(
+                        ambiguous_product_clarification_reply(),
+                        source="ambiguous_product_request",
+                        user_text=raw_gate,
+                    ),
+                    "intent": "clarification",
+                }
+
             from app.services.gateway.sandbox_nl import try_sandbox_approve_gateway_turn
 
             sbx_apr = try_sandbox_approve_gateway_turn(gctx, raw_gate, db_inner)
