@@ -169,6 +169,61 @@ def parse_port_from_api_base(api_base: str) -> int:
         return 8010
 
 
+def resolve_setup_env_path(repo_root: Path, *, use_home_env_flag: bool = False) -> Path:
+    """Where the wizard writes ``.env``: repo root for a fresh clone; ``~/.aethos/.env`` for one-curl / home install.
+
+    Override: ``AETHOS_SETUP_REPO_ENV=1`` → always ``<repo>/.env``.
+    Prefer home when: ``--home-env``, ``AETHOS_ONE_CURL=1``, or ``~/.aethos/.env`` already exists.
+    """
+    repo_env = repo_root / ".env"
+    home_root = Path.home() / ".aethos"
+    home_env = home_root / ".env"
+    force_repo = (os.environ.get("AETHOS_SETUP_REPO_ENV") or "").strip().lower() in ("1", "true", "yes")
+    if force_repo:
+        return repo_env
+    one_curl = (os.environ.get("AETHOS_ONE_CURL") or "").strip().lower() in ("1", "true", "yes")
+    if use_home_env_flag or one_curl or home_env.is_file():
+        home_root.mkdir(parents=True, exist_ok=True)
+        return home_env
+    return repo_env
+
+
+def dedupe_env_assignment_lines(path: Path) -> None:
+    """Remove duplicate active ``KEY=value`` lines (last assignment wins). Preserves comments and blanks."""
+    if not path.is_file():
+        return
+    lines = path.read_text(encoding="utf-8").splitlines()
+    last_val: dict[str, str] = {}
+    for line in lines:
+        s = line.strip()
+        if not s or s.startswith("#") or "=" not in line:
+            continue
+        k, _, v = line.partition("=")
+        k = k.strip()
+        if k:
+            last_val[k] = v
+    out: list[str] = []
+    seen: set[str] = set()
+    for line in lines:
+        s = line.strip()
+        if not s or s.startswith("#") or "=" not in line:
+            out.append(line)
+            continue
+        k, _, _ = line.partition("=")
+        k = k.strip()
+        if not k or k not in last_val:
+            out.append(line)
+            continue
+        if k in seen:
+            continue
+        out.append(f"{k}={last_val[k]}")
+        seen.add(k)
+    for k, v in last_val.items():
+        if k not in seen:
+            out.append(f"{k}={v}")
+    path.write_text("\n".join(out) + "\n", encoding="utf-8")
+
+
 class SetupWizard:
     """Orchestrates numbered steps with persistent state for resume."""
 
@@ -194,9 +249,10 @@ class SetupWizard:
         accept_disclaimer: bool = False,
         no_browser: bool = False,
         skip_playwright_browsers: bool = False,
+        use_home_env: bool = False,
     ) -> None:
         self.repo_root = _REPO_ROOT
-        self.env_path = self.repo_root / ".env"
+        self.env_path = resolve_setup_env_path(self.repo_root, use_home_env_flag=use_home_env)
         self.env_example = self.repo_root / ".env.example"
         self.requirements = self.repo_root / "requirements.txt"
         self.pyproject = self.repo_root / "pyproject.toml"
@@ -257,6 +313,10 @@ class SetupWizard:
 {Colors.RESET}
 """
         print(banner)
+        print(
+            f"{Colors.DIM}Environment file target: {Colors.CYAN}{self.env_path.resolve()}{Colors.DIM} "
+            f"(use AETHOS_SETUP_REPO_ENV=1 to force repo-root .env){Colors.RESET}"
+        )
         print(
             f"{Colors.DIM}Type {Colors.CYAN}help{Colors.DIM} at any prompt for assistance.{Colors.RESET}\n"
         )
@@ -443,6 +503,37 @@ class SetupWizard:
         self._update_env_key(key, value)
         return True
 
+    def _ensure_core_env_flags(self) -> None:
+        """Single place for common feature flags (only if missing / blank — avoids duplicates)."""
+        pairs: list[tuple[str, str]] = [
+            ("APP_NAME", "AethOS"),
+            ("APP_ENV", "development"),
+            ("DEBUG", "true"),
+            ("NEXA_AGENT_ORCHESTRATION_ENABLED", "true"),
+            ("NEXA_AUTONOMOUS_GOAL_PLANNING", "true"),
+            ("NEXA_SELF_HEALING_ENABLED", "true"),
+            ("NEXA_SELF_IMPROVEMENT_ENABLED", "true"),
+            ("NEXA_COMMAND_TIMEOUT_SECONDS", "300"),
+            ("NEXA_TASK_TIMEOUT_SECONDS", "300"),
+            ("NEXA_COMMAND_EXECUTION_ENABLED", "false"),
+            ("NEXA_HOST_EXECUTOR_ENABLED", "false"),
+            ("NEXA_BROWSER_ENABLED", "true"),
+            ("NEXA_BROWSER_HEADLESS", "true"),
+            ("NEXA_BROWSER_ALLOWED_DOMAINS", "*"),
+            ("NEXA_TELEGRAM_EMBED_WITH_API", "true"),
+            ("NEXA_GENERIC_DEPLOY_ENABLED", "false"),
+            ("NEXA_DEPLOY_AUTO_DETECT", "true"),
+            ("NEXA_OBSERVABILITY_ENABLED", "true"),
+            ("NEXA_RESPONSE_FORMAT", "beautiful"),
+            ("AETHOS_OWNER_IDS", ""),
+            ("TELEGRAM_OWNER_IDS", ""),
+            ("NEXA_SELF_IMPROVEMENT_OWNER_ID", ""),
+            ("ANTHROPIC_API_KEY", ""),
+            ("OPENAI_API_KEY", ""),
+        ]
+        for k, v in pairs:
+            self._upsert_env_if_unset(k, v)
+
     def _ensure_playwright_env_defaults(self, *, browser_enabled: bool) -> None:
         """Append browser / host defaults to ``.env`` when keys are unset."""
         if not self.env_path.is_file():
@@ -569,6 +660,12 @@ class SetupWizard:
             print(f"  {Colors.info(f'Default workspace roots → {default_wr}')}")
 
         self._configure_playwright_after_env()
+        self._ensure_core_env_flags()
+        dedupe_env_assignment_lines(self.env_path)
+        print(
+            f"\n  {Colors.success('Environment file (deduplicated keys):')} "
+            f"{Colors.CYAN}{self.env_path.resolve()}{Colors.RESET}"
+        )
         return True
 
     def _validate_setup_user_id(self, uid: str) -> tuple[bool, str]:
@@ -682,6 +779,16 @@ class SetupWizard:
         print(f"  {Colors.DIM}Credentials file: {CREDS_FILE_HOME}{Colors.RESET}\n")
 
         self._configure_enterprise_sso_and_audit()
+        dedupe_env_assignment_lines(self.env_path)
+        api_b = (self._get_env_value("API_BASE_URL") or "").strip()
+        wtok = (self._get_env_value("NEXA_WEB_API_TOKEN") or "").strip()
+        print(f"\n  {Colors.success('Authentication saved to:')} {Colors.CYAN}{self.env_path.resolve()}{Colors.RESET}")
+        if api_b:
+            print(f"  {Colors.info(f'API_BASE_URL={api_b}')}")
+        if wtok:
+            preview = f"{wtok[:24]}…{wtok[-8:]}" if len(wtok) > 42 else wtok
+            print(f"  {Colors.info(f'NEXA_WEB_API_TOKEN={preview}')}")
+        print(f"  {Colors.info(f'TEST_X_USER_ID={user_id}')}")
         return True
 
     def _configure_enterprise_sso_and_audit(self) -> None:
@@ -1321,34 +1428,40 @@ SSO_POST_LOGIN_REDIRECT=http://localhost:3000/login
         return all_passed
 
     def _update_env_key(self, key: str, value: str) -> None:
+        """Set ``key``; removes every duplicate assignment line for ``key`` then writes one row."""
+        self.env_path.parent.mkdir(parents=True, exist_ok=True)
         lines: list[str] = []
         if self.env_path.is_file():
             lines = self.env_path.read_text(encoding="utf-8").splitlines()
-        updated = False
-        prefix = f"{key}="
-        for i, line in enumerate(lines):
+        new_lines: list[str] = []
+        inserted = False
+        for line in lines:
             stripped = line.strip()
             if stripped.startswith("#") or "=" not in line:
+                new_lines.append(line)
                 continue
             k, _, _ = line.partition("=")
             if k.strip() == key:
-                lines[i] = f"{key}={value}"
-                updated = True
-                break
-        if not updated:
-            lines.append(f"{key}={value}")
-        self.env_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+                if not inserted:
+                    new_lines.append(f"{key}={value}")
+                    inserted = True
+                continue
+            new_lines.append(line)
+        if not inserted:
+            new_lines.append(f"{key}={value}")
+        self.env_path.write_text("\n".join(new_lines) + "\n", encoding="utf-8")
 
     def _get_env_value(self, key: str) -> str | None:
         if not self.env_path.is_file():
             return None
+        last: str | None = None
         for line in self.env_path.read_text(encoding="utf-8").splitlines():
             if line.strip().startswith("#") or "=" not in line:
                 continue
             k, _, v = line.partition("=")
             if k.strip() == key:
-                return v.strip().strip('"').strip("'")
-        return None
+                last = v.strip().strip('"').strip("'")
+        return last
 
     # --- flow ---
 
@@ -1495,6 +1608,11 @@ def main() -> None:
         action="store_true",
         help="Skip Playwright Chromium download and browser .env prompts (CI/headless images)",
     )
+    parser.add_argument(
+        "--home-env",
+        action="store_true",
+        help="Write ~/.aethos/.env instead of <repo>/.env (one-machine / one-curl style)",
+    )
     args, _rest = parser.parse_known_args(argv)
 
     # Allow ``python scripts/setup.py help llm`` after argparse
@@ -1509,6 +1627,7 @@ def main() -> None:
         accept_disclaimer=args.accept_disclaimer,
         no_browser=args.no_browser,
         skip_playwright_browsers=args.skip_playwright_browsers,
+        use_home_env=args.home_env,
     )
     try:
         wizard.run()

@@ -6,6 +6,9 @@
 # scripts/setup.py (step “Start API & Mission Control”). Use --no-browser or AETHOS_SETUP_NO_BROWSER=1
 # to skip opening http://localhost:3000. Use --skip-playwright-browsers or AETHOS_SETUP_SKIP_PLAYWRIGHT_BROWSERS=1
 # to skip downloading Playwright Chromium during the “Configure .env” step. Legal / TTY behavior is in setup.py.
+#
+# One-curl / home install: AETHOS_ONE_CURL=1 or an existing ~/.aethos/.env makes the wizard write
+# ~/.aethos/.env (not repo-root .env). Override with AETHOS_SETUP_REPO_ENV=1. Optional: ./scripts/setup.sh --home-env
 
 set -euo pipefail
 
