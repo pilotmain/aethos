@@ -590,6 +590,10 @@ def parse_deploy_intent(text: str) -> dict[str, Any] | None:
     """
     Detect generic deploy phrases (gateway NL → :mod:`app.services.deployment`).
 
+    Provider slugs (e.g. ``deploy to mycloud``) are resolved at execution time against
+    ``~/.aethos/clouds.yaml`` (see :mod:`app.services.deployment.cloud_config`) and the built-in
+    CLI registry in :mod:`app.services.deployment.detector`.
+
     ``deploy_type`` is ``deploy_preview`` for preview installs (non-production Vercel / Netlify smoke URLs).
     """
     if not text or not isinstance(text, str):

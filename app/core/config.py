@@ -764,6 +764,8 @@ class Settings(BaseSettings):
     nexa_deploy_timeout_seconds: float = 300.0
     # When false, bare ``deploy`` without ``deploy to <tool>`` is rejected (no auto CLI scan).
     nexa_deploy_auto_detect: bool = True
+    # Optional path to ``clouds.yaml`` (user-defined ``deploy to <slug>`` providers). Empty → ~/.aethos/clouds.yaml.
+    nexa_cloud_config_path: str = ""
     # Optional API tokens for deployment visibility (``check vercel projects`` NL hook).
     vercel_api_token: str | None = None
     railway_api_token: str | None = None

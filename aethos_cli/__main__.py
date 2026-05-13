@@ -351,6 +351,20 @@ def main() -> int:
         help="Interactive native setup wizard (writes .env keys; see docs/NATIVE_SETUP.md)",
     )
 
+    sp_cloud = sub.add_parser("cloud", help="Manage ~/.aethos/clouds.yaml deploy providers")
+    cloud_sub = sp_cloud.add_subparsers(dest="cloud_cmd", required=True)
+    cloud_sub.add_parser("list", help="List provider slugs")
+    sp_cloud_add = cloud_sub.add_parser("add", help="Add or replace a provider")
+    sp_cloud_add.add_argument("name", help="Slug, e.g. myvps")
+    sp_cloud_add.add_argument("--deploy-cmd", required=True)
+    sp_cloud_add.add_argument("--pre-deploy", default=None)
+    sp_cloud_add.add_argument("--login-cmd", default=None)
+    sp_cloud_add.add_argument("--login-probe", default=None)
+    sp_cloud_add.add_argument("--url-pattern", default=None)
+    sp_cloud_add.add_argument("--deploy-cmd-preview", default=None)
+    sp_cloud_rm = cloud_sub.add_parser("remove", help="Remove a provider by slug")
+    sp_cloud_rm.add_argument("name")
+
     sub.add_parser(
         "init-db",
         help="Ensure SQLite dir exists and apply schema (ensure_schema); same DB as API + Telegram bot",
@@ -415,7 +429,7 @@ def main() -> int:
     if (
         not args.no_banner
         and args.cmd
-        in ("serve", "setup", "init-db", "unify-db", "migrate-scopes", "configure-bot")
+        in ("serve", "setup", "init-db", "unify-db", "migrate-scopes", "configure-bot", "cloud")
     ):
         from aethos_cli.banner import maybe_print_sponsor_hint, print_banner, should_show_banner
 
@@ -532,6 +546,33 @@ def main() -> int:
             file=sys.stderr,
         )
         return 2
+
+    if args.cmd == "cloud":
+        from aethos_cli.cloud_commands import cloud_main
+
+        av2: list[str] = []
+        if getattr(args, "cloud_cmd", None) == "list":
+            av2 = ["list"]
+        elif args.cloud_cmd == "add":
+            av2 = [
+                "add",
+                str(args.name),
+                "--deploy-cmd",
+                str(args.deploy_cmd),
+            ]
+            if getattr(args, "pre_deploy", None):
+                av2.extend(["--pre-deploy", str(args.pre_deploy)])
+            if getattr(args, "login_cmd", None):
+                av2.extend(["--login-cmd", str(args.login_cmd)])
+            if getattr(args, "login_probe", None):
+                av2.extend(["--login-probe", str(args.login_probe)])
+            if getattr(args, "url_pattern", None):
+                av2.extend(["--url-pattern", str(args.url_pattern)])
+            if getattr(args, "deploy_cmd_preview", None):
+                av2.extend(["--deploy-cmd-preview", str(args.deploy_cmd_preview)])
+        elif args.cloud_cmd == "remove":
+            av2 = ["remove", str(args.name)]
+        return cloud_main(av2)
 
     if args.cmd == "setup":
         from aethos_cli.setup_wizard import run_setup_wizard

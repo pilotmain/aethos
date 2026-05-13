@@ -173,10 +173,10 @@ def test_executor_success_mock(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) 
 def test_executor_preview_argv(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     root = tmp_path / "proj"
     root.mkdir()
-    captured: dict[str, Any] = {}
+    calls: list[object] = []
 
     def capture_run(cmd: object, **kwargs: object) -> MagicMock:
-        captured["argv"] = cmd
+        calls.append(cmd)
         mock_proc = MagicMock()
         mock_proc.returncode = 0
         mock_proc.stdout = "Preview: https://p.vercel.app\n"
@@ -187,7 +187,7 @@ def test_executor_preview_argv(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) 
     monkeypatch.setattr("app.services.deployment.executor.subprocess.run", capture_run)
 
     DeploymentExecutor.deploy_sync(str(root), provider="vercel", preview=True)
-    assert captured.get("argv") == ["vercel", "--yes"]
+    assert ["vercel", "--yes"] in calls
 
 
 def test_extract_url_skips_localhost() -> None:

@@ -158,8 +158,32 @@ def _pinned_provider_names(project_root: Path) -> list[str]:
     return names
 
 
+def _yaml_provider_slugs_ready(project_root: Path) -> list[str]:
+    """Slugs from ``clouds.yaml`` whose rendered ``deploy_cmd`` argv0 exists on PATH."""
+    from app.services.deployment.cloud_config import get_cloud_config
+    from app.services.deployment.generic_deploy import deploy_argv0_on_path
+
+    cc = get_cloud_config()
+    pname = project_root.name
+    ready: list[str] = []
+    for slug, spec in cc.providers_map().items():
+        cmd = str(spec.get("deploy_cmd") or "").strip()
+        if cmd and deploy_argv0_on_path(cmd, project_name=pname):
+            ready.append(slug)
+    return sorted(set(ready))
+
+
+def _deploy_slug_display(slug: str) -> str:
+    from app.services.deployment.cloud_config import get_cloud_config
+
+    y = get_cloud_config().get_provider(slug)
+    if y and str(y.get("name") or "").strip():
+        return str(y.get("name")).strip()
+    return _DEPLOY_DISPLAY.get(slug, slug.replace("_", " ").title())
+
+
 def _ordered_cli_names(project_root: Path) -> list[str]:
-    """Slugs for CLIs that are on PATH **and** have an automated deploy path in the registry."""
+    """Slugs for CLIs on PATH with a deploy path (built-in registry and/or ``clouds.yaml``)."""
     avail = DeploymentDetector.detect_available(str(project_root))
     names: list[str] = []
     for c in avail:
@@ -184,13 +208,34 @@ def _ordered_cli_names(project_root: Path) -> list[str]:
     for k in names:
         if k not in out:
             out.append(k)
+    seen = set(out)
+    for k in _yaml_provider_slugs_ready(project_root):
+        if k not in seen:
+            out.append(k)
+            seen.add(k)
     return out
 
 
 def get_cloud_choices(project_root: Path) -> list[dict[str, Any]]:
-    """Installed deployment targets only (same source as the numbered deploy prompt)."""
+    """Deployment targets: ``clouds.yaml`` overrides, else built-in registry."""
+    from app.services.deployment.cloud_config import get_cloud_config
+
+    cc = get_cloud_config()
     out: list[dict[str, Any]] = []
     for slug in _ordered_cli_names(project_root):
+        yspec = cc.get_provider(slug)
+        if yspec and str(yspec.get("deploy_cmd") or "").strip():
+            disp = str(yspec.get("name") or "").strip() or _DEPLOY_DISPLAY.get(
+                slug, slug.replace("_", " ").title()
+            )
+            out.append(
+                {
+                    "name": slug,
+                    "display": disp,
+                    "command": str(yspec.get("deploy_cmd") or "").strip(),
+                }
+            )
+            continue
         cfg = DeploymentDetector.get_registry(slug)
         if not cfg or cfg.get("manual_only"):
             continue
@@ -464,7 +509,7 @@ def try_gateway_deploy_turn(
                 "",
             ]
             for i, name in enumerate(opts, 1):
-                disp = _DEPLOY_DISPLAY.get(name, name)
+                disp = _deploy_slug_display(name)
                 lines.append(f"{i}. **{disp}** (`{name}`)")
             return {
                 "mode": "chat",

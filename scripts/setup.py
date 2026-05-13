@@ -345,6 +345,13 @@ class SetupWizard:
             if r2.returncode != 0:
                 print(f"  {Colors.warning('editable install failed — API imports may still work if already installed')}")
         print(f"  {Colors.success('Dependencies installed')}")
+        try:
+            from app.services.deployment.cloud_config import init_cloud_config_file
+
+            cpath = init_cloud_config_file()
+            print(f"  {Colors.info(f'Deploy providers config: {cpath}')}")
+        except Exception as exc:  # noqa: BLE001
+            print(f"  {Colors.warning(f'Optional clouds.yaml init skipped: {exc}')}")
         return True
 
     def _optional_install_vercel_cli(self) -> None:

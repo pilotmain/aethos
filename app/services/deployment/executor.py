@@ -23,6 +23,19 @@ _LOCALHOST_MARKERS = ("localhost", "127.0.0.1", "0.0.0.0", "example.com")
 class DeploymentExecutor:
     """Execute deployment using registry-defined argv or shell commands."""
 
+    @staticmethod
+    def _yaml_provider_entry(raw_slug: str, norm: str) -> tuple[dict[str, Any] | None, str]:
+        from app.services.deployment.cloud_config import get_cloud_config
+
+        cc = get_cloud_config()
+        for key in (raw_slug.strip().lower(), (norm or "").strip().lower()):
+            if not key:
+                continue
+            spec = cc.get_provider(key)
+            if spec and str(spec.get("deploy_cmd") or "").strip():
+                return spec, key
+        return None, ""
+
     @classmethod
     def deploy_sync(
         cls,
@@ -31,6 +44,7 @@ class DeploymentExecutor:
         provider: str | None = None,
         preview: bool = False,
         timeout_seconds: float = 300.0,
+        context: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """
         Deploy from ``project_path``.
@@ -66,14 +80,31 @@ class DeploymentExecutor:
 
         if provider:
             norm = _normalize_provider(provider)
+            raw_slug = provider.strip().lower()
+            yspec, ykey = cls._yaml_provider_entry(raw_slug, norm or raw_slug)
+            if yspec:
+                from app.services.deployment.generic_deploy import deploy_from_yaml_spec
+
+                return deploy_from_yaml_spec(
+                    provider_slug=ykey,
+                    spec=yspec,
+                    project_path=str(root),
+                    preview=preview,
+                    timeout_seconds=timeout_seconds,
+                    context=context,
+                )
             cfg = DeploymentDetector.get_registry(norm or "")
             if not cfg:
+                from app.services.deployment.cloud_config import get_cloud_config
+
                 avail = [c["name"] for c in DeploymentDetector.detect_available(str(root))]
+                yaml_names = get_cloud_config().list_providers()
+                merged = sorted(set(avail + yaml_names))
                 return {
                     "success": False,
-                    "error": f"Unknown provider: {provider}. Installed: {avail or 'none'}",
+                    "error": f"Unknown provider: {provider}. Configured: {merged or 'none'}",
                     "provider": provider,
-                    "available_detected": avail,
+                    "available_detected": merged,
                     "preview": preview,
                 }
             bin_name = str(cfg.get("binary") or "")
@@ -140,6 +171,7 @@ class DeploymentExecutor:
         provider: str | None = None,
         preview: bool = False,
         timeout_seconds: float = 300.0,
+        context: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         return await asyncio.to_thread(
             cls.deploy_sync,
@@ -147,6 +179,7 @@ class DeploymentExecutor:
             provider=provider,
             preview=preview,
             timeout_seconds=timeout_seconds,
+            context=context,
         )
 
     @classmethod
