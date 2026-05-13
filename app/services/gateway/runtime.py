@@ -1136,9 +1136,29 @@ class NexaGateway:
 
         def _dispatch_lane() -> dict[str, Any]:
             if db is not None:
-                return _merge_visibility_banner(_finalize_gateway_payload(_route(db)), visibility_banner)
-            with SessionLocal() as session:
-                return _merge_visibility_banner(_finalize_gateway_payload(_route(session)), visibility_banner)
+                out = _merge_visibility_banner(_finalize_gateway_payload(_route(db)), visibility_banner)
+            else:
+                with SessionLocal() as session:
+                    out = _merge_visibility_banner(_finalize_gateway_payload(_route(session)), visibility_banner)
+            try:
+                from app.services.jsonl_audit_log import log_jsonl_audit_event
+
+                uid = (gctx.user_id or "").strip() or "unknown"
+                intent = out.get("intent") if isinstance(out, dict) else None
+                mode = out.get("mode") if isinstance(out, dict) else None
+                log_jsonl_audit_event(
+                    user_id=uid,
+                    action="gateway.chat",
+                    outcome="success",
+                    details={
+                        "intent": intent,
+                        "mode": mode,
+                        "channel": gctx.channel,
+                    },
+                )
+            except Exception:  # noqa: BLE001
+                pass
+            return out
 
         with session_queue.acquire(gateway_lane_id(gctx)):
             return _dispatch_lane()

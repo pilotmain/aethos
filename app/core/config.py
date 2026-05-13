@@ -281,6 +281,17 @@ class Settings(BaseSettings):
     # Shared secret: inbound webhook auth + HMAC for permission links in email.
     email_webhook_secret: str | None = None
 
+    # Enterprise — optional OIDC SSO (Mission Control) + JSONL file audit (complements DB audit_logs).
+    sso_enabled: bool = False
+    sso_oidc_issuer: str | None = None
+    sso_client_id: str | None = None
+    sso_client_secret: str | None = None
+    sso_redirect_uri: str | None = None
+    sso_post_login_redirect: str | None = None
+    audit_enabled: bool = True
+    audit_dir: str = Field(default_factory=lambda: str(Path.home() / ".aethos" / "audit"))
+    audit_retention_days: int = 90
+
     # WhatsApp Cloud API (Meta) — optional channel (Channel Gateway)
     whatsapp_access_token: str | None = None
     whatsapp_phone_number_id: str | None = None
@@ -1088,6 +1099,9 @@ def print_local_service_urls() -> None:
         f"  Apple Messages        {base}{p}/apple-messages/inbound  (POST JSON)",
         flush=True,
     )
+    if getattr(s, "sso_enabled", False) and (s.sso_client_id or "").strip() and (s.sso_oidc_issuer or "").strip():
+        print(f"  OIDC SSO (authorize)  {base}{p}/sso/login", flush=True)
+        print(f"  OIDC SSO (callback)   {base}{p}/sso/callback", flush=True)
     print(
         f"  GitHub PR review      {base}{p}/pr-review/webhook  (POST; NEXA_PR_REVIEW_ENABLED)",
         flush=True,

@@ -20,6 +20,7 @@ export default function LoginPage() {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [regenBusy, setRegenBusy] = useState(false);
+  const [ssoReady, setSsoReady] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -53,6 +54,36 @@ export default function LoginPage() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const sp = new URLSearchParams(window.location.search);
+    const xuid = (sp.get("x_user_id") || "").trim();
+    if (!xuid) return;
+    const cur = readConfig();
+    saveConfig({ ...cur, userId: xuid });
+    setUserId(xuid);
+    const url = new URL(window.location.href);
+    url.searchParams.delete("x_user_id");
+    window.history.replaceState({}, "", `${url.pathname}${url.search}`);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const base = (apiBase.trim() || defaultConfig.apiBase).replace(/\/$/, "");
+    fetch(`${base}/api/v1/sso/status`, { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        if (cancelled || !j || typeof j !== "object") return;
+        setSsoReady(Boolean((j as { sso_enabled?: boolean }).sso_enabled));
+      })
+      .catch(() => {
+        if (!cancelled) setSsoReady(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [apiBase]);
 
   const trimmedUserId = userId.trim();
   const userIdProblem =
@@ -222,6 +253,25 @@ export default function LoginPage() {
               </p>
             )}
           </label>
+          {ssoReady && (
+            <div className="rounded-md border border-violet-500/25 bg-violet-950/40 px-3 py-3">
+              <p className="text-xs leading-relaxed text-violet-100/90">
+                OIDC SSO is enabled on this API. You will authenticate at your identity provider, then return here with{" "}
+                <code className="text-zinc-200">X-User-Id</code> prefilled. If the API uses{" "}
+                <code className="text-zinc-200">NEXA_WEB_API_TOKEN</code>, paste or regenerate the bearer token below.
+              </p>
+              <button
+                type="button"
+                className="mt-2 w-full rounded-md bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-500"
+                onClick={() => {
+                  const base = (apiBase.trim() || defaultConfig.apiBase).replace(/\/$/, "");
+                  window.location.href = `${base}/api/v1/sso/login`;
+                }}
+              >
+                Login with SSO
+              </button>
+            </div>
+          )}
           <label className="flex flex-col gap-1 text-sm">
             <span className="text-zinc-500">Bearer token (optional)</span>
             <input

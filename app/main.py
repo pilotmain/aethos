@@ -37,6 +37,7 @@ from app.api.routes import (
     dev_runtime,
     dumps,
     email,
+    enterprise_audit,
     governance_api,
     health,
     internal,
@@ -63,6 +64,7 @@ from app.api.routes import (
     saas_auth,
     setup_creds,
     slack,
+    sso,
     social,
     sms,
     system,
@@ -330,6 +332,18 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title=settings.app_name, debug=settings.debug, lifespan=lifespan)
+# OIDC authorize flow needs signed session cookies (authlib Starlette client).
+if getattr(settings, "sso_enabled", False):
+    sk = (settings.nexa_secret_key or "").strip()
+    if len(sk) >= 16:
+        from starlette.middleware.sessions import SessionMiddleware
+
+        app.add_middleware(SessionMiddleware, secret_key=sk, max_age=86400 * 14, same_site="lax")
+    else:
+        logging.getLogger("aethos").warning(
+            "SSO_ENABLED is true but NEXA_SECRET_KEY is missing or too short — "
+            "SessionMiddleware not added; set NEXA_SECRET_KEY (>=16 chars) for OIDC login."
+        )
 # Browser Origin must be listed or fetch fails with an opaque network error (looks like "wrong URL").
 # scripts/nexa_next_local_all.sh serves Next on :3120; merge these even when .env only lists :3000.
 _extra_local_web_origins = ("http://localhost:3120", "http://127.0.0.1:3120")
@@ -359,6 +373,8 @@ app.include_router(channels.router, prefix=settings.api_v1_prefix)
 app.include_router(governance_api.router, prefix=settings.api_v1_prefix)
 app.include_router(custom_agents_api.router, prefix=settings.api_v1_prefix)
 app.include_router(audit_export.router, prefix=settings.api_v1_prefix)
+app.include_router(enterprise_audit.router, prefix=settings.api_v1_prefix)
+app.include_router(sso.router, prefix=settings.api_v1_prefix)
 app.include_router(auth.router, prefix=settings.api_v1_prefix)
 app.include_router(saas_auth.router, prefix=settings.api_v1_prefix)
 app.include_router(billing.router, prefix=settings.api_v1_prefix)

@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   Briefcase,
+  ClipboardList,
   CreditCard,
   FolderKanban,
   LayoutDashboard,
@@ -54,6 +55,12 @@ export const missionControlNavItems: MissionControlNavItem[] = [
     href: "/mission-control/approvals",
     icon: ShieldCheck,
     description: "High-risk actions awaiting human sign-off",
+  },
+  {
+    name: "Audit logs",
+    href: "/mission-control/admin/audit",
+    icon: ClipboardList,
+    description: "JSONL enterprise audit trail on the API host",
   },
   {
     name: "Marketplace",
