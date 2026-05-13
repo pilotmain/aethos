@@ -535,33 +535,40 @@ class NexaGateway:
         db: Session,
     ) -> dict[str, Any]:
         """Telegram: structured routing already ran; run approval NL + full chat."""
-        gctx.extras["operator_execution_attempted"] = False
-        approval = self._try_approval_route(gctx, text, db)
-        if approval is not None:
-            return approval
-        from app.services.gateway.sandbox_nl import (
-            try_sandbox_approve_gateway_turn,
-            try_sandbox_development_file_fastpath,
-            try_sandbox_plan_gateway_turn,
-        )
+        from app.services.session_queue import gateway_lane_id, session_queue
 
-        raw_c = (text or "").strip()
-        sbx_apr = try_sandbox_approve_gateway_turn(gctx, raw_c, db)
-        if sbx_apr is not None:
-            return sbx_apr
+        def _body() -> dict[str, Any]:
+            gctx.extras["operator_execution_attempted"] = False
+            approval = self._try_approval_route(gctx, text, db)
+            if approval is not None:
+                return approval
+            from app.services.gateway.sandbox_nl import (
+                try_sandbox_approve_gateway_turn,
+                try_sandbox_development_file_fastpath,
+                try_sandbox_plan_gateway_turn,
+            )
 
-        dev_sbx = try_sandbox_development_file_fastpath(gctx, raw_c, db)
-        if dev_sbx is not None:
-            return dev_sbx
+            raw_c = (text or "").strip()
+            sbx_apr = try_sandbox_approve_gateway_turn(gctx, raw_c, db)
+            if sbx_apr is not None:
+                return sbx_apr
 
-        sbx_plan = try_sandbox_plan_gateway_turn(gctx, raw_c, db)
-        if sbx_plan is not None:
-            return sbx_plan
-        from app.services.gateway.llm_fallback import try_gateway_llm_fallback_turn
-        llm_fb = try_gateway_llm_fallback_turn(gctx, raw_c, db)
-        if llm_fb is not None:
-            return llm_fb
-        return self.handle_full_chat(gctx, text, db=db)
+            dev_sbx = try_sandbox_development_file_fastpath(gctx, raw_c, db)
+            if dev_sbx is not None:
+                return dev_sbx
+
+            sbx_plan = try_sandbox_plan_gateway_turn(gctx, raw_c, db)
+            if sbx_plan is not None:
+                return sbx_plan
+            from app.services.gateway.llm_fallback import try_gateway_llm_fallback_turn
+
+            llm_fb = try_gateway_llm_fallback_turn(gctx, raw_c, db)
+            if llm_fb is not None:
+                return llm_fb
+            return self.handle_full_chat(gctx, text, db=db)
+
+        with session_queue.acquire(gateway_lane_id(gctx)):
+            return _body()
 
     def handle_full_chat(self, gctx: GatewayContext, text: str, *, db: Session) -> dict[str, Any]:
         """
@@ -926,6 +933,8 @@ class NexaGateway:
 
         visibility_banner = drain_user_visibility_banner(vis_uid) if vis_uid else None
 
+        from app.services.session_queue import gateway_lane_id, session_queue
+
         def _merge_visibility_banner(payload: dict[str, Any], banner: str | None) -> dict[str, Any]:
             if not banner or not isinstance(payload, dict):
                 return payload
@@ -1125,11 +1134,14 @@ class NexaGateway:
                 return llm_fb
             return self.handle_full_chat(gctx, text, db=db_inner)
 
-        if db is not None:
-            return _merge_visibility_banner(_finalize_gateway_payload(_route(db)), visibility_banner)
+        def _dispatch_lane() -> dict[str, Any]:
+            if db is not None:
+                return _merge_visibility_banner(_finalize_gateway_payload(_route(db)), visibility_banner)
+            with SessionLocal() as session:
+                return _merge_visibility_banner(_finalize_gateway_payload(_route(session)), visibility_banner)
 
-        with SessionLocal() as session:
-            return _merge_visibility_banner(_finalize_gateway_payload(_route(session)), visibility_banner)
+        with session_queue.acquire(gateway_lane_id(gctx)):
+            return _dispatch_lane()
 
     def _run_mission(
         self,
