@@ -58,6 +58,8 @@ async def run_discord_bot() -> None:
         from app.core.db import SessionLocal
         from app.services.channels.router import route_inbound
 
+        ch_id = str(message.channel.id)
+        web_session_id = f"dc:{ch_id}"[:64]
         with SessionLocal() as db:
             out: dict[str, Any] = route_inbound(
                 text,
@@ -66,8 +68,9 @@ async def run_discord_bot() -> None:
                 channel="discord",
                 metadata={
                     "discord_guild_id": str(message.guild.id) if message.guild else None,
-                    "discord_channel_id": str(message.channel.id),
+                    "discord_channel_id": ch_id,
                     "discord_message_id": str(message.id),
+                    "web_session_id": web_session_id,
                 },
             )
         reply = str(out.get("text") or "…")[:1900]

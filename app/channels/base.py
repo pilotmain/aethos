@@ -22,6 +22,35 @@ class ChannelMessage:
 
 
 @dataclass
+class InboundMessage:
+    """
+    Provider-native inbound envelope (OpenClaw-style adapter output).
+
+    ``user_id`` is the **platform** identifier (Slack member id, WhatsApp digits, Discord snowflake).
+    Hand off to Nexa only after resolving to an app user id (e.g. via Channel Gateway adapters).
+    """
+
+    channel: str
+    user_id: str
+    chat_id: str
+    text: str
+    raw_payload: dict[str, Any] = field(default_factory=dict)
+
+    def to_channel_message(self, *, app_user_id: str, extra_metadata: dict[str, Any] | None = None) -> ChannelMessage:
+        """Build a :class:`ChannelMessage` for :func:`~app.services.channels.router.route_inbound`."""
+        meta: dict[str, Any] = {"chat_id": self.chat_id, **(self.raw_payload or {})}
+        if extra_metadata:
+            meta.update(extra_metadata)
+        return ChannelMessage(
+            text=self.text,
+            user_id=app_user_id,
+            channel=self.channel,
+            channel_user_id=self.user_id,
+            metadata=meta,
+        )
+
+
+@dataclass
 class ChannelResponse:
     """Normalized outbound reply metadata."""
 
@@ -52,4 +81,4 @@ class NexaChannel(ABC):
         """Process a normalized message through Nexa (typically :func:`~app.services.channels.router.route_inbound`)."""
 
 
-__all__ = ["ChannelMessage", "ChannelResponse", "NexaChannel"]
+__all__ = ["ChannelMessage", "ChannelResponse", "InboundMessage", "NexaChannel"]

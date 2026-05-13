@@ -71,5 +71,14 @@ def test_gateway_lane_id_telegram() -> None:
     assert "4242" in lid
 
 
+def test_gateway_lane_id_discord() -> None:
+    g = GatewayContext.from_channel(
+        "discord:99",
+        "discord",
+        {"discord_channel_id": "chan-42"},
+    )
+    assert gateway_lane_id(g) == "discord:discord:99:cchan-42"
+
+
 def test_singleton_session_queue_acquire() -> None:
     assert hasattr(session_queue, "acquire")

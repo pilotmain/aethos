@@ -292,6 +292,10 @@ class Settings(BaseSettings):
     twilio_account_sid: str | None = None
     twilio_auth_token: str | None = None
     twilio_from_number: str | None = None
+    # WhatsApp via Twilio (inbound POST …/whatsapp/twilio-inbound). ``whatsapp:+E164``; falls back to whatsapp:+TWILIO_FROM_NUMBER.
+    twilio_whatsapp_from_number: str | None = None
+    # When true, accept Twilio WhatsApp webhooks at /whatsapp/twilio-inbound (requires Twilio credentials).
+    nexa_whatsapp_twilio_inbound_enabled: bool = False
 
     # Apple Messages for Business (provider) — optional channel (Channel Gateway, Phase 11)
     apple_messages_provider_url: str | None = None
@@ -1072,6 +1076,11 @@ def print_local_service_urls() -> None:
     print("  Telegram bot         no local URL; chat in the Telegram app", flush=True)
     print(f"  Email inbound        {base}{p}/email/inbound  (X-Email-Webhook-Secret)", flush=True)
     print(f"  WhatsApp webhook     {base}{p}/whatsapp/webhook  (GET verify + POST)", flush=True)
+    if getattr(s, "nexa_whatsapp_twilio_inbound_enabled", False):
+        print(
+            f"  WhatsApp (Twilio)    {base}{p}/whatsapp/twilio-inbound  (POST form; opt-in)",
+            flush=True,
+        )
     print(f"  SMS inbound (Twilio) {base}{p}/sms/inbound  (POST form)", flush=True)
     print(
         f"  Apple Messages        {base}{p}/apple-messages/inbound  (POST JSON)",

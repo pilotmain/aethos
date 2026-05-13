@@ -54,6 +54,11 @@ def gateway_lane_id(gctx: GatewayContext) -> str:
     if channel == "telegram":
         chat = str(ex.get("telegram_chat_id") or ex.get("chat_id") or uid).strip() or uid
         return f"{channel}:{uid}:c{chat}"
+    if channel == "discord":
+        chat = str(
+            ex.get("discord_channel_id") or ex.get("channel_id") or ex.get("web_session_id") or uid
+        ).strip() or uid
+        return f"{channel}:{uid}:c{chat}"
     ws = str(ex.get("web_session_id") or "default").strip()[:200] or "default"
     return f"{channel}:{uid}:ws{ws}"
 

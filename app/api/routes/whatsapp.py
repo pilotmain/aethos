@@ -21,8 +21,11 @@ from app.services.channel_gateway.metadata import build_channel_origin
 from app.services.channel_gateway.origin_context import bind_channel_origin
 from app.services.channel_gateway.rate_limit import GatewayRateLimitExceeded
 from app.services.channel_gateway.router import handle_incoming_channel_message
+from app.services.channel_gateway.sms_verify import verify_twilio_signature
 from app.services.channel_gateway.whatsapp_adapter import extract_whatsapp_inbound_messages, get_whatsapp_adapter
 from app.services.channel_gateway.whatsapp_send import send_whatsapp_text
+from app.services.channel_gateway.whatsapp_twilio import is_twilio_whatsapp_from, twilio_form_to_whatsapp_raw_event
+from app.services.channel_gateway.whatsapp_twilio_send import send_whatsapp_twilio_text
 from app.services.channel_gateway.whatsapp_verify import verify_meta_webhook_signature
 from app.services.orchestrator_service import OrchestratorService
 
@@ -74,6 +77,113 @@ async def whatsapp_verify_challenge(
 
 def _verify_token_compare(expected: str, got: str) -> bool:
     return hmac.compare_digest((expected or "").strip(), (got or "").strip())
+
+
+async def _verify_twilio_signature_if_configured(request: Request, form_params: dict[str, str]) -> None:
+    s = get_settings()
+    token = (s.twilio_auth_token or "").strip()
+    if not token:
+        return
+    sig = request.headers.get("X-Twilio-Signature") or request.headers.get("x-twilio-signature")
+    url = str(request.url)
+    if not verify_twilio_signature(
+        url=url,
+        post_params=form_params,
+        auth_token=token,
+        x_twilio_signature=sig,
+    ):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="invalid Twilio signature")
+
+
+@router.post("/twilio-inbound")
+async def whatsapp_twilio_inbound(request: Request) -> dict[str, Any]:
+    """
+    Twilio WhatsApp inbound (``application/x-www-form-urlencoded``, ``From=whatsapp:+…``).
+
+    Opt-in via :envvar:`NEXA_WHATSAPP_TWILIO_INBOUND_ENABLED`. Reuses Meta :class:`WhatsAppAdapter`
+    identity + normalization; outbound uses Twilio REST (not Meta Cloud).
+    """
+    s = get_settings()
+    if not getattr(s, "nexa_whatsapp_twilio_inbound_enabled", False):
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Twilio WhatsApp inbound disabled (set NEXA_WHATSAPP_TWILIO_INBOUND_ENABLED=true)",
+        )
+    if not (s.twilio_account_sid or "").strip() or not (s.twilio_auth_token or "").strip():
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Twilio not configured (TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN)",
+        )
+
+    form = await request.form()
+    form_params = {str(k): str(v) for k, v in form.items()}
+    await _verify_twilio_signature_if_configured(request, form_params)
+
+    from_raw = str(form_params.get("From") or "").strip()
+    if not is_twilio_whatsapp_from(from_raw):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="expected WhatsApp From (whatsapp:+E164); use /sms/inbound for SMS",
+        )
+    try:
+        raw_ev = twilio_form_to_whatsapp_raw_event(form_params)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+    if not str(raw_ev.get("text") or "").strip():
+        return {"ok": True, "processed": 0}
+
+    db = SessionLocal()
+    try:
+        adapter = get_whatsapp_adapter()
+        app_uid = adapter.resolve_app_user_id(db, raw_ev)
+        orchestrator.users.get_or_create(db, app_uid)
+        norm = adapter.normalize_message(raw_ev, app_user_id=app_uid)
+        with bind_channel_origin(build_channel_origin(norm)):
+            env = handle_incoming_channel_message(db, normalized_message=norm)
+
+        reply_body = (env.get("message") or "").strip()
+        pr = env.get("permission_required")
+        if pr:
+            try:
+                pid = int(str(pr.get("permission_request_id") or pr.get("permission_id") or "0"))
+            except (TypeError, ValueError):
+                pid = 0
+            if pid:
+                reply_body = (
+                    (reply_body + "\n\n") if reply_body else ""
+                ) + format_email_permission_text(pid, app_uid)
+            else:
+                reply_body = (
+                    (reply_body + "\n\n") if reply_body else ""
+                ) + "Permission required (missing permission id in envelope)."
+
+        try:
+            send_whatsapp_twilio_text(
+                to_wa_digits=str(raw_ev.get("from") or ""),
+                body=reply_body or "(no reply)",
+                rate_limit_user_id=app_uid,
+            )
+        except GatewayRateLimitExceeded as rle:
+            logger.warning("twilio whatsapp outbound rate limited: %s", rle)
+            return {"ok": True, "response_kind": env.get("response_kind") or "chat", "outbound": False, "rate_limited": True}
+        except Exception as exc:  # noqa: BLE001
+            logger.exception("twilio whatsapp outbound failed: %s", exc)
+            try:
+                audit_outbound_failure(
+                    db,
+                    channel="whatsapp",
+                    user_id=app_uid,
+                    message=str(exc),
+                    metadata={"stage": "outbound", "provider": "twilio"},
+                )
+            except Exception:  # noqa: BLE001
+                pass
+            return {"ok": True, "response_kind": env.get("response_kind") or "chat", "outbound": False}
+
+        return {"ok": True, "response_kind": env.get("response_kind") or "chat", "outbound": True}
+    finally:
+        db.close()
 
 
 @router.post("/webhook")
