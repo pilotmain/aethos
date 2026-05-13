@@ -1048,6 +1048,10 @@ class NexaGateway:
             if early_nl is not None:
                 return early_nl
 
+            _log.debug(
+                "host_executor gateway check text=%s",
+                (raw_gate[:50] + ("…" if len(raw_gate) > 50 else "")),
+            )
             host_out = self._try_host_executor_turn(gctx, raw_gate, db_inner)
             if host_out is not None:
                 return host_out

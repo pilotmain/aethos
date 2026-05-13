@@ -324,20 +324,45 @@ def _resolve_command_cwd(cwd: str | None = None) -> Path:
 
 
 def _absolute_arg_allowed(arg: str) -> bool:
-    """Allow ``/`` or ``~`` path tokens only when they resolve under the command work root."""
+    """Allow ``/`` or ``~`` path tokens under the command work root or system temp (e.g. ``/tmp``)."""
     raw = (arg or "").strip()
     if not raw or raw.startswith("-"):
         return False
     if not (raw.startswith("/") or raw.startswith("~")):
         return False
     try:
-        root = _command_work_dir().resolve()
         p = Path(raw).expanduser().resolve(strict=False)
-        p.relative_to(root)
         _path_allowed_for_io(p)
     except (OSError, ValueError):
         return False
-    return True
+
+    anchor_roots: list[Path] = []
+    try:
+        anchor_roots.append(_command_work_dir().resolve())
+    except OSError:
+        pass
+    try:
+        anchor_roots.append(Path("/tmp").resolve())
+    except OSError:
+        pass
+    try:
+        import tempfile
+
+        anchor_roots.append(Path(tempfile.gettempdir()).resolve())
+    except OSError:
+        pass
+    seen: set[str] = set()
+    for root in anchor_roots:
+        key = str(root)
+        if key in seen:
+            continue
+        seen.add(key)
+        try:
+            p.relative_to(root)
+            return True
+        except ValueError:
+            continue
+    return False
 
 
 def _command_timeout(default_timeout: int) -> int:

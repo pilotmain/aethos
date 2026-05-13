@@ -52,7 +52,10 @@ _RE_WRITE = re.compile(
     re.DOTALL,
 )
 _COMMAND_PATTERNS = [
+    # ``run … in <dir>`` before greedy ``run …``
     (r"^(?:run|execute)\s+(.+?)\s+in\s+([\w.`'\"/\-.~]{1,400})$", "run_command_with_dir"),
+    (r"(?i)^run\s+(.+)$", "run_command"),
+    (r"(?i)^execute\s+(.+)$", "run_command"),
     (r"(?i)^(npm|pip|pnpm|yarn)\s+install(?:\s+in\s+(.+))?$", "run_install_optional"),
     (r"^ls(?:\s.+)?$", "run_command_bare_ls"),
     (
@@ -68,7 +71,6 @@ _COMMAND_PATTERNS = [
     (r"^clone\s+(https?://[^\s]+|git@[^\s]+)$", "git_clone"),
     (r"^create\s+directory\s+(.+?)$", "create_directory"),
     (r"^create\s+(?:a\s+)?react\s+app\s+called\s+([\w.-]{1,80})(?:\s+and\s+start\s+it)?$", "create_react_app"),
-    (r"(?i)^(?:run|execute)\s+(.+)$", "run_command"),
 ]
 
 
@@ -337,6 +339,43 @@ def _command_from_intent(intent_type: str, match: re.Match[str]) -> tuple[str, s
     return first, None
 
 
+_HOST_ENQUEUE_FIRST_TOKENS = frozenset(
+    {
+        "mkdir",
+        "rm",
+        "cp",
+        "mv",
+        "ls",
+        "cat",
+        "echo",
+        "touch",
+        "chmod",
+        "grep",
+        "find",
+        "npm",
+        "pnpm",
+        "yarn",
+        "pip",
+        "git",
+        "npx",
+    }
+)
+
+
+def _host_cli_enqueue_despite_safety(command: str, raw_line: str) -> bool:
+    """Still surface host executor for ``run …`` / common CLIs when strict argv checks would drop the line."""
+    low = (raw_line or "").strip().lower()
+    if low.startswith("run ") or low.startswith("execute "):
+        return True
+    try:
+        parts = shlex.split((command or "").strip())
+    except ValueError:
+        return False
+    if not parts:
+        return False
+    return parts[0].lower() in _HOST_ENQUEUE_FIRST_TOKENS
+
+
 _START_GENERIC = re.compile(
     r"^(?:start|run|launch)\s+(?:the\s+|my\s+)?(todo|react)(?:\s+app)?\s*$",
     re.IGNORECASE,
@@ -569,7 +608,12 @@ def infer_host_executor_action(user_text: str) -> dict[str, Any] | None:
         from app.services.host_executor import is_command_safe
 
         command = str(command_intent.get("command") or "").strip()
-        if not is_command_safe(command):
+        # Route parsed CLI to the host executor path even when argv touches ``/tmp`` or
+        # other paths outside ``NEXA_COMMAND_WORK_ROOT``; :func:`~app.services.host_executor.is_command_safe`
+        # still applies at execution time after approval.
+        if not command:
+            return None
+        if not is_command_safe(command) and not _host_cli_enqueue_despite_safety(command, line):
             return None
         out = {
             "host_action": "run_command",

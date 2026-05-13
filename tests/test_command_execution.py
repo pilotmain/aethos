@@ -110,6 +110,20 @@ class TestCommandExecution:
         assert pl.get("host_action") == "run_command"
         assert pl.get("command") == "mkdir -p newdir"
 
+    def test_is_command_safe_mkdir_under_tmp(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Absolute args under ``/tmp`` (and the process temp dir) are allowed for dev UX."""
+        settings = _settings(tmp_path)
+        monkeypatch.setattr(host_executor, "get_settings", lambda: settings)
+        assert host_executor.is_command_safe("mkdir -p /tmp/nexa_host_exec_test_dir") is True
+
+    def test_infer_run_mkdir_under_tmp(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        s = _settings(tmp_path)
+        monkeypatch.setattr("app.services.host_executor_intent.get_settings", lambda: s)
+        pl = infer_host_executor_action("run mkdir -p /tmp/nexa_infer_mkdir_test")
+        assert pl is not None
+        assert pl.get("host_action") == "run_command"
+        assert pl.get("command") == "mkdir -p /tmp/nexa_infer_mkdir_test"
+
     def test_execute_chained_mkdir_echo(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         settings = _settings(tmp_path)
         monkeypatch.setattr(host_executor, "get_settings", lambda: settings)
