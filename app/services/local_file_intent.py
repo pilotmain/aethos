@@ -22,6 +22,20 @@ from app.services.custom_agent_routing import custom_agent_message_blocks_folder
 from app.services.host_executor_intent import safe_relative_path
 
 
+def _looks_like_ls_flags_token(token: str) -> bool:
+    """True when ``ls <token>`` is flag-like, not a path (prevents ``-la`` from becoming a path segment)."""
+    s = (token or "").strip()
+    if not s or "/" in s or s.startswith("~/"):
+        return False
+    if s in (".", ".."):
+        return False
+    if s.startswith("--"):
+        return bool(re.fullmatch(r"--[\w.-]+(?:=[^/\s]+)?", s))
+    if s.startswith("-"):
+        return bool(re.fullmatch(r"-[A-Za-z][A-Za-z0-9.,=]*", s))
+    return False
+
+
 def _agent_team_chat_blocks_folder_heuristics(text: str) -> bool:
     """Lazy import: avoids cycle with agent_team (chat → service → host bridge → local_file_intent)."""
     from app.services.agent_team.chat import agent_team_chat_blocks_folder_heuristics
@@ -530,6 +544,8 @@ def infer_local_file_request(
         path_raw = (list_m.group(1) or "").strip()
     elif ls_m:
         path_raw = (ls_m.group(1) or "").strip()
+        if _looks_like_ls_flags_token(path_raw):
+            path_raw = ""
     if path_raw:
         if _is_tech_stack_keyword_fragment(path_raw):
             return LocalFileIntent(matched=False)

@@ -14,7 +14,7 @@ from app.models.agent_job import AgentJob
 from app.services import host_executor
 from app.services.gateway.context import GatewayContext
 from app.services.gateway.runtime import NexaGateway
-from app.services.host_executor_intent import parse_command_intent
+from app.services.host_executor_intent import infer_host_executor_action, parse_command_intent
 
 
 def _settings(root: Path) -> SimpleNamespace:
@@ -56,6 +56,15 @@ class TestCommandExecution:
         assert run["command_type"] == "run_command"
         assert run["command"] == "ls -la"
 
+        bare = parse_command_intent("ls -la")
+        assert bare is not None
+        assert bare["command_type"] == "run_command_bare_ls"
+        assert bare["command"] == "ls -la"
+
+        bare2 = parse_command_intent("ls")
+        assert bare2 is not None
+        assert bare2["command"] == "ls"
+
         install = parse_command_intent("install express")
         assert install is not None
         assert install["command_type"] == "install_package"
@@ -64,6 +73,15 @@ class TestCommandExecution:
         mkdir = parse_command_intent("create directory src/components")
         assert mkdir is not None
         assert mkdir["command"] == "mkdir -p src/components"
+
+    def test_infer_host_executor_bare_ls(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        s = _settings(tmp_path)
+        monkeypatch.setattr("app.services.host_executor_intent.get_settings", lambda: s)
+        pl = infer_host_executor_action("ls -la")
+        assert pl is not None
+        assert pl.get("host_action") == "run_command"
+        assert pl.get("command") == "ls -la"
+        assert pl.get("command_type") == "run_command_bare_ls"
 
     def test_execute_payload_runs_safe_command(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         settings = _settings(tmp_path)

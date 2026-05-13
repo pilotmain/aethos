@@ -194,3 +194,15 @@ def test_infer_https_only_defers_to_other_routing(
     with patch("app.services.local_file_intent.get_settings", return_value=S()):
         lf = infer_local_file_request("check https://example.com/path for broken links")
     assert not lf.matched
+
+
+def test_ls_flags_not_list_directory_path(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    root = str(tmp_path.resolve())
+
+    class S:
+        host_executor_work_root = root
+
+    with patch("app.services.local_file_intent.get_settings", return_value=S()):
+        lf = infer_local_file_request("ls -la", default_relative_base=".")
+    assert not lf.matched

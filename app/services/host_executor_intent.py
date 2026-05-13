@@ -53,6 +53,7 @@ _RE_WRITE = re.compile(
 )
 _COMMAND_PATTERNS = [
     (r"^(?:run|execute)\s+(.+?)\s+in\s+([\w.`'\"/\-.~]{1,400})$", "run_command_with_dir"),
+    (r"^ls(?:\s.+)?$", "run_command_bare_ls"),
     (r"^npm\s+install\s+(.+?)$", "npm_install"),
     (r"^pip\s+install\s+(.+?)$", "pip_install"),
     (r"^install\s+(.+?)(?:\s+package)?$", "install_package"),
@@ -216,11 +217,14 @@ def _quote_command_arg(raw: str) -> str:
 
 
 def _command_from_intent(intent_type: str, match: re.Match[str]) -> tuple[str, str | None]:
-    first = (match.group(1) or "").strip()
-    cwd = None
     if intent_type == "run_command_with_dir":
+        first = (match.group(1) or "").strip()
         cwd = (match.group(2) or "").strip()
         return first, cwd
+    if intent_type == "run_command_bare_ls":
+        return (match.group(0) or "").strip(), None
+    first = (match.group(1) or "").strip()
+    cwd = None
     if intent_type == "run_command":
         return first, None
     if intent_type == "npm_install":
