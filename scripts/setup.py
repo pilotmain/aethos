@@ -10,8 +10,10 @@ import argparse
 import json
 import os
 import secrets
+import shutil
 import subprocess
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -202,6 +204,7 @@ class SetupWizard:
         self.force = bool(force or env_force)
         self.results: dict[str, bool] = {}
         self._api_process: subprocess.Popen[bytes] | None = None
+        self._web_process: subprocess.Popen[bytes] | None = None
         self.pending_workspace: tuple[str, str] | None = None
         self._workspace_register_done: bool = False
 
@@ -660,20 +663,161 @@ HOST_EXECUTOR_WORK_ROOT={Path.home() / "aethos-workspace"}
             out[k.strip()] = v.strip().strip('"').strip("'")
         return out
 
+    def _find_web_dir(self) -> Path | None:
+        """Locate the Mission Control / Next.js app directory."""
+        candidates = [
+            self.repo_root / "web",
+            self.repo_root / "frontend",
+            self.repo_root / "mission-control",
+            self.repo_root / "ui",
+        ]
+        for cand in candidates:
+            if cand.is_dir() and (cand / "package.json").is_file():
+                return cand
+        return None
+
+    def _is_port_in_use(self, port: int) -> bool:
+        free, _msg = Validator.check_port(port)
+        return not free
+
+    def _kill_process_on_port(self, port: int) -> bool:
+        """Best-effort: stop listeners on ``port`` (macOS/Linux ``lsof``)."""
+        if not shutil.which("lsof"):
+            return False
+        try:
+            result = subprocess.run(
+                ["lsof", "-ti", f":{port}"],
+                capture_output=True,
+                text=True,
+                timeout=8,
+            )
+            pids = [p for p in result.stdout.strip().split() if p.isdigit()]
+            if not pids:
+                return False
+            for pid in pids:
+                subprocess.run(["kill", "-9", pid], capture_output=True, timeout=5)
+            time.sleep(0.4)
+            return True
+        except (OSError, subprocess.TimeoutExpired):
+            return False
+
+    def _build_web_ui(self, web_dir: Path) -> bool:
+        """Run ``npm install`` and ``npm run build`` when a build script exists."""
+        if not web_dir.is_dir() or not shutil.which("npm"):
+            if not shutil.which("npm"):
+                print(f"  {Colors.warning('npm not found — install Node.js to build Mission Control')}")
+            return False
+
+        print(f"  {Colors.info(f'Installing web dependencies in {web_dir.name}/ …')}")
+        npm_install = subprocess.run(
+            ["npm", "install"],
+            cwd=str(web_dir),
+            capture_output=True,
+            text=True,
+            timeout=900,
+        )
+        if npm_install.returncode != 0:
+            tail = (npm_install.stderr or npm_install.stdout or "")[-400:]
+            print(f"  {Colors.warning('npm install failed — Mission Control may not run')}")
+            if tail.strip():
+                print(f"  {Colors.DIM}{tail.strip()}{Colors.RESET}")
+            return False
+
+        pkg_path = web_dir / "package.json"
+        if not pkg_path.is_file():
+            return True
+        try:
+            pkg = json.loads(pkg_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return True
+        if "build" not in (pkg.get("scripts") or {}):
+            return True
+
+        print(f"  {Colors.info('Running npm run build …')}")
+        build = subprocess.run(
+            ["npm", "run", "build"],
+            cwd=str(web_dir),
+            capture_output=True,
+            text=True,
+            timeout=900,
+        )
+        if build.returncode != 0:
+            tail = (build.stderr or build.stdout or "")[-400:]
+            print(f"  {Colors.warning('npm run build failed — dev server may still work')}")
+            if tail.strip():
+                print(f"  {Colors.DIM}{tail.strip()}{Colors.RESET}")
+            return False
+        print(f"  {Colors.success('Web production build finished')}")
+        return True
+
+    def _start_web_ui(self, web_dir: Path, *, web_port: int = 3000) -> bool:
+        """Start ``npm run dev`` for Mission Control in the background."""
+        if not shutil.which("npm"):
+            return False
+        print(f"  {Colors.info(f'Starting Mission Control (npm run dev) on port {web_port}…')}")
+
+        if self._is_port_in_use(web_port):
+            print(f"  {Colors.warning(f'Port {web_port} is already in use')}")
+            yn = prompt_line(f"  {Colors.question('Kill existing process and free the port? [y/N]')} ").strip().lower()
+            if yn in ("y", "yes"):
+                if not self._kill_process_on_port(web_port):
+                    print(f"  {Colors.warning('Could not free the port (install lsof or stop the process manually)')}")
+                elif self._is_port_in_use(web_port):
+                    print(f"  {Colors.warning('Port still busy after kill attempt')}")
+            if self._is_port_in_use(web_port):
+                print(
+                    f"  {Colors.DIM}Manual: cd {web_dir} && npm run dev{Colors.RESET}"
+                )
+                return False
+
+        log_dir = self.repo_root / ".setup"
+        log_dir.mkdir(parents=True, exist_ok=True)
+        web_log = open(log_dir / "web.setup.log", "ab", buffering=0)
+        popen_kw: dict[str, Any] = {
+            "args": ["npm", "run", "dev"],
+            "cwd": str(web_dir),
+            "stdout": web_log,
+            "stderr": subprocess.STDOUT,
+            "env": {**os.environ, **self._env_for_subprocess(), "PORT": str(web_port)},
+        }
+        if os.name != "nt":
+            popen_kw["start_new_session"] = True
+        self._web_process = subprocess.Popen(**popen_kw)
+
+        for _ in range(20):
+            time.sleep(0.5)
+            if self._is_port_in_use(web_port):
+                print(f"  {Colors.success(f'Mission Control — http://localhost:{web_port}')}")
+                return True
+        print(f"  {Colors.warning('Mission Control may not have started — see .setup/web.setup.log')}")
+        return False
+
     def start_services(self) -> bool:
-        print(f"\n{Colors.step(8, TOTAL_STEPS, 'Starting API (optional smoke test)…')}\n")
+        print(f"\n{Colors.step(8, TOTAL_STEPS, 'Starting services (API + Mission Control)…')}\n")
         if self.skip_services:
             print(f"  {Colors.info('Skipped (--skip-services)')}")
             return True
+
         api_base = self._get_env_value("API_BASE_URL") or "http://127.0.0.1:8010"
         port = parse_port_from_api_base(api_base)
-        ok, msg = Validator.check_port(port)
-        if not ok:
-            print(f"  {Colors.warning(f'Port {port} busy — {msg}')}")
-            print(f"  {Colors.dim('Start the API manually after freeing the port.')}")
-            return True
-        print(f"  {Colors.info(f'Starting uvicorn on {port} (child process)')}")
-        log_dir = _REPO_ROOT / ".setup"
+        web_port = 3000
+
+        if self._is_port_in_use(port):
+            print(f"  {Colors.warning(f'API port {port} is already in use')}")
+            yn = prompt_line(f"  {Colors.question('Kill existing process and free the port? [y/N]')} ").strip().lower()
+            if yn in ("y", "yes"):
+                if not self._kill_process_on_port(port):
+                    print(f"  {Colors.warning('Could not free the port (install lsof or stop the process manually)')}")
+                elif self._is_port_in_use(port):
+                    print(f"  {Colors.warning('Port still busy after kill attempt')}")
+            if self._is_port_in_use(port):
+                print(
+                    f"  {Colors.DIM}Manual: {sys.executable} -m uvicorn app.main:app --host 0.0.0.0 --port {port}{Colors.RESET}"
+                )
+                return True
+
+        print(f"  {Colors.info(f'Starting API on port {port} (logs: .setup/uvicorn.setup.log)')}")
+        log_dir = self.repo_root / ".setup"
         log_dir.mkdir(parents=True, exist_ok=True)
         out_log = open(log_dir / "uvicorn.setup.log", "ab", buffering=0)
         api_env = {
@@ -681,8 +825,8 @@ HOST_EXECUTOR_WORK_ROOT={Path.home() / "aethos-workspace"}
             **self._env_for_subprocess(),
             "PYTHONPATH": str(self.repo_root) + os.pathsep + os.environ.get("PYTHONPATH", ""),
         }
-        self._api_process = subprocess.Popen(
-            [
+        popen_api: dict[str, Any] = {
+            "args": [
                 sys.executable,
                 "-m",
                 "uvicorn",
@@ -692,24 +836,35 @@ HOST_EXECUTOR_WORK_ROOT={Path.home() / "aethos-workspace"}
                 "--port",
                 str(port),
             ],
-            cwd=str(self.repo_root),
-            stdout=out_log,
-            stderr=subprocess.STDOUT,
-            env=api_env,
-        )
-        pid_path = log_dir / "uvicorn.setup.pid"
-        pid_path.write_text(str(self._api_process.pid), encoding="utf-8")
-        # Brief wait for bind
-        import time
+            "cwd": str(self.repo_root),
+            "stdout": out_log,
+            "stderr": subprocess.STDOUT,
+            "env": api_env,
+        }
+        if os.name != "nt":
+            popen_api["start_new_session"] = True
+        self._api_process = subprocess.Popen(**popen_api)
+        (log_dir / "uvicorn.setup.pid").write_text(str(self._api_process.pid), encoding="utf-8")
 
         for _ in range(30):
             time.sleep(0.2)
-            ok2, _ = Validator.check_port(port)
-            if not ok2:
-                # port now in use = likely our server
-                print(f"  {Colors.success(f'API listening on http://127.0.0.1:{port}')}")
-                return True
-        print(f"  {Colors.warning('API did not bind in time — see .setup/uvicorn.setup.log')}")
+            if self._is_port_in_use(port):
+                print(f"  {Colors.success(f'API — http://127.0.0.1:{port} (docs: /docs)')}")
+                break
+        else:
+            print(f"  {Colors.warning('API did not bind in time — see .setup/uvicorn.setup.log')}")
+            return False
+
+        web_dir = self._find_web_dir()
+        if web_dir and (web_dir / "package.json").is_file():
+            print(f"\n  {Colors.info('Mission Control (Web UI)')}")
+            self._build_web_ui(web_dir)
+            self._start_web_ui(web_dir, web_port=web_port)
+        else:
+            print(
+                f"  {Colors.DIM}Web UI directory not found — skipped (expected web/ with package.json){Colors.RESET}"
+            )
+
         return True
 
     def _register_pending_workspace(self, api_base: str, web_user: str, token: str) -> None:
@@ -867,7 +1022,7 @@ HOST_EXECUTOR_WORK_ROOT={Path.home() / "aethos-workspace"}
             ("database", "Initialize database", self.setup_database),
             ("llm_keys", "LLM keys (optional)", self.configure_llm_keys),
             ("host_executor", "Host executor (local runs)", self.configure_host_executor),
-            ("services", "Start API (optional)", self.start_services),
+            ("services", "Start API & Mission Control", self.start_services),
             ("verify", "Verify HTTP endpoints", self.verify_installation),
         ]
 
@@ -890,41 +1045,34 @@ HOST_EXECUTOR_WORK_ROOT={Path.home() / "aethos-workspace"}
         print(Colors.header("Setup complete"))
         api_base = self._get_env_value("API_BASE_URL") or "http://127.0.0.1:8010"
         port = parse_port_from_api_base(api_base)
-        connect_uid = (self._get_env_value("TEST_X_USER_ID") or "").strip() or "your-user-id"
-        full_tok = (self._get_env_value("NEXA_WEB_API_TOKEN") or "").strip()
-        if len(full_tok) > 42:
-            tok_show = f"{full_tok[:30]}…{full_tok[-10:]}"
-        else:
-            tok_show = full_tok or "(set NEXA_WEB_API_TOKEN)"
+        web_port = 3000
+        connect_uid = (self._get_env_value("TEST_X_USER_ID") or "").strip() or "web_setup_user"
 
         print(
             f"""
-{Colors.GREEN}AethOS is configured.{Colors.RESET}
+{Colors.GREEN}✅ AethOS is now installed and running!{Colors.RESET}
 
-{Colors.BOLD}Connection details (Mission Control){Colors.RESET}
-{Colors.CYAN}{'─' * 52}{Colors.RESET}
-  API base:     {Colors.BOLD}{api_base}{Colors.RESET}
-  X-User-Id:    {Colors.BOLD}{connect_uid}{Colors.RESET}
-  Bearer token: {Colors.BOLD}{tok_show}{Colors.RESET}
-{Colors.CYAN}{'─' * 52}{Colors.RESET}
+{Colors.BOLD}🌐 Access your Agentic OS:{Colors.RESET}
 
-{Colors.BOLD}Next steps:{Colors.RESET}
+  {Colors.CYAN}Mission Control (Web UI):{Colors.RESET}
+     → {Colors.BOLD}http://localhost:{web_port}{Colors.RESET}
 
-1. {Colors.CYAN}Web UI{Colors.RESET}: {Colors.DIM}cd web && npm install && npm run dev{Colors.RESET} → usually {Colors.DIM}http://localhost:3000{Colors.RESET}
+  {Colors.CYAN}API:{Colors.RESET}
+     → {Colors.BOLD}http://127.0.0.1:{port}{Colors.RESET}
+     → {Colors.DIM}API docs: http://127.0.0.1:{port}/docs{Colors.RESET}
 
-2. {Colors.CYAN}In the app{Colors.RESET}, open connection / settings and set:
-   • API base URL → {Colors.BOLD}{api_base}{Colors.RESET}
-   • Bearer token → {Colors.BOLD}(full value from .env: NEXA_WEB_API_TOKEN){Colors.RESET}
-   • X-User-Id → {Colors.BOLD}{connect_uid}{Colors.RESET}
+{Colors.BOLD}📋 Connection settings (if prompted in the app):{Colors.RESET}
+  • API Base URL: {Colors.BOLD}http://127.0.0.1:{port}{Colors.RESET}
+  • Bearer token: {Colors.BOLD}(full value from .env: NEXA_WEB_API_TOKEN){Colors.RESET}
+  • X-User-Id: {Colors.BOLD}{connect_uid}{Colors.RESET}
 
-3. {Colors.CYAN}API{Colors.RESET} (if not running):  
-   {Colors.DIM}cd {_REPO_ROOT} && source .venv/bin/activate && uvicorn app.main:app --host 0.0.0.0 --reload --port {port}{Colors.RESET}
+{Colors.BOLD}💡 Next steps:{Colors.RESET}
+  • In Mission Control, try: {Colors.CYAN}create a marketing agent{Colors.RESET}
+  • Or: {Colors.CYAN}make a file test.txt that says Hello{Colors.RESET}
 
-4. {Colors.CYAN}Credentials file{Colors.RESET}: {Colors.DIM}{CREDS_FILE_HOME}{Colors.RESET}
-
-5. {Colors.DIM}Quick view:{Colors.RESET} {Colors.DIM}./scripts/show_credentials.sh{Colors.RESET}
-
-{Colors.DIM}Also see ``.env.example`` and repo ``docs/``.{Colors.RESET}
+{Colors.DIM}Credentials: {CREDS_FILE_HOME}{Colors.RESET}
+{Colors.DIM}Logs: .setup/uvicorn.setup.log · .setup/web.setup.log{Colors.RESET}
+{Colors.DIM}Also see .env.example and repo docs/.{Colors.RESET}
 """
         )
 
@@ -946,7 +1094,7 @@ def main() -> None:
     parser.add_argument(
         "--skip-services",
         action="store_true",
-        help="Do not spawn uvicorn for smoke test",
+        help="Do not start uvicorn or Mission Control (npm dev)",
     )
     parser.add_argument(
         "--full-reset",
