@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 # AethOS Beautiful Setup — launches scripts/setup.py inside .venv when present.
 # Usage (from repo root): bash scripts/setup.sh   or   ./scripts/setup.sh
-# Legal disclaimer + TTY reattach for curl|bash: scripts/setup.py (auto-accept when piped; then /dev/tty for prompts).
+#
+# API + Mission Control (npm), HTTP health waits (60s), and optional browser open are handled in
+# scripts/setup.py (step “Start API & Mission Control”). Use --no-browser or AETHOS_SETUP_NO_BROWSER=1
+# to skip opening http://localhost:3000. Legal / TTY behavior is also in setup.py.
 
 set -euo pipefail
 

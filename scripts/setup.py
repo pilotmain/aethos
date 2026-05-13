@@ -17,6 +17,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import webbrowser
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable
@@ -186,6 +187,7 @@ class SetupWizard:
         full_reset: bool,
         force: bool = False,
         accept_disclaimer: bool = False,
+        no_browser: bool = False,
     ) -> None:
         self.repo_root = _REPO_ROOT
         self.env_path = self.repo_root / ".env"
@@ -196,6 +198,7 @@ class SetupWizard:
         self.skip_services = skip_services
         self.full_reset = full_reset
         self.accept_disclaimer = accept_disclaimer
+        self.no_browser = bool(no_browser)
         env_force = (os.environ.get("AETHOS_SETUP_FORCE") or "").strip().lower() in (
             "1",
             "true",
@@ -701,6 +704,54 @@ HOST_EXECUTOR_WORK_ROOT={Path.home() / "aethos-workspace"}
         except (OSError, subprocess.TimeoutExpired):
             return False
 
+    def _wait_http_ok(self, url: str, *, max_seconds: float = 60.0, interval: float = 0.5) -> bool:
+        """Poll until ``url`` returns HTTP 2xx or 3xx."""
+        deadline = time.monotonic() + max_seconds
+        while time.monotonic() < deadline:
+            try:
+                req = urllib.request.Request(url, headers={"User-Agent": "AethOS-setup/1"})
+                with urllib.request.urlopen(req, timeout=5) as resp:
+                    code = int(resp.status)
+                    if 200 <= code < 400:
+                        return True
+            except urllib.error.HTTPError as e:
+                if 200 <= int(e.code) < 400:
+                    return True
+            except Exception:
+                pass
+            time.sleep(interval)
+        return False
+
+    def _should_auto_open_browser(self) -> bool:
+        if self.no_browser:
+            return False
+        if (os.environ.get("AETHOS_SETUP_NO_BROWSER") or "").strip().lower() in ("1", "true", "yes"):
+            return False
+        if (os.environ.get("CI") or "").strip() or (os.environ.get("GITHUB_ACTIONS") or "").strip():
+            return False
+        return True
+
+    def _open_mission_control_browser(self, web_port: int) -> None:
+        url = f"http://localhost:{web_port}"
+        if not self._should_auto_open_browser():
+            print(
+                f"  {Colors.DIM}Browser auto-open skipped (CI, --no-browser, or AETHOS_SETUP_NO_BROWSER=1).{Colors.RESET}"
+                f"\n  {Colors.DIM}Open manually: {url}{Colors.RESET}"
+            )
+            return
+        print(f"  {Colors.info(f'Opening browser → {url}')}")
+        opened = False
+        try:
+            opened = bool(webbrowser.open(url))
+        except Exception:
+            opened = False
+        if not opened and sys.platform == "darwin":
+            subprocess.run(["open", url], check=False, timeout=20)
+        elif not opened and sys.platform.startswith("linux"):
+            subprocess.run(["xdg-open", url], check=False, timeout=20)
+        elif not opened and os.name == "nt":
+            subprocess.run(["cmd", "/c", "start", "", url], check=False, timeout=20)
+
     def _build_web_ui(self, web_dir: Path) -> bool:
         """Run ``npm install`` and ``npm run build`` when a build script exists."""
         if not web_dir.is_dir() or not shutil.which("npm"):
@@ -787,10 +838,17 @@ HOST_EXECUTOR_WORK_ROOT={Path.home() / "aethos-workspace"}
         for _ in range(20):
             time.sleep(0.5)
             if self._is_port_in_use(web_port):
-                print(f"  {Colors.success(f'Mission Control — http://localhost:{web_port}')}")
-                return True
-        print(f"  {Colors.warning('Mission Control may not have started — see .setup/web.setup.log')}")
-        return False
+                break
+        else:
+            print(f"  {Colors.warning('Mission Control did not bind a port — see .setup/web.setup.log')}")
+            return False
+
+        print(f"  {Colors.info('Waiting for Mission Control HTTP (up to 60s)…')}")
+        if not self._wait_http_ok(f"http://127.0.0.1:{web_port}/", max_seconds=60.0):
+            print(f"  {Colors.warning('Mission Control did not respond in time — see .setup/web.setup.log')}")
+            return False
+        print(f"  {Colors.success(f'Mission Control ready — http://localhost:{web_port}')}")
+        return True
 
     def start_services(self) -> bool:
         print(f"\n{Colors.step(8, TOTAL_STEPS, 'Starting services (API + Mission Control)…')}\n")
@@ -846,20 +904,21 @@ HOST_EXECUTOR_WORK_ROOT={Path.home() / "aethos-workspace"}
         self._api_process = subprocess.Popen(**popen_api)
         (log_dir / "uvicorn.setup.pid").write_text(str(self._api_process.pid), encoding="utf-8")
 
-        for _ in range(30):
-            time.sleep(0.2)
-            if self._is_port_in_use(port):
-                print(f"  {Colors.success(f'API — http://127.0.0.1:{port} (docs: /docs)')}")
-                break
-        else:
-            print(f"  {Colors.warning('API did not bind in time — see .setup/uvicorn.setup.log')}")
+        health_url = f"{api_base.rstrip('/')}/api/v1/health"
+        print(f"  {Colors.info('Waiting for API health (up to 60s)…')}")
+        if not self._wait_http_ok(health_url, max_seconds=60.0):
+            print(f"  {Colors.warning('API did not become healthy in time — see .setup/uvicorn.setup.log')}")
             return False
+        print(f"  {Colors.success(f'API healthy — http://127.0.0.1:{port} (docs: /docs)')}")
 
         web_dir = self._find_web_dir()
+        mission_ok = False
         if web_dir and (web_dir / "package.json").is_file():
             print(f"\n  {Colors.info('Mission Control (Web UI)')}")
             self._build_web_ui(web_dir)
-            self._start_web_ui(web_dir, web_port=web_port)
+            mission_ok = bool(self._start_web_ui(web_dir, web_port=web_port))
+            if mission_ok:
+                self._open_mission_control_browser(web_port)
         else:
             print(
                 f"  {Colors.DIM}Web UI directory not found — skipped (expected web/ with package.json){Colors.RESET}"
@@ -1047,6 +1106,13 @@ HOST_EXECUTOR_WORK_ROOT={Path.home() / "aethos-workspace"}
         port = parse_port_from_api_base(api_base)
         web_port = 3000
         connect_uid = (self._get_env_value("TEST_X_USER_ID") or "").strip() or "web_setup_user"
+        full_tok = (self._get_env_value("NEXA_WEB_API_TOKEN") or "").strip()
+        if len(full_tok) > 42:
+            tok_show = f"{full_tok[:24]}…{full_tok[-8:]}"
+        elif full_tok:
+            tok_show = full_tok
+        else:
+            tok_show = "(set NEXA_WEB_API_TOKEN in .env)"
 
         print(
             f"""
@@ -1061,14 +1127,14 @@ HOST_EXECUTOR_WORK_ROOT={Path.home() / "aethos-workspace"}
      → {Colors.BOLD}http://127.0.0.1:{port}{Colors.RESET}
      → {Colors.DIM}API docs: http://127.0.0.1:{port}/docs{Colors.RESET}
 
-{Colors.BOLD}📋 Connection settings (if prompted in the app):{Colors.RESET}
+{Colors.BOLD}📋 Connection settings (paste into Mission Control if asked):{Colors.RESET}
   • API Base URL: {Colors.BOLD}http://127.0.0.1:{port}{Colors.RESET}
-  • Bearer token: {Colors.BOLD}(full value from .env: NEXA_WEB_API_TOKEN){Colors.RESET}
+  • Bearer token: {Colors.BOLD}{tok_show}{Colors.RESET}
   • X-User-Id: {Colors.BOLD}{connect_uid}{Colors.RESET}
 
 {Colors.BOLD}💡 Next steps:{Colors.RESET}
+  • If the browser did not open, visit {Colors.CYAN}http://localhost:{web_port}{Colors.RESET}
   • In Mission Control, try: {Colors.CYAN}create a marketing agent{Colors.RESET}
-  • Or: {Colors.CYAN}make a file test.txt that says Hello{Colors.RESET}
 
 {Colors.DIM}Credentials: {CREDS_FILE_HOME}{Colors.RESET}
 {Colors.DIM}Logs: .setup/uvicorn.setup.log · .setup/web.setup.log{Colors.RESET}
@@ -1111,6 +1177,11 @@ def main() -> None:
         action="store_true",
         help="Acknowledge LICENSE.disclaimer without interactive prompt (optional; non-TTY/CI auto-accepts)",
     )
+    parser.add_argument(
+        "--no-browser",
+        action="store_true",
+        help="Do not auto-open Mission Control in the default browser after setup",
+    )
     args, _rest = parser.parse_known_args(argv)
 
     # Allow ``python scripts/setup.py help llm`` after argparse
@@ -1123,6 +1194,7 @@ def main() -> None:
         full_reset=args.full_reset,
         force=args.force,
         accept_disclaimer=args.accept_disclaimer,
+        no_browser=args.no_browser,
     )
     try:
         wizard.run()
