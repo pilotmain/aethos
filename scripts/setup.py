@@ -188,6 +188,7 @@ class SetupWizard:
         force: bool = False,
         accept_disclaimer: bool = False,
         no_browser: bool = False,
+        skip_playwright_browsers: bool = False,
     ) -> None:
         self.repo_root = _REPO_ROOT
         self.env_path = self.repo_root / ".env"
@@ -199,6 +200,8 @@ class SetupWizard:
         self.full_reset = full_reset
         self.accept_disclaimer = accept_disclaimer
         self.no_browser = bool(no_browser)
+        self.skip_playwright_browsers = bool(skip_playwright_browsers)
+        self._setup_playwright_browsers_enabled: bool = False
         env_force = (os.environ.get("AETHOS_SETUP_FORCE") or "").strip().lower() in (
             "1",
             "true",
@@ -338,6 +341,104 @@ class SetupWizard:
         print(f"  {Colors.success('Dependencies installed')}")
         return True
 
+    def _setup_wants_playwright_browser(self) -> bool:
+        """Whether to install Chromium and write browser defaults into ``.env``."""
+        if self.skip_playwright_browsers:
+            return False
+        if (os.environ.get("AETHOS_SETUP_SKIP_PLAYWRIGHT_BROWSERS") or "").strip().lower() in (
+            "1",
+            "true",
+            "yes",
+        ):
+            return False
+        if _legal_auto_accept_noninteractive():
+            return True
+        yn = prompt_line(
+            f"  {Colors.question('Enable browser automation (Playwright / Chromium)? [Y/n]')} "
+        ).strip().lower()
+        return yn not in ("n", "no")
+
+    def _install_playwright_browsers(self) -> bool:
+        """Download Chromium for Playwright (``python -m playwright install chromium``)."""
+        print(f"\n  {Colors.info('Installing Playwright browsers (Chromium)…')}")
+        try:
+            r = subprocess.run(
+                [sys.executable, "-m", "playwright", "install", "chromium"],
+                cwd=str(self.repo_root),
+                capture_output=True,
+                text=True,
+                timeout=900,
+            )
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            print(f"  {Colors.warning(f'Playwright browser install failed: {exc!s}')}")
+            return False
+        if r.returncode != 0:
+            tail = ((r.stderr or "") + (r.stdout or ""))[-600:].strip()
+            print(f"  {Colors.warning('Playwright ``install chromium`` exited non-zero')}")
+            if tail:
+                print(f"  {Colors.DIM}{tail}{Colors.RESET}")
+            return False
+        print(f"  {Colors.success('Playwright Chromium installed')}")
+        return True
+
+    def _upsert_env_if_unset(self, key: str, value: str) -> bool:
+        """Set ``key=value`` only when the key is missing or blank in ``.env``."""
+        cur = self._get_env_value(key)
+        if cur is not None and str(cur).strip():
+            return False
+        self._update_env_key(key, value)
+        return True
+
+    def _ensure_playwright_env_defaults(self, *, browser_enabled: bool) -> None:
+        """Append browser / host defaults to ``.env`` when keys are unset."""
+        if not self.env_path.is_file():
+            return
+        if not browser_enabled:
+            if self._upsert_env_if_unset("NEXA_BROWSER_ENABLED", "false"):
+                print(f"  {Colors.info('Set NEXA_BROWSER_ENABLED=false (browser automation declined)')}")
+            self._upsert_env_if_unset("NEXA_BROWSER_AUTOMATION_ENABLED", "false")
+            return
+
+        banner = "# Browser automation (Playwright) — setup wizard"
+        raw = self.env_path.read_text(encoding="utf-8")
+        if banner not in raw:
+            self.env_path.write_text(raw.rstrip() + f"\n\n{banner}\n", encoding="utf-8")
+
+        default_root = (self._get_env_value("NEXA_WORKSPACE_ROOT") or "").strip() or str(
+            Path.home() / "aethos-workspace"
+        )
+        added: list[str] = []
+        pairs: list[tuple[str, str]] = [
+            ("NEXA_HOST_EXECUTOR_ENABLED", "true"),
+            ("NEXA_BROWSER_AUTOMATION_ENABLED", "true"),
+            ("NEXA_BROWSER_ENABLED", "true"),
+            ("NEXA_BROWSER_HEADLESS", "false"),
+            ("NEXA_BROWSER_ALLOWED_DOMAINS", "*"),
+            ("NEXA_BROWSER_TIMEOUT_SECONDS", "30"),
+        ]
+        for k, v in pairs:
+            if self._upsert_env_if_unset(k, v):
+                added.append(k)
+        if self._upsert_env_if_unset("HOST_EXECUTOR_WORK_ROOT", default_root):
+            added.append("HOST_EXECUTOR_WORK_ROOT")
+        if added:
+            print(
+                f"  {Colors.success('Added browser / host executor defaults to .env: ' + ', '.join(added))}"
+            )
+
+    def _configure_playwright_after_env(self) -> None:
+        """Prompt, write ``.env`` keys, and install Chromium after core ``.env`` fields exist."""
+        wants = self._setup_wants_playwright_browser()
+        self._setup_playwright_browsers_enabled = wants
+        self._ensure_playwright_env_defaults(browser_enabled=wants)
+        if wants:
+            self._install_playwright_browsers()
+        else:
+            print(
+                f"  {Colors.DIM}Skipped Playwright browser download (enable later: re-run setup or "
+                f"`{sys.executable} -m playwright install chromium`).{Colors.RESET}"
+            )
+
     def configure_env(self) -> bool:
         print(f"\n{Colors.step(3, TOTAL_STEPS, 'Configuring environment…')}\n")
         if self.env_path.is_file():
@@ -413,6 +514,7 @@ class SetupWizard:
             self._update_env_key("HOST_EXECUTOR_WORK_ROOT", default_wr)
             print(f"  {Colors.info(f'Default workspace roots → {default_wr}')}")
 
+        self._configure_playwright_after_env()
         return True
 
     def _validate_setup_user_id(self, uid: str) -> tuple[bool, str]:
@@ -584,6 +686,26 @@ HOST_EXECUTOR_WORK_ROOT={Path.home() / "aethos-workspace"}
         print(
             f"  {Colors.DIM}The API process must load these env vars; restart after changing .env.{Colors.RESET}\n"
         )
+        he_cur = (self._get_env_value("NEXA_HOST_EXECUTOR_ENABLED") or "").strip().lower()
+        wr_cur = (self._get_env_value("HOST_EXECUTOR_WORK_ROOT") or "").strip()
+        if (
+            getattr(self, "_setup_playwright_browsers_enabled", False)
+            and he_cur in ("1", "true", "yes")
+            and wr_cur
+        ):
+            print(
+                f"  {Colors.success('Host executor + work root already set for browser automation (.env).')}"
+            )
+            reg = prompt_line(
+                f"  {Colors.question('Register this path as a Mission Control workspace root when the API is up? [Y/n]')} "
+            ).strip().lower()
+            if reg in ("", "y", "yes"):
+                self.pending_workspace = (wr_cur, "setup_workspace")
+                print(
+                    f"  {Colors.info('Will POST /api/v1/web/workspace/roots during verification if the API responds.')}"
+                )
+            return True
+
         yn = prompt_line(
             f"  {Colors.question('Enable local host executor (file + command actions)? [y/N]')} "
         ).strip().lower()
@@ -1202,6 +1324,11 @@ def main() -> None:
         action="store_true",
         help="Do not auto-open Mission Control in the default browser after setup",
     )
+    parser.add_argument(
+        "--skip-playwright-browsers",
+        action="store_true",
+        help="Skip Playwright Chromium download and browser .env prompts (CI/headless images)",
+    )
     args, _rest = parser.parse_known_args(argv)
 
     # Allow ``python scripts/setup.py help llm`` after argparse
@@ -1215,6 +1342,7 @@ def main() -> None:
         force=args.force,
         accept_disclaimer=args.accept_disclaimer,
         no_browser=args.no_browser,
+        skip_playwright_browsers=args.skip_playwright_browsers,
     )
     try:
         wizard.run()

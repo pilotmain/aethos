@@ -4,7 +4,8 @@
 #
 # API + Mission Control (npm), HTTP health waits (60s), and optional browser open are handled in
 # scripts/setup.py (step “Start API & Mission Control”). Use --no-browser or AETHOS_SETUP_NO_BROWSER=1
-# to skip opening http://localhost:3000. Legal / TTY behavior is also in setup.py.
+# to skip opening http://localhost:3000. Use --skip-playwright-browsers or AETHOS_SETUP_SKIP_PLAYWRIGHT_BROWSERS=1
+# to skip downloading Playwright Chromium during the “Configure .env” step. Legal / TTY behavior is in setup.py.
 
 set -euo pipefail
 
