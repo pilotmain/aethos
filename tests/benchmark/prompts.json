@@ -1,0 +1,550 @@
+{
+  "benchmark_version": 1,
+  "description": "Agent-task intent axis: compare Ollama JSON classification to golden labels.",
+  "ollama_model": "phi3:mini",
+  "intents": [
+    "analysis",
+    "brain_dump",
+    "capability_question",
+    "clarification",
+    "config_query",
+    "correction",
+    "create_custom_agent",
+    "create_sub_agent",
+    "dev_command",
+    "external_execution",
+    "external_execution_continue",
+    "external_investigation",
+    "followup_reply",
+    "general_chat",
+    "greeting",
+    "help_request",
+    "orchestrate_system",
+    "status_update",
+    "stuck",
+    "stuck_dev"
+  ],
+  "system": "You are an intent classifier for AethOS. Reply with ONLY a single JSON object, no markdown, no prose. Keys: \"intent\" (string), \"confidence\" (number 0-1), \"reason\" (short string). The intent MUST be exactly one of the allowed list provided in the user message block.",
+  "cases": [
+    {
+      "id": "case_001_greet_01",
+      "category": "intent_classification",
+      "user": "hi",
+      "expected": {
+        "intent": "greeting"
+      }
+    },
+    {
+      "id": "case_002_greet_02",
+      "category": "intent_classification",
+      "user": "hello there",
+      "expected": {
+        "intent": "greeting"
+      }
+    },
+    {
+      "id": "case_003_greet_03",
+      "category": "intent_classification",
+      "user": "hey team",
+      "expected": {
+        "intent": "greeting"
+      }
+    },
+    {
+      "id": "case_004_greet_04",
+      "category": "intent_classification",
+      "user": "good morning",
+      "expected": {
+        "intent": "greeting"
+      }
+    },
+    {
+      "id": "case_005_greet_05",
+      "category": "intent_classification",
+      "user": "howdy",
+      "expected": {
+        "intent": "greeting"
+      }
+    },
+    {
+      "id": "case_006_cap_01",
+      "category": "intent_classification",
+      "user": "what can you do",
+      "expected": {
+        "intent": "capability_question"
+      }
+    },
+    {
+      "id": "case_007_cap_02",
+      "category": "intent_classification",
+      "user": "can you write code for me",
+      "expected": {
+        "intent": "capability_question"
+      }
+    },
+    {
+      "id": "case_008_cap_03",
+      "category": "intent_classification",
+      "user": "are you able to help with deployments",
+      "expected": {
+        "intent": "capability_question"
+      }
+    },
+    {
+      "id": "case_009_cap_04",
+      "category": "intent_classification",
+      "user": "what can't you do",
+      "expected": {
+        "intent": "capability_question"
+      }
+    },
+    {
+      "id": "case_010_cap_05",
+      "category": "intent_classification",
+      "user": "list your capabilities",
+      "expected": {
+        "intent": "capability_question"
+      }
+    },
+    {
+      "id": "case_011_bd_01",
+      "category": "intent_classification",
+      "user": "buy milk, call dentist, finish the deck slides",
+      "expected": {
+        "intent": "brain_dump"
+      }
+    },
+    {
+      "id": "case_012_bd_02",
+      "category": "intent_classification",
+      "user": "I need to email HR, book flights, and clean the garage",
+      "expected": {
+        "intent": "brain_dump"
+      }
+    },
+    {
+      "id": "case_013_bd_03",
+      "category": "intent_classification",
+      "user": "remind me to pay rent, renew passport, and fix the bike",
+      "expected": {
+        "intent": "brain_dump"
+      }
+    },
+    {
+      "id": "case_014_bd_04",
+      "category": "intent_classification",
+      "user": "pick up kids, cook dinner, fold laundry",
+      "expected": {
+        "intent": "brain_dump"
+      }
+    },
+    {
+      "id": "case_015_bd_05",
+      "category": "intent_classification",
+      "user": "ship the patch, update the changelog, and tag the release",
+      "expected": {
+        "intent": "brain_dump"
+      }
+    },
+    {
+      "id": "case_016_stuck_01",
+      "category": "intent_classification",
+      "user": "I feel completely stuck and can't start",
+      "expected": {
+        "intent": "stuck"
+      }
+    },
+    {
+      "id": "case_017_stuck_02",
+      "category": "intent_classification",
+      "user": "I'm overwhelmed and frozen",
+      "expected": {
+        "intent": "stuck"
+      }
+    },
+    {
+      "id": "case_018_sd_01",
+      "category": "intent_classification",
+      "user": "pytest fails with a fixture error on CI",
+      "expected": {
+        "intent": "stuck_dev"
+      }
+    },
+    {
+      "id": "case_019_sd_02",
+      "category": "intent_classification",
+      "user": "docker build exits 1 during npm ci",
+      "expected": {
+        "intent": "stuck_dev"
+      }
+    },
+    {
+      "id": "case_020_sd_03",
+      "category": "intent_classification",
+      "user": "kubernetes pod keeps crashlooping",
+      "expected": {
+        "intent": "stuck_dev"
+      }
+    },
+    {
+      "id": "case_021_sd_04",
+      "category": "intent_classification",
+      "user": "TypeError in my FastAPI route handler",
+      "expected": {
+        "intent": "stuck_dev"
+      }
+    },
+    {
+      "id": "case_022_cfg_01",
+      "category": "intent_classification",
+      "user": "what model are you using",
+      "expected": {
+        "intent": "config_query"
+      }
+    },
+    {
+      "id": "case_023_cfg_02",
+      "category": "intent_classification",
+      "user": "which LLM is configured on this server",
+      "expected": {
+        "intent": "config_query"
+      }
+    },
+    {
+      "id": "case_024_cfg_03",
+      "category": "intent_classification",
+      "user": "where is my workspace root",
+      "expected": {
+        "intent": "config_query"
+      }
+    },
+    {
+      "id": "case_025_cfg_04",
+      "category": "intent_classification",
+      "user": "show me my configuration",
+      "expected": {
+        "intent": "config_query"
+      }
+    },
+    {
+      "id": "case_026_help_01",
+      "category": "intent_classification",
+      "user": "I need help but I'm not sure what to ask",
+      "expected": {
+        "intent": "help_request"
+      }
+    },
+    {
+      "id": "case_027_fu_01",
+      "category": "intent_classification",
+      "user": "I didn't finish the task yet",
+      "expected": {
+        "intent": "followup_reply"
+      }
+    },
+    {
+      "id": "case_028_su_01",
+      "category": "intent_classification",
+      "user": "I finished the migration yesterday",
+      "expected": {
+        "intent": "status_update"
+      }
+    },
+    {
+      "id": "case_029_corr_01",
+      "category": "intent_classification",
+      "user": "No, answer the question I asked",
+      "expected": {
+        "intent": "correction"
+      }
+    },
+    {
+      "id": "case_030_orch_01",
+      "category": "intent_classification",
+      "user": "give me a mission control status update on all runs",
+      "expected": {
+        "intent": "orchestrate_system"
+      }
+    },
+    {
+      "id": "case_031_orch_02",
+      "category": "intent_classification",
+      "user": "what succeeded and what failed across missions",
+      "expected": {
+        "intent": "orchestrate_system"
+      }
+    },
+    {
+      "id": "case_032_ext_01",
+      "category": "intent_classification",
+      "user": "check railway logs, fix the code, push, redeploy, verify production",
+      "expected": {
+        "intent": "external_execution"
+      }
+    },
+    {
+      "id": "case_033_extc_01",
+      "category": "intent_classification",
+      "user": "yes use the railway token I pasted",
+      "expected": {
+        "intent": "external_execution_continue"
+      }
+    },
+    {
+      "id": "case_034_exti_01",
+      "category": "intent_classification",
+      "user": "is railway down right now for everyone",
+      "expected": {
+        "intent": "external_investigation"
+      }
+    },
+    {
+      "id": "case_035_sa_01",
+      "category": "intent_classification",
+      "user": "create a marketing agent for me",
+      "expected": {
+        "intent": "create_sub_agent"
+      }
+    },
+    {
+      "id": "case_036_sa_02",
+      "category": "intent_classification",
+      "user": "spawn a QA specialist agent",
+      "expected": {
+        "intent": "create_sub_agent"
+      }
+    },
+    {
+      "id": "case_037_clar_01",
+      "category": "intent_classification",
+      "user": "make my website better",
+      "expected": {
+        "intent": "clarification"
+      }
+    },
+    {
+      "id": "case_038_anal_01",
+      "category": "intent_classification",
+      "user": "analyze this stack trace and root cause it",
+      "expected": {
+        "intent": "analysis"
+      }
+    },
+    {
+      "id": "case_039_gc_01",
+      "category": "intent_classification",
+      "user": "tell me a joke about compilers",
+      "expected": {
+        "intent": "general_chat"
+      }
+    },
+    {
+      "id": "case_040_gc_02",
+      "category": "intent_classification",
+      "user": "what is the capital of France",
+      "expected": {
+        "intent": "general_chat"
+      }
+    },
+    {
+      "id": "case_041_devc_01",
+      "category": "intent_classification",
+      "user": "run npm test in the repo root",
+      "expected": {
+        "intent": "dev_command"
+      }
+    },
+    {
+      "id": "case_042_devc_02",
+      "category": "intent_classification",
+      "user": "git status and show me the diff",
+      "expected": {
+        "intent": "dev_command"
+      }
+    },
+    {
+      "id": "case_043_bd_06",
+      "category": "intent_classification",
+      "user": "write report, call client, update Jira",
+      "expected": {
+        "intent": "brain_dump"
+      }
+    },
+    {
+      "id": "case_044_bd_07",
+      "category": "intent_classification",
+      "user": "schedule dentist, renew insurance, backup laptop",
+      "expected": {
+        "intent": "brain_dump"
+      }
+    },
+    {
+      "id": "case_045_cap_06",
+      "category": "intent_classification",
+      "user": "can you do kubernetes work",
+      "expected": {
+        "intent": "capability_question"
+      }
+    },
+    {
+      "id": "case_046_greet_06",
+      "category": "intent_classification",
+      "user": "hello",
+      "expected": {
+        "intent": "greeting"
+      }
+    },
+    {
+      "id": "case_047_stuck_03",
+      "category": "intent_classification",
+      "user": "I can't get started on anything today",
+      "expected": {
+        "intent": "stuck"
+      }
+    },
+    {
+      "id": "case_048_sd_05",
+      "category": "intent_classification",
+      "user": "eslint fails with no-unused-vars",
+      "expected": {
+        "intent": "stuck_dev"
+      }
+    },
+    {
+      "id": "case_049_cfg_05",
+      "category": "intent_classification",
+      "user": "what API keys are configured",
+      "expected": {
+        "intent": "config_query"
+      }
+    },
+    {
+      "id": "case_050_bd_08",
+      "category": "intent_classification",
+      "user": "task one: invoices, task two: onboarding docs",
+      "expected": {
+        "intent": "brain_dump"
+      }
+    },
+    {
+      "id": "case_051_orch_03",
+      "category": "intent_classification",
+      "user": "orchestrate an update on dev runs and missions",
+      "expected": {
+        "intent": "orchestrate_system"
+      }
+    },
+    {
+      "id": "case_052_ext_02",
+      "category": "intent_classification",
+      "user": "full pipeline: fix tests, push to main, deploy to vercel, verify",
+      "expected": {
+        "intent": "external_execution"
+      }
+    },
+    {
+      "id": "case_053_sa_03",
+      "category": "intent_classification",
+      "user": "I need a security review agent",
+      "expected": {
+        "intent": "create_sub_agent"
+      }
+    },
+    {
+      "id": "case_054_help_02",
+      "category": "intent_classification",
+      "user": "help me figure out what to do next",
+      "expected": {
+        "intent": "help_request"
+      }
+    },
+    {
+      "id": "case_055_fu_02",
+      "category": "intent_classification",
+      "user": "not done yet",
+      "expected": {
+        "intent": "followup_reply"
+      }
+    },
+    {
+      "id": "case_056_su_02",
+      "category": "intent_classification",
+      "user": "completed the checklist",
+      "expected": {
+        "intent": "status_update"
+      }
+    },
+    {
+      "id": "case_057_corr_02",
+      "category": "intent_classification",
+      "user": "you misunderstood my request",
+      "expected": {
+        "intent": "correction"
+      }
+    },
+    {
+      "id": "case_058_anal_02",
+      "category": "intent_classification",
+      "user": "postmortem this outage summary",
+      "expected": {
+        "intent": "analysis"
+      }
+    },
+    {
+      "id": "case_059_gc_03",
+      "category": "intent_classification",
+      "user": "random trivia about CPUs",
+      "expected": {
+        "intent": "general_chat"
+      }
+    },
+    {
+      "id": "case_060_clar_02",
+      "category": "intent_classification",
+      "user": "improve my app",
+      "expected": {
+        "intent": "clarification"
+      }
+    },
+    {
+      "id": "case_061_exti_02",
+      "category": "intent_classification",
+      "user": "render dashboard shows service unhealthy",
+      "expected": {
+        "intent": "external_investigation"
+      }
+    },
+    {
+      "id": "case_062_bd_09",
+      "category": "intent_classification",
+      "user": "todo: taxes, dentist, car registration",
+      "expected": {
+        "intent": "brain_dump"
+      }
+    },
+    {
+      "id": "case_063_cap_07",
+      "category": "intent_classification",
+      "user": "do you support custom agents",
+      "expected": {
+        "intent": "capability_question"
+      }
+    },
+    {
+      "id": "case_064_greet_07",
+      "category": "intent_classification",
+      "user": "hey",
+      "expected": {
+        "intent": "greeting"
+      }
+    },
+    {
+      "id": "case_065_sd_06",
+      "category": "intent_classification",
+      "user": "CI fails on GitHub Actions with permission denied",
+      "expected": {
+        "intent": "stuck_dev"
+      }
+    }
+  ]
+}
