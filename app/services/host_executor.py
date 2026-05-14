@@ -27,6 +27,7 @@ from typing import Any
 
 from app.core.config import REPO_ROOT, get_settings
 from app.services.host_executor_chain import (
+    chain_actions_are_browser_open_screenshot_system,
     chain_actions_are_browser_plugin_skills,
     chain_step_output_failed,
     merge_chain_step,
@@ -1439,12 +1440,18 @@ def execute_payload(
         browser_chain = isinstance(actions_in, list) and chain_actions_are_browser_plugin_skills(
             actions_in
         )
-        if not bool(getattr(s, "nexa_host_executor_chain_enabled", False)) and not browser_chain:
+        system_open_shot = isinstance(actions_in, list) and chain_actions_are_browser_open_screenshot_system(
+            actions_in
+        )
+        if (
+            not bool(getattr(s, "nexa_host_executor_chain_enabled", False))
+            and not browser_chain
+            and not system_open_shot
+        ):
             raise ValueError(
                 "Chain host actions are disabled. Set NEXA_HOST_EXECUTOR_CHAIN_ENABLED=1 on the worker."
             )
         allowed_inner = parse_chain_inner_allowed(s)
-        actions_in = payload.get("actions")
         if not isinstance(actions_in, list) or not actions_in:
             raise ValueError("chain requires a non-empty actions list")
         max_s = min(max(int(getattr(s, "nexa_host_executor_chain_max_steps", 10)), 1), 20)

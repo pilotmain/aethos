@@ -245,10 +245,16 @@ def pending_inject_ttl_seconds(pending_json: str | None) -> int:
         if sn.startswith("browser_"):
             return HOST_BROWSER_PENDING_INJECT_TTL_SECONDS
     if ha == "chain":
-        from app.services.host_executor_chain import chain_actions_are_browser_plugin_skills
+        from app.services.host_executor_chain import (
+            chain_actions_are_browser_open_screenshot_system,
+            chain_actions_are_browser_plugin_skills,
+        )
 
         actions_in = pl.get("actions")
-        if isinstance(actions_in, list) and chain_actions_are_browser_plugin_skills(actions_in):
+        if isinstance(actions_in, list) and (
+            chain_actions_are_browser_plugin_skills(actions_in)
+            or chain_actions_are_browser_open_screenshot_system(actions_in)
+        ):
             return HOST_BROWSER_PENDING_INJECT_TTL_SECONDS
     return SUGGESTED_TTL_SECONDS
 

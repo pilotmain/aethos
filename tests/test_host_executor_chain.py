@@ -12,6 +12,7 @@ import pytest
 
 from app.services import host_executor
 from app.services.host_executor_chain import (
+    chain_actions_are_browser_open_screenshot_system,
     chain_step_output_failed,
     merge_chain_step,
     parse_chain_inner_allowed,
@@ -34,6 +35,26 @@ class _BaseSettings:
 def test_parse_chain_inner_allowed_default() -> None:
     s = _BaseSettings(Path("/tmp"))
     assert "git_push" in parse_chain_inner_allowed(s)
+    assert "browser_open" in parse_chain_inner_allowed(s)
+    assert "browser_screenshot" in parse_chain_inner_allowed(s)
+
+
+def test_chain_actions_are_browser_open_screenshot_system() -> None:
+    assert chain_actions_are_browser_open_screenshot_system(
+        [
+            {"host_action": "browser_open", "url": "https://a.com"},
+            {"host_action": "browser_screenshot"},
+        ]
+    )
+    assert not chain_actions_are_browser_open_screenshot_system(
+        [{"host_action": "browser_open", "url": "https://a.com"}]
+    )
+    assert not chain_actions_are_browser_open_screenshot_system(
+        [
+            {"host_action": "plugin_skill", "skill_name": "browser_navigate", "input": {"url": "x"}},
+            {"host_action": "plugin_skill", "skill_name": "browser_screenshot", "input": {}},
+        ]
+    )
 
 
 def test_merge_chain_inherits_cwd() -> None:
@@ -60,6 +81,38 @@ def test_chain_disabled_raises(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) 
                     "actions": [{"host_action": "file_write", "relative_path": "a.txt", "content": "x"}],
                 }
             )
+
+
+def test_system_open_screenshot_chain_runs_when_chain_disabled(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """NL ``open … and screenshot`` maps to host browser_open + browser_screenshot (no Playwright chain)."""
+    monkeypatch.chdir(tmp_path)
+    s = _BaseSettings(tmp_path)
+    s.nexa_host_executor_chain_enabled = False
+    s.nexa_browser_allowed_domains = "*"
+
+    def fake_run(action: str, payload: dict) -> str:
+        if action == "browser_open":
+            return f"Opened in your default browser:\n{payload.get('url', '')}"
+        if action == "browser_screenshot":
+            return "Screenshot saved:\n/tmp/mock.png"
+        raise AssertionError(action)
+
+    with patch.object(host_executor, "get_settings", return_value=s):
+        with patch("app.services.browser_automation.run_browser_host_action_sync", fake_run):
+            out = host_executor.execute_payload(
+                {
+                    "host_action": "chain",
+                    "actions": [
+                        {"host_action": "browser_open", "url": "https://example.com"},
+                        {"host_action": "browser_screenshot"},
+                    ],
+                }
+            )
+    assert "Opened" in out
+    assert "example.com" in out
+    assert "Screenshot" in out
 
 
 def test_chain_rejects_invalid_inner_action(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

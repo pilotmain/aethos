@@ -5,6 +5,10 @@
 Map natural phrases to host_executor payload_json shapes.
 
 Only emits allowlisted structures — no raw shell, no arbitrary commands.
+
+Combined phrases such as ``open https://… and take screenshot`` are handled in
+:mod:`app.services.host_executor_nl_chain` (``host_action: chain`` with ``browser_open`` then
+``browser_screenshot``), not as a single intent here.
 """
 
 from __future__ import annotations

@@ -22,6 +22,7 @@ from app.services.audit_service import audit
 from app.services.channel_gateway.governance import user_can_approve_high_risk
 from app.services.governance_taxonomy import EVENT_APPROVAL_ROLE_DENIED
 from app.services.host_executor_chain import (
+    chain_actions_are_browser_open_screenshot_system,
     chain_actions_are_browser_plugin_skills,
     merge_chain_step,
     parse_chain_inner_allowed,
@@ -806,7 +807,14 @@ def check_host_executor_chain_job(
     s = get_settings()
     actions_in = payload.get("actions")
     browser_chain = isinstance(actions_in, list) and chain_actions_are_browser_plugin_skills(actions_in)
-    if not bool(getattr(s, "nexa_host_executor_chain_enabled", False)) and not browser_chain:
+    system_open_shot = isinstance(actions_in, list) and chain_actions_are_browser_open_screenshot_system(
+        actions_in
+    )
+    if (
+        not bool(getattr(s, "nexa_host_executor_chain_enabled", False))
+        and not browser_chain
+        and not system_open_shot
+    ):
         return (
             False,
             "Chain host actions are disabled. Set NEXA_HOST_EXECUTOR_CHAIN_ENABLED=1 on the worker.",

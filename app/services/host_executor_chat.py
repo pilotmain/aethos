@@ -138,10 +138,16 @@ def _host_pending_ttl_seconds(payload: dict[str, Any]) -> int:
         if sn in ("browser_open", "browser_screenshot") or sn.startswith("browser_"):
             return 300
     elif ha == "chain":
-        from app.services.host_executor_chain import chain_actions_are_browser_plugin_skills
+        from app.services.host_executor_chain import (
+            chain_actions_are_browser_open_screenshot_system,
+            chain_actions_are_browser_plugin_skills,
+        )
 
         acts_in = payload.get("actions")
-        if isinstance(acts_in, list) and chain_actions_are_browser_plugin_skills(acts_in):
+        if isinstance(acts_in, list) and (
+            chain_actions_are_browser_plugin_skills(acts_in)
+            or chain_actions_are_browser_open_screenshot_system(acts_in)
+        ):
             return 300
     elif ha in ("browser_open", "browser_screenshot"):
         return 300
@@ -462,15 +468,20 @@ def _validate_enqueue_payload(payload: dict[str, Any]) -> dict[str, Any] | None:
         return _attach_cwd(out_ps)
 
     if act == "chain":
-        from app.services.host_executor_chain import chain_actions_are_browser_plugin_skills, parse_chain_inner_allowed
+        from app.services.host_executor_chain import (
+            chain_actions_are_browser_open_screenshot_system,
+            chain_actions_are_browser_plugin_skills,
+            parse_chain_inner_allowed,
+        )
 
         s = get_settings()
         actions_in = payload.get("actions")
         if not isinstance(actions_in, list) or not actions_in:
             return None
         browser_only = chain_actions_are_browser_plugin_skills(actions_in)
+        system_open_shot = chain_actions_are_browser_open_screenshot_system(actions_in)
         chain_on = bool(getattr(s, "nexa_host_executor_chain_enabled", False))
-        if not chain_on and not browser_only:
+        if not chain_on and not browser_only and not system_open_shot:
             return None
         allowed = parse_chain_inner_allowed(s)
         max_s = min(max(int(getattr(s, "nexa_host_executor_chain_max_steps", 10)), 1), 20)

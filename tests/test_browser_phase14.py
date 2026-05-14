@@ -48,8 +48,25 @@ def test_try_infer_navigate_and_screenshot_chain() -> None:
     assert pl.get("host_action") == "chain"
     acts = pl.get("actions") or []
     assert len(acts) == 2
-    assert acts[0].get("skill_name") == "browser_navigate"
-    assert acts[1].get("skill_name") == "browser_screenshot"
+    assert acts[0].get("host_action") == "browser_open"
+    assert acts[0].get("url", "").startswith("https://")
+    assert acts[1].get("host_action") == "browser_screenshot"
+
+
+def test_try_infer_open_url_and_take_screenshot_phrase() -> None:
+    class _S:
+        nexa_host_executor_enabled = True
+        nexa_browser_enabled = True
+        nexa_browser_automation_enabled = False
+
+    with patch("app.services.host_executor_nl_chain.get_settings", return_value=_S()):
+        pl = try_infer_browser_automation_nl("open https://pilotmain.com and take screenshot")
+    assert pl is not None
+    assert pl.get("host_action") == "chain"
+    acts = pl.get("actions") or []
+    assert len(acts) == 2
+    assert acts[0]["host_action"] == "browser_open"
+    assert acts[0]["url"].startswith("https://pilotmain.com")
 
 
 def test_builtin_browser_manifests_resolve(isolated_registry: PluginSkillRegistry) -> None:

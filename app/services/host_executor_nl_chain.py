@@ -331,22 +331,15 @@ def try_infer_browser_automation_nl(user_text: str) -> dict[str, Any] | None:
     if url_match and (
         re.search(r"\b(screenshot|capture the page)\b", low)
         or "take a screenshot" in low
+        or re.search(r"\band\s+take\s+screenshot\b", low)
     ):
         url = _normalize_browser_url(url_match.group(1))
         if url:
             return {
                 "host_action": "chain",
                 "actions": [
-                    {
-                        "host_action": "plugin_skill",
-                        "skill_name": "browser_navigate",
-                        "input": {"url": url},
-                    },
-                    {
-                        "host_action": "plugin_skill",
-                        "skill_name": "browser_screenshot",
-                        "input": {},
-                    },
+                    {"host_action": "browser_open", "url": url},
+                    {"host_action": "browser_screenshot"},
                 ],
                 "stop_on_failure": True,
             }
