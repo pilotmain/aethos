@@ -84,17 +84,15 @@ Benchmarks are **not CI-enforced** in this document unless separately added. Mea
 
 **Explicit non-goals for local OSS:** no **99.9% SLA** claim for a single laptop process without defining hosting.
 
-### 2.3 Default experience vs configuration `[Target]`
+### 2.3 Default experience vs configuration `[Implemented]`
 
-The following is **product intent**; verify against `Settings`, `.env.example`, and gateway before marking `[Implemented]` for a named release.
+**Verified 2026-05-14** against `Settings` (`app/core/config.py`), `app/services/intent_classifier.py`, `app/services/response_composer.py`, and `app/services/llm/completion.py` (`providers_available`).
 
-| Scenario | Desired behavior |
+| Scenario | Actual behavior |
 |----------|------------------|
-| No cloud LLM keys, Ollama not running | Safe degradation: pattern / lightweight routing without paid APIs (exact path: verify `use_real_llm`, `nexa_llm_provider`, fallbacks). |
-| Ollama running | Prefer local HTTP provider (`ollama` slug in LLM bootstrap). |
-| Cloud keys present | Use Anthropic / OpenAI / etc. per `NEXA_LLM_PROVIDER` and keys. |
-
-**Action item `[Release TBD]`:** Reconcile `.env.example` (`USE_REAL_LLM`, keys) with this table once verified.
+| `USE_REAL_LLM=true`, no Anthropic/OpenAI merged keys, `NEXA_LLM_PROVIDER=auto`, Ollama not enabled (`NEXA_OLLAMA_ENABLED=false`, default), no DeepSeek/OpenRouter/`NEXA_LLM_API_KEY` usable pair | **No paid LLM calls.** Intent: `classify_intent_llm` skips the LLM path when `MergedLlmKeyInfo.has_any_key` is false (Anthropic/OpenAI only) and uses **`classify_intent_fallback`**. Reply composition: `response_composer.use_real_llm()` is false when **`providers_available()`** is false, so **`fallback_compose_response`** / template paths run instead of `primary_complete_*`. |
+| Ollama reachable | Set **`NEXA_OLLAMA_ENABLED=true`** and/or **`NEXA_LLM_PROVIDER=ollama`** so bootstrap registers the HTTP backend (`app/services/llm/bootstrap.py`). With **`NEXA_LLM_PROVIDER=auto`**, Ollama is **not** auto-registered unless `NEXA_OLLAMA_ENABLED` or **`NEXA_LOCAL_FIRST`** (with auto) enables it. |
+| Cloud or gateway keys present | Anthropic / OpenAI (merged system + user), DeepSeek, OpenRouter, or `NEXA_LLM_API_KEY` with a non-`auto` primary satisfy **`providers_available()`**; routing follows `NEXA_LLM_PROVIDER` and registry order in bootstrap. |
 
 ---
 
