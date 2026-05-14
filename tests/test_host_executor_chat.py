@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import json
 from unittest.mock import patch
 
 import pytest
@@ -15,7 +16,17 @@ from app.core.db import Base
 from app.models.agent_job import AgentJob
 from app.models.conversation_context import ConversationContext
 from app.services import next_action_apply as naa
-from app.services.host_executor_chat import drain_host_executor_web_notifications
+from app.services.content_provenance import InstructionSource, apply_trusted_instruction_source
+from app.services.host_executor_chat import (
+    _host_pending_ttl_seconds,
+    _validate_enqueue_payload,
+    drain_host_executor_web_notifications,
+)
+from app.services.next_action_confirmation import (
+    is_pending_inject_expired,
+    pending_inject_ttl_seconds,
+)
+from app.services.nexa_safety_policy import stamp_host_payload
 
 
 class _HostOn:
@@ -76,6 +87,43 @@ def test_chat_run_tests_then_yes_queues_job(in_memory_db: Session) -> None:
     assert pl.get("run_name") == "pytest"
     assert pl.get("chat_origin", {}).get("web_session_id") == "sess-a"
     assert r2.related_job_ids[0] == job.id
+
+
+def test_validate_enqueue_browser_open_round_trip():
+    stamped = stamp_host_payload(
+        apply_trusted_instruction_source(
+            {"host_action": "browser_open", "url": "https://example.com/foo"},
+            InstructionSource.USER_MESSAGE.value,
+        )
+    )
+    safe = _validate_enqueue_payload(stamped)
+    assert safe is not None
+    assert safe.get("host_action") == "browser_open"
+    assert safe.get("url") == "https://example.com/foo"
+
+
+def test_browser_pending_ttl_vs_other_host_action():
+    assert _host_pending_ttl_seconds({"host_action": "browser_open", "url": "https://a.com"}) == 300
+    assert (
+        _host_pending_ttl_seconds({"host_action": "browser_screenshot"}) == 300
+    )
+    assert _host_pending_ttl_seconds({"host_action": "run_command", "run_name": "pytest"}) == 60
+
+
+def test_explicit_pending_ttl_in_json():
+    blob = {"pending_ttl_seconds": 60, "payload": {}, "created_at": "2026-01-01T00:00:00+00:00"}
+    assert pending_inject_ttl_seconds(json.dumps(blob)) == 60
+
+    expired = json.dumps(
+        {
+            "kind": "host_executor",
+            "title": "x",
+            "payload": {"host_action": "run_command"},
+            "created_at": "2020-01-01T00:00:00+00:00",
+            "pending_ttl_seconds": 60,
+        }
+    )
+    assert is_pending_inject_expired(expired) is True
 
 
 def test_drain_web_completion_once(in_memory_db: Session) -> None:

@@ -226,6 +226,16 @@ def pending_inject_ttl_seconds(pending_json: str | None) -> int:
         return SUGGESTED_TTL_SECONDS
     if not isinstance(o, dict):
         return SUGGESTED_TTL_SECONDS
+    raw_ttl = o.get("pending_ttl_seconds")
+    if raw_ttl is not None:
+        try:
+            ttl = int(raw_ttl)
+        except (TypeError, ValueError):
+            ttl = None
+        else:
+            if ttl <= 0:
+                return SUGGESTED_TTL_SECONDS
+            return min(max(ttl, 30), 86400)
     pl = o.get("payload")
     if not isinstance(pl, dict):
         return SUGGESTED_TTL_SECONDS

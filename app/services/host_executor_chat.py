@@ -8,9 +8,12 @@ from __future__ import annotations
 import json
 import logging
 import re
+import uuid
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 from sqlalchemy.orm import Session
 
@@ -71,6 +74,7 @@ from app.services.next_action_confirmation import (
     _wants_proceed_ok,
     _wants_yesish,
     is_pending_inject_expired,
+    pending_inject_ttl_seconds,
 )
 from app.services.permission_request_flow import (
     card_message_for_host_payload,
@@ -119,6 +123,31 @@ def _legacy_command_pending(pending_json: str | None) -> bool:
     return bool(str(o.get("command") or "").strip())
 
 
+@dataclass(frozen=True)
+class ParsedHostPending:
+    payload: dict[str, Any]
+    title: str
+    pending_id: str | None = None
+
+
+def _host_pending_ttl_seconds(payload: dict[str, Any]) -> int:
+    """Shorter TTL for most host confirmations; browser open/screenshot waits get 5 minutes."""
+    ha = (payload.get("host_action") or "").strip().lower()
+    if ha == "plugin_skill":
+        sn = str(payload.get("skill_name") or "").strip().lower()
+        if sn in ("browser_open", "browser_screenshot") or sn.startswith("browser_"):
+            return 300
+    elif ha == "chain":
+        from app.services.host_executor_chain import chain_actions_are_browser_plugin_skills
+
+        acts_in = payload.get("actions")
+        if isinstance(acts_in, list) and chain_actions_are_browser_plugin_skills(acts_in):
+            return 300
+    elif ha in ("browser_open", "browser_screenshot"):
+        return 300
+    return 60
+
+
 def may_run_pre_llm_deterministic_host(cctx: ConversationContext) -> bool:
     """
     When False, blocked state or host confirmation pending owns this turn — do not infer a new
@@ -135,7 +164,7 @@ def may_run_pre_llm_deterministic_host(cctx: ConversationContext) -> bool:
 
 def _parse_pending_host_executor(
     pending_json: str | None,
-) -> tuple[dict[str, Any], str] | None:
+) -> ParsedHostPending | None:
     if not (pending_json or "").strip():
         return None
     try:
@@ -152,7 +181,9 @@ def _parse_pending_host_executor(
     title = str(o.get("title") or title_for_payload(payload)).strip() or title_for_payload(
         payload
     )
-    return payload, title
+    pid_raw = o.get("pending_id")
+    pending_id = str(pid_raw).strip()[:80] if pid_raw is not None and str(pid_raw).strip() else None
+    return ParsedHostPending(payload=payload, title=title, pending_id=pending_id)
 
 
 def _normalize_browser_host_pending_payload(payload: dict[str, Any]) -> dict[str, Any]:
@@ -368,6 +399,52 @@ def _validate_enqueue_payload(payload: dict[str, Any]) -> dict[str, Any] | None:
             out2["intel_operation"] = str(payload.get("intel_operation") or "summarize")[:48]
         return _attach_cwd(out2)
 
+    if act == "browser_open":
+        url = str(payload.get("url") or "").strip()
+        if not url or len(url) > 8000:
+            return None
+        try:
+            pu = urlparse(url)
+        except ValueError:
+            return None
+        if pu.scheme not in ("http", "https"):
+            return None
+        if not (pu.hostname or "").strip():
+            return None
+        return _attach_cwd({"host_action": "browser_open", "url": url})
+
+    if act == "browser_click":
+        from app.services.browser_automation import _sanitize_selector
+
+        try:
+            sel = _sanitize_selector(str(payload.get("selector") or ""))
+        except ValueError:
+            return None
+        return _attach_cwd({"host_action": "browser_click", "selector": sel})
+
+    if act == "browser_fill":
+        from app.services.browser_automation import _sanitize_selector
+
+        try:
+            sel = _sanitize_selector(str(payload.get("selector") or ""))
+        except ValueError:
+            return None
+        text = str(payload.get("text") or "")
+        if not text.strip():
+            return None
+        if len(text) > 50_000:
+            return None
+        return _attach_cwd({"host_action": "browser_fill", "selector": sel, "text": text})
+
+    if act == "browser_screenshot":
+        out_bs: dict[str, Any] = {"host_action": "browser_screenshot"}
+        nm = str(payload.get("name") or "").strip()
+        if nm:
+            if len(nm) > 240 or any(c in nm for c in ("\n", "\r", "\x00")):
+                return None
+            out_bs["name"] = nm[:240]
+        return _attach_cwd(out_bs)
+
     if act == "plugin_skill":
         sn = str(payload.get("skill_name") or "").strip()
         if not sn.startswith("browser_") or len(sn) > 96 or "/" in sn or "\\" in sn:
@@ -509,12 +586,24 @@ def enqueue_host_job_from_validated_payload(
 
 def _set_host_pending(cctx: ConversationContext, payload: dict[str, Any], title: str) -> None:
     stamped = stamp_host_payload(dict(payload))
+    ttl_seconds = _host_pending_ttl_seconds(stamped)
+    pending_id = uuid.uuid4().hex
+    uid_log = (cctx.user_id or "").strip()
+    logger.info(
+        "[DEBUG] host_executor pending stored user=%s pending_id=%s pending_ttl_seconds=%s host_action=%s",
+        uid_log or "(none)",
+        pending_id,
+        ttl_seconds,
+        (stamped.get("host_action") or ""),
+    )
     cctx.next_action_pending_inject_json = json.dumps(
         {
             "kind": _PENDING_KIND,
             "payload": stamped,
             "title": title,
             "created_at": datetime.now(timezone.utc).isoformat(),
+            "pending_id": pending_id,
+            "pending_ttl_seconds": ttl_seconds,
         },
         ensure_ascii=False,
     )
@@ -1169,9 +1258,22 @@ def try_apply_host_executor_turn(
 
     parsed = _parse_pending_host_executor(cctx.next_action_pending_inject_json)
     if parsed:
-        payload0, title0 = parsed
-        pend_raw = cctx.next_action_pending_inject_json
-        if is_pending_inject_expired(pend_raw):
+        payload0 = parsed.payload
+        title0 = parsed.title
+        pending_lookup_id = parsed.pending_id
+        pend_raw = cctx.next_action_pending_inject_json or ""
+        eff_ttl = pending_inject_ttl_seconds(pend_raw)
+        pend_expired = is_pending_inject_expired(pend_raw)
+        logger.info(
+            "[DEBUG] host_executor pending lookup user=%s pending_id=%s effective_ttl_seconds=%s "
+            "host_action=%s expired=%s",
+            (cctx.user_id or "").strip() or "(none)",
+            pending_lookup_id or "(none)",
+            eff_ttl,
+            (payload0.get("host_action") or ""),
+            pend_expired,
+        )
+        if pend_expired:
             cctx.next_action_pending_inject_json = None
             db.add(cctx)
             db.commit()
@@ -1199,6 +1301,12 @@ def try_apply_host_executor_turn(
             )
 
         if _confirms_host_executor(t0):
+            logger.info(
+                "[DEBUG] host_executor pending confirm run user=%s pending_id=%s host_action=%s",
+                (cctx.user_id or "").strip() or "(none)",
+                pending_lookup_id or "(none)",
+                (payload0.get("host_action") or ""),
+            )
             if not get_settings().nexa_host_executor_enabled:
                 return NextActionApplicationResult(
                     "Host execution is disabled (`NEXA_HOST_EXECUTOR_ENABLED`). "
@@ -1218,6 +1326,12 @@ def try_apply_host_executor_turn(
                 )
             )
             if not safe_pl:
+                logger.info(
+                    "[DEBUG] host_executor pending validate_failed user=%s pending_id=%s host_action=%s",
+                    (cctx.user_id or "").strip() or "(none)",
+                    pending_lookup_id or "(none)",
+                    (raw_pl.get("host_action") or ""),
+                )
                 cctx.next_action_pending_inject_json = None
                 db.add(cctx)
                 db.commit()
