@@ -57,6 +57,9 @@ def _build_chain() -> list[str]:
         fp = (getattr(s, "nexa_cost_aware_fallback_provider", "") or "").strip().lower()
         if fp and fp not in chain and reg.get_provider(fp):
             chain.append(fp)
+    # Pure local-first: try Ollama before cloud when the local backend is registered.
+    if bool(getattr(s, "nexa_pure_local_llm_mode", False)) and reg.get_provider("ollama"):
+        chain = ["ollama"] + [p for p in chain if p != "ollama"]
     return chain
 
 

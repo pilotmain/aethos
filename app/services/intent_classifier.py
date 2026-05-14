@@ -841,6 +841,43 @@ def classify_intent_llm(
         return classify_intent_fallback(message, conversation_snapshot)
 
 
+def _finalize_intent_from_llm(
+    message: str,
+    result: dict[str, Any],
+    *,
+    conversation_snapshot: dict | None = None,
+) -> str:
+    """Apply post-LLM normalization (shared by pure-local and normal paths)."""
+    t0 = (message or "").strip()
+    from app.services.sub_agent_natural_creation import looks_like_registry_agent_creation_nl
+
+    intent = str(result.get("intent", "general_chat") or "").strip() or "general_chat"
+    confidence = float(result.get("confidence", 0.0))
+
+    if intent == "create_custom_agent" and looks_like_registry_agent_creation_nl(t0):
+        intent = "create_sub_agent"
+
+    if intent in ("create_custom_agent", "create_sub_agent") and is_multi_agent_capability_question(t0):
+        intent = "capability_question"
+        confidence = max(confidence, 0.9)
+
+    logger.info(
+        "intent_classifier intent=%s confidence=%s reason=%s text_preview=%s",
+        intent,
+        confidence,
+        result.get("reason"),
+        message[:80],
+    )
+
+    if intent == "brain_dump" and confidence < 0.72:
+        return "general_chat"
+
+    if intent == "stuck" and looks_like_stuck_dev(t0):
+        intent = "stuck_dev"
+
+    return intent
+
+
 def get_intent(
     message: str,
     conversation_snapshot: dict | None = None,
@@ -848,7 +885,20 @@ def get_intent(
     memory_summary: str | None = None,
 ) -> str:
     t0 = (message or "").strip()
-    tl0 = t0.lower()
+    s = get_settings()
+    from app.services.llm.completion import providers_available
+
+    if bool(getattr(s, "nexa_pure_local_llm_mode", False)):
+        if not providers_available():
+            fb = classify_intent_fallback(t0, conversation_snapshot)
+            return str(fb.get("intent") or "general_chat").strip() or "general_chat"
+        result = classify_intent_llm(
+            message,
+            conversation_snapshot=conversation_snapshot,
+            memory_summary=memory_summary,
+        )
+        return _finalize_intent_from_llm(message, result, conversation_snapshot=conversation_snapshot)
+
     from app.services.sub_agent_natural_creation import looks_like_registry_agent_creation_nl
 
     # Phase 77 — before registry/orchestration cues so "what model…" is never mistaken for actions.
@@ -909,31 +959,7 @@ def get_intent(
         conversation_snapshot=conversation_snapshot,
         memory_summary=memory_summary,
     )
-    intent = result["intent"]
-    confidence = result["confidence"]
-
-    if intent == "create_custom_agent" and looks_like_registry_agent_creation_nl(t0):
-        intent = "create_sub_agent"
-
-    if intent in ("create_custom_agent", "create_sub_agent") and is_multi_agent_capability_question(t0):
-        intent = "capability_question"
-        confidence = max(confidence, 0.9)
-
-    logger.info(
-        "intent_classifier intent=%s confidence=%s reason=%s text_preview=%s",
-        intent,
-        confidence,
-        result.get("reason"),
-        message[:80],
-    )
-
-    if intent == "brain_dump" and confidence < 0.72:
-        return "general_chat"
-
-    if intent == "stuck" and looks_like_stuck_dev(t0):
-        intent = "stuck_dev"
-
-    return intent
+    return _finalize_intent_from_llm(message, result, conversation_snapshot=conversation_snapshot)
 
 
 def is_command_question(text: str) -> bool:

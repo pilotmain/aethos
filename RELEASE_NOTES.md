@@ -42,7 +42,15 @@ Run locally and attach JSON + console summary to a release:
 python scripts/benchmark_performance.py --runs 100 --json-out data/benchmark_performance/latest.json
 ```
 
-## Release gate (CI / pre-tag)
+## Pure local LLM mode (`NEXA_PURE_LOCAL_LLM_MODE`)
+
+When set to **`true`** and at least one LLM provider is reachable (`providers_available()`):
+
+- **Intent:** skips regex fast-paths; uses **`classify_intent_llm`** (same few-shots as the benchmark). If nothing is reachable, uses **`classify_intent_fallback`** only.
+- **Completion chain:** **Ollama** is tried **first** when registered (then existing cloud order).
+- **Composer:** skips the canned research-capability block for capability questions; replies go through the LLM. If no provider is up, users get a short **offline** notice instead of the full template fallback tree.
+
+Default is **`false`** so CI and installs without Ollama keep current hybrid behavior.
 
 ```bash
 pytest tests/release_gate.py -q --tb=short

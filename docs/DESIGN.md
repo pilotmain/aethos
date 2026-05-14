@@ -114,6 +114,8 @@ Benchmarks are **not CI-enforced** in this document unless separately added. Mea
 3. **Tool execution** — **deterministic** gates (`host_executor`, allowlists, approvals).  
 4. **Agent handoff** — model classifies; **AethOS** enforces routing and quotas.
 
+**Pure local LLM mode (opt-in):** set **`NEXA_PURE_LOCAL_LLM_MODE=true`** when Ollama (or another provider) is up: intent skips regex fast-paths in favor of **`classify_intent_llm`**, the completion chain tries **Ollama first**, and the response composer skips the canned research-capability short-circuit so capability questions go through the LLM. When **no** provider is available, intent uses **`classify_intent_fallback`** only and chat returns a short offline notice instead of the full template tree.
+
 **Cleanup posture:** benchmark-tuned few-shots are **shared** with production (no duplicate prompt strings). Further shrinking of regex shortcuts is optional and should stay test-guarded (benchmark + product tests).
 
 **Order of operations:** ~~benchmark → integrate local primary → validate → delete legacy~~ **Intent benchmark + local default model path are landed**; incremental simplification of redundant fallbacks can follow behind tests.
@@ -271,6 +273,7 @@ Threats: path traversal (mitigated by `safe_relative_path` and roots), arbitrary
 | Version | Date | Notes |
 |---------|------|--------|
 | 2.0 | 2026-05-14 | Draft: codebase-aligned vocabulary, routes, soul + browser detail, governance. |
+| 2.0.5 | 2026-05-14 | §2.4: `NEXA_PURE_LOCAL_LLM_MODE` (Ollama-first intent + composer); completion chain prefers Ollama when flag on. |
 | 2.0.4 | 2026-05-14 | NFR-05 + `scripts/benchmark_performance.py`; `RELEASE_NOTES.md`; `tests/release_gate.py`. |
 | 2.0.3 | 2026-05-14 | §2.4 `[Implemented]`: router/executor + local `qwen2.5:7b` benchmark 100%; §3.5 Ollama path; intent LLM uses `providers_available()`; shared `intent_classifier_prompt_shots.py`. |
 | 2.0.2 | 2026-05-14 | §4.3: `qwen2.5:7b` default for local accuracy; benchmark few-shot expansion. |

@@ -889,6 +889,10 @@ class Settings(BaseSettings):
     # Infra / deployment — prepend honesty banner when chat implies verified cloud work without proof.
     nexa_execution_truth_guard_enabled: bool = True
     nexa_local_first: bool = False
+    # When True with a reachable LLM: skip intent regex fast-paths (always classify via LLM when enabled),
+    # prefer Ollama first in the completion chain when registered, and skip composer template short-circuits.
+    # When no provider is available, intent uses ``classify_intent_fallback`` only; composer returns a minimal offline notice.
+    nexa_pure_local_llm_mode: bool = False
     nexa_ollama_base_url: str | None = None
     # Phase 39 — local Ollama when NEXA_LOCAL_FIRST routes tools away from remote APIs
     nexa_ollama_enabled: bool = False

@@ -683,6 +683,12 @@ def use_real_llm() -> bool:
     return providers_available()
 
 
+def _pure_local_llm_chat_mode() -> bool:
+    """True when ``nexa_pure_local_llm_mode`` is on and a provider can run chat/intent LLM calls."""
+    s = get_settings()
+    return bool(getattr(s, "nexa_pure_local_llm_mode", False)) and use_real_llm()
+
+
 def fallback_capability_response(text: str) -> str:
     from app.services.research_capability_copy import (
         format_research_capability_message,
@@ -997,7 +1003,7 @@ def compose_unstick_response(ctx: ResponseContext) -> ComposedResponse:
 
 
 def compose_clarify_response(ctx: ResponseContext) -> ComposedResponse:
-    if ctx.intent == "capability_question":
+    if not _pure_local_llm_chat_mode() and ctx.intent == "capability_question":
         from app.services.research_capability_copy import (
             format_research_capability_message,
             is_research_capability_question,
@@ -1026,6 +1032,23 @@ def compose_response(ctx: ResponseContext) -> ComposedResponse:
         ur,
     )
     if not ur:
+        s = get_settings()
+        if bool(getattr(s, "nexa_pure_local_llm_mode", False)):
+            offline: ComposedResponse = {
+                "message": (
+                    "No LLM provider is reachable right now. Start **Ollama** (`ollama serve`) with a pulled model "
+                    "(e.g. `ollama pull qwen2.5:7b`) and set **`NEXA_OLLAMA_ENABLED=true`**, or configure cloud keys. "
+                    "Until then, replies stay on minimal fallbacks."
+                ),
+                "should_ask_followup": False,
+                "followup_question": None,
+                "suggested_microstep": None,
+                "next_steps": None,
+            }
+            return _apply_decisive_dev_composer_guard(
+                _apply_composed_identity_guards(offline, user_message=ctx.user_message),
+                ctx,
+            )
         return _apply_decisive_dev_composer_guard(
             _apply_composed_identity_guards(
                 fallback_compose_response(
