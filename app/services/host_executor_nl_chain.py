@@ -335,6 +335,8 @@ def try_infer_browser_automation_nl(user_text: str) -> dict[str, Any] | None:
     ):
         url = _normalize_browser_url(url_match.group(1))
         if url:
+            # Chain runs ``browser_open`` then ``browser_screenshot`` in order; the capture step
+            # waits inside :func:`take_system_screenshot` before OS screenshot so the tab can paint.
             return {
                 "host_action": "chain",
                 "actions": [

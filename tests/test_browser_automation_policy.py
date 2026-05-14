@@ -103,6 +103,7 @@ def test_take_system_screenshot_darwin_screencapture(
         Path(cmd[-1]).write_bytes(b"\x89PNG\r\n\x1a\n")
 
     monkeypatch.setattr("app.services.browser_automation.subprocess.run", fake_run)
+    monkeypatch.setattr("app.services.browser_automation.time.sleep", lambda _s: None)
     try:
         with patch("app.services.browser_automation.sys.platform", "darwin"):
             from app.services.browser_automation import take_system_screenshot

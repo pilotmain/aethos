@@ -15,6 +15,7 @@ import shutil
 import subprocess
 import sys
 import threading
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -200,6 +201,9 @@ def take_system_screenshot(*, name: str | None = None) -> dict[str, Any]:
     """
     Capture the primary display to a PNG under :func:`host_browser_screenshot_directory` (no Playwright).
 
+    Waits briefly before capture so a just-opened default browser tab can paint (system ``open`` is
+    asynchronous; OS screenshot is full-screen, not page-aware).
+
     Uses ``screencapture`` on macOS, PowerShell ``CopyFromScreen`` on Windows, and on Linux tries
     ``gnome-screenshot``, ``scrot``, ``grim``, then ImageMagick ``import``.
     """
@@ -213,6 +217,7 @@ def take_system_screenshot(*, name: str | None = None) -> dict[str, Any]:
     out_path = str(path.resolve())
 
     try:
+        time.sleep(1.5)
         if sys.platform == "darwin":
             subprocess.run(["screencapture", "-x", str(path)], check=True, timeout=120)
         elif sys.platform == "win32":
