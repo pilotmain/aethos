@@ -63,20 +63,26 @@ def extract_json_object(text: str) -> dict[str, Any] | None:
 
 
 def build_intent_classifier_system_prompt(base_instruction: str) -> str:
-    """Append few-shot examples (addresses common phi3:mini mislabels)."""
+    """Append few-shot examples (addresses common small-model mislabels; tuned for Qwen/Phi)."""
     base = (base_instruction or "").strip()
     shots = """
 ## Critical disambiguation (read before classifying)
 - **greeting**: short social openers only (hi, hello, hey, good morning, howdy) with **no** real task yet. **Never** use general_chat for these.
 - **general_chat**: trivia, small talk, factual Q&A, or chit-chat that is **not** a greeting-only line and **not** another intent.
-- **brain_dump**: user lists **2+ concrete tasks/errands** or clear multi-item todo language.
+- **brain_dump**: user lists **2+ concrete tasks/errands** or clear multi-item todo language — not a single imperative dev command.
 - **create_sub_agent**: user wants a **named role/specialist agent** (marketing, QA, security, research, …) via registry — phrases like "create a … agent", "spawn a … agent", "I need a … specialist".
 - **create_custom_agent**: legacy **user-defined agent profile** wording only when clearly about building a **custom profile/config**, not a role specialist (rare in benchmarks).
 - **orchestrate_system**: status across **missions / Mission Control / dev runs / what succeeded or failed** — orchestration overview.
 - **external_execution**: user wants an **end-to-end pipeline** on hosted infra (check logs, fix, push, redeploy, verify production).
 - **external_execution_continue**: short confirmation continuing a prior **external execution / Railway / deploy** access thread.
 - **external_investigation**: hosted provider health / outage / dashboard questions **without** demanding the full fix-push-verify pipeline.
-- **stuck**: overwhelmed / frozen **without** listing tasks; life overwhelm (not build errors).
+- **stuck**: emotional **freeze / overwhelm about life or work in general** without a concrete task list or “not done yet” deferral.
+- **followup_reply**: user reports **incomplete work** on something already in motion (“I didn’t finish”, “not done yet”, “still working on it”) — **not** stuck unless it is clearly emotional overwhelm, not task status.
+- **correction**: user **rejects** the assistant’s prior answer or demands it answer differently (“No, answer the question”, “you misunderstood”).
+- **clarification**: vague product tweak with **no URL/stack/concrete goal** (“make my website better”).
+- **config_query**: asks about **this deployment’s** configuration (which LLM, workspace path, whether keys are set — never the secret values).
+- **capability_question**: asks what the assistant **can or cannot do** in a domain (“can you deploy”, “do you support agents”) — not “run npm test” style imperative.
+- **dev_command**: imperative to **run a specific command or inspect repo** (“run npm test”, “git status”) — not a capability question.
 - **stuck_dev**: **build, test, CI, deploy, tooling, stack traces, configs** — technical blockage.
 
 ## Few-shot (your entire reply must be ONE JSON object only — no markdown, no text before or after)
@@ -112,6 +118,30 @@ User message: I feel completely stuck and can't start
 
 User message: pytest fails with a fixture error on CI
 {"intent":"stuck_dev","confidence":0.9,"reason":"technical CI/test failure"}
+
+User message: I didn't finish the task yet
+{"intent":"followup_reply","confidence":0.9,"reason":"incomplete work update"}
+
+User message: not done yet
+{"intent":"followup_reply","confidence":0.88,"reason":"short deferral on progress"}
+
+User message: No, answer the question I asked
+{"intent":"correction","confidence":0.92,"reason":"rejects prior answer"}
+
+User message: you misunderstood my request
+{"intent":"correction","confidence":0.9,"reason":"meta correction"}
+
+User message: make my website better
+{"intent":"clarification","confidence":0.85,"reason":"vague product ask"}
+
+User message: what model are you using
+{"intent":"config_query","confidence":0.9,"reason":"deployment LLM settings"}
+
+User message: can you write code for me
+{"intent":"capability_question","confidence":0.88,"reason":"asks if coding is supported"}
+
+User message: run npm test in the repo root
+{"intent":"dev_command","confidence":0.9,"reason":"imperative command"}
 """.strip()
     return f"{base}\n\n{shots}".strip()
 

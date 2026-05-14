@@ -900,7 +900,7 @@ class Settings(BaseSettings):
     nexa_ollama_base_url: str | None = None
     # Phase 39 — local Ollama when NEXA_LOCAL_FIRST routes tools away from remote APIs
     nexa_ollama_enabled: bool = False
-    nexa_ollama_default_model: str = "phi3:mini"
+    nexa_ollama_default_model: str = "qwen2.5:7b"
     nexa_mission_parallel_tasks: bool = False
     # When True with SQLite, allow parallel agent waves (dev-only; session-per-thread).
     nexa_mission_parallel_allow_sqlite: bool = False

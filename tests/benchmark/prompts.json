@@ -1,7 +1,7 @@
 {
   "benchmark_version": 1,
   "description": "Agent-task intent axis: compare Ollama JSON classification to golden labels.",
-  "ollama_model": "phi3:mini",
+  "ollama_model": "qwen2.5:7b",
   "intents": [
     "analysis",
     "brain_dump",

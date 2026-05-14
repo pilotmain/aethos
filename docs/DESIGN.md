@@ -218,13 +218,14 @@ Local inference uses the **Ollama HTTP** backend only (`NEXA_LLM_PROVIDER=ollama
 
 | Model (Ollama-style tag) | License (summary) | Q4-ish size (indicative) | RAM (rough) | Notes |
 |--------------------------|-------------------|--------------------------|-------------|--------|
-| **`phi3:mini`** (Phi-3 Mini 3.8B) | MIT | ~2.5GB | 4–6GB | **Recommended default** — best quality-to-size for structured / agent-adjacent tasks on CPU. |
-| **`qwen2.5:1.5b`** (Qwen 2.5 1.5B) | Apache-2.0 | ~1GB | 2–3GB | Minimum footprint, very fast; weaker on hard reasoning than Phi-3 Mini. |
+| **`qwen2.5:7b`** (Qwen 2.5 7B) | Apache-2.0 | ~4.5GB | 8–12GB | **Recommended default for accuracy** on the repo’s **agent-task intent benchmark** (`tests/benchmark/`) when RAM allows — best measured match to golden labels vs smaller tags in the same harness. |
+| **`phi3:mini`** (Phi-3 Mini 3.8B) | MIT | ~2.5GB | 4–6GB | **Light default** — smaller footprint; use when **RAM is tight** or cold-start latency matters more than benchmark score. |
+| **`qwen2.5:1.5b`** (Qwen 2.5 1.5B) | Apache-2.0 | ~1GB | 2–3GB | Minimum footprint, very fast; weaker on hard reasoning than 7B / Phi-3 Mini on the benchmark. |
 | **`gemma2:2b`** | Gemma terms (not OSI MIT) | ~1.5GB | 2–4GB | Fast, light tasks; check license if you redistribute configs. |
 
 Exact tag names vary on the Ollama library; confirm with `ollama list` / [ollama.com/library](https://ollama.com/library).
 
-**Accuracy / benchmarking:** do **not** claim “>95%” against open-ended chat. Scope targets to a **fixed agent-task suite** (e.g. file-op payloads, command allowlist classification, handoff phrasing, intent labels) measured with manual or automated regression prompts. Tune model + prompts against that suite; Phi-3 Mini is a sensible first baseline for those narrower tasks.
+**Accuracy / benchmarking:** do **not** claim “>95%” against open-ended chat. Scope targets to a **fixed agent-task suite** (e.g. file-op payloads, command allowlist classification, handoff phrasing, intent labels) measured with **`tests/benchmark/run_benchmark.py`**. Tune model + few-shot prompts against that suite; **`qwen2.5:7b`** is the current documented pick when the **>~80%** intent-axis target matters more than minimum RAM.
 
 ### 4.4 Soul history and rollback `[Implemented]`
 
@@ -270,7 +271,7 @@ Threats: path traversal (mitigated by `safe_relative_path` and roots), arbitrary
 | Version | Date | Notes |
 |---------|------|--------|
 | 2.0 | 2026-05-14 | Draft: codebase-aligned vocabulary, routes, soul + browser detail, governance. |
-| 2.0.1 | 2026-05-14 | §2.4 router vs model intelligence; benchmark + explicit no pre-clean. |
+| 2.0.2 | 2026-05-14 | §4.3: `qwen2.5:7b` default for local accuracy; benchmark few-shot expansion. |
 | 1.x | (prior drafts) | Superseded — generic diagrams / incorrect API names. |
 
 ---

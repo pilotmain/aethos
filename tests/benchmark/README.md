@@ -6,7 +6,9 @@ Offline-curated prompts (`prompts.json`) score how well a **local Ollama** model
 
 `run_benchmark.py` prepends **disambiguation rules + few-shot JSON lines** to the base `system` string from `prompts.json`, and uses **bracket-balanced** JSON extraction so answers with trailing prose still score.
 
-Approximate historical run on `phi3:mini` (same 65-case set, machine-dependent): **~31%** (baseline) → **~58%** after few-shot (example: 38/65). Treat numbers as **regression deltas**, not guarantees. If you need **>80%** on this suite without changing goldens, try **`--model`** with a larger tag (e.g. `qwen2.5:7b`, `phi3:medium`) per `docs/DESIGN.md` §4.3.
+Approximate historical run on the 65-case harness (machine-dependent): **~31%** (`phi3:mini`, baseline) → **~58%** (few-shot + `phi3:mini`) → **~77%** (`qwen2.5:7b` + few-shot, before the 2026-05-14 prompt expansion). Re-run after pulls: `python tests/benchmark/run_benchmark.py --timeout 180`. Default model tag in `prompts.json` / `.env.example` is **`qwen2.5:7b`** when accuracy matters; use **`phi3:mini`** when RAM is tight.
+
+Treat numbers as **regression deltas**. If you need **>80%**, combine this prompt with **`qwen2.5:7b`** (or **`qwen2.5:14b`** if RAM allows) and occasional **golden-label** edits for ambiguous lines in `prompts.json`.
 
 ## Prerequisites
 
