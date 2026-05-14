@@ -238,6 +238,11 @@ def dedupe_env_assignment_lines(path: Path) -> None:
     path.write_text("\n".join(out) + "\n", encoding="utf-8")
 
 
+def ollama_cli_on_path() -> bool:
+    """True when the ``ollama`` executable is on PATH (does not verify ``ollama serve`` or pulled models)."""
+    return shutil.which("ollama") is not None
+
+
 def _aethos_auto_register_workspace_default() -> bool:
     """When true (default), queue workspace API registration without an extra prompt."""
     v = (os.environ.get("AETHOS_AUTO_REGISTER_WORKSPACE") or "true").strip().lower()
@@ -566,6 +571,25 @@ class SetupWizard:
         if low_llm in ("false", "0", "no", ""):
             self._update_env_key("USE_REAL_LLM", "true")
 
+    def _apply_ollama_autodetect_to_env(self) -> None:
+        """If ``ollama`` is on PATH, prefer local HTTP backend (matches ``providers_available()`` / bootstrap)."""
+        if not self.env_path.is_file():
+            return
+        if ollama_cli_on_path():
+            self._update_env_key("NEXA_OLLAMA_ENABLED", "true")
+            self._update_env_key("NEXA_LLM_PROVIDER", "ollama")
+            print(
+                f"  {Colors.success('Ollama CLI on PATH — set NEXA_OLLAMA_ENABLED=true and NEXA_LLM_PROVIDER=ollama')}"
+            )
+            print(
+                f"  {Colors.DIM}Start or keep `ollama serve` running and pull a model (see NEXA_OLLAMA_DEFAULT_MODEL).{Colors.RESET}"
+            )
+        else:
+            print(
+                f"  {Colors.DIM}Ollama CLI not on PATH — left NEXA_OLLAMA_ENABLED / provider as in template "
+                f"(install from https://ollama.com for local models).{Colors.RESET}"
+            )
+
     def _sync_self_improvement_and_owners_for_user(self, user_id: str) -> None:
         """Always enable self-improvement; bind owner gates to the Mission Control web user id."""
         self._update_env_key("NEXA_SELF_IMPROVEMENT_ENABLED", "true")
@@ -701,6 +725,7 @@ class SetupWizard:
 
         self._configure_playwright_after_env()
         self._apply_setup_default_env_overlay()
+        self._apply_ollama_autodetect_to_env()
         dedupe_env_assignment_lines(self.env_path)
         print(
             f"\n  {Colors.success('Environment file (deduplicated keys):')} "
