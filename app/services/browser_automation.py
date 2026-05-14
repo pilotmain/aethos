@@ -1,18 +1,110 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2025 AethOS AI
 
-"""Host-executor browser helpers: URL allowlist + sync bridge to async Playwright."""
+"""Host-executor browser helpers: URL allowlist + sync Playwright (reused session)."""
 
 from __future__ import annotations
 
-import asyncio
-import concurrent.futures
+import logging
 import re
 import subprocess
+import threading
+from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
 from app.core.config import get_settings
+
+logger = logging.getLogger(__name__)
+
+# Host executor calls ``run_browser_host_action_sync`` from sync code, often via ``asyncio.run()``
+# in a worker thread. A module-level **async** Playwright tied to a closed event loop breaks the
+# next ``open`` ("handler is closed"). Keep a dedicated **sync** Playwright session for this path.
+_sync_lock = threading.Lock()
+_sync_pw: Any = None
+_sync_browser: Any = None
+_sync_context: Any = None
+_sync_page: Any = None
+
+
+def _reset_sync_browser_session_locked() -> None:
+    global _sync_pw, _sync_browser, _sync_context, _sync_page
+    if _sync_page is not None:
+        try:
+            _sync_page.close()
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("sync browser page close: %s", exc)
+        _sync_page = None
+    if _sync_context is not None:
+        try:
+            _sync_context.close()
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("sync browser context close: %s", exc)
+        _sync_context = None
+    if _sync_browser is not None:
+        try:
+            _sync_browser.close()
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("sync browser close: %s", exc)
+        _sync_browser = None
+    if _sync_pw is not None:
+        try:
+            _sync_pw.stop()
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("sync playwright stop: %s", exc)
+        _sync_pw = None
+
+
+def _get_sync_host_browser_page():
+    """Return a shared sync Playwright page (lazy start, reused across consecutive host actions)."""
+    from playwright.sync_api import sync_playwright
+
+    global _sync_pw, _sync_browser, _sync_context, _sync_page
+
+    with _sync_lock:
+        s = get_settings()
+        sec = getattr(s, "nexa_browser_timeout_seconds", None)
+        if sec is not None:
+            try:
+                timeout_ms = max(int(sec), 1) * 1000
+            except (TypeError, ValueError):
+                timeout_ms = int(getattr(s, "nexa_browser_timeout", 30000) or 30000)
+        else:
+            timeout_ms = int(getattr(s, "nexa_browser_timeout", 30000) or 30000)
+
+        if _sync_page is not None:
+            try:
+                if not _sync_page.is_closed():
+                    _sync_page.set_default_timeout(timeout_ms)
+                    return _sync_page
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("sync browser session stale, restarting: %s", exc)
+            _reset_sync_browser_session_locked()
+
+        _sync_pw = sync_playwright().start()
+        headless = bool(getattr(s, "nexa_browser_headless", True))
+        _sync_browser = _sync_pw.chromium.launch(
+            headless=headless,
+            args=[
+                "--no-sandbox",
+                "--disable-dev-shm-usage",
+                "--disable-setuid-sandbox",
+            ],
+        )
+        _sync_context = _sync_browser.new_context(
+            user_agent=getattr(s, "nexa_web_user_agent", None) or "AethOSBrowser/1.0",
+        )
+        _sync_page = _sync_context.new_page()
+        _sync_page.set_default_timeout(timeout_ms)
+        logger.info("sync host browser session started headless=%s", headless)
+        return _sync_page
+
+
+def shutdown_sync_browser_host_session() -> None:
+    """Close the sync Playwright session used by :func:`run_browser_host_action_sync` (API shutdown)."""
+    with _sync_lock:
+        _reset_sync_browser_session_locked()
 
 
 def assert_browser_url_allowed(url: str) -> None:
@@ -95,65 +187,49 @@ def run_browser_host_action_sync(action: str, payload: dict[str, Any]) -> str:
     Run a allowlisted browser host_action from synchronous :func:`~app.services.host_executor.execute_payload`.
 
     ``action`` is one of: ``browser_open``, ``browser_click``, ``browser_fill``, ``browser_screenshot``.
-    """
-    from app.services.browser.controller import get_browser_controller
 
+    Uses a process-wide **sync** Playwright browser/page so consecutive ``open`` commands reuse the
+    same tab instead of hitting a stale async driver after per-call ``asyncio.run()`` teardown.
+    """
     act = (action or "").strip().lower()
-    ctrl = get_browser_controller()
     timeout_ms = default_browser_timeout_ms()
     op_timeout = min(max(timeout_ms, 1000), 120_000)
+    page = _get_sync_host_browser_page()
+    page.set_default_timeout(op_timeout)
 
-    async def _run() -> str:
-        if act == "browser_open":
-            url = str(payload.get("url") or "").strip()
-            if not url:
-                raise ValueError("browser_open requires url")
-            assert_browser_url_allowed(url)
-            r = await ctrl.navigate(url, wait_until="domcontentloaded")
-            if not r.success:
-                raise ValueError(r.error or "navigate failed")
-            return str(r.output)
-        if act == "browser_click":
-            sel = _sanitize_selector(str(payload.get("selector") or ""))
-            r = await ctrl.click(sel, timeout=op_timeout)
-            if not r.success:
-                raise ValueError(r.error or "click failed")
-            return str(r.output)
-        if act == "browser_fill":
-            sel = _sanitize_selector(str(payload.get("selector") or ""))
-            text = str(payload.get("text") or "")
-            if not text:
-                raise ValueError("browser_fill requires text")
-            if len(text) > 50_000:
-                raise ValueError("text too long (max 50000)")
-            r = await ctrl.fill(sel, text, timeout=op_timeout)
-            if not r.success:
-                raise ValueError(r.error or "fill failed")
-            return str(r.output)
-        if act == "browser_screenshot":
-            name = str(payload.get("name") or "").strip() or None
-            r = await ctrl.screenshot(name)
-            if not r.success:
-                raise ValueError(r.error or "screenshot failed")
-            return str(r.output)
-        raise ValueError(f"unknown browser host action {act!r}")
-
-    async def _wrapper() -> str:
-        return await _run()
-
-    wall_timeout = min(600, max(30, op_timeout // 1000 + 30))
-
-    try:
-        asyncio.get_running_loop()
-    except RuntimeError:
-        return asyncio.run(_wrapper())
-    else:
-
-        def _thread_runner() -> str:
-            return asyncio.run(_wrapper())
-
-        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-            return pool.submit(_thread_runner).result(timeout=wall_timeout)
+    if act == "browser_open":
+        url = str(payload.get("url") or "").strip()
+        if not url:
+            raise ValueError("browser_open requires url")
+        assert_browser_url_allowed(url)
+        page.goto(url, wait_until="domcontentloaded", timeout=op_timeout)
+        title = page.title()
+        return f"Navigated to {url}\nTitle: {title}"
+    if act == "browser_click":
+        sel = _sanitize_selector(str(payload.get("selector") or ""))
+        page.click(sel, timeout=op_timeout)
+        return f"Clicked: {sel}"
+    if act == "browser_fill":
+        sel = _sanitize_selector(str(payload.get("selector") or ""))
+        text = str(payload.get("text") or "")
+        if not text:
+            raise ValueError("browser_fill requires text")
+        if len(text) > 50_000:
+            raise ValueError("text too long (max 50000)")
+        page.fill(sel, text, timeout=op_timeout)
+        return f"Filled {sel}"
+    if act == "browser_screenshot":
+        settings = get_settings()
+        screenshot_dir = Path(settings.nexa_browser_screenshot_dir or "")
+        screenshot_dir.mkdir(parents=True, exist_ok=True)
+        name = str(payload.get("name") or "").strip() or None
+        stem = name or f"screenshot_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.png"
+        if not str(stem).lower().endswith(".png"):
+            stem = f"{stem}.png"
+        path = screenshot_dir / stem
+        page.screenshot(path=str(path), full_page=True)
+        return f"Screenshot saved: {path}"
+    raise ValueError(f"unknown browser host action {act!r}")
 
 
 _RE_BROWSER_OPEN = re.compile(r"(?is)^(?:open|goto)\s+(https?://\S+)$")

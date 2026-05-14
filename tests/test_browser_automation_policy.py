@@ -6,7 +6,7 @@ from __future__ import annotations
 import pytest
 
 from app.core.config import get_settings
-from app.services.browser_automation import assert_browser_url_allowed
+from app.services.browser_automation import assert_browser_url_allowed, shutdown_sync_browser_host_session
 
 
 def test_browser_allowed_domains_star(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -30,3 +30,8 @@ def test_browser_allowed_domains_restricts(monkeypatch: pytest.MonkeyPatch) -> N
     finally:
         monkeypatch.delenv("NEXA_BROWSER_ALLOWED_DOMAINS", raising=False)
         get_settings.cache_clear()
+
+
+def test_shutdown_sync_browser_host_session_idempotent() -> None:
+    shutdown_sync_browser_host_session()
+    shutdown_sync_browser_host_session()

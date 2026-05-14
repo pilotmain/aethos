@@ -277,6 +277,12 @@ async def lifespan(app: FastAPI):
         await shutdown_browser_session()
     except Exception as exc:
         logging.getLogger("aethos").warning("browser session shutdown failed: %s", exc)
+    try:
+        from app.services.browser_automation import shutdown_sync_browser_host_session
+
+        shutdown_sync_browser_host_session()
+    except Exception as exc:
+        logging.getLogger("aethos").warning("sync browser host session shutdown failed: %s", exc)
     if getattr(_boot, "nexa_agent_monitoring_enabled", False):
         try:
             from app.services.agent.supervisor import get_supervisor
