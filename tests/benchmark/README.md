@@ -1,6 +1,6 @@
 # Agent-task intent benchmark
 
-Offline-curated prompts (`prompts.json`) score how well a **local Ollama** model (default **`phi3:mini`**) returns JSON aligned with golden **`intent`** labels. This is a **narrow axis** (intent classification style); it does **not** prove end-to-end host-executor or gateway safety — see `docs/DESIGN.md` §4.3 for scope and for **>95%** claims: define a fixed task suite and treat numbers as regression deltas, not “beats GPT-4 on chat”.
+Offline-curated prompts (`prompts.json`) score how well a **local Ollama** model (default **`phi3:mini`**) returns JSON aligned with golden **`intent`** labels. This is a **narrow axis** (intent classification style); it does **not** prove end-to-end host-executor or gateway safety — see `docs/DESIGN.md` **§2.4** (router vs model) and **§4.3** for scope and for **>95%** claims: define a fixed task suite and treat numbers as regression deltas, not “beats GPT-4 on chat”.
 
 ## Prerequisites
 

@@ -96,6 +96,26 @@ Benchmarks are **not CI-enforced** in this document unless separately added. Mea
 | Ollama **enabled in config** but HTTP unreachable or **`GET …/api/tags`** returns **no models** | **`is_ollama_ready()`** is false → **`providers_available()`** is false for the Ollama-only case → **`use_real_llm()`** false → **template / fallback** composer (same as no-provider). Result is cached briefly (~15s) so the gateway recovers when Ollama starts. |
 | Cloud or gateway keys present | Anthropic / OpenAI (merged system + user), DeepSeek, OpenRouter, or `NEXA_LLM_API_KEY` with a non-`auto` primary satisfy **`providers_available()`**; routing follows `NEXA_LLM_PROVIDER` and registry order in bootstrap. |
 
+### 2.4 Design principle — router / executor vs model intelligence `[Target]`
+
+**AethOS should not “think”; it should route and execute.**
+
+- The **quantized / local LLM** (e.g. Phi-3 Mini, Gemma 2, Qwen via **Ollama HTTP** today) is intended to carry **reasoning, classification, and natural-language generation** where product quality requires it.  
+- AethOS carries the **doing**: file operations, command execution, browser control, deployment wiring, agent registry routing, permissions, and approvals.
+
+**Current implementation is layered:** regex heuristics, template fallbacks, gateway branches, and LLM calls coexist (`intent_classifier.py`, `response_composer.py`, gateway runtime). That is **intentionally transitional** until a local model path is **benchmarked and trusted** on a fixed agent-task suite (see **`tests/benchmark/`** — harness **implemented**; golden prompts and scoring evolve with measurements).
+
+**Target shape (after local model integration + validation, not before):**
+
+1. **Intent classification** → primary path through the **local / quantized** model (fast, consistent JSON or structured output).  
+2. **User-visible reply generation** → same stack where appropriate, with policy guards unchanged.  
+3. **Tool execution** → **deterministic** gates (`host_executor`, allowlists, approvals) — separate from “model chooses to run bash”.  
+4. **Agent handoff** → model proposes / classifies; **AethOS** enforces routing, quotas, and safety.
+
+**Cleanup (explicitly later — do not pre-clean):** remove or shrink regex-only intent shortcuts, shrink template-only reply surfaces, simplify fallback chains, and reduce gateway branching **only after** benchmark targets are met and the local stack is the default happy path.
+
+**Order of operations:** benchmark harness → integrate / tune quantized primary LLM (Ollama or ADR’d provider) → validate accuracy on the **scoped** task set → **then** delete legacy paths. Skipping ahead risks regressions while paid-cloud and safety paths still matter.
+
 ---
 
 ## 3. Architecture
@@ -250,6 +270,7 @@ Threats: path traversal (mitigated by `safe_relative_path` and roots), arbitrary
 | Version | Date | Notes |
 |---------|------|--------|
 | 2.0 | 2026-05-14 | Draft: codebase-aligned vocabulary, routes, soul + browser detail, governance. |
+| 2.0.1 | 2026-05-14 | §2.4 router vs model intelligence; benchmark + explicit no pre-clean. |
 | 1.x | (prior drafts) | Superseded — generic diagrams / incorrect API names. |
 
 ---
