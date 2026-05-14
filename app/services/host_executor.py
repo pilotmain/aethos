@@ -307,10 +307,73 @@ def _command_work_dir() -> Path:
     return Path(raw).expanduser().resolve()
 
 
+def _allowed_command_cwd_anchor_roots() -> list[Path]:
+    """Resolved dirs where ``cwd_relative`` / ``npm install in`` may target (mkdir allowed)."""
+    roots: list[Path] = []
+    seen: set[str] = set()
+
+    def add(p: Path) -> None:
+        try:
+            r = p.expanduser().resolve(strict=False)
+            k = str(r)
+            if k not in seen:
+                seen.add(k)
+                roots.append(r)
+        except OSError:
+            return
+
+    add(_command_work_dir())
+    add(_base_work_dir())
+    try:
+        add(Path("/tmp"))
+    except OSError:
+        pass
+    try:
+        import tempfile
+
+        add(Path(tempfile.gettempdir()))
+    except OSError:
+        pass
+    return roots
+
+
+def path_is_under_allowed_command_cwd_anchor(p: Path) -> bool:
+    """True when ``p`` resolves under command root, host work root, ``/tmp``, or system temp."""
+    try:
+        pr = p.expanduser().resolve(strict=False)
+    except OSError:
+        return False
+    for a in _allowed_command_cwd_anchor_roots():
+        try:
+            pr.relative_to(a)
+            return True
+        except ValueError:
+            continue
+    return False
+
+
 def _resolve_command_cwd(cwd: str | None = None) -> Path:
     root = _command_work_dir()
     raw = (cwd or "").strip()
-    target = root if not raw else Path(raw).expanduser()
+    if not raw:
+        return root
+    if raw.startswith("/"):
+        try:
+            resolved = Path(raw).expanduser().resolve(strict=False)
+        except OSError as e:
+            raise ValueError(f"invalid cwd: {e}") from e
+        if not path_is_under_allowed_command_cwd_anchor(resolved):
+            raise ValueError(
+                "command cwd must be under NEXA_COMMAND_WORK_ROOT, HOST_EXECUTOR_WORK_ROOT, /tmp, or system temp"
+            )
+        _path_allowed_for_io(resolved)
+        try:
+            resolved.mkdir(parents=True, exist_ok=True)
+        except OSError as e:
+            raise ValueError(f"could not create cwd: {e}") from e
+        return resolved
+
+    target = Path(raw).expanduser()
     if not target.is_absolute():
         target = root / raw
     resolved = target.resolve()
@@ -324,7 +387,7 @@ def _resolve_command_cwd(cwd: str | None = None) -> Path:
 
 
 def _absolute_arg_allowed(arg: str) -> bool:
-    """Allow ``/`` or ``~`` path tokens under the command work root or system temp (e.g. ``/tmp``)."""
+    """Allow ``/`` or ``~`` tokens under allowed cwd anchors; mkdir missing dirs when permitted."""
     raw = (arg or "").strip()
     if not raw or raw.startswith("-"):
         return False
@@ -336,33 +399,14 @@ def _absolute_arg_allowed(arg: str) -> bool:
     except (OSError, ValueError):
         return False
 
-    anchor_roots: list[Path] = []
-    try:
-        anchor_roots.append(_command_work_dir().resolve())
-    except OSError:
-        pass
-    try:
-        anchor_roots.append(Path("/tmp").resolve())
-    except OSError:
-        pass
-    try:
-        import tempfile
-
-        anchor_roots.append(Path(tempfile.gettempdir()).resolve())
-    except OSError:
-        pass
-    seen: set[str] = set()
-    for root in anchor_roots:
-        key = str(root)
-        if key in seen:
-            continue
-        seen.add(key)
+    if not path_is_under_allowed_command_cwd_anchor(p):
+        return False
+    if not p.exists():
         try:
-            p.relative_to(root)
-            return True
-        except ValueError:
-            continue
-    return False
+            p.mkdir(parents=True, exist_ok=True)
+        except OSError:
+            return False
+    return True
 
 
 def _command_timeout(default_timeout: int) -> int:
@@ -1475,7 +1519,13 @@ def execute_payload(
         command = (payload.get("command") or "").strip()
         if command:
             cwd_rel = str(payload.get("cwd_relative") or "").strip()
-            command_cwd = str(_safe_join_under_root(_command_work_dir(), cwd_rel)) if cwd_rel else None
+            if cwd_rel:
+                if cwd_rel.startswith("/"):
+                    command_cwd = str(_resolve_command_cwd(cwd_rel))
+                else:
+                    command_cwd = str(_safe_join_under_root(_command_work_dir(), cwd_rel))
+            else:
+                command_cwd = None
             result = _execute_command_sync(
                 command,
                 cwd=command_cwd,

@@ -185,6 +185,20 @@ def _validate_enqueue_payload(payload: dict[str, Any]) -> dict[str, Any] | None:
     def _attach_cwd(out: dict[str, Any]) -> dict[str, Any]:
         cwd = str(payload.get("cwd_relative") or "").strip()
         if cwd:
+            if cwd.startswith("/"):
+                from pathlib import Path
+
+                from app.services.host_executor import path_is_under_allowed_command_cwd_anchor
+
+                try:
+                    p = Path(cwd).expanduser().resolve(strict=False)
+                except OSError:
+                    return out
+                if path_is_under_allowed_command_cwd_anchor(p):
+                    out = dict(out)
+                    out["cwd_relative"] = str(p)
+                    return out
+                return out
             sr = safe_relative_path(cwd.replace("\\", "/"))
             if sr:
                 out = dict(out)
@@ -199,14 +213,18 @@ def _validate_enqueue_payload(payload: dict[str, Any]) -> dict[str, Any] | None:
         if rn in ALLOWED_RUN_COMMANDS:
             return _attach_cwd({"host_action": "run_command", "run_name": rn})
         cmd = str(payload.get("command") or "").strip()
-        if cmd and is_command_safe(cmd):
-            out_rc = {
-                "host_action": "run_command",
-                "command": cmd,
-                "command_type": str(payload.get("command_type") or "").strip()[:80],
-            }
-            return _attach_cwd(out_rc)
-        return None
+        if not cmd:
+            return None
+        from app.services.host_executor_intent import _host_cli_enqueue_despite_safety
+
+        if not (is_command_safe(cmd) or _host_cli_enqueue_despite_safety(cmd, cmd)):
+            return None
+        out_rc = {
+            "host_action": "run_command",
+            "command": cmd,
+            "command_type": str(payload.get("command_type") or "").strip()[:80],
+        }
+        return _attach_cwd(out_rc)
     if act == "file_read":
         rel = safe_relative_path(str(payload.get("relative_path") or ""))
         if rel:

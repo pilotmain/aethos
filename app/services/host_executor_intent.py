@@ -103,13 +103,48 @@ def _write_target_relative_path(path_raw: str, *, parent_raw: str | None = None)
     if target.is_absolute() or target_text.startswith("~"):
         try:
             root = Path(get_settings().host_executor_work_root).expanduser().resolve()
-            candidate = Path(target_text).expanduser().resolve()
+            candidate = Path(target_text).expanduser().resolve(strict=False)
             rel = candidate.relative_to(root)
         except (OSError, ValueError):
             return None
         return safe_relative_path(str(rel).replace("\\", "/"))
 
     return safe_relative_path(target_text.replace("\\", "/"))
+
+
+def _resolve_install_cwd_directory_token(directory: str) -> str | None:
+    """Resolve ``npm install in <dir>`` / similar ``directory`` for ``cwd_relative`` (mkdir under anchors)."""
+    d = _clean_path_token(directory)
+    if not d:
+        return None
+    try:
+        candidate = Path(d).expanduser().resolve(strict=False)
+    except OSError:
+        return None
+
+    from app.services.host_executor import (
+        _command_work_dir,
+        _path_allowed_for_io,
+        path_is_under_allowed_command_cwd_anchor,
+    )
+
+    if not path_is_under_allowed_command_cwd_anchor(candidate):
+        return None
+    try:
+        _path_allowed_for_io(candidate)
+    except ValueError:
+        return None
+    try:
+        candidate.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        return None
+
+    cmd_root = _command_work_dir()
+    try:
+        rel = candidate.relative_to(cmd_root)
+        return safe_relative_path(str(rel).replace("\\", "/"))
+    except ValueError:
+        return str(candidate)
 
 
 def title_for_payload(payload: dict[str, Any]) -> str:
@@ -622,7 +657,7 @@ def infer_host_executor_action(user_text: str) -> dict[str, Any] | None:
         }
         directory = str(command_intent.get("directory") or "").strip()
         if directory:
-            cwd_rel = _write_target_relative_path(".", parent_raw=directory)
+            cwd_rel = _resolve_install_cwd_directory_token(directory)
             if not cwd_rel:
                 return None
             out["cwd_relative"] = "." if cwd_rel == "." else cwd_rel.rstrip("/")

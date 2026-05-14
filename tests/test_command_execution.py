@@ -124,6 +124,17 @@ class TestCommandExecution:
         assert pl.get("host_action") == "run_command"
         assert pl.get("command") == "mkdir -p /tmp/nexa_infer_mkdir_test"
 
+    def test_infer_npm_install_in_missing_subdir(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        s = _settings(tmp_path)
+        monkeypatch.setattr("app.services.host_executor_intent.get_settings", lambda: s)
+        d = tmp_path / "new_pkg_dir"
+        assert not d.is_dir()
+        pl = infer_host_executor_action(f"npm install in {d}")
+        assert pl is not None
+        assert pl.get("host_action") == "run_command"
+        assert d.is_dir()
+        assert pl.get("cwd_relative")
+
     def test_execute_chained_mkdir_echo(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         settings = _settings(tmp_path)
         monkeypatch.setattr(host_executor, "get_settings", lambda: settings)
