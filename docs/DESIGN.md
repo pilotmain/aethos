@@ -80,7 +80,10 @@ Benchmarks are **not CI-enforced** in this document unless separately added. Mea
 | NFR-01 | Gateway turn (server-side `POST …/gateway/run` processing) | Document p50/p95 after profiling; not including browser TLS |
 | NFR-02 | Small file write under host executor | Order-of-magnitude ms on reference machine |
 | NFR-03 | Idle RAM (API only) | Measure with typical `.env` |
-| NFR-04 | RAM with Ollama + model | Measure with pinned model |
+| NFR-04 | RAM with Ollama + model | Measure **Ollama server** RSS (and Python) — see `scripts/benchmark_performance.py` |
+| NFR-05 | Intent `classify_intent_llm` round-trip | Run `python scripts/benchmark_performance.py --runs 100`; record `latency_ms.p50` / `p95` and RSS snapshot JSON (`data/benchmark_performance/latest.json` by default) |
+
+**Performance capture (local):** `scripts/benchmark_performance.py` prints a human summary and writes JSON (default under `data/benchmark_performance/`). Commit numbers into `RELEASE_NOTES.md` or the GitHub release body for a tagged build; CI may skip Ollama-heavy gates via `SKIP_RELEASE_GATE_BENCHMARK=1` on `tests/release_gate.py`.
 
 **Explicit non-goals for local OSS:** no **99.9% SLA** claim for a single laptop process without defining hosting.
 
@@ -268,6 +271,7 @@ Threats: path traversal (mitigated by `safe_relative_path` and roots), arbitrary
 | Version | Date | Notes |
 |---------|------|--------|
 | 2.0 | 2026-05-14 | Draft: codebase-aligned vocabulary, routes, soul + browser detail, governance. |
+| 2.0.4 | 2026-05-14 | NFR-05 + `scripts/benchmark_performance.py`; `RELEASE_NOTES.md`; `tests/release_gate.py`. |
 | 2.0.3 | 2026-05-14 | §2.4 `[Implemented]`: router/executor + local `qwen2.5:7b` benchmark 100%; §3.5 Ollama path; intent LLM uses `providers_available()`; shared `intent_classifier_prompt_shots.py`. |
 | 2.0.2 | 2026-05-14 | §4.3: `qwen2.5:7b` default for local accuracy; benchmark few-shot expansion. |
 | 1.x | (prior drafts) | Superseded — generic diagrams / incorrect API names. |
