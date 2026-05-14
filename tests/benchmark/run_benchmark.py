@@ -69,21 +69,24 @@ def build_intent_classifier_system_prompt(base_instruction: str) -> str:
 ## Critical disambiguation (read before classifying)
 - **greeting**: short social openers only (hi, hello, hey, good morning, howdy) with **no** real task yet. **Never** use general_chat for these.
 - **general_chat**: trivia, small talk, factual Q&A, or chit-chat that is **not** a greeting-only line and **not** another intent.
-- **brain_dump**: user lists **2+ concrete tasks/errands** or clear multi-item todo language — not a single imperative dev command.
+- **brain_dump**: user lists **2+ concrete tasks/errands** or clear multi-item todo language — not a single imperative dev command. **Release-engineering checklists** (ship patch, changelog, tag, tests) are **brain_dump** unless they explicitly demand a **hosted** fix-push-verify **pipeline** (Railway/Render/production) — then **external_execution**.
 - **create_sub_agent**: user wants a **named role/specialist agent** (marketing, QA, security, research, …) via registry — phrases like "create a … agent", "spawn a … agent", "I need a … specialist".
 - **create_custom_agent**: legacy **user-defined agent profile** wording only when clearly about building a **custom profile/config**, not a role specialist (rare in benchmarks).
 - **orchestrate_system**: status across **missions / Mission Control / dev runs / what succeeded or failed** — orchestration overview.
-- **external_execution**: user wants an **end-to-end pipeline** on hosted infra (check logs, fix, push, redeploy, verify production).
+- **external_execution**: user wants an **end-to-end pipeline** on **hosted** infra (check logs, fix, push, redeploy, **verify production** / explicit hosted service). **Not** a simple local task list without hosted verification language.
 - **external_execution_continue**: short confirmation continuing a prior **external execution / Railway / deploy** access thread.
 - **external_investigation**: hosted provider health / outage / dashboard questions **without** demanding the full fix-push-verify pipeline.
 - **stuck**: emotional **freeze / overwhelm about life or work in general** without a concrete task list or “not done yet” deferral.
-- **followup_reply**: user reports **incomplete work** on something already in motion (“I didn’t finish”, “not done yet”, “still working on it”) — **not** stuck unless it is clearly emotional overwhelm, not task status.
+- **followup_reply**: user reports **incomplete work** on something already in motion (“I didn’t finish”, “not done yet”, “still working on it”) — **not** stuck unless it is clearly emotional overwhelm, not task status. **Not** status_update: followup is about **incomplete** progress, not **done**.
+- **status_update**: user reports **completed** or **done** work (“I finished…”, “completed the migration”, “shipped it yesterday”).
 - **correction**: user **rejects** the assistant’s prior answer or demands it answer differently (“No, answer the question”, “you misunderstood”).
-- **clarification**: vague product tweak with **no URL/stack/concrete goal** (“make my website better”).
+- **clarification**: vague product tweak with **no URL/stack/concrete goal** (“make my website better”, “improve my app”) — **not** help_request when the user is asking how to decide what to do next. **Not** analysis: **postmortem / root-cause / “analyze this [paste, trace, summary]”** on supplied material → **analysis**, not a vague tweak.
+- **analysis**: asks for a **structured writeup or diagnosis of supplied material** — **postmortem**/RCA on an outage summary, “**analyze this** stack trace / log / document”. **Not** when the user is mainly **reporting a live project failure** (TypeError in code, eslint/pytest/CI failures) → that is **stuck_dev**.
+- **help_request**: user wants **support, guidance, or help figuring out next steps** (“I need help”, “not sure what to ask”, “help me figure out what to do next”) — **not** greeting (no hi/hello opener required) and **not** clarification unless the message is **only** a vague product tweak with zero help-seeking.
 - **config_query**: asks about **this deployment’s** configuration (which LLM, workspace path, whether keys are set — never the secret values).
 - **capability_question**: asks what the assistant **can or cannot do** in a domain (“can you deploy”, “do you support agents”) — not “run npm test” style imperative.
-- **dev_command**: imperative to **run a specific command or inspect repo** (“run npm test”, “git status”) — not a capability question.
-- **stuck_dev**: **build, test, CI, deploy, tooling, stack traces, configs** — technical blockage.
+- **dev_command**: imperative **run / show / print** (“run npm test”, “git status”) — **not** “tool X **fails** / **error** …” (those are **stuck_dev** failure reports, not commands).
+- **stuck_dev**: **build, test, CI, lint, deploy, tooling** — user’s project is **broken or red** (TypeError, failing tests, eslint errors, CI red). Prefer **stuck_dev** over **analysis** when the line **reports a failure** rather than asking to postmortem/analyze a pasted artifact.
 
 ## Few-shot (your entire reply must be ONE JSON object only — no markdown, no text before or after)
 User message: hello there
@@ -119,6 +122,12 @@ User message: I feel completely stuck and can't start
 User message: pytest fails with a fixture error on CI
 {"intent":"stuck_dev","confidence":0.9,"reason":"technical CI/test failure"}
 
+User message: TypeError in my FastAPI route handler
+{"intent":"stuck_dev","confidence":0.9,"reason":"runtime error in user code"}
+
+User message: eslint fails with no-unused-vars
+{"intent":"stuck_dev","confidence":0.9,"reason":"lint failure not an imperative command"}
+
 User message: I didn't finish the task yet
 {"intent":"followup_reply","confidence":0.9,"reason":"incomplete work update"}
 
@@ -134,6 +143,12 @@ User message: you misunderstood my request
 User message: make my website better
 {"intent":"clarification","confidence":0.85,"reason":"vague product ask"}
 
+User message: analyze this stack trace and root cause it
+{"intent":"analysis","confidence":0.9,"reason":"structured technical diagnosis"}
+
+User message: postmortem this outage summary
+{"intent":"analysis","confidence":0.9,"reason":"incident postmortem is structured analysis"}
+
 User message: what model are you using
 {"intent":"config_query","confidence":0.9,"reason":"deployment LLM settings"}
 
@@ -142,6 +157,18 @@ User message: can you write code for me
 
 User message: run npm test in the repo root
 {"intent":"dev_command","confidence":0.9,"reason":"imperative command"}
+
+User message: ship the patch, update the changelog, and tag the release
+{"intent":"brain_dump","confidence":0.9,"reason":"multi-item local release checklist not hosted pipeline"}
+
+User message: I need help but I'm not sure what to ask
+{"intent":"help_request","confidence":0.88,"reason":"seeks guidance not a greeting"}
+
+User message: I finished the migration yesterday
+{"intent":"status_update","confidence":0.92,"reason":"reports completed work"}
+
+User message: help me figure out what to do next
+{"intent":"help_request","confidence":0.88,"reason":"next-step guidance not vague product tweak"}
 """.strip()
     return f"{base}\n\n{shots}".strip()
 
