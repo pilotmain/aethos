@@ -52,8 +52,19 @@ def test_missing_key_raises() -> None:
         "app.services.web_search.get_settings",
         return_value=_settings(nexa_web_search_enabled=True, nexa_web_search_api_key=""),
     ):
-        with pytest.raises(MissingWebSearchKey):
+        with pytest.raises(MissingWebSearchKey) as excinfo:
             search_web("hello")
+    msg = str(excinfo.value)
+    assert "NEXA_WEB_SEARCH_API_KEY" in msg
+    assert "brave" in msg.lower()
+
+
+def test_web_search_configuration_error_payload() -> None:
+    from app.services.web_search import web_search_configuration_error_payload
+
+    d = web_search_configuration_error_payload()
+    assert "error" in d
+    assert "NEXA_WEB_SEARCH_ENABLED" in d["error"]
 
 
 def test_max_results_capped() -> None:

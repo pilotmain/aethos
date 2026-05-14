@@ -29,14 +29,39 @@ def _redact(s: str) -> str:
     return t[:1_200]
 
 
+_WEB_SEARCH_CONFIGURE_HELP = (
+    "Web search is not fully configured.\n\n"
+    "To enable real-time web search:\n"
+    "1. Get an API key (Brave is a common default): https://api.search.brave.com/app/documentation\n"
+    "2. Add to your repo-root `.env` or `~/.aethos/.env`:\n"
+    "   NEXA_WEB_SEARCH_ENABLED=true\n"
+    "   NEXA_WEB_SEARCH_PROVIDER=brave\n"
+    "   NEXA_WEB_SEARCH_API_KEY=your-key-here\n"
+    "3. Restart the API (and bot if applicable) so the process reloads the environment.\n\n"
+    "Other providers: set NEXA_WEB_SEARCH_PROVIDER to `tavily` or `serpapi` and use that vendor's key. "
+    "See `.env.example` (web search section) and `scripts/verify_web_search.py`."
+)
+
+_WEB_SEARCH_DISABLED_HELP = (
+    "Web search is disabled (NEXA_WEB_SEARCH_ENABLED is not true on the host).\n\n"
+    "To enable it, set NEXA_WEB_SEARCH_ENABLED=true, then configure provider and API key:\n\n"
+    + _WEB_SEARCH_CONFIGURE_HELP
+)
+
+
 class WebSearchDisabled(Exception):
     def __str__(self) -> str:  # noqa: D105
-        return "Web search is disabled (NEXA_WEB_SEARCH_ENABLED=false on the host)."
+        return _WEB_SEARCH_DISABLED_HELP
 
 
 class MissingWebSearchKey(Exception):
     def __str__(self) -> str:  # noqa: D105
-        return "Web search needs NEXA_WEB_SEARCH_PROVIDER and NEXA_WEB_SEARCH_API_KEY (see AethOS doctor)."
+        return _WEB_SEARCH_CONFIGURE_HELP
+
+
+def web_search_configuration_error_payload() -> dict[str, str]:
+    """Structured copy for APIs or JSON responses when search is misconfigured."""
+    return {"error": _WEB_SEARCH_CONFIGURE_HELP}
 
 
 @dataclass
