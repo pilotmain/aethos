@@ -1,13 +1,17 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2025 AethOS AI
 
-"""Host-executor browser helpers: URL allowlist, system default browser for ``open``, Playwright for other actions."""
+"""Host-executor browser helpers: URL allowlist, system default browser for ``open``, system capture for ``screenshot``.
+
+``browser_click`` / ``browser_fill`` still use a dedicated sync Playwright session when those actions are used.
+"""
 
 from __future__ import annotations
 
 import logging
 import os
 import re
+import shutil
 import subprocess
 import sys
 import threading
@@ -20,8 +24,8 @@ from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
 
-# ``browser_open`` uses the system default browser (no Playwright). Click / fill / screenshot use a
-# dedicated **sync** Playwright session so they are not tied to a short-lived asyncio loop.
+# ``browser_open`` uses the system default browser; ``browser_screenshot`` uses OS tools (screencapture,
+# PowerShell CopyFromScreen, gnome-screenshot / scrot / grim / import). Click / fill use sync Playwright.
 _sync_lock = threading.Lock()
 _sync_pw: Any = None
 _sync_browser: Any = None
@@ -140,9 +144,24 @@ def assert_browser_url_allowed(url: str) -> None:
         raise ValueError(f"URL host {host!r} is not allowed by NEXA_BROWSER_ALLOWED_DOMAINS")
 
 
+def _normalize_open_browser_url(url: str) -> str:
+    """Ensure http(s) scheme so ``open`` / ``xdg-open`` receive a valid URL."""
+    u = (url or "").strip()
+    if not u:
+        return u
+    p = urlparse(u)
+    if p.scheme in ("http", "https"):
+        return u
+    if not p.scheme and p.netloc:
+        return f"https://{p.netloc}{p.path or ''}{('?' + p.query) if p.query else ''}{('#' + p.fragment) if p.fragment else ''}"
+    if not p.scheme:
+        return "https://" + u.lstrip("/")
+    return u
+
+
 def open_system_browser(url: str) -> dict[str, Any]:
     """Open URL in the system default browser (no Playwright). Enforces :func:`assert_browser_url_allowed`."""
-    u = (url or "").strip()
+    u = _normalize_open_browser_url(url or "")
     if not u:
         return {"success": False, "error": "missing url", "url": ""}
     try:
@@ -177,8 +196,75 @@ def host_browser_screenshot_directory() -> Path:
     return p
 
 
+def take_system_screenshot(*, name: str | None = None) -> dict[str, Any]:
+    """
+    Capture the primary display to a PNG under :func:`host_browser_screenshot_directory` (no Playwright).
+
+    Uses ``screencapture`` on macOS, PowerShell ``CopyFromScreen`` on Windows, and on Linux tries
+    ``gnome-screenshot``, ``scrot``, ``grim``, then ImageMagick ``import``.
+    """
+    screenshot_dir = host_browser_screenshot_directory()
+    stem = (name or "").strip() or None
+    if stem is None:
+        stem = f"screenshot_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.png"
+    if not str(stem).lower().endswith(".png"):
+        stem = f"{stem}.png"
+    path = screenshot_dir / stem
+    out_path = str(path.resolve())
+
+    try:
+        if sys.platform == "darwin":
+            subprocess.run(["screencapture", "-x", str(path)], check=True, timeout=120)
+        elif sys.platform == "win32":
+            env = {**os.environ, "NEXA_SYS_SCREENSHOT_PATH": out_path}
+            ps = (
+                "Add-Type -AssemblyName System.Windows.Forms,System.Drawing; "
+                "$p = $env:NEXA_SYS_SCREENSHOT_PATH; "
+                "$b = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds; "
+                "$img = New-Object System.Drawing.Bitmap $b.Width, $b.Height; "
+                "$g = [System.Drawing.Graphics]::FromImage($img); "
+                "$g.CopyFromScreen($b.Location, [System.Drawing.Point]::Empty, $b.Size); "
+                "$img.Save($p); $g.Dispose(); $img.Dispose()"
+            )
+            subprocess.run(
+                ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", ps],
+                check=True,
+                timeout=120,
+                env=env,
+            )
+        else:
+            candidates: list[list[str]] = [
+                ["gnome-screenshot", "-f", str(path)],
+                ["scrot", str(path)],
+                ["grim", str(path)],
+                ["import", "-window", "root", str(path)],
+            ]
+            last_err: BaseException | None = None
+            ran = False
+            for argv in candidates:
+                exe = argv[0]
+                if shutil.which(exe) is None:
+                    continue
+                try:
+                    subprocess.run(argv, check=True, timeout=120, capture_output=True, text=True)
+                    ran = True
+                    break
+                except (FileNotFoundError, subprocess.CalledProcessError, OSError) as exc:
+                    last_err = exc
+                    continue
+            if not ran:
+                raise RuntimeError(
+                    "no screenshot tool found (try gnome-screenshot, scrot, grim, or ImageMagick import)"
+                ) from last_err
+
+        return {"success": True, "path": out_path, "method": "system_screenshot"}
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("take_system_screenshot failed: %s", exc)
+        return {"success": False, "error": str(exc), "path": out_path}
+
+
 def default_browser_timeout_ms() -> int:
-    """Default Playwright timeout (ms) from Settings."""
+    """Default Playwright timeout (ms) from Settings (click / fill only)."""
     s = get_settings()
     sec = getattr(s, "nexa_browser_timeout_seconds", None)
     if sec is not None:
@@ -191,9 +277,10 @@ def default_browser_timeout_ms() -> int:
 
 def ensure_browser_ready() -> bool:
     """
-    Best-effort check that Playwright is available; optionally install Chromium for browser automation.
+    Best-effort check that Playwright is available for click/fill/preview; optionally install Chromium.
 
     Returns True if the ``playwright`` package imports; install step is non-fatal (check=False).
+    Host ``open`` / ``screenshot`` do not use Playwright.
     """
     try:
         import playwright  # noqa: F401
@@ -215,7 +302,8 @@ def run_browser_host_action_sync(action: str, payload: dict[str, Any]) -> str:
     """
     Run a allowlisted browser host_action from synchronous :func:`~app.services.host_executor.execute_payload`.
 
-    ``browser_open`` uses the **system default browser** (no Playwright). Other actions use sync Playwright.
+    ``browser_open`` uses the **system default browser**. ``browser_screenshot`` uses OS capture tools.
+    ``browser_click`` / ``browser_fill`` use sync Playwright against a shared page.
     """
     act = (action or "").strip().lower()
 
@@ -226,7 +314,23 @@ def run_browser_host_action_sync(action: str, payload: dict[str, Any]) -> str:
         res = open_system_browser(url)
         if not res.get("success"):
             raise ValueError(str(res.get("error") or "system browser open failed"))
-        return f"Opened in your default browser:\n{url}"
+        opened = str(res.get("url") or url).strip()
+        return f"Opened in your default browser:\n{opened}"
+
+    if act == "browser_screenshot":
+        name = str(payload.get("name") or "").strip() or None
+        res = take_system_screenshot(name=name)
+        if not res.get("success"):
+            raise ValueError(str(res.get("error") or "system screenshot failed"))
+        path = str(res.get("path") or "").strip()
+        screenshot_dir = host_browser_screenshot_directory()
+        try:
+            on_desktop = screenshot_dir.resolve() == (Path.home() / "Desktop").resolve()
+        except OSError:
+            on_desktop = False
+        if on_desktop:
+            return f"Screenshot saved to Desktop:\n{path}"
+        return f"Screenshot saved:\n{path}"
 
     timeout_ms = default_browser_timeout_ms()
     op_timeout = min(max(timeout_ms, 1000), 120_000)
@@ -246,21 +350,6 @@ def run_browser_host_action_sync(action: str, payload: dict[str, Any]) -> str:
             raise ValueError("text too long (max 50000)")
         page.fill(sel, text, timeout=op_timeout)
         return f"Filled {sel}"
-    if act == "browser_screenshot":
-        screenshot_dir = host_browser_screenshot_directory()
-        name = str(payload.get("name") or "").strip() or None
-        stem = name or f"screenshot_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.png"
-        if not str(stem).lower().endswith(".png"):
-            stem = f"{stem}.png"
-        path = screenshot_dir / stem
-        page.screenshot(path=str(path), full_page=True)
-        try:
-            on_desktop = screenshot_dir.resolve() == (Path.home() / "Desktop").resolve()
-        except OSError:
-            on_desktop = False
-        if on_desktop:
-            return f"Screenshot saved to Desktop:\n{path}"
-        return f"Screenshot saved:\n{path}"
     raise ValueError(f"unknown browser host action {act!r}")
 
 

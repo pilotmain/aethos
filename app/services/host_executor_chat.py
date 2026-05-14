@@ -824,6 +824,44 @@ def evaluate_deterministic_host_permission_turn(
                 intent_override="command_completed",
             )
 
+    if ha0 == "browser_screenshot" and not simulate_mode:
+        name_ss = str(inferred.get("name") or "").strip() or None
+        stamped_ss = stamp_host_payload(
+            apply_trusted_instruction_source(dict(inferred), InstructionSource.USER_MESSAGE.value)
+        )
+        safe_ss = _validate_enqueue_payload(stamped_ss)
+        if safe_ss:
+            from app.services.browser_automation import host_browser_screenshot_directory, take_system_screenshot
+
+            res_ss = take_system_screenshot(name=name_ss)
+            if res_ss.get("success"):
+                path_ss = str(res_ss.get("path") or "").strip()
+
+                shot_dir = host_browser_screenshot_directory()
+                try:
+                    on_desktop = shot_dir.resolve() == (Path.home() / "Desktop").resolve()
+                except OSError:
+                    on_desktop = False
+                if on_desktop and path_ss:
+                    reply_ss = f"Screenshot saved to Desktop:\n{path_ss}"
+                elif path_ss:
+                    reply_ss = f"Screenshot saved:\n{path_ss}"
+                else:
+                    reply_ss = "Screenshot captured."
+            else:
+                reply_ss = (
+                    "Could not capture a screenshot with the system tool: "
+                    f"{res_ss.get('error') or 'unknown error'}"
+                )[:4000]
+            return NextActionApplicationResult(
+                reply_ss,
+                t0,
+                False,
+                True,
+                None,
+                intent_override="command_completed",
+            )
+
     if simulate_mode:
         from app.services.host_executor import build_simulation_plan
 
