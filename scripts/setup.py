@@ -578,17 +578,79 @@ class SetupWizard:
         if ollama_cli_on_path():
             self._update_env_key("NEXA_OLLAMA_ENABLED", "true")
             self._update_env_key("NEXA_LLM_PROVIDER", "ollama")
+            self._upsert_env_if_unset("NEXA_OLLAMA_DEFAULT_MODEL", "qwen2.5:7b")
+            self._update_env_key("NEXA_PURE_LOCAL_LLM_MODE", "true")
             print(
-                f"  {Colors.success('Ollama CLI on PATH — set NEXA_OLLAMA_ENABLED=true and NEXA_LLM_PROVIDER=ollama')}"
+                f"  {Colors.success('Ollama CLI on PATH — local LLM is primary (Ollama enabled, pure local LLM mode on).')}"
             )
             print(
-                f"  {Colors.DIM}Start or keep `ollama serve` running and pull a model (see NEXA_OLLAMA_DEFAULT_MODEL).{Colors.RESET}"
+                f"  {Colors.DIM}Start or keep `ollama serve` running and pull a model (default tag when unset: "
+                f"qwen2.5:7b). Optional cloud keys in the next wizard step are fallbacks only.{Colors.RESET}"
             )
         else:
             print(
                 f"  {Colors.DIM}Ollama CLI not on PATH — left NEXA_OLLAMA_ENABLED / provider as in template "
                 f"(install from https://ollama.com for local models).{Colors.RESET}"
             )
+
+    def _print_llm_configuration_summary(self) -> None:
+        """Summarize primary vs optional cloud fallbacks after .env is written."""
+        if not self.env_path.is_file():
+            return
+
+        def _truthy(val: str | None) -> bool:
+            return (val or "").strip().lower() in ("1", "true", "yes", "on")
+
+        line_sep = "=" * 50
+        print(f"\n{line_sep}")
+        print(f"  {Colors.BOLD}LLM configuration summary{Colors.RESET}")
+        ollama_primary = _truthy(self._get_env_value("NEXA_OLLAMA_ENABLED")) and (
+            (self._get_env_value("NEXA_LLM_PROVIDER") or "").strip().lower() == "ollama"
+        )
+        model = (self._get_env_value("NEXA_OLLAMA_DEFAULT_MODEL") or "qwen2.5:7b").strip()
+        if ollama_primary:
+            print(f"  {Colors.success('Primary:')} Ollama (local) — default model tag: {model}")
+        elif ollama_cli_on_path():
+            print(
+                f"  {Colors.warning('Ollama CLI on PATH but .env does not show Ollama as primary — check NEXA_OLLAMA_ENABLED / NEXA_LLM_PROVIDER.')}"
+            )
+        if _truthy(self._get_env_value("NEXA_PURE_LOCAL_LLM_MODE")):
+            print(
+                f"  {Colors.info('Pure local LLM mode: ON (Ollama-first intent/chat when a provider is up)')}"
+            )
+
+        def _looks_configured(key: str, prefix: str | None) -> bool:
+            raw = (self._get_env_value(key) or "").strip()
+            if not raw or raw.startswith("#") or len(raw) <= 8:
+                return False
+            if prefix is not None and not raw.startswith(prefix):
+                return False
+            return True
+
+        if _looks_configured("ANTHROPIC_API_KEY", "sk-ant-"):
+            print(f"  {Colors.success('Fallback:')} Anthropic Claude")
+        if _looks_configured("OPENAI_API_KEY", "sk-"):
+            print(f"  {Colors.success('Fallback:')} OpenAI")
+        if _looks_configured("DEEPSEEK_API_KEY", None):
+            print(f"  {Colors.success('Fallback:')} DeepSeek")
+
+        has_cloud = any(
+            _looks_configured(k, p)
+            for k, p in (
+                ("ANTHROPIC_API_KEY", "sk-ant-"),
+                ("OPENAI_API_KEY", "sk-"),
+                ("DEEPSEEK_API_KEY", None),
+            )
+        )
+        if not ollama_primary and not has_cloud:
+            print(
+                f"  {Colors.warning('No LLM providers in .env — heuristics / templates only until Ollama or a cloud key is configured.')}"
+            )
+        elif ollama_primary and not has_cloud:
+            print(
+                f"  {Colors.DIM}No cloud keys — fine for fully local runs; add one if you want a paid fallback.{Colors.RESET}"
+            )
+        print(line_sep)
 
     def _sync_self_improvement_and_owners_for_user(self, user_id: str) -> None:
         """Always enable self-improvement; bind owner gates to the Mission Control web user id."""
@@ -975,10 +1037,26 @@ SSO_POST_LOGIN_REDIRECT=http://localhost:3000/login
 """
 
     def configure_llm_keys(self) -> bool:
-        print(f"\n{Colors.step(6, TOTAL_STEPS, 'Optional LLM API keys…')}\n")
-        print(
-            f"  {Colors.info('Add at least one provider for full chat/dev features (optional for offline/dev)')}"
+        print(f"\n{Colors.step(6, TOTAL_STEPS, 'LLM providers (optional cloud fallbacks)…')}\n")
+
+        def _truthy(val: str | None) -> bool:
+            return (val or "").strip().lower() in ("1", "true", "yes", "on")
+
+        ollama_primary = _truthy(self._get_env_value("NEXA_OLLAMA_ENABLED")) and (
+            (self._get_env_value("NEXA_LLM_PROVIDER") or "").strip().lower() == "ollama"
         )
+        if ollama_primary:
+            print(
+                f"  {Colors.info('Ollama is the primary LLM. Cloud keys below are optional fallbacks if Ollama is down.')}"
+            )
+        elif ollama_cli_on_path():
+            print(
+                f"  {Colors.warning('Ollama is on PATH; if .env does not show Ollama as primary, re-run the environment step or edit .env.')}"
+            )
+        else:
+            print(
+                f"  {Colors.info('Install https://ollama.com and re-run setup to prefer local models first; keys below are optional paid fallbacks.')}"
+            )
         providers: list[tuple[str, str, str | None]] = [
             ("Anthropic", "ANTHROPIC_API_KEY", "sk-ant-"),
             ("OpenAI", "OPENAI_API_KEY", "sk-"),
@@ -991,7 +1069,9 @@ SSO_POST_LOGIN_REDIRECT=http://localhost:3000/login
                 print(f"  {Colors.success(f'{name}: already set in .env')}")
                 configured += 1
                 continue
-            yn = prompt_line(f"  {Colors.question(f'Configure {name} now? [y/N]')} ").strip().lower()
+            yn = prompt_line(
+                f"  {Colors.question(f'Add {name} API key as optional fallback? [y/N]')} "
+            ).strip().lower()
             if yn != "y":
                 continue
             key = prompt_line(f"  {Colors.question(f'{name} API key')} ").strip()
@@ -999,12 +1079,16 @@ SSO_POST_LOGIN_REDIRECT=http://localhost:3000/login
                 print(f"  {Colors.warning('Skipped empty key')}")
                 continue
             if prefix and not key.startswith(prefix):
-                print(f"  {Colors.warning(f'Unexpected prefix — storing anyway')}")
+                print(
+                    f"  {Colors.warning(f'Invalid key format for {name} (expected prefix {prefix!r}) — skipping.')}"
+                )
+                continue
             self._update_env_key(env_key, key)
-            print(f"  {Colors.success(f'{name} saved to .env')}")
+            print(f"  {Colors.success(f'{name} saved to .env (fallback when configured)')}")
             configured += 1
         if configured == 0:
-            print(f"\n  {Colors.warning('No LLM keys added — you can edit .env later.')}")
+            print(f"\n  {Colors.warning('No new cloud LLM keys added — you can edit .env later.')}")
+        self._print_llm_configuration_summary()
         return True
 
     def configure_host_executor(self) -> bool:
