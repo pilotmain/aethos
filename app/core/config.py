@@ -195,7 +195,8 @@ class Settings(BaseSettings):
     nexa_auto_approve_domains: str = "git"
     nexa_auto_approve_log_only: bool = False
     # When true, privileged owners skip the chat confirmation step for host actions and execute in-process.
-    nexa_auto_approve_owner: bool = True
+    # Loaded from ``NEXA_AUTO_APPROVE_OWNER`` (see :envvar:`NEXA_AUTO_APPROVE_OWNER` in ``.env.example``).
+    nexa_auto_approve_owner: bool = Field(default=True)
     # Agentic OS — status dashboard, React/long-task timeouts, concurrency (see .env.example).
     nexa_agent_heartbeat_interval: int = 30
     nexa_status_auto_report: bool = True

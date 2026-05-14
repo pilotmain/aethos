@@ -350,9 +350,12 @@ class NexaGateway:
             try_apply_host_executor_turn,
         )
 
-        web_session_id = str(gctx.extras.get("web_session_id") or "default").strip()[:64] or "default"
-        cctx = get_or_create_context(db, uid, web_session_id=web_session_id)
         s = get_settings()
+        debug_owner = (os.environ.get("NEXA_DEBUG_GATEWAY_OWNER_BYPASS") or "").strip().lower() in (
+            "1",
+            "true",
+            "yes",
+        )
         raw_auto = (os.environ.get("NEXA_AUTO_APPROVE_OWNER") or "").strip().lower()
         if raw_auto in ("0", "false", "no"):
             auto_owner = False
@@ -360,10 +363,39 @@ class NexaGateway:
             auto_owner = True
         else:
             auto_owner = bool(getattr(s, "nexa_auto_approve_owner", True))
+
+        if debug_owner:
+            owners_env = (os.environ.get("AETHOS_OWNER_IDS") or "").strip()
+            owners_settings = (getattr(s, "aethos_owner_ids", None) or "").strip()
+            host_ex = bool(getattr(s, "nexa_host_executor_enabled", False))
+            _log.info(
+                "[DEBUG] host_executor_turn text_preview=%r user_id=%r nexa_host_executor_enabled=%s "
+                "NEXA_AUTO_APPROVE_OWNER(raw_env)=%r resolved_auto_owner=%s "
+                "settings.nexa_auto_approve_owner=%s AETHOS_OWNER_IDS(env)=%r settings.aethos_owner_ids=%r",
+                (raw[:50] + ("…" if len(raw) > 50 else "")),
+                uid,
+                host_ex,
+                (os.environ.get("NEXA_AUTO_APPROVE_OWNER") or ""),
+                auto_owner,
+                getattr(s, "nexa_auto_approve_owner", None),
+                owners_env[:300],
+                owners_settings[:300],
+            )
+
+        web_session_id = str(gctx.extras.get("web_session_id") or "default").strip()[:64] or "default"
+        cctx = get_or_create_context(db, uid, web_session_id=web_session_id)
         if bool(getattr(s, "nexa_host_executor_enabled", False)) and auto_owner:
             from app.services.user_capabilities import is_privileged_owner_for_web_mutations
 
-            if is_privileged_owner_for_web_mutations(db, uid):
+            is_owner = is_privileged_owner_for_web_mutations(db, uid)
+            if debug_owner:
+                _log.info(
+                    "[DEBUG] host_executor_turn owner_gate is_privileged_owner=%s (AETHOS_OWNER_IDS must "
+                    "contain this user_id for web_* operators)",
+                    is_owner,
+                )
+
+            if is_owner:
                 from app.services.content_provenance import InstructionSource, apply_trusted_instruction_source
                 from app.services.host_executor import execute_payload
                 from app.services.host_executor_chat import _validate_enqueue_payload
@@ -371,6 +403,12 @@ class NexaGateway:
                 from app.services.nexa_safety_policy import stamp_host_payload
 
                 inf_browser = try_infer_browser_automation_nl(raw)
+                if debug_owner:
+                    _log.info(
+                        "[DEBUG] host_executor_turn try_infer_browser_automation_nl matched=%s payload_keys=%s",
+                        bool(inf_browser),
+                        sorted(inf_browser.keys()) if isinstance(inf_browser, dict) else None,
+                    )
                 if inf_browser:
                     stamped_b = stamp_host_payload(
                         apply_trusted_instruction_source(
@@ -378,7 +416,18 @@ class NexaGateway:
                         )
                     )
                     safe_browser = _validate_enqueue_payload(stamped_b)
+                    if debug_owner:
+                        _log.info(
+                            "[DEBUG] host_executor_turn owner browser path safe_browser=%s host_action=%r",
+                            bool(safe_browser),
+                            (safe_browser or {}).get("host_action") if isinstance(safe_browser, dict) else None,
+                        )
                     if safe_browser:
+                        if debug_owner:
+                            _log.info(
+                                "[DEBUG] Owner bypass active — executing browser/host payload immediately "
+                                "(source=host_executor_owner_browser)"
+                            )
 
                         class _OwnerBrowserJob:
                             user_id = uid
@@ -1049,6 +1098,14 @@ class NexaGateway:
                     "intent": "config_query",
                 }
 
+            _log.debug(
+                "host_executor gateway check text=%s",
+                (raw_gate[:50] + ("…" if len(raw_gate) > 50 else "")),
+            )
+            host_out = self._try_host_executor_turn(gctx, raw_gate, db_inner)
+            if host_out is not None:
+                return host_out
+
             from app.services.gateway.soul_versioning_nl import try_soul_versioning_nl_turn
 
             soul_nl = try_soul_versioning_nl_turn(gctx, raw_gate, db_inner)
@@ -1060,14 +1117,6 @@ class NexaGateway:
             early_nl = try_early_nl_host_actions(gctx, raw_gate, db_inner)
             if early_nl is not None:
                 return early_nl
-
-            _log.debug(
-                "host_executor gateway check text=%s",
-                (raw_gate[:50] + ("…" if len(raw_gate) > 50 else "")),
-            )
-            host_out = self._try_host_executor_turn(gctx, raw_gate, db_inner)
-            if host_out is not None:
-                return host_out
 
             from app.services.intent_classifier import (
                 ambiguous_product_clarification_reply,
