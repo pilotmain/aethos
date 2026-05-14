@@ -785,6 +785,8 @@ def classify_intent_llm(
 
     s = get_settings()
     m = get_merged_api_keys()
+    # Intent LLM uses merged Anthropic/OpenAI keys only. Ollama-only setups stay on fallback here;
+    # gateway reply composition uses ``providers_available()`` (includes ``is_ollama_ready()``).
     if not s.use_real_llm or not m.has_any_key:
         return classify_intent_fallback(message)
 

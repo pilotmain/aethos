@@ -86,13 +86,14 @@ Benchmarks are **not CI-enforced** in this document unless separately added. Mea
 
 ### 2.3 Default experience vs configuration `[Implemented]`
 
-**Verified 2026-05-14** against `Settings` (`app/core/config.py`), `app/services/intent_classifier.py`, `app/services/response_composer.py`, and `app/services/llm/completion.py` (`providers_available`). **Setup:** `scripts/setup.py` autodetects the `ollama` CLI (`shutil.which`) during **Configure .env** and, when present, writes **`NEXA_OLLAMA_ENABLED=true`** and **`NEXA_LLM_PROVIDER=ollama`** (no manual edit for the common local-first install).
+**Verified 2026-05-14** against `Settings` (`app/core/config.py`), `app/services/intent_classifier.py`, `app/services/response_composer.py`, and `app/services/llm/completion.py` (`providers_available`, **`is_ollama_ready()`** in `app/services/llm/bootstrap.py`). **Setup:** `scripts/setup.py` autodetects the `ollama` CLI (`shutil.which`) during **Configure .env** and, when present, writes **`NEXA_OLLAMA_ENABLED=true`** and **`NEXA_LLM_PROVIDER=ollama`** (no manual edit for the common local-first install).
 
 | Scenario | Actual behavior |
 |----------|------------------|
 | `USE_REAL_LLM=true`, no Anthropic/OpenAI merged keys, `NEXA_LLM_PROVIDER=auto`, Ollama not enabled (`NEXA_OLLAMA_ENABLED=false`, default), no DeepSeek/OpenRouter/`NEXA_LLM_API_KEY` usable pair | **No paid LLM calls.** Intent: `classify_intent_llm` skips the LLM path when `MergedLlmKeyInfo.has_any_key` is false (Anthropic/OpenAI only) and uses **`classify_intent_fallback`**. Reply composition: `response_composer.use_real_llm()` is false when **`providers_available()`** is false, so **`fallback_compose_response`** / template paths run instead of `primary_complete_*`. |
 | Fresh **`scripts/setup.py`** and **`ollama`** on `PATH` | Target `.env` gets **`NEXA_OLLAMA_ENABLED=true`** and **`NEXA_LLM_PROVIDER=ollama`** (CLI presence only; you still need a running Ollama server and a pulled model for successful local inference). |
 | Ollama as LLM backend (manual or setup) | Set **`NEXA_OLLAMA_ENABLED=true`** and/or **`NEXA_LLM_PROVIDER=ollama`** so bootstrap registers the HTTP backend (`app/services/llm/bootstrap.py`). With **`NEXA_LLM_PROVIDER=auto`**, Ollama is **not** auto-registered from the running app alone — use **`NEXA_OLLAMA_ENABLED=true`** (setup does this when the CLI exists) or **`NEXA_LOCAL_FIRST=true`** with `auto`. |
+| Ollama **enabled in config** but HTTP unreachable or **`GET …/api/tags`** returns **no models** | **`is_ollama_ready()`** is false → **`providers_available()`** is false for the Ollama-only case → **`use_real_llm()`** false → **template / fallback** composer (same as no-provider). Result is cached briefly (~15s) so the gateway recovers when Ollama starts. |
 | Cloud or gateway keys present | Anthropic / OpenAI (merged system + user), DeepSeek, OpenRouter, or `NEXA_LLM_API_KEY` with a non-`auto` primary satisfy **`providers_available()`**; routing follows `NEXA_LLM_PROVIDER` and registry order in bootstrap. |
 
 ---

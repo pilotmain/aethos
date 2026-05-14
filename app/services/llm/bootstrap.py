@@ -8,6 +8,11 @@ Register :class:`~app.services.llm.base.LLMProvider` instances from settings and
 from __future__ import annotations
 
 import logging
+import time
+from typing import Any
+
+import httpx
+
 from app.core.config import Settings, get_settings
 from app.services.llm_key_resolution import MergedLlmKeyInfo, get_merged_api_keys
 from app.services.llm.providers.anthropic_backend import AnthropicBackend
@@ -16,6 +21,60 @@ from app.services.llm.providers.openai_backend import OpenAIBackend
 from app.services.llm.registry import LLMRegistry, get_llm_registry
 
 logger = logging.getLogger(__name__)
+
+# (normalized_base_url, monotonic_ts, ready) — short TTL so gateway recovers when Ollama starts.
+_ollama_ready_cache: tuple[str, float, bool] | None = None
+_OLLAMA_READY_TTL_SEC = 15.0
+
+
+def clear_ollama_readiness_cache() -> None:
+    """Clear cached ``/api/tags`` result (tests or after Ollama install)."""
+    global _ollama_ready_cache
+    _ollama_ready_cache = None
+
+
+def is_ollama_ready() -> bool:
+    """
+    True when Ollama responds on HTTP and ``GET /api/tags`` lists at least one model.
+
+    Does not verify the configured default model exists; callers may still get a chat error
+    for a missing tag — that path is handled by the Ollama backend / retries.
+    """
+    global _ollama_ready_cache
+    s = get_settings()
+    base = (s.nexa_ollama_base_url or "").strip() or "http://127.0.0.1:11434"
+    root = base.rstrip("/")
+    now = time.monotonic()
+    if _ollama_ready_cache is not None:
+        c_root, ts, ok = _ollama_ready_cache
+        if c_root == root and (now - ts) < _OLLAMA_READY_TTL_SEC:
+            return ok
+
+    url = f"{root}/api/tags"
+    ok = False
+    detail = "unknown"
+    try:
+        with httpx.Client(timeout=2.0) as client:
+            r = client.get(url)
+            r.raise_for_status()
+            data: Any = r.json()
+        models = data.get("models") if isinstance(data, dict) else None
+        ok = isinstance(models, list) and len(models) > 0
+        if not ok:
+            detail = "no models in /api/tags"
+    except Exception as exc:  # noqa: BLE001
+        detail = str(exc)[:200]
+        ok = False
+
+    if not ok:
+        logger.warning(
+            "Ollama not ready at %s (%s) — gateway treats LLM as unavailable until /api/tags lists models.",
+            url,
+            detail,
+        )
+
+    _ollama_ready_cache = (root, now, ok)
+    return ok
 
 
 def _resolve_api_key(provider_id: str, s: Settings, m: MergedLlmKeyInfo) -> str | None:
@@ -167,4 +226,4 @@ def register_llm_providers_from_settings() -> LLMRegistry:
     return reg
 
 
-__all__ = ["register_llm_providers_from_settings"]
+__all__ = ["clear_ollama_readiness_cache", "is_ollama_ready", "register_llm_providers_from_settings"]

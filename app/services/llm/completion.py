@@ -304,7 +304,8 @@ def get_llm() -> Callable[[str], str] | None:
 
 
 def providers_available() -> bool:
-    """True if at least one Phase 11 backend could be registered."""
+    """True if at least one Phase 11 backend could be registered and used (Ollama requires a live /api/tags)."""
+    from app.services.llm.bootstrap import is_ollama_ready
     from app.services.llm_key_resolution import get_merged_api_keys
 
     s = get_settings()
@@ -319,7 +320,7 @@ def providers_available() -> bool:
     if (s.nexa_llm_api_key or "").strip() and p not in ("", "auto"):
         return True
     if s.nexa_ollama_enabled or p == "ollama":
-        return True
+        return is_ollama_ready()
     return False
 
 
