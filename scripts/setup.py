@@ -511,6 +511,7 @@ class SetupWizard:
             ("APP_NAME", "AethOS"),
             ("APP_ENV", "development"),
             ("DEBUG", "true"),
+            ("USE_REAL_LLM", "true"),
             ("NEXA_AGENT_ORCHESTRATION_ENABLED", "true"),
             ("NEXA_AUTONOMOUS_GOAL_PLANNING", "true"),
             ("NEXA_SELF_HEALING_ENABLED", "true"),
@@ -539,6 +540,10 @@ class SetupWizard:
         ]
         for k, v in pairs:
             self._upsert_env_if_unset(k, v)
+        # Prefer real LLM for agents / custom agents; operators may set false explicitly in .env.
+        low_llm = (self._get_env_value("USE_REAL_LLM") or "").strip().lower()
+        if low_llm in ("false", "0", "no", ""):
+            self._update_env_key("USE_REAL_LLM", "true")
 
     def _sync_self_improvement_and_owners_for_user(self, user_id: str) -> None:
         """Always enable self-improvement; bind owner gates to the Mission Control web user id."""
@@ -879,7 +884,7 @@ DATABASE_URL={default_sqlite_database_url()}
 NEXA_SECRET_KEY={secrets.token_urlsafe(32)}
 NEXA_WEB_API_TOKEN={generate_web_api_token()}
 NEXA_AGENT_ORCHESTRATION_ENABLED=true
-USE_REAL_LLM=false
+USE_REAL_LLM=true
 NEXA_WORKSPACE_ROOT={Path.home() / "aethos-workspace"}
 HOST_EXECUTOR_WORK_ROOT={Path.home() / "aethos-workspace"}
 # Enterprise — JSONL audit (per day under AUDIT_DIR); set AUDIT_ENABLED=false to disable.

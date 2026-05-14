@@ -135,6 +135,18 @@ class TestCommandExecution:
         assert d.is_dir()
         assert pl.get("cwd_relative")
 
+    def test_npm_install_creates_minimal_package_json(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        settings = _settings(tmp_path)
+        monkeypatch.setattr(host_executor, "get_settings", lambda: settings)
+        sub = tmp_path / "empty_npm_dir"
+        sub.mkdir(parents=True, exist_ok=True)
+        assert not (sub / "package.json").exists()
+        out = host_executor.execute_payload(
+            {"host_action": "run_command", "command": "npm install", "cwd_relative": str(sub.relative_to(tmp_path))}
+        )
+        assert (sub / "package.json").is_file()
+        assert "name" in (sub / "package.json").read_text(encoding="utf-8")
+
     def test_execute_chained_mkdir_echo(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         settings = _settings(tmp_path)
         monkeypatch.setattr(host_executor, "get_settings", lambda: settings)

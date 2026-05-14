@@ -15,6 +15,7 @@ When ``db`` and ``job`` with ``user_id`` are provided, permission registry + gra
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import os
 import re
@@ -421,6 +422,29 @@ def _command_timeout(default_timeout: int) -> int:
     return min(max(effective, 5), 3600)
 
 
+def _maybe_ensure_package_json_for_local_install(command_text: str, exec_cwd: Path) -> None:
+    """Create a minimal ``package.json`` when ``npm|pnpm|yarn install`` runs in a folder without one."""
+    low = (command_text or "").strip().lower()
+    if " -g " in low or "--global" in low or low.startswith("npm install -g"):
+        return
+    if not (
+        low == "npm install"
+        or low.startswith("npm install ")
+        or low == "pnpm install"
+        or low.startswith("pnpm install ")
+        or low == "yarn install"
+        or low.startswith("yarn install ")
+    ):
+        return
+    pkg = exec_cwd / "package.json"
+    if pkg.exists():
+        return
+    raw_name = exec_cwd.name or "workspace"
+    safe = re.sub(r"[^a-z0-9._-]", "-", raw_name.lower()).strip("-")[:214] or "workspace"
+    minimal = {"name": safe, "version": "1.0.0", "private": True}
+    pkg.write_text(json.dumps(minimal, indent=2) + "\n", encoding="utf-8")
+
+
 def _apply_task_scaffold_timeout(argv: list[str], base_timeout: int) -> int:
     """Bump timeout for long npm/npx scaffolds (e.g. ``create-react-app``)."""
     blob = " ".join(str(a) for a in argv).lower()
@@ -522,6 +546,7 @@ def _execute_command_sync(
             "stderr": str(exc),
             "command": command,
         }
+    _maybe_ensure_package_json_for_local_install(command_text, exec_cwd)
     exec_timeout = _apply_task_scaffold_timeout(argv, _command_timeout(timeout))
     hs = _host_settings()
     attempts = max(1, min(10, int(getattr(hs, "nexa_host_command_max_attempts", 3) or 3)))
