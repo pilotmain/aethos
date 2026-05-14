@@ -20,7 +20,9 @@ def parse_inter_agent_steps(text: str) -> list[tuple[str, str]] | None:
     Parse multi-step agent instructions.
 
     Supported:
-    - ``ask marketing_agent to … and ask qa_agent to …``
+    - ``ask marketing_agent to … and ask qa_agent to …`` / ``…, then ask …``
+    - ``ask marketing_agent to …. Then ask qa_agent to …`` (sentence + **Then**)
+    - ``ask marketing_agent to …. ask qa_agent to …`` (two sentences, no **then**)
     - ``ask marketing_agent to …`` / ``tell marketing_agent to …``
 
     Steps are executed as conversational handoffs; QA ``review`` tasks do not require file paths
@@ -37,15 +39,6 @@ def parse_inter_agent_steps(text: str) -> list[tuple[str, str]] | None:
     )
     if m_then:
         a1, t1, a2, t2 = m_then.group(1), m_then.group(2).strip(), m_then.group(3), m_then.group(4).strip()
-        if a1 and t1 and a2 and t2:
-            return [(a1, t1), (a2, t2)]
-
-    m_then2 = re.search(
-        r"(?is)^ask\s+@?([\w-]+)\s+to\s+(.+?)\s+then\s+(?:ask|tell)\s+@?([\w-]+)\s+to\s+(.+?)(?:[.?!]+)?\s*$",
-        line,
-    )
-    if m_then2:
-        a1, t1, a2, t2 = m_then2.group(1), m_then2.group(2).strip(), m_then2.group(3), m_then2.group(4).strip()
         if a1 and t1 and a2 and t2:
             return [(a1, t1), (a2, t2)]
 
@@ -74,6 +67,30 @@ def parse_inter_agent_steps(text: str) -> list[tuple[str, str]] | None:
             m_then_dot.group(3),
             m_then_dot.group(4).strip(),
         )
+        if a1 and t1 and a2 and t2:
+            return [(a1, t1), (a2, t2)]
+
+    # "Ask A to B. Then ask C to D" / "Ask A to B. Ask C to D" (sentence boundary; common in chat)
+    m_sentence_chain = re.search(
+        r"(?is)^ask\s+@?([\w-]+)\s+to\s+(.+?)\.\s+(?:then\s+)?(?:ask|tell)\s+@?([\w-]+)\s+to\s+(.+?)(?:[.?!]+)?\s*$",
+        line,
+    )
+    if m_sentence_chain:
+        a1, t1, a2, t2 = (
+            m_sentence_chain.group(1),
+            m_sentence_chain.group(2).strip(),
+            m_sentence_chain.group(3),
+            m_sentence_chain.group(4).strip(),
+        )
+        if a1 and t1 and a2 and t2:
+            return [(a1, t1), (a2, t2)]
+
+    m_then2 = re.search(
+        r"(?is)^ask\s+@?([\w-]+)\s+to\s+(.+?)\s+then\s+(?:ask|tell)\s+@?([\w-]+)\s+to\s+(.+?)(?:[.?!]+)?\s*$",
+        line,
+    )
+    if m_then2:
+        a1, t1, a2, t2 = m_then2.group(1), m_then2.group(2).strip(), m_then2.group(3), m_then2.group(4).strip()
         if a1 and t1 and a2 and t2:
             return [(a1, t1), (a2, t2)]
 

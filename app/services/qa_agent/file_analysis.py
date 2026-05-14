@@ -42,6 +42,30 @@ def _is_under_allowed(path: Path) -> bool:
     return False
 
 
+def first_path_from_inter_agent_handoff(message: str) -> str | None:
+    """
+    Return the first absolute ``/path/file.ext`` after an inter-agent handoff marker.
+
+    Used when the user's line is a generic review (\"review it\") but the prior agent
+    pasted a concrete path in the handoff block.
+    """
+    raw = message or ""
+    markers = (
+        "\n\n---\n**Handoff (prior agent output):**",
+        "**Handoff (prior agent output):**",
+        "\n\n---\n**Handoff",
+    )
+    tail = ""
+    for mk in markers:
+        if mk in raw:
+            tail = raw.split(mk, 1)[-1]
+            break
+    if not tail:
+        return None
+    m = _PATH_RE.search(tail.replace("\\", "/"))
+    return m.group(1) if m else None
+
+
 def run_qa_file_analysis(message: str, *, max_lines: int = 100) -> str:
     """
     Scan a local file for obvious risk patterns (first ``max_lines`` lines).

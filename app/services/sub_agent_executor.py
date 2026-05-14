@@ -40,7 +40,7 @@ from app.services.agent.activity_tracker import get_activity_tracker
 from app.services.fsmonitor import watch
 from app.services.infra.railway import get_railway_client
 from app.services.infra.vercel import get_vercel_client
-from app.services.qa_agent.file_analysis import run_qa_file_analysis
+from app.services.qa_agent.file_analysis import first_path_from_inter_agent_handoff, run_qa_file_analysis
 from app.services.telegram_outbound import send_telegram_message
 from app.services.sub_agent_audit import log_agent_event
 from app.services.sub_agent_auto_approve import get_auto_approve_message, should_auto_approve
@@ -702,13 +702,20 @@ class AgentExecutor:
             prefix = _qa_user_task_before_handoff(message)
             low_pre = prefix.lower()
             path_like = bool(re.search(r"/[\w/.-]+\.\w+", prefix))
+            hand_path = first_path_from_inter_agent_handoff(message)
             wants_scan = any(
                 k in low_pre for k in ("analyze", "review file", "scan file", "lint file", "audit file")
             )
+            generic_review = any(
+                k in low_pre for k in ("review", "check", "audit", "look over", "sanity check")
+            )
+            if generic_review and not path_like and hand_path:
+                wants_scan = True
             if wants_scan or path_like:
-                # Use only the user's line for path extraction — handoff often contains `/path/file.py`
-                # from the prior agent, which must not trigger a spurious "include a file path" prompt.
-                return run_qa_file_analysis(prefix)
+                # Prefer the user's line for path extraction; if they asked generically after a handoff
+                # that contains a file path, analyze that path (inter-agent chain).
+                effective = prefix if path_like else (f"analyze {hand_path}" if hand_path else prefix)
+                return run_qa_file_analysis(effective)
             return self._conversational_response(agent, message, "qa")
         return self._test(agent, message, chat_id, db=db, user_id=user_id, web_session_id=web_session_id)
 

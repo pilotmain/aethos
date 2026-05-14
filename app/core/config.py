@@ -748,7 +748,8 @@ class Settings(BaseSettings):
     nexa_command_execution_enabled: bool = False
     nexa_command_timeout_seconds: int = 60
     nexa_allowed_commands: str = (
-        "npm,yarn,pnpm,pip,python,python3,node,npx,git,gh,ls,cat,echo,mkdir,touch,cp,mv,cd,pwd"
+        "npm,yarn,pnpm,pip,python,python3,node,npx,git,gh,ls,cat,echo,mkdir,touch,cp,mv,cd,pwd,"
+        "find,grep,chmod,head,tail,sort,uniq,wc"
     )
     nexa_command_work_root: str = Field(default_factory=lambda: str(_PROJECT_ROOT))
     # Generic CLI deploy (vercel/railway/fly/netlify/gcloud) — gateway NL; owner-only in deploy_nl module.
