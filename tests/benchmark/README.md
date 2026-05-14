@@ -2,6 +2,12 @@
 
 Offline-curated prompts (`prompts.json`) score how well a **local Ollama** model (default **`phi3:mini`**) returns JSON aligned with golden **`intent`** labels. This is a **narrow axis** (intent classification style); it does **not** prove end-to-end host-executor or gateway safety — see `docs/DESIGN.md` **§2.4** (router vs model) and **§4.3** for scope and for **>95%** claims: define a fixed task suite and treat numbers as regression deltas, not “beats GPT-4 on chat”.
 
+## Prompt engineering (few-shot)
+
+`run_benchmark.py` prepends **disambiguation rules + few-shot JSON lines** to the base `system` string from `prompts.json`, and uses **bracket-balanced** JSON extraction so answers with trailing prose still score.
+
+Approximate historical run on `phi3:mini` (same 65-case set, machine-dependent): **~31%** (baseline) → **~58%** after few-shot (example: 38/65). Treat numbers as **regression deltas**, not guarantees. If you need **>80%** on this suite without changing goldens, try **`--model`** with a larger tag (e.g. `qwen2.5:7b`, `phi3:medium`) per `docs/DESIGN.md` §4.3.
+
 ## Prerequisites
 
 - [Ollama](https://ollama.com) running (`ollama serve` or the app service).

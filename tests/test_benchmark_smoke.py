@@ -51,6 +51,10 @@ def test_prompts_json_schema_and_count() -> None:
         ('{"intent": "greeting", "confidence": 1, "reason": "x"}', "greeting"),
         ('```json\n{"intent": "brain_dump"}\n```', "brain_dump"),
         ('Here: {"intent": "stuck_dev"} thanks', "stuck_dev"),
+        (
+            '{"intent": "correction", "confidence": 0.9, "reason": "x"}\n\nExtra prose after JSON.',
+            "correction",
+        ),
     ],
 )
 def test_extract_json_object(raw: str, expected_intent: str) -> None:

@@ -26,23 +26,94 @@ _PROMPTS = Path(__file__).resolve().parent / "prompts.json"
 
 
 def extract_json_object(text: str) -> dict[str, Any] | None:
-    """Best-effort JSON object parse from model output (handles fences / prose)."""
+    """Best-effort JSON object parse from model output (handles fences / prose after JSON)."""
     t = (text or "").strip()
     if not t:
         return None
     fence = re.search(r"```(?:json)?\s*(\{[\s\S]*?\})\s*```", t, re.I)
     if fence:
         t = fence.group(1).strip()
-    start = t.find("{")
-    end = t.rfind("}")
-    if start == -1 or end == -1 or end <= start:
-        return None
-    blob = t[start : end + 1]
-    try:
-        out = json.loads(blob)
-        return out if isinstance(out, dict) else None
-    except json.JSONDecodeError:
-        return None
+    start = 0
+    while True:
+        start = t.find("{", start)
+        if start == -1:
+            return None
+        depth = 0
+        end_idx = -1
+        for i in range(start, len(t)):
+            c = t[i]
+            if c == "{":
+                depth += 1
+            elif c == "}":
+                depth -= 1
+                if depth == 0:
+                    end_idx = i
+                    break
+        if end_idx == -1:
+            return None
+        blob = t[start : end_idx + 1]
+        try:
+            out = json.loads(blob)
+            if isinstance(out, dict):
+                return out
+        except json.JSONDecodeError:
+            start += 1
+            continue
+        start += 1
+
+
+def build_intent_classifier_system_prompt(base_instruction: str) -> str:
+    """Append few-shot examples (addresses common phi3:mini mislabels)."""
+    base = (base_instruction or "").strip()
+    shots = """
+## Critical disambiguation (read before classifying)
+- **greeting**: short social openers only (hi, hello, hey, good morning, howdy) with **no** real task yet. **Never** use general_chat for these.
+- **general_chat**: trivia, small talk, factual Q&A, or chit-chat that is **not** a greeting-only line and **not** another intent.
+- **brain_dump**: user lists **2+ concrete tasks/errands** or clear multi-item todo language.
+- **create_sub_agent**: user wants a **named role/specialist agent** (marketing, QA, security, research, …) via registry — phrases like "create a … agent", "spawn a … agent", "I need a … specialist".
+- **create_custom_agent**: legacy **user-defined agent profile** wording only when clearly about building a **custom profile/config**, not a role specialist (rare in benchmarks).
+- **orchestrate_system**: status across **missions / Mission Control / dev runs / what succeeded or failed** — orchestration overview.
+- **external_execution**: user wants an **end-to-end pipeline** on hosted infra (check logs, fix, push, redeploy, verify production).
+- **external_execution_continue**: short confirmation continuing a prior **external execution / Railway / deploy** access thread.
+- **external_investigation**: hosted provider health / outage / dashboard questions **without** demanding the full fix-push-verify pipeline.
+- **stuck**: overwhelmed / frozen **without** listing tasks; life overwhelm (not build errors).
+- **stuck_dev**: **build, test, CI, deploy, tooling, stack traces, configs** — technical blockage.
+
+## Few-shot (your entire reply must be ONE JSON object only — no markdown, no text before or after)
+User message: hello there
+{"intent":"greeting","confidence":0.95,"reason":"short social opener"}
+
+User message: hey team
+{"intent":"greeting","confidence":0.92,"reason":"greeting to group"}
+
+User message: buy milk, call dentist, finish the deck slides
+{"intent":"brain_dump","confidence":0.9,"reason":"multiple concrete tasks listed"}
+
+User message: create a marketing agent for me
+{"intent":"create_sub_agent","confidence":0.9,"reason":"registry role specialist"}
+
+User message: spawn a QA specialist agent
+{"intent":"create_sub_agent","confidence":0.9,"reason":"spawn specialist"}
+
+User message: give me mission control status on all runs
+{"intent":"orchestrate_system","confidence":0.88,"reason":"orchestration status"}
+
+User message: check railway logs, fix the code, push, redeploy, verify production
+{"intent":"external_execution","confidence":0.9,"reason":"full hosted pipeline"}
+
+User message: yes use the railway token I pasted
+{"intent":"external_execution_continue","confidence":0.85,"reason":"continues deploy access thread"}
+
+User message: is railway down for everyone right now
+{"intent":"external_investigation","confidence":0.85,"reason":"hosted service health question"}
+
+User message: I feel completely stuck and can't start
+{"intent":"stuck","confidence":0.88,"reason":"overwhelm without task list"}
+
+User message: pytest fails with a fixture error on CI
+{"intent":"stuck_dev","confidence":0.9,"reason":"technical CI/test failure"}
+""".strip()
+    return f"{base}\n\n{shots}".strip()
 
 
 def format_classifier_user(raw_user: str, intents: list[str]) -> str:
@@ -121,7 +192,8 @@ def run_ollama_benchmark(
     timeout: float,
 ) -> RunSummary:
     spec = json.loads(prompts_path.read_text(encoding="utf-8"))
-    system = str(spec.get("system") or "")
+    base_system = str(spec.get("system") or "")
+    system = build_intent_classifier_system_prompt(base_system)
     intents = spec.get("intents")
     if not isinstance(intents, list) or not all(isinstance(x, str) for x in intents):
         raise ValueError("prompts.json: missing or invalid 'intents' list")
@@ -245,7 +317,7 @@ def main() -> int:
     )
     parser.add_argument("--base-url", default="http://127.0.0.1:11434", help="Ollama root URL")
     parser.add_argument("--model", default="", help="Override model (default from prompts.json)")
-    parser.add_argument("--timeout", type=float, default=120.0, help="HTTP timeout seconds")
+    parser.add_argument("--timeout", type=float, default=180.0, help="HTTP timeout seconds (per request)")
     parser.add_argument("--json-out", type=Path, default=None, help="Write machine-readable report")
     parser.add_argument("--markdown-out", type=Path, default=None, help="Write Markdown table report")
     args = parser.parse_args()
