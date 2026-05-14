@@ -28,19 +28,18 @@ export default function LoginPage() {
       try {
         const r = await fetch("/api/setup-creds", { cache: "no-store" });
         const creds = (await r.json()) as { api_base?: string; user_id?: string; bearer_token?: string };
-        if (cancelled || !creds.user_id || !creds.api_base) {
-          return;
-        }
+        if (cancelled) return;
+        const ab = (creds.api_base || "").trim().replace(/\/$/, "");
+        const uid = (creds.user_id || "").trim();
+        const btok = (creds.bearer_token || "").trim();
+        if (!ab && !uid && !btok) return;
         const cur = readConfig();
-        const uid = creds.user_id.trim();
-        const apply = !cur.userId.trim() || cur.userId.trim() === uid;
-        if (!apply) {
-          return;
-        }
+        const sameUser = !uid || !cur.userId.trim() || cur.userId.trim() === uid;
+        if (!sameUser) return;
         const next = {
-          apiBase: creds.api_base.trim().replace(/\/$/, "") || cur.apiBase || defaultConfig.apiBase,
-          userId: uid,
-          token: (creds.bearer_token ?? cur.token ?? "").trim(),
+          apiBase: ab || cur.apiBase || defaultConfig.apiBase,
+          userId: uid || cur.userId,
+          token: btok || cur.token,
         };
         saveConfig(next);
         setApiBase(next.apiBase);

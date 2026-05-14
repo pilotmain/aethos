@@ -155,6 +155,22 @@ def _parse_pending_host_executor(
     return payload, title
 
 
+def _normalize_browser_host_pending_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    """Repair common JSON round-trip gaps for browser ``plugin_skill`` / chains before re-validation."""
+    out = dict(payload or {})
+    ha = (out.get("host_action") or "").strip().lower()
+    if ha == "plugin_skill":
+        if out.get("input") is None or not isinstance(out.get("input"), dict):
+            out["input"] = {}
+    elif ha == "chain":
+        acts = out.get("actions")
+        if isinstance(acts, list):
+            out["actions"] = [
+                _normalize_browser_host_pending_payload(x) if isinstance(x, dict) else x for x in acts
+            ]
+    return out
+
+
 def _confirms_host_executor(user_text: str) -> bool:
     tl = (user_text or "").strip().lower()
     if tl in ("continue", "do it", "do that", "run it", "go ahead", "run"):
@@ -1192,7 +1208,15 @@ def try_apply_host_executor_turn(
                     True,
                     None,
                 )
-            safe_pl = _validate_enqueue_payload(payload0)
+            raw_pl = dict(payload0)
+            safe_pl = _validate_enqueue_payload(
+                stamp_host_payload(
+                    apply_trusted_instruction_source(
+                        _normalize_browser_host_pending_payload(raw_pl),
+                        InstructionSource.USER_MESSAGE.value,
+                    )
+                )
+            )
             if not safe_pl:
                 cctx.next_action_pending_inject_json = None
                 db.add(cctx)

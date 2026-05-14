@@ -8,6 +8,7 @@ from __future__ import annotations
 import asyncio
 import concurrent.futures
 import re
+import subprocess
 from typing import Any
 from urllib.parse import urlparse
 
@@ -65,6 +66,28 @@ def default_browser_timeout_ms() -> int:
         except (TypeError, ValueError):
             pass
     return int(getattr(s, "nexa_browser_timeout", 30000) or 30000)
+
+
+def ensure_browser_ready() -> bool:
+    """
+    Best-effort check that Playwright is available; optionally install Chromium for browser automation.
+
+    Returns True if the ``playwright`` package imports; install step is non-fatal (check=False).
+    """
+    try:
+        import playwright  # noqa: F401
+    except ImportError:
+        return False
+    try:
+        subprocess.run(
+            ["playwright", "install", "chromium"],
+            check=False,
+            capture_output=True,
+            timeout=600,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
+        return False
+    return True
 
 
 def run_browser_host_action_sync(action: str, payload: dict[str, Any]) -> str:

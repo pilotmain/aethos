@@ -14,6 +14,8 @@ from datetime import datetime, timezone
 from typing import Any
 
 SUGGESTED_TTL_SECONDS = 30 * 60
+# Host-executor pending confirms for browser automation (navigate + screenshot chains) may wait on user approval.
+HOST_BROWSER_PENDING_INJECT_TTL_SECONDS = 120 * 60
 
 # Commands we inject directly; free-text lines get a one-time "run" confirm.
 _INJECTABLE = re.compile(
@@ -212,6 +214,33 @@ def _parse_last_injected(pending_json: str | None) -> tuple[str, str] | None:
     if not c:
         return None
     return c, ts0
+
+
+def pending_inject_ttl_seconds(pending_json: str | None) -> int:
+    """TTL for ``next_action_pending_inject_json`` — longer for browser host payloads."""
+    if not (pending_json or "").strip():
+        return SUGGESTED_TTL_SECONDS
+    try:
+        o = json.loads(pending_json)
+    except (json.JSONDecodeError, TypeError, ValueError):
+        return SUGGESTED_TTL_SECONDS
+    if not isinstance(o, dict):
+        return SUGGESTED_TTL_SECONDS
+    pl = o.get("payload")
+    if not isinstance(pl, dict):
+        return SUGGESTED_TTL_SECONDS
+    ha = (pl.get("host_action") or "").strip().lower()
+    if ha == "plugin_skill":
+        sn = str(pl.get("skill_name") or "").strip().lower()
+        if sn.startswith("browser_"):
+            return HOST_BROWSER_PENDING_INJECT_TTL_SECONDS
+    if ha == "chain":
+        from app.services.host_executor_chain import chain_actions_are_browser_plugin_skills
+
+        actions_in = pl.get("actions")
+        if isinstance(actions_in, list) and chain_actions_are_browser_plugin_skills(actions_in):
+            return HOST_BROWSER_PENDING_INJECT_TTL_SECONDS
+    return SUGGESTED_TTL_SECONDS
 
 
 def is_last_injected_action_expired(
@@ -534,7 +563,8 @@ def is_pending_inject_expired(pending_json: str | None) -> bool:
         return True
     if t.tzinfo is None:
         t = t.replace(tzinfo=timezone.utc)
-    return (now - t).total_seconds() > SUGGESTED_TTL_SECONDS
+    ttl = pending_inject_ttl_seconds(pending_json)
+    return (now - t).total_seconds() > ttl
 
 
 def _pending_for_unknown(cmd: str) -> NextActionUserTurn:

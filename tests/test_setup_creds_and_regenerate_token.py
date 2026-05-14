@@ -31,6 +31,19 @@ def test_get_setup_creds_reads_file(monkeypatch, tmp_path) -> None:
     assert body.get("api_base") == "http://127.0.0.1:8010"
 
 
+def test_merge_setup_creds_partial(monkeypatch, tmp_path) -> None:
+    from app.core.setup_creds_file import merge_setup_creds, read_setup_creds_dict
+
+    p = tmp_path / "creds.json"
+    monkeypatch.setenv("AETHOS_SETUP_CREDS_FILE", str(p))
+    merge_setup_creds(api_base="http://127.0.0.1:9999", user_id="u1", bearer_token="t1")
+    merge_setup_creds(bearer_token="t2")
+    d = read_setup_creds_dict()
+    assert d.get("api_base") == "http://127.0.0.1:9999"
+    assert d.get("user_id") == "u1"
+    assert d.get("bearer_token") == "t2"
+
+
 def test_regenerate_token_ok_for_test_x_user(monkeypatch, db_session) -> None:
     monkeypatch.setenv("TEST_X_USER_ID", "web_setup_rot1")
     monkeypatch.setenv("NEXA_WEB_API_TOKEN", "secret_rotate_me")

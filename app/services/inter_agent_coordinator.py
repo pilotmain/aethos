@@ -31,6 +31,24 @@ def parse_inter_agent_steps(text: str) -> list[tuple[str, str]] | None:
         return None
     line = raw.splitlines()[0].strip()
 
+    m_then = re.search(
+        r"(?is)^ask\s+@?([\w-]+)\s+to\s+(.+?)\s*,\s*then\s+(?:ask|tell)\s+@?([\w-]+)\s+to\s+(.+?)(?:[.?!]+)?\s*$",
+        line,
+    )
+    if m_then:
+        a1, t1, a2, t2 = m_then.group(1), m_then.group(2).strip(), m_then.group(3), m_then.group(4).strip()
+        if a1 and t1 and a2 and t2:
+            return [(a1, t1), (a2, t2)]
+
+    m_then2 = re.search(
+        r"(?is)^ask\s+@?([\w-]+)\s+to\s+(.+?)\s+then\s+(?:ask|tell)\s+@?([\w-]+)\s+to\s+(.+?)(?:[.?!]+)?\s*$",
+        line,
+    )
+    if m_then2:
+        a1, t1, a2, t2 = m_then2.group(1), m_then2.group(2).strip(), m_then2.group(3), m_then2.group(4).strip()
+        if a1 and t1 and a2 and t2:
+            return [(a1, t1), (a2, t2)]
+
     m = re.search(
         r"(?is)^ask\s+@?([\w-]+)\s+to\s+(.+?)\s+and\s+(?:ask|tell)\s+@?([\w-]+)\s+to\s+(.+?)(?:[.?!]+)?\s*$",
         line,

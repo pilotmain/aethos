@@ -224,6 +224,12 @@ def dedupe_env_assignment_lines(path: Path) -> None:
     path.write_text("\n".join(out) + "\n", encoding="utf-8")
 
 
+def _aethos_auto_register_workspace_default() -> bool:
+    """When true (default), queue workspace API registration without an extra prompt."""
+    v = (os.environ.get("AETHOS_AUTO_REGISTER_WORKSPACE") or "true").strip().lower()
+    return v in ("1", "true", "yes", "y", "")
+
+
 class SetupWizard:
     """Orchestrates numbered steps with persistent state for resume."""
 
@@ -953,14 +959,21 @@ SSO_POST_LOGIN_REDIRECT=http://localhost:3000/login
             print(
                 f"  {Colors.success('Host executor + work root already set for browser automation (.env).')}"
             )
-            reg = prompt_line(
-                f"  {Colors.question('Register this path as a Mission Control workspace root when the API is up? [Y/n]')} "
-            ).strip().lower()
-            if reg in ("", "y", "yes"):
+            print(f"  {Colors.info(f'Workspace path: {wr_cur}')}")
+            if _aethos_auto_register_workspace_default():
                 self.pending_workspace = (wr_cur, "setup_workspace")
                 print(
-                    f"  {Colors.info('Will POST /api/v1/web/workspace/roots during verification if the API responds.')}"
+                    f"  {Colors.success('Will register this path via API when the API is up (AETHOS_AUTO_REGISTER_WORKSPACE).')}"
                 )
+            else:
+                reg = prompt_line(
+                    f"  {Colors.question(f'Register {wr_cur} as a Mission Control workspace root when the API is up? [Y/n]')} "
+                ).strip().lower()
+                if reg in ("", "y", "yes"):
+                    self.pending_workspace = (wr_cur, "setup_workspace")
+                    print(
+                        f"  {Colors.info('Will POST /api/v1/web/workspace/roots during verification if the API responds.')}"
+                    )
             return True
 
         yn = prompt_line(
@@ -995,15 +1008,21 @@ SSO_POST_LOGIN_REDIRECT=http://localhost:3000/login
         print(
             f"  {Colors.warning('Host actions can modify files under this tree — use a dedicated folder.')}"
         )
-
-        reg = prompt_line(
-            f"  {Colors.question('Register this path as a Mission Control workspace root when the API is up? [Y/n]')} "
-        ).strip().lower()
-        if reg in ("", "y", "yes"):
+        print(f"  {Colors.info(f'Workspace path: {resolved}')}")
+        if _aethos_auto_register_workspace_default():
             self.pending_workspace = (resolved, "setup_workspace")
             print(
-                f"  {Colors.info('Will POST /api/v1/web/workspace/roots during verification if the API responds.')}"
+                f"  {Colors.success('Will register this path via API when the API is up (AETHOS_AUTO_REGISTER_WORKSPACE).')}"
             )
+        else:
+            reg = prompt_line(
+                f"  {Colors.question(f'Register {resolved} as a Mission Control workspace root when the API is up? [Y/n]')} "
+            ).strip().lower()
+            if reg in ("", "y", "yes"):
+                self.pending_workspace = (resolved, "setup_workspace")
+                print(
+                    f"  {Colors.info('Will POST /api/v1/web/workspace/roots during verification if the API responds.')}"
+                )
         return True
 
     def setup_database(self) -> bool:
@@ -1241,11 +1260,12 @@ SSO_POST_LOGIN_REDIRECT=http://localhost:3000/login
             return
         try:
             sys.path.insert(0, str(self.repo_root))
-            from app.core.setup_creds_file import setup_creds_json_path, write_setup_creds
+            from app.core.setup_creds_file import merge_setup_creds, setup_creds_json_path
 
-            write_setup_creds(api_base=ab, user_id=uid, bearer_token=tok)
+            merge_setup_creds(api_base=ab, user_id=uid or None, bearer_token=tok or None)
             dest = setup_creds_json_path()
-            print(f"  {Colors.success(f'Mission Control bootstrap creds → {dest}')}")
+            if dest.is_file() and dest.stat().st_size > 0:
+                print(f"  {Colors.success(f'Mission Control bootstrap creds → {dest}')}")
         except Exception as exc:  # noqa: BLE001
             print(f"  {Colors.warning(f'Could not write setup creds file: {exc!s}')}")
         self._register_workspace_roots_via_api(ab)
