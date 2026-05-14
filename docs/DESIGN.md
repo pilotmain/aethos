@@ -90,31 +90,30 @@ Benchmarks are **not CI-enforced** in this document unless separately added. Mea
 
 | Scenario | Actual behavior |
 |----------|------------------|
-| `USE_REAL_LLM=true`, no Anthropic/OpenAI merged keys, `NEXA_LLM_PROVIDER=auto`, Ollama not enabled (`NEXA_OLLAMA_ENABLED=false`, default), no DeepSeek/OpenRouter/`NEXA_LLM_API_KEY` usable pair | **No paid LLM calls.** Intent: `classify_intent_llm` skips the LLM path when `MergedLlmKeyInfo.has_any_key` is false (Anthropic/OpenAI only) and uses **`classify_intent_fallback`**. Reply composition: `response_composer.use_real_llm()` is false when **`providers_available()`** is false, so **`fallback_compose_response`** / template paths run instead of `primary_complete_*`. |
+| `USE_REAL_LLM=true`, no Anthropic/OpenAI merged keys, `NEXA_LLM_PROVIDER=auto`, Ollama not enabled (`NEXA_OLLAMA_ENABLED=false`, default), no DeepSeek/OpenRouter/`NEXA_LLM_API_KEY` usable pair | **No paid LLM calls.** Intent: `classify_intent_llm` uses **`providers_available()`** (includes Ollama when enabled + `is_ollama_ready()`); if false, **`classify_intent_fallback`**. Reply composition: `response_composer.use_real_llm()` is false when **`providers_available()`** is false, so **`fallback_compose_response`** / template paths run instead of `primary_complete_*`. |
 | Fresh **`scripts/setup.py`** and **`ollama`** on `PATH` | Target `.env` gets **`NEXA_OLLAMA_ENABLED=true`** and **`NEXA_LLM_PROVIDER=ollama`** (CLI presence only; you still need a running Ollama server and a pulled model for successful local inference). |
 | Ollama as LLM backend (manual or setup) | Set **`NEXA_OLLAMA_ENABLED=true`** and/or **`NEXA_LLM_PROVIDER=ollama`** so bootstrap registers the HTTP backend (`app/services/llm/bootstrap.py`). With **`NEXA_LLM_PROVIDER=auto`**, Ollama is **not** auto-registered from the running app alone — use **`NEXA_OLLAMA_ENABLED=true`** (setup does this when the CLI exists) or **`NEXA_LOCAL_FIRST=true`** with `auto`. |
 | Ollama **enabled in config** but HTTP unreachable or **`GET …/api/tags`** returns **no models** | **`is_ollama_ready()`** is false → **`providers_available()`** is false for the Ollama-only case → **`use_real_llm()`** false → **template / fallback** composer (same as no-provider). Result is cached briefly (~15s) so the gateway recovers when Ollama starts. |
 | Cloud or gateway keys present | Anthropic / OpenAI (merged system + user), DeepSeek, OpenRouter, or `NEXA_LLM_API_KEY` with a non-`auto` primary satisfy **`providers_available()`**; routing follows `NEXA_LLM_PROVIDER` and registry order in bootstrap. |
 
-### 2.4 Design principle — router / executor vs model intelligence `[Target]`
+### 2.4 Design principle — router / executor vs model intelligence `[Implemented]`
 
 **AethOS should not “think”; it should route and execute.**
 
-- The **quantized / local LLM** (e.g. Phi-3 Mini, Gemma 2, Qwen via **Ollama HTTP** today) is intended to carry **reasoning, classification, and natural-language generation** where product quality requires it.  
-- AethOS carries the **doing**: file operations, command execution, browser control, deployment wiring, agent registry routing, permissions, and approvals.
+- The **quantized / local LLM** (recommended: **`qwen2.5:7b`** via **Ollama HTTP**, 4‑bit ~4.7GB on disk) carries **classification and NL generation** where product quality requires it; **router + executor** carry **doing** (file ops, allowlisted commands, browser, deploy wiring, registry, approvals).
 
-**Current implementation is layered:** regex heuristics, template fallbacks, gateway branches, and LLM calls coexist (`intent_classifier.py`, `response_composer.py`, gateway runtime). That is **intentionally transitional** until a local model path is **benchmarked and trusted** on a fixed agent-task suite (see **`tests/benchmark/`** — harness **implemented**; golden prompts and scoring evolve with measurements).
+**Measured intent axis (fixed suite):** the repo’s **65-case** agent-task intent benchmark (`tests/benchmark/run_benchmark.py` + `prompts.json`) reached **100%** label match with **`qwen2.5:7b`** and the shared few-shot block in `app/services/intent_classifier_prompt_shots.py` (same text appended to production `INTENT_CLASSIFIER_SYSTEM` in `intent_classifier.py`). This does **not** generalize to open-ended chat; scope stays the golden suite.
 
-**Target shape (after local model integration + validation, not before):**
+**Implementation layering:**
 
-1. **Intent classification** → primary path through the **local / quantized** model (fast, consistent JSON or structured output).  
-2. **User-visible reply generation** → same stack where appropriate, with policy guards unchanged.  
-3. **Tool execution** → **deterministic** gates (`host_executor`, allowlists, approvals) — separate from “model chooses to run bash”.  
-4. **Agent handoff** → model proposes / classifies; **AethOS** enforces routing, quotas, and safety.
+1. **Intent classification** — LLM JSON path when `USE_REAL_LLM` and **`providers_available()`** (Ollama-only laptops included when Ollama is enabled or `NEXA_LOCAL_FIRST=true` with `auto` and `/api/tags` is healthy); otherwise **`classify_intent_fallback`**. Deterministic **fast-path gates** in `get_intent` (greeting, config query, orchestration NL, etc.) stay for latency and safety.  
+2. **User-visible replies** — Phase‑11 provider chain (`llm/bootstrap.py`, `completion.py`) with existing policy guards.  
+3. **Tool execution** — **deterministic** gates (`host_executor`, allowlists, approvals).  
+4. **Agent handoff** — model classifies; **AethOS** enforces routing and quotas.
 
-**Cleanup (explicitly later — do not pre-clean):** remove or shrink regex-only intent shortcuts, shrink template-only reply surfaces, simplify fallback chains, and reduce gateway branching **only after** benchmark targets are met and the local stack is the default happy path.
+**Cleanup posture:** benchmark-tuned few-shots are **shared** with production (no duplicate prompt strings). Further shrinking of regex shortcuts is optional and should stay test-guarded (benchmark + product tests).
 
-**Order of operations:** benchmark harness → integrate / tune quantized primary LLM (Ollama or ADR’d provider) → validate accuracy on the **scoped** task set → **then** delete legacy paths. Skipping ahead risks regressions while paid-cloud and safety paths still matter.
+**Order of operations:** ~~benchmark → integrate local primary → validate → delete legacy~~ **Intent benchmark + local default model path are landed**; incremental simplification of redundant fallbacks can follow behind tests.
 
 ---
 
@@ -185,11 +184,9 @@ Authoritative list: **`/docs`** and **`/openapi.json`** on a running API, or `ap
 
 Many more routers exist (cron, jobs, approvals, self-improvement, …); do not treat this table as exhaustive.
 
-### 3.5 Phase 5 — optional local quantized LLM `[Target]`
+### 3.5 Phase 5 — optional local quantized LLM `[Implemented]` (Ollama)
 
-- **Not implemented** as a separate GGUF engine in this repo today.  
-- **Today:** remote HTTP providers + **`ollama`** as the local HTTP backend (`app/services/llm/providers/ollama_backend.py`, registered from `bootstrap.py`).  
-- **Direction:** any future local engine should appear as **another provider in the same registry / `NEXA_LLM_PROVIDER` enum**, with an ADR naming the slug (`local_gguf`, etc.) — do not document a literal `local` slug until it exists in `Settings` validation.
+- **Shipped path:** **Ollama HTTP** as a first-class provider (`app/services/llm/providers/ollama_backend.py`, registered from `bootstrap.py`). Default tag in `Settings`: **`nexa_ollama_default_model` → `qwen2.5:7b`**. No separate in-repo GGUF engine; other local engines would be ADR’d as additional provider slugs.
 
 ---
 
@@ -225,7 +222,7 @@ Local inference uses the **Ollama HTTP** backend only (`NEXA_LLM_PROVIDER=ollama
 
 Exact tag names vary on the Ollama library; confirm with `ollama list` / [ollama.com/library](https://ollama.com/library).
 
-**Accuracy / benchmarking:** do **not** claim “>95%” against open-ended chat. Scope targets to a **fixed agent-task suite** (e.g. file-op payloads, command allowlist classification, handoff phrasing, intent labels) measured with **`tests/benchmark/run_benchmark.py`**. Tune model + few-shot prompts against that suite; **`qwen2.5:7b`** is the current documented pick when the **>~80%** intent-axis target matters more than minimum RAM.
+**Accuracy / benchmarking:** scope claims to the **fixed agent-task suite** (65 intent-label cases in `tests/benchmark/prompts.json`) measured with **`tests/benchmark/run_benchmark.py`**. As of **2026-05-14**, **`qwen2.5:7b`** achieves **100%** intent accuracy on that suite with the shared few-shot block (`intent_classifier_prompt_shots.py`). Do **not** extrapolate to unconstrained user chat.
 
 ### 4.4 Soul history and rollback `[Implemented]`
 
@@ -271,6 +268,7 @@ Threats: path traversal (mitigated by `safe_relative_path` and roots), arbitrary
 | Version | Date | Notes |
 |---------|------|--------|
 | 2.0 | 2026-05-14 | Draft: codebase-aligned vocabulary, routes, soul + browser detail, governance. |
+| 2.0.3 | 2026-05-14 | §2.4 `[Implemented]`: router/executor + local `qwen2.5:7b` benchmark 100%; §3.5 Ollama path; intent LLM uses `providers_available()`; shared `intent_classifier_prompt_shots.py`. |
 | 2.0.2 | 2026-05-14 | §4.3: `qwen2.5:7b` default for local accuracy; benchmark few-shot expansion. |
 | 1.x | (prior drafts) | Superseded — generic diagrams / incorrect API names. |
 

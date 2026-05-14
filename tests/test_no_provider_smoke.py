@@ -32,6 +32,7 @@ def no_provider_llm_env(monkeypatch: pytest.MonkeyPatch) -> None:
         "app.services.llm_key_resolution.get_merged_api_keys",
         lambda: MergedLlmKeyInfo(anthropic_api_key=None, openai_api_key=None),
     )
+    monkeypatch.setattr("app.services.llm.completion.providers_available", lambda: False)
     monkeypatch.setattr("app.services.response_composer.providers_available", lambda: False)
 
     monkeypatch.setattr("app.services.intent_classifier.safe_llm_json_call", _assert_no_remote_llm)

@@ -164,15 +164,6 @@ class Settings(BaseSettings):
     # Phase 37 — optional asyncio supervisor loop (registry + audit health checks).
     nexa_agent_monitoring_enabled: bool = False
     nexa_agent_monitor_interval_seconds: int = 30
-    # Phase 73 — self-healing agents (Genesis Loop). When enabled, the supervisor
-    # tick triggers diagnosis + recovery for agents that exceed the failure
-    # threshold within the failure window. Escalation only fires when a Telegram
-    # chat id is set; otherwise alerts go to the application log only.
-    nexa_self_healing_enabled: bool = True
-    nexa_agent_escalation_chat_id: str = ""
-    nexa_agent_max_auto_recovery_attempts: int = 3
-    nexa_agent_failure_threshold: int = 3
-    nexa_agent_failure_window_minutes: int = 60
     # When true with orchestration, sub-agent host payloads run via execute_payload in-process (audit log).
     nexa_agent_orchestration_autoqueue: bool = False
     # Week 5 — in-process rate limits (single-worker; see sub_agent_rate_limit)

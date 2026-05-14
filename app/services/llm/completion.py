@@ -319,7 +319,7 @@ def providers_available() -> bool:
     p = (s.nexa_llm_provider or "").strip().lower()
     if (s.nexa_llm_api_key or "").strip() and p not in ("", "auto"):
         return True
-    if s.nexa_ollama_enabled or p == "ollama":
+    if s.nexa_ollama_enabled or p == "ollama" or (s.nexa_local_first and p in ("auto", "")):
         return is_ollama_ready()
     return False
 

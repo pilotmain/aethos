@@ -9,6 +9,7 @@ import logging
 import re
 
 from app.core.config import get_settings
+from app.services.intent_classifier_prompt_shots import INTENT_CLASSIFIER_PROMPT_SHOTS
 from app.services.multi_agent_routing import is_multi_agent_capability_question
 from app.services.safe_llm_gateway import safe_llm_json_call
 
@@ -65,7 +66,8 @@ Return JSON only:
 
 User message: {message}"""
 
-INTENT_CLASSIFIER_SYSTEM = INTENT_CLASSIFIER_PROMPT.rsplit("User message:", 1)[0].strip()
+_INTENT_CLASSIFIER_BASE = INTENT_CLASSIFIER_PROMPT.rsplit("User message:", 1)[0].strip()
+INTENT_CLASSIFIER_SYSTEM = f"{_INTENT_CLASSIFIER_BASE}\n\n{INTENT_CLASSIFIER_PROMPT_SHOTS}".strip()
 
 VALID_INTENTS = {
     "orchestrate_system",
@@ -785,10 +787,13 @@ def classify_intent_llm(
 
     s = get_settings()
     m = get_merged_api_keys()
-    # Intent LLM uses merged Anthropic/OpenAI keys only. Ollama-only setups stay on fallback here;
-    # gateway reply composition uses ``providers_available()`` (includes ``is_ollama_ready()``).
-    if not s.use_real_llm or not m.has_any_key:
-        return classify_intent_fallback(message)
+    from app.services.llm.completion import providers_available
+
+    # Use LLM when any registered provider can run (cloud keys or Ollama ready per ``providers_available``).
+    if not s.use_real_llm:
+        return classify_intent_fallback(message, conversation_snapshot)
+    if not m.has_any_key and not providers_available():
+        return classify_intent_fallback(message, conversation_snapshot)
 
     mem_note = ""
     if (memory_summary or "").strip():
