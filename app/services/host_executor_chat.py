@@ -255,6 +255,8 @@ def _validate_enqueue_payload(payload: dict[str, Any]) -> dict[str, Any] | None:
     act = (payload.get("host_action") or "").strip().lower()
     if act == "git_status":
         return _attach_cwd({"host_action": "git_status"})
+    if act == "show_workspace_root":
+        return {"host_action": "show_workspace_root"}
     if act == "run_command":
         rn = (payload.get("run_name") or "").strip().lower()
         if rn in ALLOWED_RUN_COMMANDS:

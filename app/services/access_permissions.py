@@ -435,6 +435,8 @@ def host_action_scope_and_risk(
         return SCOPE_BROWSER_ACTION, RISK_HIGH
     if a in ("browser_click", "browser_fill", "browser_screenshot"):
         return SCOPE_BROWSER_ACTION, RISK_MEDIUM
+    if a == "show_workspace_root":
+        return SCOPE_PROJECT_SCAN, RISK_LOW
     return SCOPE_COMMAND_RUN, RISK_MEDIUM
 
 

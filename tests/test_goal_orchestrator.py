@@ -3,18 +3,30 @@
 
 """Autonomous goal planner (deterministic MVP)."""
 
-from __future__ import annotations
-
 import tempfile
 from pathlib import Path
 
-from app.services.goal_orchestrator import GoalOrchestrator, parse_goal_intent
+import pytest
+
+from app.services.goal_orchestrator import GoalOrchestrator, is_goal_planning_line, parse_goal_intent
 
 
 def test_parse_goal_build_app() -> None:
     p = parse_goal_intent("build a todo app")
     assert p is not None
     assert p["intent_type"] == "goal_build_app"
+
+
+def test_is_goal_planning_line_extended_static_site(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("NEXA_EXECUTION_PLANNER_ENABLED", "true")
+    from app.core.config import get_settings
+
+    get_settings.cache_clear()
+    try:
+        assert is_goal_planning_line("build a simple static website") is True
+    finally:
+        monkeypatch.delenv("NEXA_EXECUTION_PLANNER_ENABLED", raising=False)
+        get_settings.cache_clear()
 
 
 def test_execute_build_app_creates_files() -> None:

@@ -11,6 +11,7 @@ from unittest.mock import patch
 from app.services.host_executor_intent import (
     infer_host_executor_action,
     parse_development_task_intent,
+    parse_read_intent,
     parse_start_app_intent,
 )
 
@@ -44,6 +45,14 @@ def test_git_status_variants() -> None:
     for s in ("git status", "check git status", "please check git status", "show git status"):
         out = infer_host_executor_action(s)
         assert out == {"host_action": "git_status"}
+
+
+def test_show_workspace_root_exact() -> None:
+    assert infer_host_executor_action("show workspace root") == {"host_action": "show_workspace_root"}
+
+
+def test_parse_read_intent_ignores_show_workspace_root() -> None:
+    assert parse_read_intent("show workspace root") is None
 
 
 def test_vercel_projects_list_phrase() -> None:

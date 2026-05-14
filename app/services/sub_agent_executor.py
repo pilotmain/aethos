@@ -706,7 +706,9 @@ class AgentExecutor:
                 k in low_pre for k in ("analyze", "review file", "scan file", "lint file", "audit file")
             )
             if wants_scan or path_like:
-                return run_qa_file_analysis(message)
+                # Use only the user's line for path extraction — handoff often contains `/path/file.py`
+                # from the prior agent, which must not trigger a spurious "include a file path" prompt.
+                return run_qa_file_analysis(prefix)
             return self._conversational_response(agent, message, "qa")
         return self._test(agent, message, chat_id, db=db, user_id=user_id, web_session_id=web_session_id)
 

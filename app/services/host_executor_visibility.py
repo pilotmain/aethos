@@ -26,6 +26,8 @@ def allowed_tool_human(payload: dict[str, Any]) -> str:
     act = (payload.get("host_action") or "").strip().lower()
     if act == "git_status":
         return "git status (short, branch summary)"
+    if act == "show_workspace_root":
+        return "print configured workspace roots (read-only)"
     if act == "run_command":
         rn = (payload.get("run_name") or "").strip().lower()
         if rn in ALLOWED_RUN_COMMANDS:

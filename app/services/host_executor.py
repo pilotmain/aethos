@@ -854,6 +854,8 @@ def _format_simulation_plan(
     elif action == "browser_open":
         u = (payload.get("url") or "").strip()
         lines.append(f"Would open in system default browser: {u or '(missing url)'}")
+    elif action == "show_workspace_root":
+        lines.append("Would print NEXA_WORKSPACE_ROOT and HOST_EXECUTOR_WORK_ROOT (read-only).")
     elif action in ("browser_click", "browser_fill", "browser_screenshot"):
         lines.append(f"Would run browser host action (Playwright): {action}")
     elif not action:
@@ -1249,6 +1251,16 @@ def build_simulation_plan(payload: dict[str, Any]) -> dict[str, Any]:
             "screenshot_dir": str(getattr(hs, "nexa_browser_screenshot_dir", "") or ""),
         }
 
+    elif action == "show_workspace_root":
+        plan["kind"] = "info"
+        plan["fields"] = {
+            "action": "show_workspace_root",
+            "nexa_workspace_root": (pl.get("nexa_workspace_root") or getattr(_host_settings(), "nexa_workspace_root", "") or ""),
+            "host_executor_work_root": (
+                pl.get("host_executor_work_root") or getattr(_host_settings(), "host_executor_work_root", "") or ""
+            ),
+        }
+
     elif action in _SIMULATION_DEPLOY_HINTS:
         plan["kind"] = "deploy"
         plan["fields"] = {
@@ -1405,6 +1417,22 @@ def execute_payload(
             str(exec_root)[-128:],
         )
         return _finalize_output(plan)
+
+    if action == "show_workspace_root":
+        lines = [
+            "Configured workspace paths:",
+            "",
+            f"- NEXA_WORKSPACE_ROOT: {getattr(s, 'nexa_workspace_root', '') or '(unset)'}",
+            f"- HOST_EXECUTOR_WORK_ROOT: {getattr(s, 'host_executor_work_root', '') or '(unset)'}",
+        ]
+        hr = (getattr(s, "host_executor_work_root", "") or "").strip()
+        if hr:
+            try:
+                r = Path(hr).expanduser().resolve()
+                lines.append(f"- Resolved host work root: {r}")
+            except OSError as exc:
+                lines.append(f"- (Could not resolve host work root: {exc})")
+        return _finalize_output("\n".join(lines))
 
     if action == "chain":
         actions_in = payload.get("actions")
@@ -1910,6 +1938,8 @@ def proposed_risk_level(payload: dict[str, Any]) -> str:
             return "high"
         return "normal"
     if action in ("list_directory", "find_files"):
+        return "low"
+    if action == "show_workspace_root":
         return "low"
     if action == "read_multiple_files":
         return "normal"

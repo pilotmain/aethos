@@ -152,6 +152,8 @@ def title_for_payload(payload: dict[str, Any]) -> str:
     act = (payload.get("host_action") or "").strip().lower()
     if act == "git_status":
         return "Git status"
+    if act == "show_workspace_root":
+        return "Show workspace roots"
     if act == "run_command":
         cmd = (payload.get("command") or "").strip()
         if cmd:
@@ -529,6 +531,8 @@ def parse_read_intent(text: str) -> dict[str, Any] | None:
 
     if parse_observability_intent(line):
         return None
+    if re.match(r"(?i)^show\s+workspace\s+root\s*$", line.strip()):
+        return None
     text_lower = line.lower()
     for pattern, _kind in _READ_NL_PATTERNS:
         match = re.search(pattern, text_lower, re.IGNORECASE)
@@ -594,6 +598,9 @@ def infer_host_executor_action(user_text: str) -> dict[str, Any] | None:
     if not t or len(t) > 2_000:
         return None
     line = t.splitlines()[0].strip()
+
+    if re.match(r"(?i)^show\s+workspace\s+root\s*$", line):
+        return {"host_action": "show_workspace_root"}
 
     host_browser = parse_browser_host_command(line)
     if host_browser:

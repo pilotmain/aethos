@@ -80,6 +80,26 @@ def test_parse_inter_agent_steps_and_then() -> None:
     assert steps[1][0] == "qa_agent"
 
 
+def test_parse_inter_agent_steps_ampersand() -> None:
+    steps = parse_inter_agent_steps(
+        "ask marketing_agent to create a tagline for coffee & ask qa_agent to review it"
+    )
+    assert steps is not None
+    assert len(steps) == 2
+    assert steps[0][0] == "marketing_agent"
+    assert steps[1][0] == "qa_agent"
+
+
+def test_parse_inter_agent_steps_dot_then() -> None:
+    steps = parse_inter_agent_steps(
+        "ask marketing_agent to create a tagline for coffee. then ask qa_agent to review it"
+    )
+    assert steps is not None
+    assert len(steps) == 2
+    assert steps[0][0] == "marketing_agent"
+    assert steps[1][0] == "qa_agent"
+
+
 def test_visibility_feed_roundtrip() -> None:
     clear_visibility_feed_for_tests()
     push_agent_spawn_notice("web_u1", agent_name="foo_agent", domain="qa", agent_id="abc12345")

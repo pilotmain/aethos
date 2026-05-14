@@ -124,6 +124,8 @@ def reason_for_host_payload(payload: dict[str, Any]) -> str:
         return "Read and analyze local files"
     if ha == "git_status":
         return "Show git status"
+    if ha == "show_workspace_root":
+        return "Show configured workspace roots"
     if ha == "git_commit":
         return "Create a git commit"
     if ha == "git_push":

@@ -198,8 +198,11 @@ class NexaGateway:
         if not uid or not raw:
             return None
         from app.services.host_executor_intent import parse_file_write_intent
+        from app.services.goal_orchestrator import is_goal_planning_line
 
         if parse_file_write_intent(raw):
+            return None
+        if is_goal_planning_line(raw):
             return None
         rows = list_workspaces(db, uid)
         cctx = get_or_create_context(db, uid)

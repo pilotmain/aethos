@@ -49,6 +49,34 @@ def parse_inter_agent_steps(text: str) -> list[tuple[str, str]] | None:
         if a1 and t1 and a2 and t2:
             return [(a1, t1), (a2, t2)]
 
+    m_then_amp = re.search(
+        r"(?is)^ask\s+@?([\w-]+)\s+to\s+(.+?)\s*&\s*(?:ask|tell)\s+@?([\w-]+)\s+to\s+(.+?)(?:[.?!]+)?\s*$",
+        line,
+    )
+    if m_then_amp:
+        a1, t1, a2, t2 = (
+            m_then_amp.group(1),
+            m_then_amp.group(2).strip(),
+            m_then_amp.group(3),
+            m_then_amp.group(4).strip(),
+        )
+        if a1 and t1 and a2 and t2:
+            return [(a1, t1), (a2, t2)]
+
+    m_then_dot = re.search(
+        r"(?is)^ask\s+@?([\w-]+)\s+to\s+(.+?)\s*\.\s+then\s+(?:ask|tell)\s+@?([\w-]+)\s+to\s+(.+?)(?:[.?!]+)?\s*$",
+        line,
+    )
+    if m_then_dot:
+        a1, t1, a2, t2 = (
+            m_then_dot.group(1),
+            m_then_dot.group(2).strip(),
+            m_then_dot.group(3),
+            m_then_dot.group(4).strip(),
+        )
+        if a1 and t1 and a2 and t2:
+            return [(a1, t1), (a2, t2)]
+
     m_and_then = re.search(
         r"(?is)^ask\s+@?([\w-]+)\s+to\s+(.+?)\s+and\s+then\s+(?:ask|tell)\s+@?([\w-]+)\s+to\s+(.+?)(?:[.?!]+)?\s*$",
         line,

@@ -76,6 +76,11 @@ def parse_goal_intent(text: str) -> dict[str, Any] | None:
     return None
 
 
+def is_goal_planning_line(text: str) -> bool:
+    """True when ``text`` matches a deterministic autonomous goal (avoids dev auto-confirm gate)."""
+    return parse_goal_intent(text) is not None
+
+
 def _todo_app_files(slug: str) -> list[dict[str, Any]]:
     return list(todo_static_bundle(slug))
 
@@ -251,5 +256,6 @@ __all__ = [
     "GoalStatus",
     "SubGoal",
     "format_goal_result",
+    "is_goal_planning_line",
     "parse_goal_intent",
 ]
