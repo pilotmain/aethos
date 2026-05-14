@@ -14,6 +14,7 @@ import shutil
 import subprocess
 import sys
 import time
+import uuid
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -46,6 +47,19 @@ STATE_FILE = _REPO_ROOT / ".aethos_setup_state.json"
 BACKUP_SUBDIR = _REPO_ROOT / ".setup" / "backups"
 TOTAL_STEPS = 9
 CREDS_FILE_HOME = Path.home() / ".aethos_credentials"
+
+
+def get_canonical_user_id(telegram_id: str | None = None) -> str:
+    """
+    Default Mission Control X-User-Id for setup when the operator presses Enter.
+
+    If a Telegram-style id is provided (``tg_<digits>``), use it as the canonical id.
+    Otherwise generate a stable random ``web_<hex>`` id (not timestamp-based).
+    """
+    t = (telegram_id or "").strip()
+    if t.startswith("tg_"):
+        return t
+    return f"web_{uuid.uuid4().hex[:16]}"
 
 
 def _legal_auto_accept_noninteractive() -> bool:
@@ -538,6 +552,7 @@ class SetupWizard:
             ("NEXA_DEPLOY_TIMEOUT_SECONDS", "300"),
             ("NEXA_OBSERVABILITY_ENABLED", "true"),
             ("NEXA_RESPONSE_FORMAT", "beautiful"),
+            ("NEXA_AUTO_APPROVE_OWNER", "true"),
             ("AETHOS_OWNER_IDS", ""),
             ("TELEGRAM_OWNER_IDS", ""),
             ("NEXA_SELF_IMPROVEMENT_OWNER_ID", ""),
@@ -554,9 +569,7 @@ class SetupWizard:
     def _sync_self_improvement_and_owners_for_user(self, user_id: str) -> None:
         """Always enable self-improvement; bind owner gates to the Mission Control web user id."""
         self._update_env_key("NEXA_SELF_IMPROVEMENT_ENABLED", "true")
-        cur = (self._get_env_value("AETHOS_OWNER_IDS") or "").strip()
-        if not cur:
-            self._update_env_key("AETHOS_OWNER_IDS", user_id)
+        self._update_env_key("AETHOS_OWNER_IDS", user_id)
         if not (self._get_env_value("NEXA_SELF_IMPROVEMENT_OWNER_ID") or "").strip():
             self._update_env_key("NEXA_SELF_IMPROVEMENT_OWNER_ID", user_id)
         if user_id.startswith("tg_") and user_id[3:].isdigit():
@@ -738,6 +751,32 @@ class SetupWizard:
             lines.append("# TELEGRAM_BOT_TOKEN=(not set)")
         CREDS_FILE_HOME.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
+    def _print_aethos_ready_banner(self, *, api_base_url: str, user_id: str, token: str) -> None:
+        """Prominent summary after auth is written to ``.env`` (Mission Control auto-loads these values)."""
+        ab = (api_base_url or "http://127.0.0.1:8010").strip().rstrip("/")
+        tok = (token or "").strip()
+        if len(tok) > 30:
+            tok_show = f"{tok[:20]}...{tok[-10:]}"
+        elif tok:
+            tok_show = tok
+        else:
+            tok_show = "(set NEXA_WEB_API_TOKEN)"
+        bar = "=" * 60
+        print(f"\n{bar}")
+        print(f"{Colors.GREEN}✅ AETHOS IS READY{Colors.RESET}")
+        print(bar)
+        print(f"{Colors.CYAN}🌐 Mission Control:{Colors.RESET} http://localhost:3000")
+        print(f"{Colors.CYAN}📡 API:{Colors.RESET} {ab}")
+        print(f"{Colors.CYAN}🔑 API docs:{Colors.RESET} {ab}/docs")
+        print("")
+        print(f"{Colors.BOLD}🔐 Your login credentials (already filled in the browser when Mission Control runs):{Colors.RESET}")
+        print(f"   • API Base URL: {ab}")
+        print(f"   • X-User-Id: {user_id}")
+        print(f"   • Bearer Token: {tok_show}")
+        print("")
+        print(f"{Colors.DIM}🚀 The browser opens after services start. If not, go to http://localhost:3000{Colors.RESET}")
+        print(f"{bar}\n")
+
     def configure_authentication(self) -> bool:
         """Collect Mission Control user id, optional Telegram token, display bearer token."""
         print(f"\n{Colors.step(4, TOTAL_STEPS, 'Authentication (web API)…')}\n")
@@ -745,10 +784,11 @@ class SetupWizard:
             f"  {Colors.info('Mission Control requests X-User-Id + Bearer token when NEXA_WEB_API_TOKEN is set.')}"
         )
         print(
-            f"  {Colors.DIM}Use a stable id you will paste into the web UI (e.g. web_yourname or tg_<Telegram digits>).{Colors.RESET}"
+            f"  {Colors.DIM}Enter your Telegram user id as tg_<digits> if you use Telegram, or press Enter for a "
+            f"stable random web id.{Colors.RESET}"
         )
 
-        default_uid = f"web_setup_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        default_uid = get_canonical_user_id(None)
         while True:
             raw = prompt_line(
                 f"  {Colors.question(f'X-User-Id [{default_uid}]')} "
@@ -764,7 +804,8 @@ class SetupWizard:
             )
 
         self._update_env_key("TEST_X_USER_ID", user_id)
-        print(f"  {Colors.success(f'Saved TEST_X_USER_ID={user_id}')}")
+        self._update_env_key("X_USER_ID", user_id)
+        print(f"  {Colors.success(f'Saved TEST_X_USER_ID and X_USER_ID={user_id}')}")
         self._sync_self_improvement_and_owners_for_user(user_id)
 
         yn = prompt_line(
@@ -817,6 +858,7 @@ class SetupWizard:
             preview = f"{wtok[:24]}…{wtok[-8:]}" if len(wtok) > 42 else wtok
             print(f"  {Colors.info(f'NEXA_WEB_API_TOKEN={preview}')}")
         print(f"  {Colors.info(f'TEST_X_USER_ID={user_id}')}")
+        self._print_aethos_ready_banner(api_base_url=api_b, user_id=user_id, token=wtok)
         return True
 
     def _configure_enterprise_sso_and_audit(self) -> None:
@@ -1254,7 +1296,9 @@ SSO_POST_LOGIN_REDIRECT=http://localhost:3000/login
     def _write_aethos_setup_creds_file(self, api_base: str | None = None) -> None:
         """Write JSON for Mission Control / Next to auto-load (``AETHOS_SETUP_CREDS_FILE`` overrides path)."""
         ab = (api_base or self._get_env_value("API_BASE_URL") or "http://127.0.0.1:8010").rstrip("/")
-        uid = (self._get_env_value("TEST_X_USER_ID") or "").strip()
+        uid = (
+            (self._get_env_value("TEST_X_USER_ID") or self._get_env_value("X_USER_ID") or "").strip()
+        )
         tok = (self._get_env_value("NEXA_WEB_API_TOKEN") or "").strip()
         if not uid or not tok:
             return
@@ -1291,7 +1335,7 @@ SSO_POST_LOGIN_REDIRECT=http://localhost:3000/login
             return
         token = (self._get_env_value("NEXA_WEB_API_TOKEN") or "").strip()
         web_user = (
-            (self._get_env_value("TEST_X_USER_ID") or "").strip()
+            (self._get_env_value("TEST_X_USER_ID") or self._get_env_value("X_USER_ID") or "").strip()
             or "web_setup_wizard"
         )
         if not token:
@@ -1417,7 +1461,7 @@ SSO_POST_LOGIN_REDIRECT=http://localhost:3000/login
 
         token = (self._get_env_value("NEXA_WEB_API_TOKEN") or "").strip()
         web_user = (
-            (self._get_env_value("TEST_X_USER_ID") or "").strip()
+            (self._get_env_value("TEST_X_USER_ID") or self._get_env_value("X_USER_ID") or "").strip()
             or "web_setup_wizard"
         )
 
@@ -1566,7 +1610,10 @@ SSO_POST_LOGIN_REDIRECT=http://localhost:3000/login
         api_base = self._get_env_value("API_BASE_URL") or "http://127.0.0.1:8010"
         port = parse_port_from_api_base(api_base)
         web_port = 3000
-        connect_uid = (self._get_env_value("TEST_X_USER_ID") or "").strip() or "web_setup_user"
+        connect_uid = (
+            (self._get_env_value("TEST_X_USER_ID") or self._get_env_value("X_USER_ID") or "").strip()
+            or "web_setup_user"
+        )
         full_tok = (self._get_env_value("NEXA_WEB_API_TOKEN") or "").strip()
         if len(full_tok) > 42:
             tok_show = f"{full_tok[:24]}…{full_tok[-8:]}"
@@ -1588,10 +1635,12 @@ SSO_POST_LOGIN_REDIRECT=http://localhost:3000/login
      → {Colors.BOLD}http://127.0.0.1:{port}{Colors.RESET}
      → {Colors.DIM}API docs: http://127.0.0.1:{port}/docs{Colors.RESET}
 
-{Colors.BOLD}📋 Connection settings (paste into Mission Control if asked):{Colors.RESET}
+{Colors.BOLD}📋 Connection (Mission Control auto-fills from the API when local):{Colors.RESET}
   • API Base URL: {Colors.BOLD}http://127.0.0.1:{port}{Colors.RESET}
   • Bearer token: {Colors.BOLD}{tok_show}{Colors.RESET}
   • X-User-Id: {Colors.BOLD}{connect_uid}{Colors.RESET}
+
+{Colors.DIM}If a field is empty, open Login — the app calls /api/setup-creds using your repo .env.{Colors.RESET}
 
 {Colors.BOLD}💡 Next steps:{Colors.RESET}
   • If the browser did not open, visit {Colors.CYAN}http://localhost:{web_port}{Colors.RESET}

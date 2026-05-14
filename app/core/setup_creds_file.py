@@ -63,8 +63,8 @@ def read_setup_creds_merged_dict() -> dict[str, str]:
     """
     JSON from :func:`read_setup_creds_dict` merged with live repo and ``~/.aethos/.env`` values.
 
-    Dotenv files win for ``API_BASE_URL``, ``TEST_X_USER_ID``, and ``NEXA_WEB_API_TOKEN`` when set,
-    so Mission Control picks up tokens regenerated after the JSON snapshot (no API restart required
+    Dotenv files win for ``API_BASE_URL``, ``TEST_X_USER_ID`` (or ``X_USER_ID``), and ``NEXA_WEB_API_TOKEN``
+    when set, so Mission Control picks up tokens regenerated after the JSON snapshot (no API restart required
     for file reads; values refresh on each HTTP request).
     """
     if (os.environ.get("AETHOS_SETUP_CREDS_DOTENV_MERGE", "true") or "true").strip().lower() in (
@@ -91,6 +91,10 @@ def read_setup_creds_merged_dict() -> dict[str, str]:
             v = blob.get(ek)
             if isinstance(v, str) and v.strip():
                 merged[ck] = v.strip()
+        if not (merged.get("user_id") or "").strip():
+            xu = blob.get("X_USER_ID")
+            if isinstance(xu, str) and xu.strip():
+                merged["user_id"] = xu.strip()
     if merged.get("api_base"):
         merged["api_base"] = merged["api_base"].rstrip("/")
     return merged

@@ -22,3 +22,18 @@ def test_read_setup_creds_merged_prefers_dotenv(monkeypatch, tmp_path) -> None:
     assert d.get("user_id") == "from_json"
     assert d.get("bearer_token") == "from_dotenv"
     assert d.get("api_base") == "http://127.0.0.1:8010"
+
+
+def test_read_setup_creds_merged_x_user_id_fallback(monkeypatch, tmp_path) -> None:
+    monkeypatch.delenv("AETHOS_SETUP_CREDS_DOTENV_MERGE", raising=False)
+    fake_home = tmp_path / "nh2"
+    fake_home.mkdir()
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: fake_home))
+    p = tmp_path / "creds2.json"
+    p.write_text('{"api_base": "http://127.0.0.1:8010"}', encoding="utf-8")
+    monkeypatch.setenv("AETHOS_SETUP_CREDS_FILE", str(p))
+    rep = tmp_path / "repo2.env"
+    rep.write_text("X_USER_ID=from_x_only\n", encoding="utf-8")
+    monkeypatch.setattr("app.core.config.ENV_FILE_PATH", rep)
+    d = read_setup_creds_merged_dict()
+    assert d.get("user_id") == "from_x_only"

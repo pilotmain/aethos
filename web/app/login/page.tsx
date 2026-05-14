@@ -34,8 +34,6 @@ export default function LoginPage() {
         const btok = (creds.bearer_token || "").trim();
         if (!ab && !uid && !btok) return;
         const cur = readConfig();
-        const sameUser = !uid || !cur.userId.trim() || cur.userId.trim() === uid;
-        if (!sameUser) return;
         const next = {
           apiBase: ab || cur.apiBase || defaultConfig.apiBase,
           userId: uid || cur.userId,

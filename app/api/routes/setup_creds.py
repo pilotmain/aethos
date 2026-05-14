@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2025 AethOS AI
 
-"""Expose setup-time credentials for Mission Control (local dev; file written by ``scripts/setup.py``)."""
+"""Expose setup-time credentials for Mission Control (loopback-only; live merge from repo ``.env``)."""
 
 from __future__ import annotations
 

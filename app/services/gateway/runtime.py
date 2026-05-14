@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import json
+import os
 import uuid
 from typing import Any
 
@@ -352,9 +353,14 @@ class NexaGateway:
         web_session_id = str(gctx.extras.get("web_session_id") or "default").strip()[:64] or "default"
         cctx = get_or_create_context(db, uid, web_session_id=web_session_id)
         s = get_settings()
-        if bool(getattr(s, "nexa_host_executor_enabled", False)) and bool(
-            getattr(s, "nexa_auto_approve_owner", True)
-        ):
+        raw_auto = (os.environ.get("NEXA_AUTO_APPROVE_OWNER") or "").strip().lower()
+        if raw_auto in ("0", "false", "no"):
+            auto_owner = False
+        elif raw_auto in ("1", "true", "yes"):
+            auto_owner = True
+        else:
+            auto_owner = bool(getattr(s, "nexa_auto_approve_owner", True))
+        if bool(getattr(s, "nexa_host_executor_enabled", False)) and auto_owner:
             from app.services.user_capabilities import is_privileged_owner_for_web_mutations
 
             if is_privileged_owner_for_web_mutations(db, uid):
