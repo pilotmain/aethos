@@ -170,6 +170,13 @@ def _sanitize_selector(raw: str) -> str:
     return s
 
 
+def host_browser_screenshot_directory() -> Path:
+    """Resolved directory for host-executor screenshots (default from Settings: ``~/Desktop``)."""
+    p = Path(get_settings().nexa_browser_screenshot_dir).expanduser()
+    p.mkdir(parents=True, exist_ok=True)
+    return p
+
+
 def default_browser_timeout_ms() -> int:
     """Default Playwright timeout (ms) from Settings."""
     s = get_settings()
@@ -240,16 +247,20 @@ def run_browser_host_action_sync(action: str, payload: dict[str, Any]) -> str:
         page.fill(sel, text, timeout=op_timeout)
         return f"Filled {sel}"
     if act == "browser_screenshot":
-        settings = get_settings()
-        screenshot_dir = Path(settings.nexa_browser_screenshot_dir or "")
-        screenshot_dir.mkdir(parents=True, exist_ok=True)
+        screenshot_dir = host_browser_screenshot_directory()
         name = str(payload.get("name") or "").strip() or None
         stem = name or f"screenshot_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.png"
         if not str(stem).lower().endswith(".png"):
             stem = f"{stem}.png"
         path = screenshot_dir / stem
         page.screenshot(path=str(path), full_page=True)
-        return f"Screenshot saved: {path}"
+        try:
+            on_desktop = screenshot_dir.resolve() == (Path.home() / "Desktop").resolve()
+        except OSError:
+            on_desktop = False
+        if on_desktop:
+            return f"Screenshot saved to Desktop:\n{path}"
+        return f"Screenshot saved:\n{path}"
     raise ValueError(f"unknown browser host action {act!r}")
 
 

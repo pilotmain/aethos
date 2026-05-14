@@ -10,6 +10,7 @@ import pytest
 from app.core.config import get_settings
 from app.services.browser_automation import (
     assert_browser_url_allowed,
+    host_browser_screenshot_directory,
     open_system_browser,
     shutdown_sync_browser_host_session,
 )
@@ -67,6 +68,21 @@ def test_open_system_browser_darwin_invokes_open(monkeypatch: pytest.MonkeyPatch
         assert recorded == [["open", "https://pilotmain.com/path"]]
     finally:
         monkeypatch.delenv("NEXA_BROWSER_ALLOWED_DOMAINS", raising=False)
+        get_settings.cache_clear()
+
+
+def test_host_browser_screenshot_directory_respects_env(
+    monkeypatch: pytest.MonkeyPatch, tmp_path,
+) -> None:
+    d = tmp_path / "shotdir"
+    monkeypatch.setenv("NEXA_BROWSER_SCREENSHOT_DIR", str(d))
+    get_settings.cache_clear()
+    try:
+        out = host_browser_screenshot_directory()
+        assert out.resolve() == d.resolve()
+        assert out.is_dir()
+    finally:
+        monkeypatch.delenv("NEXA_BROWSER_SCREENSHOT_DIR", raising=False)
         get_settings.cache_clear()
 
 

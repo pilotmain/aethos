@@ -652,7 +652,7 @@ class Settings(BaseSettings):
     #: Comma-separated host allowlist for navigations (``*`` = all). Supports ``*.example.com``.
     nexa_browser_allowed_domains: str = "*"
     nexa_browser_screenshot_dir: str = Field(
-        default_factory=lambda: str(REPO_ROOT / "data" / "screenshots"),
+        default_factory=lambda: str(Path.home() / "Desktop"),
     )
 
     @field_validator("nexa_browser_screenshot_dir", mode="before")
@@ -660,7 +660,7 @@ class Settings(BaseSettings):
     def _browser_screenshot_dir_fallback(cls, v: object) -> str:
         s = (str(v) if v is not None else "").strip()
         if not s:
-            return str(REPO_ROOT / "data" / "screenshots")
+            return str(Path.home() / "Desktop")
         return s
 
     @field_validator("nexa_approvals_enabled", mode="before")

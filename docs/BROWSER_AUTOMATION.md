@@ -9,7 +9,7 @@
 | `NEXA_BROWSER_ENABLED` | Master switch (default `true`). |
 | `NEXA_BROWSER_HEADLESS` | Run Chromium headless (default `true`). |
 | `NEXA_BROWSER_TIMEOUT` | Default page timeout in **milliseconds** (default `30000`). |
-| `NEXA_BROWSER_SCREENSHOT_DIR` | PNG/PDF output directory (default `<repo>/data/screenshots`; Docker: `/app/data/screenshots`). |
+| `NEXA_BROWSER_SCREENSHOT_DIR` | PNG/PDF output directory (default `~/Desktop`; Docker: `/app/data/screenshots`). |
 
 Legacy: `NEXA_BROWSER_AUTOMATION_ENABLED=true` also enables the shared session (compat with Phase 41 naming).
 
