@@ -851,8 +851,11 @@ def _format_simulation_plan(
     elif action == "plugin_skill":
         name = (payload.get("skill_name") or "").strip()
         lines.append(f"Would invoke plugin skill: {name or '(missing skill_name)'}")
-    elif action in ("browser_open", "browser_click", "browser_fill", "browser_screenshot"):
-        lines.append(f"Would run browser host action: {action}")
+    elif action == "browser_open":
+        u = (payload.get("url") or "").strip()
+        lines.append(f"Would open in system default browser: {u or '(missing url)'}")
+    elif action in ("browser_click", "browser_fill", "browser_screenshot"):
+        lines.append(f"Would run browser host action (Playwright): {action}")
     elif not action:
         lines.append("Would dispatch (action missing — would have raised ValueError at runtime).")
     else:

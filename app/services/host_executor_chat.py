@@ -795,6 +795,33 @@ def evaluate_deterministic_host_permission_turn(
             None,
         )
 
+    ha0 = (inferred.get("host_action") or "").strip().lower()
+    if ha0 == "browser_open" and not simulate_mode:
+        url0 = str(inferred.get("url") or "").strip()
+        stamped_bo = stamp_host_payload(
+            apply_trusted_instruction_source(dict(inferred), InstructionSource.USER_MESSAGE.value)
+        )
+        safe_bo = _validate_enqueue_payload(stamped_bo)
+        if safe_bo and url0:
+            from app.services.browser_automation import open_system_browser
+
+            res = open_system_browser(url0)
+            if res.get("success"):
+                reply_bo = f"Opened in your default browser:\n{url0}"
+            else:
+                reply_bo = (
+                    "Could not open that URL in the system browser: "
+                    f"{res.get('error') or 'unknown error'}"
+                )[:4000]
+            return NextActionApplicationResult(
+                reply_bo,
+                t0,
+                False,
+                True,
+                None,
+                intent_override="command_completed",
+            )
+
     if simulate_mode:
         from app.services.host_executor import build_simulation_plan
 

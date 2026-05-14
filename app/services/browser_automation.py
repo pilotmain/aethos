@@ -1,13 +1,15 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2025 AethOS AI
 
-"""Host-executor browser helpers: URL allowlist + sync Playwright (reused session)."""
+"""Host-executor browser helpers: URL allowlist, system default browser for ``open``, Playwright for other actions."""
 
 from __future__ import annotations
 
 import logging
+import os
 import re
 import subprocess
+import sys
 import threading
 from datetime import datetime, timezone
 from pathlib import Path
@@ -18,9 +20,8 @@ from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
 
-# Host executor calls ``run_browser_host_action_sync`` from sync code, often via ``asyncio.run()``
-# in a worker thread. A module-level **async** Playwright tied to a closed event loop breaks the
-# next ``open`` ("handler is closed"). Keep a dedicated **sync** Playwright session for this path.
+# ``browser_open`` uses the system default browser (no Playwright). Click / fill / screenshot use a
+# dedicated **sync** Playwright session so they are not tied to a short-lived asyncio loop.
 _sync_lock = threading.Lock()
 _sync_pw: Any = None
 _sync_browser: Any = None
@@ -139,6 +140,27 @@ def assert_browser_url_allowed(url: str) -> None:
         raise ValueError(f"URL host {host!r} is not allowed by NEXA_BROWSER_ALLOWED_DOMAINS")
 
 
+def open_system_browser(url: str) -> dict[str, Any]:
+    """Open URL in the system default browser (no Playwright). Enforces :func:`assert_browser_url_allowed`."""
+    u = (url or "").strip()
+    if not u:
+        return {"success": False, "error": "missing url", "url": ""}
+    try:
+        assert_browser_url_allowed(u)
+    except ValueError as exc:
+        return {"success": False, "error": str(exc), "url": u}
+    try:
+        if sys.platform == "darwin":
+            subprocess.run(["open", u], check=True, timeout=60)
+        elif sys.platform == "win32":
+            os.startfile(u)  # noqa: S606 — http(s) URL validated by assert_browser_url_allowed
+        else:
+            subprocess.run(["xdg-open", u], check=True, timeout=60)
+        return {"success": True, "method": "system_browser", "url": u}
+    except Exception as exc:  # noqa: BLE001
+        return {"success": False, "error": str(exc), "url": u}
+
+
 def _sanitize_selector(raw: str) -> str:
     s = (raw or "").strip().strip('`"\'')
     if not s or len(s) > 2000:
@@ -186,25 +208,24 @@ def run_browser_host_action_sync(action: str, payload: dict[str, Any]) -> str:
     """
     Run a allowlisted browser host_action from synchronous :func:`~app.services.host_executor.execute_payload`.
 
-    ``action`` is one of: ``browser_open``, ``browser_click``, ``browser_fill``, ``browser_screenshot``.
-
-    Uses a process-wide **sync** Playwright browser/page so consecutive ``open`` commands reuse the
-    same tab instead of hitting a stale async driver after per-call ``asyncio.run()`` teardown.
+    ``browser_open`` uses the **system default browser** (no Playwright). Other actions use sync Playwright.
     """
     act = (action or "").strip().lower()
-    timeout_ms = default_browser_timeout_ms()
-    op_timeout = min(max(timeout_ms, 1000), 120_000)
-    page = _get_sync_host_browser_page()
-    page.set_default_timeout(op_timeout)
 
     if act == "browser_open":
         url = str(payload.get("url") or "").strip()
         if not url:
             raise ValueError("browser_open requires url")
-        assert_browser_url_allowed(url)
-        page.goto(url, wait_until="domcontentloaded", timeout=op_timeout)
-        title = page.title()
-        return f"Navigated to {url}\nTitle: {title}"
+        res = open_system_browser(url)
+        if not res.get("success"):
+            raise ValueError(str(res.get("error") or "system browser open failed"))
+        return f"Opened in your default browser:\n{url}"
+
+    timeout_ms = default_browser_timeout_ms()
+    op_timeout = min(max(timeout_ms, 1000), 120_000)
+    page = _get_sync_host_browser_page()
+    page.set_default_timeout(op_timeout)
+
     if act == "browser_click":
         sel = _sanitize_selector(str(payload.get("selector") or ""))
         page.click(sel, timeout=op_timeout)
