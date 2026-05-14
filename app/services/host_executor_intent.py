@@ -907,6 +907,12 @@ def parse_available_clouds_intent(text: str) -> bool:
 
 _SOUL_VERSIONING_PATTERNS: list[tuple[re.Pattern, str]] = [
     (re.compile(r"(?i)(?:show|list)\s+soul\s+(?:version\s+)?history\b"), "soul_history"),
+    (
+        re.compile(
+            r"(?i)rollback\s+soul\s+to\s+(?:the\s+)?(?:previous|prior)\s+version\b"
+        ),
+        "soul_rollback_previous",
+    ),
     (re.compile(r"(?i)rollback\s+soul\s+to\s+(\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}(?:_\d+)?)\b"), "soul_rollback"),
     (re.compile(r"(?i)undo\s+soul\s+change\b"), "soul_undo"),
 ]

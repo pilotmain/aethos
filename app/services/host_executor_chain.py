@@ -21,6 +21,24 @@ def parse_chain_inner_allowed(settings: Any) -> frozenset[str]:
     return frozenset(parts) if parts else DEFAULT_CHAIN_INNER_ALLOWED
 
 
+def chain_actions_are_browser_plugin_skills(actions: Any) -> bool:
+    """True when every step is ``plugin_skill`` with a ``browser_*`` skill (short NL automation chains)."""
+    if not isinstance(actions, list) or not actions:
+        return False
+    for step in actions:
+        if not isinstance(step, dict):
+            return False
+        if (step.get("host_action") or "").strip().lower() != "plugin_skill":
+            return False
+        sn = str(step.get("skill_name") or "").strip()
+        if not sn.startswith("browser_") or len(sn) > 96 or "/" in sn or "\\" in sn:
+            return False
+        raw_inp = step.get("input")
+        if raw_inp is not None and not isinstance(raw_inp, dict):
+            return False
+    return True
+
+
 def merge_chain_step(chain_payload: dict[str, Any], step: dict[str, Any]) -> dict[str, Any]:
     """
     Inherit ``cwd_relative`` from the chain payload when a step omits it and the tool uses cwd

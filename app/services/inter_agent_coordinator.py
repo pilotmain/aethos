@@ -22,6 +22,9 @@ def parse_inter_agent_steps(text: str) -> list[tuple[str, str]] | None:
     Supported:
     - ``ask marketing_agent to … and ask qa_agent to …``
     - ``ask marketing_agent to …`` / ``tell marketing_agent to …``
+
+    Steps are executed as conversational handoffs; QA ``review`` tasks do not require file paths
+    (see :meth:`~app.services.sub_agent_executor.AgentExecutor._qa_or_test`).
     """
     raw = (text or "").strip()
     if not raw:

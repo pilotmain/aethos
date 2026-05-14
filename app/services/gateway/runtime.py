@@ -994,6 +994,20 @@ class NexaGateway:
             if soul_nl is not None:
                 return soul_nl
 
+            from app.services.gateway.early_nl_host_actions import try_early_nl_host_actions
+
+            early_nl = try_early_nl_host_actions(gctx, raw_gate, db_inner)
+            if early_nl is not None:
+                return early_nl
+
+            _log.debug(
+                "host_executor gateway check text=%s",
+                (raw_gate[:50] + ("…" if len(raw_gate) > 50 else "")),
+            )
+            host_out = self._try_host_executor_turn(gctx, raw_gate, db_inner)
+            if host_out is not None:
+                return host_out
+
             from app.services.intent_classifier import (
                 ambiguous_product_clarification_reply,
                 is_ambiguous_product_request,
@@ -1041,20 +1055,6 @@ class NexaGateway:
             goal_nl = try_goal_planning_gateway_turn(gctx, raw_gate, db_inner)
             if goal_nl is not None:
                 return goal_nl
-
-            from app.services.gateway.early_nl_host_actions import try_early_nl_host_actions
-
-            early_nl = try_early_nl_host_actions(gctx, raw_gate, db_inner)
-            if early_nl is not None:
-                return early_nl
-
-            _log.debug(
-                "host_executor gateway check text=%s",
-                (raw_gate[:50] + ("…" if len(raw_gate) > 50 else "")),
-            )
-            host_out = self._try_host_executor_turn(gctx, raw_gate, db_inner)
-            if host_out is not None:
-                return host_out
 
             from app.services.gateway.sandbox_nl import try_sandbox_development_file_fastpath
 

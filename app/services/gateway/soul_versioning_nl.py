@@ -63,6 +63,27 @@ def try_soul_versioning_nl_turn(
             "intent": "soul_rollback",
         }
 
+    if kind == "soul_rollback_previous":
+        from app.services.soul_manager import get_user_soul_history, read_user_soul_version
+
+        hist = get_user_soul_history(uid, limit=1)
+        if not hist:
+            body = "Nothing to roll back — no prior soul snapshots for this account."
+        else:
+            ver = hist[0]
+            blob = read_user_soul_version(uid, ver)
+            if blob is None:
+                body = f"Snapshot `{ver}` is missing on disk."
+            else:
+                ms.update_soul_markdown(db, uid, blob, source="chat_rollback_previous", record_history=True)
+                db.commit()
+                body = f"Restored soul to the previous saved version (`{ver}`)."
+        return {
+            "mode": "chat",
+            "text": gateway_finalize_chat_reply(body, source="soul_nl", user_text=raw),
+            "intent": "soul_rollback_previous",
+        }
+
     if kind == "soul_undo":
         from app.services.soul_manager import get_user_soul_history, read_user_soul_version
 

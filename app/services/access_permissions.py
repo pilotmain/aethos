@@ -21,7 +21,11 @@ from app.services import workspace_registry as workspace_registry_mod
 from app.services.audit_service import audit
 from app.services.channel_gateway.governance import user_can_approve_high_risk
 from app.services.governance_taxonomy import EVENT_APPROVAL_ROLE_DENIED
-from app.services.host_executor_chain import merge_chain_step, parse_chain_inner_allowed
+from app.services.host_executor_chain import (
+    chain_actions_are_browser_plugin_skills,
+    merge_chain_step,
+    parse_chain_inner_allowed,
+)
 from app.services.host_executor_intent import safe_relative_path
 from app.services.sensitivity import NEXA_SENSITIVITY_KEY, detect_sensitivity
 from app.services.trust_audit_constants import (
@@ -798,7 +802,9 @@ def check_host_executor_chain_job(
         return False, "internal: not a chain payload", []
 
     s = get_settings()
-    if not bool(getattr(s, "nexa_host_executor_chain_enabled", False)):
+    actions_in = payload.get("actions")
+    browser_chain = isinstance(actions_in, list) and chain_actions_are_browser_plugin_skills(actions_in)
+    if not bool(getattr(s, "nexa_host_executor_chain_enabled", False)) and not browser_chain:
         return (
             False,
             "Chain host actions are disabled. Set NEXA_HOST_EXECUTOR_CHAIN_ENABLED=1 on the worker.",
@@ -806,7 +812,6 @@ def check_host_executor_chain_job(
         )
 
     allowed_inner = parse_chain_inner_allowed(s)
-    actions_in = payload.get("actions")
     if not isinstance(actions_in, list) or not actions_in:
         return False, "chain requires a non-empty actions list", []
     max_s = min(max(int(getattr(s, "nexa_host_executor_chain_max_steps", 10)), 1), 20)

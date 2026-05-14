@@ -59,6 +59,19 @@ _DEPLOY_STATUS_RX = re.compile(
 )
 
 
+def _qa_user_task_before_handoff(message: str) -> str:
+    """Strip appended inter-agent handoff so path/file heuristics use only the user's line."""
+    m = message or ""
+    for marker in (
+        "\n\n---\n**Handoff (prior agent output):**",
+        "**Handoff (prior agent output):**",
+        "\n\n---\n**Handoff",
+    ):
+        if marker in m:
+            return m.split(marker, 1)[0].strip()
+    return m.strip()
+
+
 class AgentExecutor:
     """Dispatches sub-agent messages to allowlisted host payloads (sync)."""
 
@@ -686,12 +699,15 @@ class AgentExecutor:
         if wants_pytest:
             return self._test(agent, message, chat_id, db=db, user_id=user_id, web_session_id=web_session_id)
         if dom == "qa":
-            path_like = bool(re.search(r"/[\w/.-]+\.\w+", message or ""))
+            prefix = _qa_user_task_before_handoff(message)
+            low_pre = prefix.lower()
+            path_like = bool(re.search(r"/[\w/.-]+\.\w+", prefix))
             wants_scan = any(
-                k in low for k in ("analyze", "review file", "scan file", "lint file", "audit file")
+                k in low_pre for k in ("analyze", "review file", "scan file", "lint file", "audit file")
             )
             if wants_scan or path_like:
                 return run_qa_file_analysis(message)
+            return self._conversational_response(agent, message, "qa")
         return self._test(agent, message, chat_id, db=db, user_id=user_id, web_session_id=web_session_id)
 
     def _test(

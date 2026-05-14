@@ -352,16 +352,32 @@ def _validate_enqueue_payload(payload: dict[str, Any]) -> dict[str, Any] | None:
             out2["intel_operation"] = str(payload.get("intel_operation") or "summarize")[:48]
         return _attach_cwd(out2)
 
+    if act == "plugin_skill":
+        sn = str(payload.get("skill_name") or "").strip()
+        if not sn.startswith("browser_") or len(sn) > 96 or "/" in sn or "\\" in sn:
+            return None
+        raw_inp = payload.get("input")
+        if raw_inp is not None and not isinstance(raw_inp, dict):
+            return None
+        out_ps: dict[str, Any] = {
+            "host_action": "plugin_skill",
+            "skill_name": sn,
+            "input": dict(raw_inp or {}),
+        }
+        return _attach_cwd(out_ps)
+
     if act == "chain":
-        from app.services.host_executor_chain import parse_chain_inner_allowed
+        from app.services.host_executor_chain import chain_actions_are_browser_plugin_skills, parse_chain_inner_allowed
 
         s = get_settings()
-        if not bool(getattr(s, "nexa_host_executor_chain_enabled", False)):
-            return None
-        allowed = parse_chain_inner_allowed(s)
         actions_in = payload.get("actions")
         if not isinstance(actions_in, list) or not actions_in:
             return None
+        browser_only = chain_actions_are_browser_plugin_skills(actions_in)
+        chain_on = bool(getattr(s, "nexa_host_executor_chain_enabled", False))
+        if not chain_on and not browser_only:
+            return None
+        allowed = parse_chain_inner_allowed(s)
         max_s = min(max(int(getattr(s, "nexa_host_executor_chain_max_steps", 10)), 1), 20)
         if len(actions_in) > max_s:
             return None
@@ -577,6 +593,43 @@ def evaluate_deterministic_host_permission_turn(
     uid = (cctx.user_id or "").strip()
     ok_pre, err_pre = precheck_host_executor_permissions(db, uid, inferred)
     if not ok_pre:
+        from app.services.user_capabilities import is_privileged_owner_for_web_mutations
+
+        owner_auto = bool(getattr(get_settings(), "nexa_auto_approve_owner", True)) and is_privileged_owner_for_web_mutations(
+            db, uid
+        )
+        if owner_auto and is_permission_eligible_precheck_failure(err_pre, inferred):
+            stamped_own = stamp_host_payload(
+                apply_trusted_instruction_source(
+                    dict(inferred), InstructionSource.USER_MESSAGE.value
+                )
+            )
+            safe_own = _validate_enqueue_payload(stamped_own)
+            if safe_own:
+
+                class _UidJobOwn:
+                    user_id = uid
+                    payload_json: dict[str, Any] = {}
+
+                try:
+                    text_out = execute_payload(safe_own, db=db, job=_UidJobOwn())
+                except ValueError as exc:
+                    return NextActionApplicationResult(
+                        f"I couldn’t run that on the host: {exc}"[:4000],
+                        t0,
+                        False,
+                        True,
+                        None,
+                    )
+                reply = (text_out or "").strip()[:12000] or "(no output)"
+                return NextActionApplicationResult(
+                    reply,
+                    t0,
+                    False,
+                    True,
+                    None,
+                )
+
         if is_permission_eligible_precheck_failure(err_pre, inferred):
             scope_t, target_t, risk_t = permission_fields_for_enqueue_payload(inferred)
             reason_t = derive_permission_reason(
@@ -883,6 +936,47 @@ def try_apply_host_executor_turn(
                         None,
                     )
 
+                from app.services.user_capabilities import is_privileged_owner_for_web_mutations
+
+                if (
+                    not ok_resume
+                    and bool(getattr(get_settings(), "nexa_auto_approve_owner", True))
+                    and is_privileged_owner_for_web_mutations(db, uid_b)
+                ):
+                    pl_own = stamp_host_payload(
+                        apply_trusted_instruction_source(
+                            dict(payload_b), InstructionSource.USER_MESSAGE.value
+                        )
+                    )
+                    safe_b = _validate_enqueue_payload(pl_own)
+                    if safe_b:
+
+                        class _UidRes:
+                            user_id = uid_b
+                            payload_json: dict[str, Any] = {}
+
+                        try:
+                            text_b = execute_payload(safe_b, db=db, job=_UidRes())
+                        except ValueError as exc:
+                            return NextActionApplicationResult(
+                                f"I couldn't run that on the host: {exc}"[:4000],
+                                t0,
+                                False,
+                                True,
+                                None,
+                            )
+                        cctx.blocked_host_executor_json = None
+                        db.add(cctx)
+                        db.commit()
+                        reply_b = (text_b or "").strip()[:12000] or "(no output)"
+                        return NextActionApplicationResult(
+                            reply_b,
+                            t0,
+                            False,
+                            True,
+                            None,
+                        )
+
                 if is_permission_row_denied(db, int(pid_b) if pid_b is not None else None):
                     cctx.blocked_host_executor_json = None
                     db.add(cctx)
@@ -948,6 +1042,43 @@ def try_apply_host_executor_turn(
                         default=str,
                     )
                     if same:
+                        if (
+                            bool(getattr(get_settings(), "nexa_auto_approve_owner", True))
+                            and is_privileged_owner_for_web_mutations(db, uid_b)
+                        ):
+                            pl_same = stamp_host_payload(
+                                apply_trusted_instruction_source(
+                                    dict(payload_b), InstructionSource.USER_MESSAGE.value
+                                )
+                            )
+                            safe_same = _validate_enqueue_payload(pl_same)
+                            if safe_same:
+
+                                class _UidSame:
+                                    user_id = uid_b
+                                    payload_json: dict[str, Any] = {}
+
+                                try:
+                                    text_s = execute_payload(safe_same, db=db, job=_UidSame())
+                                except ValueError as exc:
+                                    return NextActionApplicationResult(
+                                        f"I couldn't run that on the host: {exc}"[:4000],
+                                        t0,
+                                        False,
+                                        True,
+                                        None,
+                                    )
+                                cctx.blocked_host_executor_json = None
+                                db.add(cctx)
+                                db.commit()
+                                reply_s = (text_s or "").strip()[:12000] or "(no output)"
+                                return NextActionApplicationResult(
+                                    reply_s,
+                                    t0,
+                                    False,
+                                    True,
+                                    None,
+                                )
                         sc, tg, rk = permission_fields_for_enqueue_payload(payload_b)
                         ws_dup = (
                             web_session_id or getattr(cctx, "session_id", None) or "default"
@@ -1077,6 +1208,41 @@ def try_apply_host_executor_turn(
             wid = (web_session_id or getattr(cctx, "session_id", None) or "default").strip()[
                 :64
             ] or "default"
+            from app.services.user_capabilities import is_privileged_owner_for_web_mutations
+
+            if bool(getattr(get_settings(), "nexa_auto_approve_owner", True)) and is_privileged_owner_for_web_mutations(
+                db, uid
+            ):
+
+                class _UidConf:
+                    user_id = uid
+                    payload_json: dict[str, Any] = {}
+
+                try:
+                    text_c = execute_payload(safe_pl, db=db, job=_UidConf())
+                except ValueError as exc:
+                    cctx.next_action_pending_inject_json = None
+                    db.add(cctx)
+                    db.commit()
+                    return NextActionApplicationResult(
+                        f"I couldn't run that on the host: {exc}"[:4000],
+                        t0,
+                        False,
+                        True,
+                        None,
+                    )
+                cctx.next_action_pending_inject_json = None
+                db.add(cctx)
+                db.commit()
+                reply_c = (text_c or "").strip()[:12000] or "(no output)"
+                return NextActionApplicationResult(
+                    reply_c,
+                    t0,
+                    False,
+                    True,
+                    None,
+                )
+
             job = enqueue_host_job_from_validated_payload(
                 db,
                 uid,
