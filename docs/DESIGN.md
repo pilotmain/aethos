@@ -86,7 +86,7 @@ Benchmarks are **not CI-enforced** in this document unless separately added. Mea
 
 ### 2.3 Default experience vs configuration `[Implemented]`
 
-**Verified 2026-05-14** against `Settings` (`app/core/config.py`), `app/services/intent_classifier.py`, `app/services/response_composer.py`, and `app/services/llm/completion.py` (`providers_available`, **`is_ollama_ready()`** in `app/services/llm/bootstrap.py`). **Setup:** `scripts/setup.py` autodetects the `ollama` CLI (`shutil.which`) during **Configure .env** and, when present, writes **`NEXA_OLLAMA_ENABLED=true`** and **`NEXA_LLM_PROVIDER=ollama`** (no manual edit for the common local-first install).
+**Verified 2026-05-14** against `Settings` (`app/core/config.py`), `app/services/intent_classifier.py`, `app/services/response_composer.py`, and `app/services/llm/completion.py` (`providers_available`, **`is_ollama_ready()`** in `app/services/llm/bootstrap.py`). **Setup:** `scripts/setup.py` autodetects the `ollama` CLI (`shutil.which`) during **Configure .env** and, when present, writes **`NEXA_OLLAMA_ENABLED=true`** and **`NEXA_LLM_PROVIDER=ollama`** (no manual edit for the common local-first install). **Recommended Ollama model tags and RAM notes:** see **§4.3**.
 
 | Scenario | Actual behavior |
 |----------|------------------|
@@ -191,6 +191,20 @@ Many more routers exist (cron, jobs, approvals, self-improvement, …); do not t
 
 - Provider chain built in `llm/bootstrap.py` / `completion.py`.  
 - Configuration via `app/core/config.py` (`Settings`): keys, `NEXA_LLM_PROVIDER`, models, Ollama base URL, etc.
+
+#### Recommended Ollama models (CPU / normal laptop)
+
+Local inference uses the **Ollama HTTP** backend only (`NEXA_LLM_PROVIDER=ollama` or `NEXA_OLLAMA_ENABLED=true` with bootstrap). Pull tags with `ollama pull <tag>` so **`GET …/api/tags`** lists at least one model (`is_ollama_ready()`).
+
+| Model (Ollama-style tag) | License (summary) | Q4-ish size (indicative) | RAM (rough) | Notes |
+|--------------------------|-------------------|--------------------------|-------------|--------|
+| **`phi3:mini`** (Phi-3 Mini 3.8B) | MIT | ~2.5GB | 4–6GB | **Recommended default** — best quality-to-size for structured / agent-adjacent tasks on CPU. |
+| **`qwen2.5:1.5b`** (Qwen 2.5 1.5B) | Apache-2.0 | ~1GB | 2–3GB | Minimum footprint, very fast; weaker on hard reasoning than Phi-3 Mini. |
+| **`gemma2:2b`** | Gemma terms (not OSI MIT) | ~1.5GB | 2–4GB | Fast, light tasks; check license if you redistribute configs. |
+
+Exact tag names vary on the Ollama library; confirm with `ollama list` / [ollama.com/library](https://ollama.com/library).
+
+**Accuracy / benchmarking:** do **not** claim “>95%” against open-ended chat. Scope targets to a **fixed agent-task suite** (e.g. file-op payloads, command allowlist classification, handoff phrasing, intent labels) measured with manual or automated regression prompts. Tune model + prompts against that suite; Phi-3 Mini is a sensible first baseline for those narrower tasks.
 
 ### 4.4 Soul history and rollback `[Implemented]`
 
