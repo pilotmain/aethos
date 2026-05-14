@@ -47,17 +47,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (cancelled) {
           return;
         }
-        if (creds.user_id && creds.api_base) {
+        const ab = (creds.api_base || "").trim().replace(/\/$/, "");
+        const uid = (creds.user_id || "").trim();
+        const btok = (creds.bearer_token || "").trim();
+        if (ab || uid || btok) {
           const cur = readConfig();
-          const uid = creds.user_id.trim();
-          const apply = !cur.userId.trim() || cur.userId.trim() === uid;
-          if (apply) {
-            saveConfig({
-              apiBase: creds.api_base.trim().replace(/\/$/, "") || cur.apiBase || DEFAULT_API_BASE,
-              userId: uid,
-              token: (creds.bearer_token ?? cur.token ?? "").trim(),
-            });
-          }
+          saveConfig({
+            apiBase: ab || cur.apiBase || DEFAULT_API_BASE,
+            userId: uid || cur.userId,
+            token: btok || cur.token,
+          });
         }
       } catch {
         /* ignore */

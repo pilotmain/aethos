@@ -351,6 +351,61 @@ class NexaGateway:
 
         web_session_id = str(gctx.extras.get("web_session_id") or "default").strip()[:64] or "default"
         cctx = get_or_create_context(db, uid, web_session_id=web_session_id)
+        s = get_settings()
+        if bool(getattr(s, "nexa_host_executor_enabled", False)) and bool(
+            getattr(s, "nexa_auto_approve_owner", True)
+        ):
+            from app.services.user_capabilities import is_privileged_owner_for_web_mutations
+
+            if is_privileged_owner_for_web_mutations(db, uid):
+                from app.services.content_provenance import InstructionSource, apply_trusted_instruction_source
+                from app.services.host_executor import execute_payload
+                from app.services.host_executor_chat import _validate_enqueue_payload
+                from app.services.host_executor_nl_chain import try_infer_browser_automation_nl
+                from app.services.nexa_safety_policy import stamp_host_payload
+
+                inf_browser = try_infer_browser_automation_nl(raw)
+                if inf_browser:
+                    stamped_b = stamp_host_payload(
+                        apply_trusted_instruction_source(
+                            dict(inf_browser), InstructionSource.USER_MESSAGE.value
+                        )
+                    )
+                    safe_browser = _validate_enqueue_payload(stamped_b)
+                    if safe_browser:
+
+                        class _OwnerBrowserJob:
+                            user_id = uid
+                            payload_json: dict[str, Any] = {}
+
+                        try:
+                            text_br = execute_payload(safe_browser, db=db, job=_OwnerBrowserJob())
+                        except ValueError as exc:
+                            err_br = f"I couldn't run that browser action: {exc}"[:4000]
+                            return {
+                                "mode": "chat",
+                                "text": gateway_finalize_chat_reply(
+                                    err_br, source="host_executor_owner_browser", user_text=raw
+                                ),
+                                "intent": "host_executor",
+                                "host_executor": True,
+                            }
+                        reply_br = (text_br or "").strip()[:12000] or "(no output)"
+                        ha_br = (safe_browser.get("host_action") or "").strip().lower()
+                        intent_br = (
+                            "browser_host"
+                            if ha_br in ("plugin_skill", "chain", "browser_open", "browser_screenshot")
+                            else "command_completed"
+                        )
+                        return {
+                            "mode": "chat",
+                            "text": gateway_finalize_chat_reply(
+                                reply_br, source="host_executor_owner_browser", user_text=raw
+                            ),
+                            "intent": intent_br,
+                            "host_executor": True,
+                        }
+
         result = try_apply_host_executor_turn(db, cctx, raw, web_session_id=web_session_id)
         if result is None and may_run_pre_llm_deterministic_host(cctx):
             result = evaluate_deterministic_host_permission_turn(

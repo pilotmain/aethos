@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Request
 
-from app.core.setup_creds_file import read_setup_creds_dict
+from app.core.setup_creds_file import read_setup_creds_merged_dict
 
 router = APIRouter(tags=["setup"])
 
@@ -27,4 +27,4 @@ def _client_loopback(request: Request) -> bool:
 async def get_setup_creds(request: Request) -> dict[str, str]:
     if not _client_loopback(request):
         return {}
-    return read_setup_creds_dict()
+    return read_setup_creds_merged_dict()

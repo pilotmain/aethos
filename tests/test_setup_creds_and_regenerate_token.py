@@ -3,11 +3,18 @@
 
 from __future__ import annotations
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.core.config import get_settings
 from app.core.setup_creds_file import write_setup_creds
 from app.main import app
+
+
+@pytest.fixture(autouse=True)
+def _disable_dotenv_merge_for_setup_creds_tests(monkeypatch):
+    """Keep GET /api/setup-creds tests isolated from the developer's repo ``.env``."""
+    monkeypatch.setenv("AETHOS_SETUP_CREDS_DOTENV_MERGE", "false")
 
 
 def test_get_setup_creds_empty_without_file(monkeypatch, tmp_path) -> None:
