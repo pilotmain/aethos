@@ -335,6 +335,79 @@ class NexaGateway:
 
         return "host_executor"
 
+    def _try_operator_and_execution_loop(
+        self,
+        gctx: GatewayContext,
+        raw_gate: str,
+        db: Session,
+    ) -> dict[str, Any] | None:
+        """
+        Bounded operator CLI + external execution loop before host NL or ``parse_mission``.
+
+        Must run ahead of :meth:`_try_host_executor_turn` (which probes mission syntax) so
+        Railway/deploy-shaped asks short-circuit without spawning fake https missions.
+        """
+        from app.services.conversation_context_service import build_context_snapshot, get_or_create_context
+        from app.services.execution_loop import try_execute_or_explain
+        from app.services.operator_execution_loop import try_operator_execution
+
+        uid_gate = (gctx.user_id or "").strip()
+        raw = (raw_gate or "").strip()
+        if not uid_gate or not raw:
+            return None
+
+        _cctx_loop = get_or_create_context(db, uid_gate)
+        _snap_loop = build_context_snapshot(_cctx_loop, db)
+
+        if not gctx.extras.get("operator_execution_attempted"):
+            op_result = try_operator_execution(
+                user_text=raw,
+                gctx=gctx,
+                db=db,
+                snapshot=_snap_loop,
+            )
+            gctx.extras["operator_execution_attempted"] = True
+            if op_result.handled:
+                return {
+                    "mode": "chat",
+                    "text": gateway_finalize_operator_or_execution_reply(
+                        op_result.text,
+                        user_text=raw,
+                        layer="operator_execution",
+                    ),
+                    "operator_execution": True,
+                    "operator_provider": op_result.provider,
+                    "ran": op_result.ran,
+                    "verified": op_result.verified,
+                    "blocker": op_result.blocker,
+                    "operator_evidence": op_result.evidence,
+                    "intent": "operator_execution",
+                }
+
+        if not gctx.extras.get("execution_loop_attempted"):
+            loop_result = try_execute_or_explain(
+                user_text=raw,
+                gctx=gctx,
+                db=db,
+                snapshot=_snap_loop,
+            )
+            gctx.extras["execution_loop_attempted"] = True
+            if loop_result.handled:
+                return {
+                    "mode": "chat",
+                    "text": gateway_finalize_operator_or_execution_reply(
+                        loop_result.text,
+                        user_text=raw,
+                        layer="execution_loop",
+                    ),
+                    "execution_loop": True,
+                    "ran": loop_result.ran,
+                    "blocker": loop_result.blocker,
+                    "verified": loop_result.verified,
+                    "intent": loop_result.intent or "execution_loop",
+                }
+        return None
+
     def _try_host_executor_turn(self, gctx: GatewayContext, text: str, db: Session) -> dict[str, Any] | None:
         """
         Mission-control gateway parity with web chat's deterministic host executor path.
@@ -345,6 +418,10 @@ class NexaGateway:
         raw = (text or "").strip()
         uid = (gctx.user_id or "").strip()
         if not uid or not raw:
+            return None
+        from app.services.missions.parser import parse_mission
+
+        if parse_mission(raw):
             return None
 
         from app.services.conversation_context_service import get_or_create_context
@@ -692,17 +769,18 @@ class NexaGateway:
         text: str,
     ) -> dict[str, Any]:
         """Host + deploy + agents + executor, then :meth:`handle_full_chat` (LLM-first interior)."""
-        from app.services.conversation_context_service import build_context_snapshot, get_or_create_context
-        from app.services.execution_loop import try_execute_or_explain
         from app.services.gateway.deploy_nl import try_gateway_deploy_turn
         from app.services.gateway.deployment_status_nl import try_gateway_deployment_status_turn
         from app.services.gateway.early_nl_host_actions import try_early_nl_host_actions
-        from app.services.gateway.start_built_app_nl import try_start_built_app_gateway_turn
+        from app.services.gateway.start_built_app_gateway_turn import try_start_built_app_gateway_turn
         from app.services.inter_agent_coordinator import try_inter_agent_gateway_turn
-        from app.services.operator_execution_loop import try_operator_execution
         from app.services.sub_agent_router import try_sub_agent_gateway_turn
 
         uid_gate = (gctx.user_id or "").strip()
+
+        loop_early = self._try_operator_and_execution_loop(gctx, raw_gate, db_inner)
+        if loop_early is not None:
+            return loop_early
 
         host_out = self._try_host_executor_turn(gctx, raw_gate, db_inner)
         if host_out is not None:
@@ -731,57 +809,6 @@ class NexaGateway:
         orch = try_sub_agent_gateway_turn(gctx, raw_gate, db_inner)
         if orch is not None:
             return orch
-
-        _cctx_loop = get_or_create_context(db_inner, uid_gate)
-        _snap_loop = build_context_snapshot(_cctx_loop, db_inner)
-
-        if not gctx.extras.get("operator_execution_attempted"):
-            op_result = try_operator_execution(
-                user_text=raw_gate,
-                gctx=gctx,
-                db=db_inner,
-                snapshot=_snap_loop,
-            )
-            gctx.extras["operator_execution_attempted"] = True
-            if op_result.handled:
-                return {
-                    "mode": "chat",
-                    "text": gateway_finalize_operator_or_execution_reply(
-                        op_result.text,
-                        user_text=raw_gate,
-                        layer="operator_execution",
-                    ),
-                    "operator_execution": True,
-                    "operator_provider": op_result.provider,
-                    "ran": op_result.ran,
-                    "verified": op_result.verified,
-                    "blocker": op_result.blocker,
-                    "operator_evidence": op_result.evidence,
-                    "intent": "operator_execution",
-                }
-
-        if not gctx.extras.get("execution_loop_attempted"):
-            loop_result = try_execute_or_explain(
-                user_text=raw_gate,
-                gctx=gctx,
-                db=db_inner,
-                snapshot=_snap_loop,
-            )
-            gctx.extras["execution_loop_attempted"] = True
-            if loop_result.handled:
-                return {
-                    "mode": "chat",
-                    "text": gateway_finalize_operator_or_execution_reply(
-                        loop_result.text,
-                        user_text=raw_gate,
-                        layer="execution_loop",
-                    ),
-                    "execution_loop": True,
-                    "ran": loop_result.ran,
-                    "blocker": loop_result.blocker,
-                    "verified": loop_result.verified,
-                    "intent": loop_result.intent or "execution_loop",
-                }
 
         structured = self._try_structured_route(gctx, text, db_inner)
         if structured is not None:
@@ -1328,8 +1355,6 @@ class NexaGateway:
             return {**payload, "text": banner}
 
         def _route(db_inner: Session) -> dict[str, Any]:
-            from app.services.conversation_context_service import build_context_snapshot, get_or_create_context
-            from app.services.execution_loop import try_execute_or_explain
             from app.services.external_execution_credentials import maybe_handle_external_credential_chat_turn
 
             raw_gate = (text or "").strip()
@@ -1348,6 +1373,10 @@ class NexaGateway:
                     raw_user_text=raw_gate,
                     payload=cred_gate,
                 )
+
+            loop_early = self._try_operator_and_execution_loop(gctx, raw_gate, db_inner)
+            if loop_early is not None:
+                return loop_early
 
             if nexa_llm_first_gateway_active():
                 # Same as full-chat path: LLM-first before co-pilot / deterministic NL (``next_action_confirmation``).
@@ -1478,56 +1507,6 @@ class NexaGateway:
             orch = try_sub_agent_gateway_turn(gctx, raw_gate, db_inner)
             if orch is not None:
                 return orch
-
-            _cctx_loop = get_or_create_context(db_inner, uid_gate)
-            _snap_loop = build_context_snapshot(_cctx_loop, db_inner)
-            from app.services.operator_execution_loop import try_operator_execution
-
-            op_result = try_operator_execution(
-                user_text=raw_gate,
-                gctx=gctx,
-                db=db_inner,
-                snapshot=_snap_loop,
-            )
-            gctx.extras["operator_execution_attempted"] = True
-            if op_result.handled:
-                return {
-                    "mode": "chat",
-                    "text": gateway_finalize_operator_or_execution_reply(
-                        op_result.text,
-                        user_text=raw_gate,
-                        layer="operator_execution",
-                    ),
-                    "operator_execution": True,
-                    "operator_provider": op_result.provider,
-                    "ran": op_result.ran,
-                    "verified": op_result.verified,
-                    "blocker": op_result.blocker,
-                    "operator_evidence": op_result.evidence,
-                    "intent": "operator_execution",
-                }
-
-            loop_result = try_execute_or_explain(
-                user_text=raw_gate,
-                gctx=gctx,
-                db=db_inner,
-                snapshot=_snap_loop,
-            )
-            gctx.extras["execution_loop_attempted"] = True
-            if loop_result.handled:
-                return {
-                    "mode": "chat",
-                    "text": gateway_finalize_operator_or_execution_reply(
-                        loop_result.text,
-                        user_text=raw_gate,
-                        layer="execution_loop",
-                    ),
-                    "execution_loop": True,
-                    "ran": loop_result.ran,
-                    "blocker": loop_result.blocker,
-                    "verified": loop_result.verified,
-                    "intent": loop_result.intent or "execution_loop",
-                }
 
             structured = self._try_structured_route(gctx, text, db_inner)
             if structured is not None:

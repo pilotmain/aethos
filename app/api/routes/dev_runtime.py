@@ -17,6 +17,7 @@ from app.core.db import get_db
 from app.core.security import get_valid_web_user_id
 from app.models.dev_runtime import NexaDevRun, NexaDevStep
 from app.services.dev_runtime.service import run_dev_mission
+from app.services.run_steering import cancel_run, edit_run_goal, pause_run, resume_run
 from app.services.dev_runtime.workspace import list_workspaces, register_workspace
 from app.services.scheduler.service import NexaSchedulerService
 
@@ -29,6 +30,10 @@ class WorkspaceCreate(BaseModel):
     repo_path: str = Field(..., min_length=1, max_length=4000)
     repo_url: str | None = Field(default=None, max_length=2000)
     branch: str | None = Field(default=None, max_length=512)
+
+
+class DevRunGoalPatch(BaseModel):
+    goal: str = Field(..., min_length=1, max_length=50_000)
 
 
 class DevRunCreate(BaseModel):
@@ -240,6 +245,55 @@ def list_runs(
         ).all()
     )
     return {"ok": True, "runs": [_run_row(r) for r in rows]}
+
+
+@router.post("/runs/{run_id}/pause")
+def post_pause_run(
+    run_id: str,
+    db: Session = Depends(get_db),
+    app_user_id: str = Depends(get_valid_web_user_id),
+) -> dict[str, Any]:
+    r = pause_run(db, run_id, app_user_id)
+    if r is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="run_not_found")
+    return {"ok": True, "run": _run_row(r)}
+
+
+@router.post("/runs/{run_id}/resume")
+def post_resume_run(
+    run_id: str,
+    db: Session = Depends(get_db),
+    app_user_id: str = Depends(get_valid_web_user_id),
+) -> dict[str, Any]:
+    r = resume_run(db, run_id, app_user_id)
+    if r is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="run_not_found")
+    return {"ok": True, "run": _run_row(r)}
+
+
+@router.post("/runs/{run_id}/cancel")
+def post_cancel_run(
+    run_id: str,
+    db: Session = Depends(get_db),
+    app_user_id: str = Depends(get_valid_web_user_id),
+) -> dict[str, Any]:
+    r = cancel_run(db, run_id, app_user_id)
+    if r is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="run_not_found")
+    return {"ok": True, "run": _run_row(r)}
+
+
+@router.patch("/runs/{run_id}/goal")
+def patch_run_goal(
+    run_id: str,
+    body: DevRunGoalPatch,
+    db: Session = Depends(get_db),
+    app_user_id: str = Depends(get_valid_web_user_id),
+) -> dict[str, Any]:
+    r = edit_run_goal(db, run_id, app_user_id, body.goal)
+    if r is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="run_not_found")
+    return {"ok": True, "run": _run_row(r)}
 
 
 @router.get("/runs/{run_id}")

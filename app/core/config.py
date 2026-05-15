@@ -369,7 +369,7 @@ class Settings(BaseSettings):
     nexa_config_dir: str | None = None
     nexa_memory_dir: str | None = None
     # Telegram voice notes — transcription pipeline (Phase 53 stub until wired).
-    nexa_voice_enabled: bool = False
+    nexa_voice_enabled: bool = True
     nexa_voice_transcribe_provider: str = "local"
 
     # Phase 54 — sandbox / vault / egress / resource caps (MVP policy gates).
@@ -960,7 +960,7 @@ class Settings(BaseSettings):
     # When True, reaction_added events are turned into gateway prompts (can be noisy).
     nexa_slack_reactions_enabled: bool = False
     # Slack: use NexaGateway route_inbound instead of legacy channel gateway pipeline.
-    nexa_slack_route_inbound: bool = False
+    nexa_slack_route_inbound: bool = True
     # Autonomy — tighten scheduler + heartbeat expectations (documentary; gates optional hooks).
     nexa_autonomous_mode: bool = False
     # Phase 43 — when True with ``nexa_autonomous_mode``, DB long-running ticks invoke the gateway.

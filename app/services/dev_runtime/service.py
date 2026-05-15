@@ -49,6 +49,7 @@ from app.services.dev_runtime.failure_intel import (
     select_fix_strategy,
     select_fix_strategy_detail,
 )
+from app.services.dev_runtime.steering import cooperate_run_steering
 from app.services.dev_runtime.workspace import get_workspace
 from app.services.events.envelope import emit_runtime_event
 from app.core.config import get_settings
@@ -211,6 +212,18 @@ def run_dev_mission(
     try:
         run.status = "running"
         run.started_at = _utc_now()
+        db.commit()
+        if cooperate_run_steering(db, rid, wait_on_paused=False) == "cancelled":
+            run.status = "cancelled"
+            run.completed_at = _utc_now()
+            run.error = "cancelled_before_start"
+            db.commit()
+            return {
+                "ok": False,
+                "run_id": rid,
+                "status": "cancelled",
+                "steering": "cancelled",
+            }
         san = repo_sanity_check(repo)
         if not san.get("ok"):
             raise RuntimeError(f"repo_sanity_failed:{san.get('error')}")
@@ -291,6 +304,20 @@ def run_dev_mission(
         while iteration < max_loop_iters:
             iteration += 1
             loop_iterations_executed = iteration
+
+            steer = cooperate_run_steering(db, rid, wait_on_paused=True, max_wait_seconds=86_400.0)
+            if steer == "cancelled":
+                run.status = "cancelled"
+                run.completed_at = _utc_now()
+                run.error = "cancelled_by_user"
+                db.commit()
+                has_runtime_errors = True
+                break
+            if steer == "paused_timeout":
+                run.status = "paused"
+                db.commit()
+                has_runtime_errors = True
+                break
 
             _notify_progress(f"Running tests / fix iteration {iteration} of {max_loop_iters}…")
 

@@ -7,17 +7,20 @@ from app.services.permissions.consents import (
     check_consent,
     grant_consent,
     request_consent,
+    reset_consents_for_tests,
     revoke_consent,
 )
 
 
 def test_consent_grant_and_check() -> None:
+    reset_consents_for_tests()
     r = request_consent(scope="tool", resource="github.read", grant_mode="session")
     grant_consent(r)
     assert check_consent(scope="tool", resource="github.read") is True
 
 
 def test_consent_revoke() -> None:
+    reset_consents_for_tests()
     r = request_consent(scope="x", resource="y")
     grant_consent(r)
     assert revoke_consent(r.consent_id, reason="user") is not None

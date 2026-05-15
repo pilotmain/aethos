@@ -32,16 +32,24 @@ def transcribe_voice_note_allowed(*, user_id: str | None) -> tuple[bool, str]:
     return True, "ok"
 
 
-async def transcribe_telegram_voice_stub(file_bytes: bytes) -> str | None:
-    """Return None until Whisper/local pipeline is wired."""
-    _ = file_bytes
+async def transcribe_telegram_voice_stub(file_bytes: bytes, *, filename: str = "voice.ogg") -> str | None:
+    """Local-first STT via :mod:`app.services.multimodal.stt` (OpenClaw-style voice path)."""
     if not voice_feature_enabled():
         return None
     ok, reason = transcribe_voice_note_allowed(user_id=None)
     if not ok:
         _log.info("voice_transcribe_blocked reason=%s", reason)
         return None
-    return None
+    if not file_bytes:
+        return None
+    from app.services.multimodal.stt import transcribe_audio_bytes
+
+    out = transcribe_audio_bytes(file_bytes, filename=filename, mime="audio/ogg")
+    if not out.get("ok"):
+        _log.info("voice_transcribe_failed code=%s", out.get("code"))
+        return None
+    text = (out.get("text") or "").strip()
+    return text or None
 
 
 __all__ = ["transcribe_telegram_voice_stub", "transcribe_voice_note_allowed", "voice_feature_enabled"]
