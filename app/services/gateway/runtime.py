@@ -772,7 +772,7 @@ class NexaGateway:
         from app.services.gateway.deploy_nl import try_gateway_deploy_turn
         from app.services.gateway.deployment_status_nl import try_gateway_deployment_status_turn
         from app.services.gateway.early_nl_host_actions import try_early_nl_host_actions
-        from app.services.gateway.start_built_app_gateway_turn import try_start_built_app_gateway_turn
+        from app.services.gateway.start_built_app_nl import try_start_built_app_gateway_turn
         from app.services.inter_agent_coordinator import try_inter_agent_gateway_turn
         from app.services.sub_agent_router import try_sub_agent_gateway_turn
 
