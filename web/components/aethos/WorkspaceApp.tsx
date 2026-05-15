@@ -87,6 +87,8 @@ type UIMessage = {
 function chatTurnLlmBadge(us: UsageSummary | null | undefined): string | null {
   if (!us) return null;
   if (!us.used_llm) return "No LLM";
+  const mix = (us.mix_display || "").trim();
+  if (mix) return mix;
   const p = (us.provider || "").toLowerCase().trim();
   const model = (us.model || "").trim();
   let label: string;

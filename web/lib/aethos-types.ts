@@ -55,6 +55,8 @@ export type UsageSummary = {
   provider: string | null;
   model: string | null;
   used_user_key: boolean;
+  /** Multi-call turn: token % split, free (Ollama) vs paid (cloud), with model ids */
+  mix_display?: string | null;
   subline?: string | null;
 };
 

@@ -389,6 +389,7 @@ def post_chat(
             provider=(str(us.get("provider")) if us.get("provider") is not None else None),
             model=(str(us.get("model")) if us.get("model") is not None else None),
             used_user_key=bool(us.get("used_user_key", False)),
+            mix_display=((str(us.get("mix_display") or "").strip()[:420]) or None),
             subline=format_usage_subline(us_raw),
         )
     dsum: DecisionSummaryOut | None = None

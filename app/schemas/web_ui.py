@@ -33,6 +33,8 @@ class UsageSummaryOut(BaseModel):
     provider: str | None = None
     model: str | None = None
     used_user_key: bool = False
+    # When multiple provider/model calls share one request_id (e.g. intent + chat)
+    mix_display: str | None = Field(default=None, max_length=420)
     # Human-readable; optional, client may ignore
     subline: str | None = None
 

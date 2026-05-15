@@ -85,6 +85,54 @@ def test_llm_call_aggregates_tokens() -> None:
         db.close()
 
 
+def test_build_usage_summary_mix_display_ollama_plus_cloud() -> None:
+    """One web turn can record intent (e.g. Ollama) + composer (e.g. Anthropic) — explain split."""
+    ensure_schema()
+    uid = f"{U_PREFIX}mix2"
+    db = SessionLocal()
+    try:
+        _clean_user(db, uid)
+        record_llm_usage(
+            db,
+            user_id=uid,
+            source="test",
+            request_id="req-mix-ollama-anthropic",
+            provider="ollama",
+            model="qwen2.5:7b",
+            action_type="intent_classification",
+            input_tokens=400,
+            output_tokens=400,
+            used_user_key=False,
+        )
+        record_llm_usage(
+            db,
+            user_id=uid,
+            source="test",
+            request_id="req-mix-ollama-anthropic",
+            provider="anthropic",
+            model="claude-sonnet-4-5-20250929",
+            action_type="chat_response",
+            input_tokens=100,
+            output_tokens=100,
+            used_user_key=False,
+        )
+        s = build_usage_summary_for_request(db, "req-mix-ollama-anthropic")
+        assert s["used_llm"] is True
+        assert s["provider"] == "mixed"
+        assert s["model"] == "mixed"
+        md = (s.get("mix_display") or "").strip()
+        assert md
+        assert "free" in md.lower()
+        assert "paid" in md.lower()
+        assert "qwen2.5:7b" in md
+        assert "claude-sonnet" in md
+        sub = format_usage_subline(s)
+        assert "—" in sub and "free" in sub.lower()
+    finally:
+        _clean_user(db, uid)
+        db.close()
+
+
 def test_byok_in_summary_and_subline() -> None:
     ensure_schema()
     uid = f"{U_PREFIX}byok"

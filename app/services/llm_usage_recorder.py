@@ -24,6 +24,61 @@ from app.services.llm_usage_context import get_llm_usage_context, resolve_db_for
 logger = logging.getLogger(__name__)
 
 
+def _pretty_provider_channel(provider: str) -> str:
+    p = (provider or "").strip().lower()
+    return {
+        "ollama": "Ollama",
+        "anthropic": "Anthropic Claude",
+        "openai": "OpenAI",
+        "deepseek": "DeepSeek",
+        "openrouter": "OpenRouter",
+        "google": "Google Gemini",
+        "gemini": "Google Gemini",
+    }.get(p, (p[:1].upper() + p[1:]) if p else "Unknown")
+
+
+def _build_usage_mix_display(rows: Sequence[LlmUsageEvent], total_tokens: int) -> str | None:
+    """
+    When one user turn hits more than one provider/model, explain split with % free vs paid.
+
+    * **free** — local Ollama only (no cloud meter).
+    * **paid** — any cloud-backed provider row (API / BYOK billing is outside this string).
+    """
+    from collections import defaultdict
+
+    agg: dict[tuple[str, str], int] = defaultdict(int)
+    for r in rows:
+        p = (r.provider or "unknown").strip().lower() or "unknown"
+        m = (r.model or "").strip() or "?"
+        if len(m) > 52:
+            m = m[:49] + "…"
+        agg[(p, m)] += max(0, int(r.total_tokens or 0))
+    if len(agg) <= 1:
+        return None
+    items = sorted(agg.items(), key=lambda x: -x[1])
+    tt = max(0, int(total_tokens or 0))
+    if tt <= 0:
+        tt = sum(t for _, t in items)
+    if tt <= 0:
+        return None
+    pcts: list[int] = []
+    for _, tok in items:
+        pcts.append(int(round(100.0 * tok / float(tt))))
+    drift = 100 - sum(pcts)
+    if pcts and drift != 0:
+        pcts[-1] = max(0, pcts[-1] + drift)
+    parts: list[str] = []
+    for i, ((p, m), _tok) in enumerate(items):
+        pct = pcts[i] if i < len(pcts) else 0
+        bill = "free" if p == "ollama" else "paid"
+        ch = _pretty_provider_channel(p)
+        if m != "?":
+            parts.append(f"{pct}% {bill}: {ch} · {m}")
+        else:
+            parts.append(f"{pct}% {bill}: {ch}")
+    return " · ".join(parts)[:400]
+
+
 def _tok_from_anthropic_message(msg: Any) -> tuple[int, int]:
     usage = getattr(msg, "usage", None)
     if not usage:
@@ -289,6 +344,7 @@ def build_usage_summary_for_request(db: Session, request_id: str | None) -> dict
             "provider": None,
             "model": None,
             "used_user_key": False,
+            "mix_display": None,
         }
     rid = (request_id or "").strip()
     rows = list(
@@ -304,6 +360,7 @@ def build_usage_summary_for_request(db: Session, request_id: str | None) -> dict
             "provider": None,
             "model": None,
             "used_user_key": False,
+            "mix_display": None,
         }
     it = sum(int(r.input_tokens) for r in rows)
     ot = sum(int(r.output_tokens) for r in rows)
@@ -324,6 +381,7 @@ def build_usage_summary_for_request(db: Session, request_id: str | None) -> dict
     else:
         mdl = "mixed"
     uuk = any(bool(r.used_user_key) for r in rows)
+    mix_display = _build_usage_mix_display(rows, tt)
     return {
         "used_llm": True,
         "input_tokens": it,
@@ -333,6 +391,7 @@ def build_usage_summary_for_request(db: Session, request_id: str | None) -> dict
         "provider": prov,
         "model": mdl,
         "used_user_key": uuk,
+        "mix_display": mix_display,
     }
 
 
@@ -483,11 +542,17 @@ def format_usage_subline(usage: dict[str, Any]) -> str:
     mbit = f" · {mdl}" if mdl else ""
     if usage.get("used_user_key"):
         if c is not None:
-            return f"{tks} tokens · ${float(c):.3f} · {pcap}{mbit} · user key"
-        return f"{tks} tokens · {pcap}{mbit} · user key"
-    if c is not None:
-        return f"{tks} tokens · ${float(c):.3f} · {pcap}{mbit} · system key"
-    return f"{tks} tokens · {pcap}{mbit} · system key"
+            base = f"{tks} tokens · ${float(c):.3f} · {pcap}{mbit} · user key"
+        else:
+            base = f"{tks} tokens · {pcap}{mbit} · user key"
+    elif c is not None:
+        base = f"{tks} tokens · ${float(c):.3f} · {pcap}{mbit} · system key"
+    else:
+        base = f"{tks} tokens · {pcap}{mbit} · system key"
+    mix = (usage.get("mix_display") or "").strip()
+    if mix:
+        return f"{base} — {mix}"[:480]
+    return base
 
 
 def build_llm_usage_summary(
