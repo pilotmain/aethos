@@ -10,7 +10,8 @@ This document is a **point-in-time implementation status** snapshot (update when
 | Item | Status |
 | --- | --- |
 | Branch | `main` (pushed) |
-| Baseline commit (parity slice) | `76f7d65` — master directive, CLI surfaces, parity test matrix |
+| Baseline (doctrine + CLI surface) | `76f7d65` |
+| Persistent runtime slice | `app/runtime/`, `~/.aethos/aethos.json`, FastAPI lifespan hooks (skipped under `NEXA_PYTEST` unless `AETHOS_RUNTIME_ENABLE_IN_PYTEST=1`) |
 | Follow-up | `73ba225` — Cursor rule: prefer commit + push to `main` when slices are done |
 
 ### Verification (reported green)
@@ -19,6 +20,7 @@ This document is a **point-in-time implementation status** snapshot (update when
 | --- | --- |
 | `python -m compileall -q app aethos_cli` | Success |
 | Parity tests (`tests/test_openclaw_*_parity.py` + `tests/test_openclaw_parity.py`) | Passing |
+| Runtime persistence tests (`tests/test_openclaw_runtime_*.py`) | Passing |
 | Doctrine tests (`tests/test_openclaw_doctrine_docs.py`) | Passing |
 | CLI parity surface | Operational (`aethos onboard`, `gateway`, `message send`, `status`, `logs`, `doctor`) |
 
@@ -45,9 +47,9 @@ This document is a **point-in-time implementation status** snapshot (update when
 | `aethos onboard` | Interactive setup / onboarding parity → maps to **setup** workflow |
 | `aethos gateway` | Persistent HTTP gateway parity → **uvicorn** `app.main:app` (`--host`, `--port`, `--reload`) |
 | `aethos message send` | Gateway message execution parity → `POST /api/v1/mission-control/gateway/run` |
-| `aethos status` | Runtime / connectivity status (existing) |
-| `aethos logs` | Tail newest `*.log` under `~/.aethos/logs/` or `<repo>/.runtime/`; `--lines N`; auto-creates `~/.aethos/logs/` |
-| `aethos doctor` | `compileall` on `app` + optional `GET /api/v1/health` (non-fatal if API offline) |
+| `aethos status` | HTTP health + **persistent runtime** summary from `~/.aethos/aethos.json` when present |
+| `aethos logs` | Tail logs; optional category `gateway\|agents\|deployments\|runtime` (`runtime` tails `aethos.json`); `--lines N` |
+| `aethos doctor` | `compileall` on `app` + `aethos_cli`, runtime/workspace checks, optional `GET /api/v1/health` |
 
 ---
 
@@ -65,16 +67,23 @@ This document is a **point-in-time implementation status** snapshot (update when
 | `tests/test_openclaw_tool_parity.py` | `is_command_safe("echo …")` |
 | `tests/test_openclaw_deployment_parity.py` | `parse_deploy_intent("deploy")` |
 | `tests/test_openclaw_channel_parity.py` | `route_inbound` web |
+| `tests/test_openclaw_runtime_persistence.py` | `aethos.json` round-trip |
+| `tests/test_openclaw_gateway_recovery.py` | Stale gateway PID recovery |
+| `tests/test_openclaw_session_recovery.py` | Session rows in runtime JSON |
+| `tests/test_openclaw_workspace_persistence.py` | `~/.aethos/workspace` created |
+| `tests/test_openclaw_runtime_registry.py` | `get_runtime_snapshot()` |
+| `tests/test_openclaw_heartbeat.py` | Heartbeat updates `last_heartbeat` |
+| `tests/test_openclaw_long_running_tasks.py` | `tasks` / `execution_queue` / `long_running` shell lists |
 
 **Preserved unchanged:** `tests/test_openclaw_parity.py`
 
 **Example aggregate run:**
 
 ```bash
-pytest tests/test_openclaw_doctrine_docs.py tests/test_openclaw_*_parity.py tests/test_openclaw_parity.py -q
+pytest tests/test_openclaw_doctrine_docs.py tests/test_openclaw_*_parity.py tests/test_openclaw_runtime_*.py tests/test_openclaw_parity.py -q
 ```
 
-(Previously reported: **21 passed** on a healthy checkout.)
+(Previously reported: **21** parity + **9** runtime-related checks on a healthy checkout; counts vary as tests are added.)
 
 ---
 
@@ -108,19 +117,22 @@ Example output when API is up: `compileall: OK`, `health HTTP 200` for `/api/v1/
 
 ### Completed (structural)
 
-- Doctrine and parity governance docs  
-- CLI parity **surface** (`onboard`, `gateway`, `message send`, `logs`, `doctor`)  
-- Parity **test framework** (eight `test_openclaw_*_parity.py` modules + existing `test_openclaw_parity.py`)  
-- Documentation and Cursor alignment with the directive  
+- Doctrine and parity governance docs
+- CLI parity **surface** (`onboard`, `gateway`, `message send`, `logs`, `doctor`)
+- Parity **test framework** (eight `test_openclaw_*_parity.py` modules + existing `test_openclaw_parity.py`)
+- **Persistent runtime shell**: `app/runtime/*`, atomic `~/.aethos/aethos.json`, workspace/logs dirs, lifespan boot + heartbeat (skipped under `NEXA_PYTEST` unless `AETHOS_RUNTIME_ENABLE_IN_PYTEST=1`)
+- **Runtime persistence tests** (`tests/test_openclaw_runtime_*.py`)
+- Expanded **`aethos status` / `logs` / `doctor`** for runtime visibility
+- Documentation and Cursor alignment with the directive
 
 ### Remaining Phase 1 (high level)
 
 | Area | Target |
 | --- | --- |
-| **Workspace expansion** | `~/.aethos/workspace/`, `~/.aethos/aethos.json` — persistent session/runtime/execution history / orchestration continuity |
-| **Richer gateway runtime** | Beyond uvicorn-only: session management, autonomous loops, long-running coordination, multi-agent orchestration, execution persistence (as behavior matches OpenClaw reference) |
-| **Richer `logs` / `doctor`** | Orchestration, deployment, memory, workspace integrity, agent/gateway health |
-| **Workflow-level tests** | Replace thin checks with real workflow assertions (gateway lifecycle, deploy lifecycle, memory continuity, multi-agent coordination) |
+| **Workspace expansion** | Populate `sessions`, `agents`, `deployments`, queues from real orchestration / DB — not only JSON shells |
+| **Richer gateway runtime** | Session manager, autonomous loops, long-running coordination, multi-agent orchestration, execution persistence (match OpenClaw reference) |
+| **Richer `logs` / `doctor`** | Structured logs, orchestration/deployment/memory integrity probes |
+| **Workflow-level tests** | Full restart / recovery scenarios; gateway lifecycle integration tests |
 
 ---
 

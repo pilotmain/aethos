@@ -26,6 +26,31 @@ def get_aethos_data_dir() -> Path:
     return Path.home() / ".aethos" / "data"
 
 
+def get_aethos_home_dir() -> Path:
+    """
+    Operator home for config + runtime parity files (default: ``~/.aethos``).
+
+    ``aethos.json`` and ``workspace/`` live here (not under ``data/``).
+    """
+    raw = (os.environ.get("AETHOS_HOME_DIR") or "").strip()
+    if raw:
+        return Path(raw).expanduser().resolve()
+    return Path.home() / ".aethos"
+
+
+def get_runtime_state_path() -> Path:
+    """Canonical JSON runtime state (OpenClaw-class persistent runtime parity)."""
+    return get_aethos_home_dir() / "aethos.json"
+
+
+def get_aethos_workspace_root() -> Path:
+    """Default workspace root for execution artifacts (``~/.aethos/workspace``)."""
+    raw = (os.environ.get("AETHOS_WORKSPACE_HOME") or "").strip()
+    if raw:
+        return Path(raw).expanduser().resolve()
+    return get_aethos_home_dir() / "workspace"
+
+
 def get_default_database_path() -> Path:
     """Canonical SQLite path when using defaults (``…/aethos.db`` under :func:`get_aethos_data_dir`)."""
     return get_aethos_data_dir() / "aethos.db"
@@ -54,7 +79,10 @@ def get_default_sqlite_database_url() -> str:
 
 __all__ = [
     "get_aethos_data_dir",
+    "get_aethos_home_dir",
+    "get_aethos_workspace_root",
     "get_default_database_path",
     "get_default_sqlite_database_url",
+    "get_runtime_state_path",
     "is_valid_sqlalchemy_database_url",
 ]

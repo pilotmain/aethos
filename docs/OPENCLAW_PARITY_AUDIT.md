@@ -96,6 +96,18 @@ When a tradeoff appears between OpenClaw parity and AethOS differentiation, choo
 
 ---
 
+## 8. Persistent runtime parity (`~/.aethos/aethos.json`)
+
+| Feature | Status | Notes | Next action |
+| --- | --- | --- | --- |
+| Canonical runtime JSON | Partial | `app/runtime/*` loads/saves atomic `aethos.json`; FastAPI lifespan hooks when not in pytest. | Wire richer session/agent/deployment mirrors from DB where applicable. |
+| Workspace + logs dirs | Partial | `~/.aethos/workspace`, `~/.aethos/logs` ensured on boot. | Persist execution artifacts + structured log files. |
+| Gateway heartbeat | Partial | Background thread updates `gateway.last_heartbeat`. | Tune intervals; avoid races with multi-worker. |
+| Stale PID recovery | Partial | `reconcile_stale_gateway_pid` clears dead `gateway.pid`. | Harden multi-instance / container edge cases. |
+| Heartbeat / runtime tests | Partial | `tests/test_openclaw_runtime_*.py` added. | Replace thin checks with full restart / recovery scenarios. |
+
+---
+
 ## Phase 1 priority backlog
 
 1. Build a reference OpenClaw workflow matrix with expected behavior, prompts, UI states, tool calls, and outputs.
@@ -129,4 +141,4 @@ Remaining divergence:
 
 ---
 
-See also: [PROJECT_HANDOFF.md](../PROJECT_HANDOFF.md), [OPENCLAW_FUNCTIONAL_PARITY_DIRECTIVE.md](OPENCLAW_FUNCTIONAL_PARITY_DIRECTIVE.md), [MIGRATING_FROM_OPENCLAW.md](MIGRATING_FROM_OPENCLAW.md), [OPENCLAW_SUCCESSOR_AUDIT.md](OPENCLAW_SUCCESSOR_AUDIT.md), and `tests/test_openclaw_parity.py` plus `tests/test_openclaw_*_parity.py`.
+See also: [PROJECT_HANDOFF.md](../PROJECT_HANDOFF.md), [OPENCLAW_FUNCTIONAL_PARITY_DIRECTIVE.md](OPENCLAW_FUNCTIONAL_PARITY_DIRECTIVE.md), [MIGRATING_FROM_OPENCLAW.md](MIGRATING_FROM_OPENCLAW.md), [OPENCLAW_SUCCESSOR_AUDIT.md](OPENCLAW_SUCCESSOR_AUDIT.md), `tests/test_openclaw_parity.py`, `tests/test_openclaw_*_parity.py`, and `tests/test_openclaw_runtime_*.py`.

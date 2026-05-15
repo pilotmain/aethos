@@ -194,6 +194,7 @@ For parity work, also run or update:
 ```bash
 pytest tests/test_openclaw_parity.py
 pytest tests/test_openclaw_*_parity.py
+pytest tests/test_openclaw_runtime_*.py
 pytest tests/test_openclaw_doctrine_docs.py
 ```
 
@@ -236,7 +237,7 @@ When docs and code disagree, trust code plus parity tests, then fix the docs.
 - [ ] Start API.
 - [ ] Start web.
 - [ ] Start channel workers only when configured and not embedded.
-- [ ] Run `python -m compileall -q app`, `pytest`, `pytest tests/test_openclaw_parity.py`, `pytest tests/test_openclaw_*_parity.py`, and `pytest tests/test_openclaw_doctrine_docs.py`.
+- [ ] Run `python -m compileall -q app`, `pytest`, `pytest tests/test_openclaw_parity.py`, `pytest tests/test_openclaw_*_parity.py`, `pytest tests/test_openclaw_runtime_*.py`, and `pytest tests/test_openclaw_doctrine_docs.py`.
 - [ ] Record remaining OpenClaw divergences in `docs/OPENCLAW_PARITY_AUDIT.md`.
 
 ---

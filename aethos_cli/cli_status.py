@@ -48,6 +48,35 @@ def cmd_status() -> int:
         except Exception as exc:  # noqa: BLE001
             print(f"✗ {label}  error — {exc}", file=sys.stderr)
         print()
+    try:
+        from app.core.paths import get_runtime_state_path
+
+        rp = get_runtime_state_path()
+        if rp.is_file():
+            print("— Persistent runtime (~/.aethos/aethos.json) —\n")
+            try:
+                doc = json.loads(rp.read_text(encoding="utf-8"))
+                gw = doc.get("gateway") or {}
+                print(f"runtime_id:     {doc.get('runtime_id', '')}")
+                print(f"last_started:   {doc.get('last_started_at', '')}")
+                print(f"gateway host:   {gw.get('host', '')}")
+                print(f"gateway port:   {gw.get('port', '')}")
+                print(f"gateway running:{gw.get('running', '')}")
+                print(f"gateway pid:    {gw.get('pid', '')}")
+                print(f"last_heartbeat: {gw.get('last_heartbeat', '')}")
+                ws = (doc.get("workspace") or {}).get("root", "")
+                print(f"workspace:      {ws}")
+                sess = doc.get("sessions") or []
+                agents = doc.get("agents") or []
+                print(f"sessions:       {len(sess) if isinstance(sess, list) else 0}")
+                print(f"agents:         {len(agents) if isinstance(agents, list) else 0}")
+            except Exception as exc:  # noqa: BLE001
+                print(f"(could not parse runtime file: {exc})", file=sys.stderr)
+            print()
+        else:
+            print("— Persistent runtime —\n(no ~/.aethos/aethos.json yet; start the API once)\n")
+    except Exception as exc:  # noqa: BLE001
+        print(f"(runtime status skipped: {exc})", file=sys.stderr)
     return 0 if ok_any else 1
 
 

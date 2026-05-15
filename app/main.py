@@ -144,6 +144,12 @@ async def lifespan(app: FastAPI):
     print_llm_debug_banner()
     maybe_log_llm_key_hint()
     print_local_service_urls()
+    try:
+        from app.runtime.runtime_integration import lifespan_runtime_start
+
+        lifespan_runtime_start()
+    except Exception as exc:
+        logging.getLogger("aethos").warning("lifespan_runtime_start failed: %s", exc)
     if not scheduler.running:
         scheduler.add_job(
             process_due_checkins,
@@ -271,6 +277,12 @@ async def lifespan(app: FastAPI):
     except Exception as exc:
         logging.getLogger("aethos").warning("marketplace update_checker start failed: %s", exc)
     yield
+    try:
+        from app.runtime.runtime_integration import lifespan_runtime_stop
+
+        lifespan_runtime_stop()
+    except Exception as exc:
+        logging.getLogger("aethos").warning("lifespan_runtime_stop failed: %s", exc)
     try:
         from app.services.browser.session import shutdown_browser_session
 

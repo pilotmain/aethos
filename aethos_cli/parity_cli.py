@@ -26,27 +26,58 @@ def _tail_file(path: Path, *, max_lines: int) -> list[str]:
     return raw[-max_lines:]
 
 
-def cmd_logs(*, lines: int = 80) -> int:
-    """Print recent lines from ``~/.aethos/logs/*.log`` or repo ``.runtime/*.log``."""
-    roots: list[Path] = []
-    home_logs = Path.home() / ".aethos" / "logs"
-    home_logs.mkdir(parents=True, exist_ok=True)
-    roots.append(home_logs)
+def _home_log_roots() -> list[Path]:
+    from app.core.paths import get_aethos_home_dir
+
+    h = get_aethos_home_dir() / "logs"
+    h.mkdir(parents=True, exist_ok=True)
+    roots = [h]
     rt = _repo_root() / ".runtime"
     if rt.is_dir():
         roots.append(rt)
+    return roots
+
+
+def _log_name_matches_category(name: str, category: str | None) -> bool:
+    n = name.lower()
+    if not category:
+        return True
+    if category == "gateway":
+        return any(x in n for x in ("gateway", "uvicorn", "aethos", "api"))
+    if category == "agents":
+        return "agent" in n
+    if category == "deployments":
+        return "deploy" in n
+    if category == "runtime":
+        return any(x in n for x in ("runtime", "heartbeat", "recovery"))
+    return True
+
+
+def cmd_logs(*, lines: int = 80, category: str | None = None) -> int:
+    """Print recent lines from ``~/.aethos/logs/*.log`` or ``<repo>/.runtime/*.log``."""
+    if category == "runtime":
+        from app.core.paths import get_runtime_state_path
+
+        p = get_runtime_state_path()
+        if p.is_file():
+            print(f"--- {p} (last {lines} lines) ---", file=sys.stderr)
+            for ln in _tail_file(p, max_lines=max(1, int(lines))):
+                print(ln)
+            return 0
+        print("No ~/.aethos/aethos.json yet — start ``aethos gateway`` once.", file=sys.stderr)
+        return 0
 
     candidates: list[Path] = []
-    for d in roots:
+    for d in _home_log_roots():
         if not d.is_dir():
             continue
         for p in d.glob("*.log"):
-            if p.is_file():
+            if p.is_file() and _log_name_matches_category(p.name, category):
                 candidates.append(p)
     if not candidates:
         print(
-            "No ``*.log`` files found under ~/.aethos/logs or <repo>/.runtime yet.\n"
-            "Start the gateway (``aethos gateway`` / ``aethos serve``) and retry.",
+            "No matching ``*.log`` files.\n"
+            "Try: ``aethos logs`` (all) or ``aethos logs gateway|agents|deployments|runtime``.",
             file=sys.stderr,
         )
         return 0
@@ -58,19 +89,53 @@ def cmd_logs(*, lines: int = 80) -> int:
     return 0
 
 
+def _runtime_doctor_messages() -> list[str]:
+    out: list[str] = []
+    try:
+        from app.runtime.runtime_workspace import ensure_runtime_workspace_layout
+
+        ensure_runtime_workspace_layout()
+        out.append("runtime_workspace: OK")
+    except Exception as exc:
+        out.append(f"runtime_workspace: FAIL ({exc})")
+        return out
+    try:
+        from app.core.paths import get_runtime_state_path, get_aethos_workspace_root
+        from app.runtime.runtime_recovery import reconcile_stale_gateway_pid
+        from app.runtime.runtime_state import load_runtime_state, save_runtime_state
+
+        ws = get_aethos_workspace_root()
+        out.append(f"workspace_root exists={ws.is_dir()} path={ws}")
+        p = get_runtime_state_path()
+        if not p.is_file():
+            out.append("aethos.json: absent (created on next API boot)")
+            return out
+        st = load_runtime_state()
+        reconcile_stale_gateway_pid(st)
+        save_runtime_state(st)
+        out.append("aethos.json: OK (reconciled stale gateway pid if any)")
+    except Exception as exc:
+        out.append(f"runtime_state: FAIL ({exc})")
+    return out
+
+
 def cmd_doctor(*, api_base: str) -> int:
-    """Compile check + optional ``GET /api/v1/health``."""
+    """Compile check + optional ``GET /api/v1/health`` + runtime parity checks."""
     root = _repo_root()
     print("== AethOS doctor (OpenClaw-class diagnostics) ==", file=sys.stderr)
-    r = subprocess.run(
-        [sys.executable, "-m", "compileall", "-q", "app"],
-        cwd=str(root),
-        check=False,
-    )
-    if r.returncode != 0:
-        print("compileall: FAIL", file=sys.stderr)
-        return 1
-    print("compileall: OK", file=sys.stderr)
+    for label, rel in (("app", "app"), ("aethos_cli", "aethos_cli")):
+        r = subprocess.run(
+            [sys.executable, "-m", "compileall", "-q", rel],
+            cwd=str(root),
+            check=False,
+        )
+        if r.returncode != 0:
+            print(f"compileall {label}: FAIL", file=sys.stderr)
+            return 1
+        print(f"compileall {label}: OK", file=sys.stderr)
+
+    for ln in _runtime_doctor_messages():
+        print(ln, file=sys.stderr)
 
     base = (api_base or "").strip().rstrip("/")
     url = f"{base}/api/v1/health"

@@ -256,7 +256,17 @@ def main() -> int:
     sp_msg_send = msg_sub.add_parser("send", help="POST mission-control/gateway/run")
     sp_msg_send.add_argument("text", help="User message body")
 
-    sp_logs = sub.add_parser("logs", help="Tail recent local gateway/runtime logs")
+    sp_logs = sub.add_parser(
+        "logs",
+        help="Tail logs: optional category gateway|agents|deployments|runtime (runtime = ~/.aethos/aethos.json)",
+    )
+    sp_logs.add_argument(
+        "log_category",
+        nargs="?",
+        default=None,
+        metavar="CATEGORY",
+        help="gateway | agents | deployments | runtime",
+    )
     sp_logs.add_argument("--lines", type=int, default=80, dest="log_lines")
 
     sub.add_parser(
@@ -503,7 +513,7 @@ def main() -> int:
     if args.cmd == "logs":
         from aethos_cli.parity_cli import cmd_logs
 
-        return cmd_logs(lines=int(getattr(args, "log_lines", 80)))
+        return cmd_logs(lines=int(getattr(args, "log_lines", 80)), category=getattr(args, "log_category", None))
 
     if args.cmd == "doctor":
         from aethos_cli.parity_cli import cmd_doctor

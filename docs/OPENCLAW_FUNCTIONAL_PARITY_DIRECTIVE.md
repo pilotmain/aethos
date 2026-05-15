@@ -146,6 +146,13 @@ Maintain parity-oriented tests under `tests/`, including (expand as behaviors la
 | `tests/test_openclaw_tool_parity.py` | Tools and host execution |
 | `tests/test_openclaw_deployment_parity.py` | Deploy flows |
 | `tests/test_openclaw_channel_parity.py` | Channels and routing |
+| `tests/test_openclaw_runtime_persistence.py` | `~/.aethos/aethos.json` round-trip |
+| `tests/test_openclaw_gateway_recovery.py` | Stale gateway PID recovery |
+| `tests/test_openclaw_session_recovery.py` | Session rows in runtime JSON |
+| `tests/test_openclaw_workspace_persistence.py` | `~/.aethos/workspace` layout |
+| `tests/test_openclaw_runtime_registry.py` | Runtime snapshot / registry |
+| `tests/test_openclaw_heartbeat.py` | Gateway heartbeat persistence |
+| `tests/test_openclaw_long_running_tasks.py` | Execution queue / task shell fields |
 
 Verify **behavior, workflows, outputs, orchestration, execution semantics** — not branding.
 
@@ -170,6 +177,12 @@ Keep these aligned with this directive and with code:
 2. **Autonomous agent parity** — loops, autonomous execution, multi-agent coordination, continuation, memory-aware routing.
 3. **Tooling and deployment parity** — deploy orchestration, shell/workspace/env, execution persistence.
 4. **Operator UX parity** — Mission Control operational parity, live orchestration visibility, execution and memory inspection, deployment dashboards.
+
+---
+
+## Implementation status
+
+Persistent runtime parity progress (`app/runtime/`, `~/.aethos/aethos.json`, heartbeat, recovery): [OPENCLAW_FUNCTIONAL_PARITY_STATUS.md](OPENCLAW_FUNCTIONAL_PARITY_STATUS.md).
 
 ---
 
