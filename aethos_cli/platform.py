@@ -88,7 +88,7 @@ def get_install_hint() -> str:
         return "brew install python@3.12  # then re-run this installer"
     if info.get("is_windows"):
         return "Install Python 3.10+ from https://www.python.org/downloads/windows/"
-    return "curl -fsSL https://raw.githubusercontent.com/pilotmain/aethos/main/install.sh | bash"
+    return "curl -fsSL https://cdn.jsdelivr.net/gh/pilotmain/aethos@main/install.sh | bash"
 
 
 def ollama_install_hint() -> str:

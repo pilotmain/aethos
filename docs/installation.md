@@ -3,7 +3,7 @@
 ## One-curl install (recommended)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/pilotmain/aethos/main/install.sh | bash
+curl -fsSL https://cdn.jsdelivr.net/gh/pilotmain/aethos@main/install.sh | bash
 ```
 
 Default install directory is **`~/.aethos`** (override with `NEXA_INSTALL_DIR`).
@@ -11,7 +11,7 @@ Default install directory is **`~/.aethos`** (override with `NEXA_INSTALL_DIR`).
 ### With Pro license string (runtime / wizard)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/pilotmain/aethos/main/install.sh | bash -s -- --license 'YOUR_KEY'
+curl -fsSL https://cdn.jsdelivr.net/gh/pilotmain/aethos@main/install.sh | bash -s -- --license 'YOUR_KEY'
 ```
 
 Private PyPI wheels (optional): see root [README.md](../README.md) and `AETHOS_PYPI_INSTALL_*` env vars in `scripts/install_aethos.sh`.

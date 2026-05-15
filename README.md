@@ -7,13 +7,13 @@
 ## One-curl install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/pilotmain/aethos/main/install.sh | bash
+curl -fsSL https://cdn.jsdelivr.net/gh/pilotmain/aethos@main/install.sh | bash
 ```
 
 With a Pro / license string for the installer (optional):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/pilotmain/aethos/main/install.sh | bash -s -- --license 'YOUR_KEY'
+curl -fsSL https://cdn.jsdelivr.net/gh/pilotmain/aethos@main/install.sh | bash -s -- --license 'YOUR_KEY'
 ```
 
 Default install path is often `~/.aethos`. For a manual clone of this repo, see [docs/installation.md](docs/installation.md).

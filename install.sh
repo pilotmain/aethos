@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # AethOS — one-curl installer (rev 2026-05-15)
-# Usage: curl -fsSL https://raw.githubusercontent.com/pilotmain/aethos/main/install.sh | bash
+# Usage: curl -fsSL https://cdn.jsdelivr.net/gh/pilotmain/aethos@main/install.sh | bash
 #
 # Optional: NEXA_REPO_URL, NEXA_INSTALL_DIR
 
