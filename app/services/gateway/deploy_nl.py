@@ -25,7 +25,7 @@ from app.services.host_executor_intent import (
     parse_deploy_intent,
     parse_deploy_root_intent,
 )
-from app.services.user_capabilities import is_privileged_owner_for_web_mutations
+from app.services.user_capabilities import is_web_operator_for_generic_deploy
 
 _DEPLOY_DISPLAY: dict[str, str] = {
     "vercel": "Vercel",
@@ -379,7 +379,7 @@ def try_gateway_deploy_turn(
     settings = get_settings()
     if not bool(getattr(settings, "nexa_generic_deploy_enabled", False)):
         return None
-    if not is_privileged_owner_for_web_mutations(db, uid):
+    if not is_web_operator_for_generic_deploy(db, uid):
         return None
 
     from app.services.gateway.runtime import gateway_finalize_chat_reply

@@ -22,6 +22,7 @@ from app.core.branding import (
     ops_execution_restricted_body,
 )
 from app.models.telegram_link import TelegramLink
+from app.services.app_user_id_parse import parse_telegram_id_from_app_user_id
 
 logger = logging.getLogger(__name__)
 
@@ -166,6 +167,24 @@ def is_privileged_owner_for_web_mutations(db: Session, app_user_id: str) -> bool
         ).limit(1)
     )
     return m is not None
+
+
+def is_web_operator_for_generic_deploy(db: Session, app_user_id: str) -> bool:
+    """
+    Whether this identity may run generic deploy / deployment-status NL (CLI + cloud hooks).
+
+    Matches :func:`require_personal_workspace_mutation_allowed` for non-Telegram ids:
+    ``web_*`` / ``local_*`` Mission Control sessions are treated as sole operators of that id.
+    Telegram-shaped ``tg_*`` users still require :func:`is_privileged_owner_for_web_mutations`.
+    """
+    uid = (app_user_id or "").strip()
+    if not uid:
+        return False
+    if is_privileged_owner_for_web_mutations(db, uid):
+        return True
+    if parse_telegram_id_from_app_user_id(uid) is not None:
+        return False
+    return uid.startswith("web_") or uid.startswith("local_")
 
 
 def require_personal_workspace_mutation_allowed(db: Session, app_user_id: str) -> None:

@@ -761,6 +761,18 @@ def parse_deploy_intent(text: str) -> dict[str, Any] | None:
             "raw_text": text,
         }
 
+    # Hosted UI wording (e.g. ``restart … on vercel.com``) → same flow as ``deploy to vercel``.
+    if re.search(r"(?i)\bvercel\b", line) and re.search(
+        r"(?i)\b(?:restart|redeploy|re-deploy|promote(?:\s+to\s+prod(?:uction)?)?|trigger(?:\s+a)?(?:new\s+)?(?:production\s+)?deployment)\b",
+        line,
+    ):
+        return {
+            "intent": "deploy",
+            "deploy_type": "deploy",
+            "provider": "vercel",
+            "raw_text": text,
+        }
+
     return None
 
 

@@ -13,7 +13,7 @@ from app.core.config import get_settings
 from app.services.deployment.vercel_client import RailwayClient, VercelClient
 from app.services.gateway.context import GatewayContext
 from app.services.host_executor_intent import parse_deployment_status_intent
-from app.services.user_capabilities import is_privileged_owner_for_web_mutations
+from app.services.user_capabilities import is_web_operator_for_generic_deploy
 
 
 def try_gateway_deployment_status_turn(
@@ -30,7 +30,7 @@ def try_gateway_deployment_status_turn(
     settings = get_settings()
     if not bool(getattr(settings, "nexa_generic_deploy_enabled", False)):
         return None
-    if not is_privileged_owner_for_web_mutations(db, uid):
+    if not is_web_operator_for_generic_deploy(db, uid):
         return None
 
     parsed = parse_deployment_status_intent(raw)

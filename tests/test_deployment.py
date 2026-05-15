@@ -51,6 +51,13 @@ def test_parse_deploy_intent_basic() -> None:
     assert parse_deploy_intent("push to production") is not None
     assert parse_deploy_intent("go live") is not None
     assert parse_deploy_intent("publish netlify")["provider"] == "netlify"
+    assert parse_deploy_intent("restart an application on vercel.com") == {
+        "intent": "deploy",
+        "deploy_type": "deploy",
+        "provider": "vercel",
+        "raw_text": "restart an application on vercel.com",
+    }
+    assert parse_deploy_intent("redeploy my app on Vercel")["provider"] == "vercel"
 
 
 def test_normalize_provider_extra() -> None:
