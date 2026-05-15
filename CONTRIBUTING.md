@@ -38,11 +38,13 @@ Please read [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). Be respectful, constructiv
 Run before opening a PR:
 
 ```bash
-python -m compileall -q app
+python -m compileall -q app aethos_cli
 pytest
 pytest tests/test_openclaw_parity.py
 pytest tests/test_openclaw_*_parity.py
 pytest tests/test_openclaw_runtime_*.py
+pytest tests/test_openclaw_task_*.py tests/test_openclaw_scheduler.py tests/test_openclaw_queue_*.py tests/test_openclaw_agent_runtime.py tests/test_openclaw_orchestration_recovery.py tests/test_openclaw_deployment_recovery.py tests/test_openclaw_runtime_dispatcher.py
+pytest tests/test_openclaw_execution_*.py tests/test_openclaw_autonomous_execution.py
 pytest tests/test_openclaw_doctrine_docs.py
 ```
 

@@ -70,6 +70,49 @@ def cmd_status() -> int:
                 agents = doc.get("agents") or []
                 print(f"sessions:       {len(sess) if isinstance(sess, list) else 0}")
                 print(f"agents:         {len(agents) if isinstance(agents, list) else 0}")
+                tr = doc.get("task_registry") or {}
+                if isinstance(tr, dict):
+                    active = sum(1 for t in tr.values() if isinstance(t, dict) and str(t.get("state")) == "running")
+                    recovering = sum(
+                        1 for t in tr.values() if isinstance(t, dict) and str(t.get("state")) == "recovering"
+                    )
+                    queued = sum(1 for t in tr.values() if isinstance(t, dict) and str(t.get("state")) == "queued")
+                    retrying_tasks = sum(
+                        1 for t in tr.values() if isinstance(t, dict) and str(t.get("state")) == "retrying"
+                    )
+                    print("— Orchestration runtime —")
+                    eq = doc.get("execution_queue") or []
+                    rq = doc.get("recovery_queue") or []
+                    sch = (doc.get("orchestration") or {}).get("scheduler") or {}
+                    gw_hb = gw.get("last_heartbeat", "")
+                    deps = doc.get("deployments") or []
+                    print(f"scheduler ticks: {sch.get('ticks', '')}  last_tick: {sch.get('last_tick', '')}")
+                    print(f"active tasks:    {active}  queued(state): {queued}  recovering: {recovering}  retrying: {retrying_tasks}")
+                    print(f"execution_queue: {len(eq) if isinstance(eq, list) else 0}  recovery_queue: {len(rq) if isinstance(rq, list) else 0}")
+                    print(f"gateway hb:      {gw_hb}")
+                    print(f"deployments:     {len(deps) if isinstance(deps, list) else 0}")
+                    print(f"runtime health:  gateway_running={gw.get('running')} scheduler_running={sch.get('running')}")
+                    ex = doc.get("execution") or {}
+                    pl = ex.get("plans") or {}
+                    sup_ex = ex.get("supervisor") or {}
+                    cpx = ex.get("checkpoints") or {}
+                    retry_steps = 0
+                    if isinstance(pl, dict):
+                        for p in pl.values():
+                            if not isinstance(p, dict):
+                                continue
+                            for s in p.get("steps") or []:
+                                if isinstance(s, dict) and str(s.get("status")) == "retrying":
+                                    retry_steps += 1
+                    rec_ev = (doc.get("recovery") or {}).get("events") or []
+                    chk_count = sum(len(v) for v in cpx.values()) if isinstance(cpx, dict) else 0
+                    print("— Autonomous execution —")
+                    print(f"execution graphs: {len(pl) if isinstance(pl, dict) else 0}")
+                    print(f"retrying steps:   {retry_steps}")
+                    print(f"checkpoint keys:  {chk_count}")
+                    print(f"supervisor ticks: {sup_ex.get('ticks', '')}  last_error: {sup_ex.get('last_error', '')}")
+                    print(f"recovery events:  {len(rec_ev) if isinstance(rec_ev, list) else 0}")
+                print()
             except Exception as exc:  # noqa: BLE001
                 print(f"(could not parse runtime file: {exc})", file=sys.stderr)
             print()

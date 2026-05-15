@@ -50,6 +50,18 @@ def _log_name_matches_category(name: str, category: str | None) -> bool:
         return "deploy" in n
     if category == "runtime":
         return any(x in n for x in ("runtime", "heartbeat", "recovery"))
+    if category == "orchestration":
+        return "orchestration" in n
+    if category == "recovery":
+        return "recovery" in n
+    if category == "execution":
+        return n == "execution.log" or ("execution" in n and "orchestration" not in n)
+    if category == "checkpoints":
+        return "checkpoint" in n
+    if category == "retries":
+        return "retries" in n
+    if category == "scheduler":
+        return n == "scheduler.log"
     return True
 
 
@@ -66,6 +78,27 @@ def cmd_logs(*, lines: int = 80, category: str | None = None) -> int:
             return 0
         print("No ~/.aethos/aethos.json yet — start ``aethos gateway`` once.", file=sys.stderr)
         return 0
+    if category in (
+        "orchestration",
+        "recovery",
+        "deployments",
+        "gateway",
+        "agents",
+        "execution",
+        "checkpoints",
+        "retries",
+        "scheduler",
+    ):
+        from app.core.paths import get_aethos_home_dir
+
+        p = get_aethos_home_dir() / "logs" / f"{category}.log"
+        if p.is_file():
+            print(f"--- {p} (last {lines} lines) ---", file=sys.stderr)
+            for ln in _tail_file(p, max_lines=max(1, int(lines))):
+                print(ln)
+            return 0
+        print(f"No {p.name} yet — run the API with orchestration once.", file=sys.stderr)
+        return 0
 
     candidates: list[Path] = []
     for d in _home_log_roots():
@@ -77,7 +110,7 @@ def cmd_logs(*, lines: int = 80, category: str | None = None) -> int:
     if not candidates:
         print(
             "No matching ``*.log`` files.\n"
-            "Try: ``aethos logs`` (all) or ``aethos logs gateway|agents|deployments|runtime``.",
+            "Try: ``aethos logs`` (all) or ``aethos logs gateway|agents|deployments|runtime|orchestration|recovery|execution|checkpoints|retries|scheduler``.",
             file=sys.stderr,
         )
         return 0
@@ -112,6 +145,110 @@ def _runtime_doctor_messages() -> list[str]:
             return out
         st = load_runtime_state()
         reconcile_stale_gateway_pid(st)
+        from app.orchestration.task_queue import QUEUE_NAMES, prune_orphan_queue_entries
+        from app.orchestration.task_registry import TASK_STATES
+
+        bad_q = 0
+        for qn in QUEUE_NAMES:
+            q = st.get(qn)
+            if not isinstance(q, list):
+                bad_q += 1
+        if bad_q:
+            out.append(f"orchestration_queues: FAIL ({bad_q} non-list queue(s))")
+        else:
+            out.append("orchestration_queues: OK (list shapes)")
+        pruned = prune_orphan_queue_entries(st)
+        if pruned:
+            out.append(f"orchestration_queues: pruned {pruned} orphan queue ref(s)")
+        tr = st.get("task_registry")
+        if not isinstance(tr, dict):
+            out.append("task_registry: FAIL (not an object)")
+        else:
+            bad_states = 0
+            for t in tr.values():
+                if isinstance(t, dict) and str(t.get("state") or "") not in TASK_STATES:
+                    bad_states += 1
+            if bad_states:
+                out.append(f"task_registry: FAIL ({bad_states} invalid state(s))")
+            else:
+                out.append("task_registry: OK")
+        orch = st.get("orchestration")
+        if not isinstance(orch, dict) or not isinstance(orch.get("checkpoints"), dict):
+            out.append("orchestration_checkpoints: FAIL")
+        else:
+            out.append("orchestration_checkpoints: OK")
+        sch = orch.get("scheduler") if isinstance(orch, dict) else None
+        if not isinstance(sch, dict):
+            out.append("scheduler_state: FAIL")
+        else:
+            out.append("scheduler_state: OK")
+        deps = st.get("deployments")
+        if deps is not None and not isinstance(deps, list):
+            out.append("deployments: FAIL (not a list)")
+        else:
+            out.append("deployments: OK")
+        from app.execution import execution_dependencies
+        from app.execution import execution_plan
+
+        ex = st.get("execution")
+        if not isinstance(ex, dict):
+            out.append("execution: FAIL (not an object)")
+        else:
+            bad_plans = 0
+            for plan in (ex.get("plans") or {}).values():
+                if not isinstance(plan, dict):
+                    bad_plans += 1
+                    continue
+                if not execution_dependencies.validate_plan_dependency_dag(plan):
+                    bad_plans += 1
+            if bad_plans:
+                out.append(f"execution_graphs: FAIL ({bad_plans} invalid DAG(s))")
+            else:
+                out.append("execution_graphs: OK")
+            cpx = ex.get("checkpoints")
+            if cpx is not None and not isinstance(cpx, dict):
+                out.append("execution_checkpoints: FAIL")
+            else:
+                out.append("execution_checkpoints: OK")
+            bad_retry = 0
+            for plan in (ex.get("plans") or {}).values():
+                if not isinstance(plan, dict):
+                    continue
+                for s in plan.get("steps") or []:
+                    if (
+                        isinstance(s, dict)
+                        and str(s.get("status")) == "retrying"
+                        and int(s.get("retry_count") or 0) > 0
+                        and s.get("next_retry_at") is None
+                    ):
+                        bad_retry += 1
+            if bad_retry:
+                out.append(f"execution_retry_integrity: FAIL ({bad_retry} step(s))")
+            else:
+                out.append("execution_retry_integrity: OK")
+            pr_ep = execution_plan.prune_orphan_plans(st)
+            if pr_ep:
+                out.append(f"execution_plans: pruned {pr_ep} orphan plan(s)")
+            stalled = 0
+            if isinstance(tr, dict):
+                cutoff = __import__("time").time() - 86400
+                for t in tr.values():
+                    if not isinstance(t, dict):
+                        continue
+                    if str(t.get("state")) != "running" or not t.get("execution_plan_id"):
+                        continue
+                    ua = t.get("updated_at")
+                    if isinstance(ua, str) and ua[:4].isdigit():
+                        try:
+                            from datetime import datetime
+
+                            dt = datetime.fromisoformat(ua.replace("Z", "+00:00"))
+                            if dt.timestamp() < cutoff:
+                                stalled += 1
+                        except Exception:
+                            pass
+            if stalled:
+                out.append(f"execution_stalled_hints: {stalled} task(s) running >24h")
         save_runtime_state(st)
         out.append("aethos.json: OK (reconciled stale gateway pid if any)")
     except Exception as exc:

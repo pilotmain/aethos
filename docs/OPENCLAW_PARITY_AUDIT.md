@@ -108,6 +108,37 @@ When a tradeoff appears between OpenClaw parity and AethOS differentiation, choo
 
 ---
 
+## 9. Orchestration runtime parity (`app/orchestration/` + `aethos.json`)
+
+| Feature | Status | Notes | Next action |
+| --- | --- | --- | --- |
+| Task registry + task states | Partial | `task_registry` dict; states include `queued`…`recovering` per OpenClaw Phase 1 list. | Wire real task producers (gateway, agents) into registry. |
+| Named persistent queues | Partial | Six queues merged on load; `execution_queue` + legacy `tasks` coexist. | Drive `agent_queue` / `channel_queue` / `scheduler_queue` from real inbound events. |
+| Boot recovery | Partial | `running` / `waiting` / `retrying` → `recovering` + `recovery_queue`. | Expand deployment/session/agent recovery per reference matrix. |
+| Scheduler + dispatcher | Partial | Background thread ticks (`AETHOS_ORCHESTRATION_TICK_SEC`); `dispatch_once` concurrency 1; recovery queue before execution queue; **plan-driven tasks** re-queued until multi-step completion. | Concurrency limits, starvation guards, richer deploy/channel drivers. |
+| Checkpoints | Partial | `orchestration.checkpoints` for noop/deploy completions. | Persist partial outputs for long-running steps. |
+| Structured logs | Partial | JSON lines to `~/.aethos/logs/{orchestration,runtime,recovery,agents,deployments,gateway}.log` via append helpers. | Emit gateway events from gateway lifecycle code paths. |
+| CLI visibility | Partial | `aethos status` prints scheduler/queue/task/deploy summaries; `doctor` checks queue/registry/checkpoint/scheduler shapes + prunes orphan queue refs; `logs orchestration\|recovery`. | Add `session_count` when session model is unified. |
+| Tests | Partial | Eight new `tests/test_openclaw_*.py` modules (registry, scheduler, queues, checkpoints, agents, orchestration recovery, deployment dispatch, dispatcher). | Add integration tests with real API boot when stable. |
+
+---
+
+## 10. Autonomous execution parity (`app/execution/` + `aethos.json`)
+
+| Feature | Status | Notes | Next action |
+| --- | --- | --- | --- |
+| Execution plans + DAG | Partial | `execution.plans` with `steps` (`step_id`, `depends_on`, `blocked`/`queued`/`running`/`completed`/`retrying`/`failed`). | Wire gateway/agents to emit real graphs. |
+| Retry runtime | Partial | `retry_count`, `last_retry_at`, `next_retry_at` (unix), exponential backoff cap 300s, `retries.log`. | Backoff jitter; max retry policy; fail terminal. |
+| Checkpoints + memory | Partial | `execution.checkpoints[plan_id][step_id]`; `execution.memory[task_id]` outputs + continuation. | Richer partial outputs / reasoning blobs. |
+| Execution supervisor | Partial | One step per tick; `execution.supervisor` ticks; unblocks dependents after step completion. | Stalled detection, parallel ready steps. |
+| Boot continuation | Partial | `recover_execution_on_boot` resets interrupted `running` steps; `deployment_recovery` marker on deploy plans. | Full deployment stage machine + log tail persistence. |
+| Execution chains | Partial | `execution.chains` linear cursor for multi-task sequences. | Cross-task deps + orchestration routing. |
+| Structured logs | Partial | `execution.log`, `checkpoints.log`, `retries.log`, `scheduler.log` (scheduler tick mirrors). | Correlate with gateway PID lifecycle. |
+| CLI | Partial | `status` / `doctor` / `logs` extended for execution metrics + integrity. | Mission Control JSON feeds (no UI redesign). |
+| Tests | Partial | `tests/test_openclaw_execution_*.py` + `test_openclaw_autonomous_execution.py`. | Long-running hour-scale scenarios. |
+
+---
+
 ## Phase 1 priority backlog
 
 1. Build a reference OpenClaw workflow matrix with expected behavior, prompts, UI states, tool calls, and outputs.
@@ -141,4 +172,4 @@ Remaining divergence:
 
 ---
 
-See also: [PROJECT_HANDOFF.md](../PROJECT_HANDOFF.md), [OPENCLAW_FUNCTIONAL_PARITY_DIRECTIVE.md](OPENCLAW_FUNCTIONAL_PARITY_DIRECTIVE.md), [MIGRATING_FROM_OPENCLAW.md](MIGRATING_FROM_OPENCLAW.md), [OPENCLAW_SUCCESSOR_AUDIT.md](OPENCLAW_SUCCESSOR_AUDIT.md), `tests/test_openclaw_parity.py`, `tests/test_openclaw_*_parity.py`, and `tests/test_openclaw_runtime_*.py`.
+See also: [PROJECT_HANDOFF.md](../PROJECT_HANDOFF.md), [OPENCLAW_FUNCTIONAL_PARITY_DIRECTIVE.md](OPENCLAW_FUNCTIONAL_PARITY_DIRECTIVE.md), [MIGRATING_FROM_OPENCLAW.md](MIGRATING_FROM_OPENCLAW.md), [OPENCLAW_SUCCESSOR_AUDIT.md](OPENCLAW_SUCCESSOR_AUDIT.md), `tests/test_openclaw_parity.py`, `tests/test_openclaw_*_parity.py`, `tests/test_openclaw_runtime_*.py`, orchestration tests (`tests/test_openclaw_task_*.py`, `tests/test_openclaw_scheduler.py`, `tests/test_openclaw_queue_*.py`, `tests/test_openclaw_agent_runtime.py`, `tests/test_openclaw_orchestration_recovery.py`, `tests/test_openclaw_deployment_recovery.py`, `tests/test_openclaw_runtime_dispatcher.py`), and autonomous execution tests (`tests/test_openclaw_execution_*.py`, `tests/test_openclaw_autonomous_execution.py`).

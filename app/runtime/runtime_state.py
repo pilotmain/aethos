@@ -51,7 +51,98 @@ def default_runtime_state(*, workspace_root: Path | None = None) -> dict[str, An
         "long_running": [],
         "memory": {"enabled": True},
         "recovery": {"events": []},
+        # --- OpenClaw orchestration runtime parity (Phase 1; JSON until DB-backed) ---
+        "task_registry": {},
+        "deployment_queue": [],
+        "agent_queue": [],
+        "channel_queue": [],
+        "recovery_queue": [],
+        "scheduler_queue": [],
+        "orchestration": {
+            "scheduler": {
+                "enabled": True,
+                "running": False,
+                "last_tick": None,
+                "ticks": 0,
+                "last_error": None,
+            },
+            "checkpoints": {},
+        },
+        # --- OpenClaw autonomous execution parity (Phase 1; JSON until DB-backed) ---
+        "execution": {
+            "plans": {},
+            "chains": {},
+            "checkpoints": {},
+            "memory": {},
+            "supervisor": {
+                "ticks": 0,
+                "last_tick": None,
+                "last_error": None,
+            },
+        },
     }
+
+
+def ensure_execution_schema(st: dict[str, Any]) -> dict[str, Any]:
+    """Merge missing autonomous execution keys (forward-compatible)."""
+    base = default_runtime_state()
+    ex = st.setdefault("execution", base.get("execution"))
+    if not isinstance(ex, dict):
+        st["execution"] = dict(base["execution"])
+        ex = st["execution"]
+    for key in ("plans", "chains", "checkpoints", "memory"):
+        if key not in ex or not isinstance(ex.get(key), dict):
+            ex[key] = {}
+    sup = ex.setdefault("supervisor", {})
+    if not isinstance(sup, dict):
+        ex["supervisor"] = dict(base["execution"]["supervisor"])
+    else:
+        for k, v in (base["execution"]["supervisor"] or {}).items():
+            sup.setdefault(k, v)
+    return st
+
+
+def ensure_orchestration_schema(st: dict[str, Any]) -> dict[str, Any]:
+    """Merge missing orchestration keys onto loaded ``aethos.json`` (forward-compatible)."""
+    base = default_runtime_state()
+    for key in (
+        "task_registry",
+        "deployment_queue",
+        "agent_queue",
+        "channel_queue",
+        "recovery_queue",
+        "scheduler_queue",
+        "orchestration",
+    ):
+        if key not in st:
+            st[key] = base[key]  # type: ignore[index]
+    orch = st.setdefault("orchestration", {})
+    if not isinstance(orch, dict):
+        st["orchestration"] = base["orchestration"]
+        orch = st["orchestration"]
+    sch = orch.setdefault("scheduler", {})
+    if not isinstance(sch, dict):
+        orch["scheduler"] = dict(base["orchestration"]["scheduler"])
+    else:
+        for k, v in (base["orchestration"]["scheduler"] or {}).items():
+            sch.setdefault(k, v)
+    orch.setdefault("checkpoints", {})
+    if not isinstance(orch.get("checkpoints"), dict):
+        orch["checkpoints"] = {}
+    tr = st.setdefault("task_registry", {})
+    if not isinstance(tr, dict):
+        st["task_registry"] = {}
+    for qn in (
+        "execution_queue",
+        "deployment_queue",
+        "agent_queue",
+        "channel_queue",
+        "recovery_queue",
+        "scheduler_queue",
+    ):
+        if qn not in st or not isinstance(st.get(qn), list):
+            st[qn] = []
+    return st
 
 
 def load_runtime_state() -> dict[str, Any]:
@@ -65,6 +156,8 @@ def load_runtime_state() -> dict[str, Any]:
         data = json.loads(raw)
         if not isinstance(data, dict):
             raise ValueError("root must be object")
+        ensure_orchestration_schema(data)
+        ensure_execution_schema(data)
         return data
     except Exception as exc:
         _LOG.warning("runtime_state.load_failed %s — resetting", exc)

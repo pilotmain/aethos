@@ -13,13 +13,14 @@ From the project root, with the project venv active:
 
 1. **Compile every app module (blocks on syntax errors):**
    ```bash
-   python -m compileall -q app
+   python -m compileall -q app aethos_cli
    ```
    Expect: **no output and exit code 0** (quiet success).
 
 2. **Short intent + response smoke check** (adjust if imports move; intent is `get_intent`, behavior via `map_intent_to_behavior`, and one `build_response` sample with `use_real_llm` typically `False` unless `.env` enables LLM):
    - Run a small one-liner or script that imports `get_intent`, `map_intent_to_behavior`, `build_response`, and `Context`, and checks a few fixed strings (capability, brain-dump list, stuck, `not done`).
    - Confirm behavior matches expectations for this codebase (e.g. `capability_question` → clarify, not planning).
+   - When changing `app/execution/` or plan dispatch, also run: `pytest tests/test_openclaw_execution_*.py tests/test_openclaw_autonomous_execution.py -q`.
 
 ## 2. Both processes (restart)
 

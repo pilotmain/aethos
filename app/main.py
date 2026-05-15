@@ -150,6 +150,12 @@ async def lifespan(app: FastAPI):
         lifespan_runtime_start()
     except Exception as exc:
         logging.getLogger("aethos").warning("lifespan_runtime_start failed: %s", exc)
+    try:
+        from app.orchestration.orchestration_integration import lifespan_orchestration_start
+
+        lifespan_orchestration_start()
+    except Exception as exc:
+        logging.getLogger("aethos").warning("lifespan_orchestration_start failed: %s", exc)
     if not scheduler.running:
         scheduler.add_job(
             process_due_checkins,
@@ -277,6 +283,12 @@ async def lifespan(app: FastAPI):
     except Exception as exc:
         logging.getLogger("aethos").warning("marketplace update_checker start failed: %s", exc)
     yield
+    try:
+        from app.orchestration.orchestration_integration import lifespan_orchestration_stop
+
+        lifespan_orchestration_stop()
+    except Exception as exc:
+        logging.getLogger("aethos").warning("lifespan_orchestration_stop failed: %s", exc)
     try:
         from app.runtime.runtime_integration import lifespan_runtime_stop
 

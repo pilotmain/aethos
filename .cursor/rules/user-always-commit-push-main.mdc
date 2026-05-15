@@ -7,6 +7,8 @@ alwaysApply: true
 
 # Commit and push to `main`
 
-When work in this repository reaches a **coherent, verified slice** (tests pass, no intentional WIP left staged), the agent should **commit** and **`git push origin main`** in the same turn unless the user explicitly says to hold, use a branch, or skip push.
+**Operator preference (authoritative for this repo):** when a task is **done** (implemented, verified, no intentional WIP left), **always `git commit`** and **`git push origin main`** in the **same turn**, unless the user explicitly says to hold, use a branch, or skip push.
+
+Treat “task is done” as: the user’s requested outcome is complete, checks you ran are green (e.g. `compileall`, relevant `pytest`), and you are not waiting on follow-up scope.
 
 Do not leave completed parity or feature work only on disk when the user expects GitHub to match `main`.

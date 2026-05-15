@@ -258,14 +258,14 @@ def main() -> int:
 
     sp_logs = sub.add_parser(
         "logs",
-        help="Tail logs: optional category gateway|agents|deployments|runtime (runtime = ~/.aethos/aethos.json)",
+        help="Tail logs: optional category gateway|agents|deployments|runtime|orchestration|recovery|execution|checkpoints|retries|scheduler (runtime = ~/.aethos/aethos.json)",
     )
     sp_logs.add_argument(
         "log_category",
         nargs="?",
         default=None,
         metavar="CATEGORY",
-        help="gateway | agents | deployments | runtime",
+        help="gateway | agents | deployments | runtime | orchestration | recovery | execution | checkpoints | retries | scheduler",
     )
     sp_logs.add_argument("--lines", type=int, default=80, dest="log_lines")
 

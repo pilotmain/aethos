@@ -153,6 +153,22 @@ Maintain parity-oriented tests under `tests/`, including (expand as behaviors la
 | `tests/test_openclaw_runtime_registry.py` | Runtime snapshot / registry |
 | `tests/test_openclaw_heartbeat.py` | Gateway heartbeat persistence |
 | `tests/test_openclaw_long_running_tasks.py` | Execution queue / task shell fields |
+| `tests/test_openclaw_task_registry.py` | Persistent task registry + states |
+| `tests/test_openclaw_task_checkpointing.py` | Execution checkpoints in `aethos.json` |
+| `tests/test_openclaw_scheduler.py` | Background scheduler tick + dispatch |
+| `tests/test_openclaw_queue_recovery.py` | Queue + boot recovery + orphan prune |
+| `tests/test_openclaw_agent_runtime.py` | Agent rows + task binding persistence |
+| `tests/test_openclaw_orchestration_recovery.py` | Interrupted tasks → `recovering` + requeue |
+| `tests/test_openclaw_deployment_recovery.py` | Deployment task checkpoint + `deployments` list |
+| `tests/test_openclaw_runtime_dispatcher.py` | Recovery queue precedence over execution queue |
+| `tests/test_openclaw_execution_plans.py` | Persistent execution plans + dependency shape |
+| `tests/test_openclaw_execution_chains.py` | Linear execution chains + cursor |
+| `tests/test_openclaw_execution_retry.py` | Retry metadata + exponential backoff |
+| `tests/test_openclaw_execution_recovery.py` | Boot continuation for interrupted steps |
+| `tests/test_openclaw_execution_dependencies.py` | DAG validation + blocked → ready ordering |
+| `tests/test_openclaw_execution_checkpointing.py` | `execution.checkpoints` persistence |
+| `tests/test_openclaw_execution_supervisor.py` | Supervisor multi-step completion |
+| `tests/test_openclaw_autonomous_execution.py` | Dispatcher re-queue autonomous continuation |
 
 Verify **behavior, workflows, outputs, orchestration, execution semantics** — not branding.
 
