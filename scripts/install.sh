@@ -26,6 +26,7 @@ SKIP_KEYS=0
 NO_CLONE=0
 DRY_RUN=0
 GUIDED=0
+BOOTSTRAP_ONLY=0
 BOOTSTRAP_EXTRA=()
 
 usage() {
@@ -38,6 +39,7 @@ usage() {
   echo "  --start MODE    none | docker | host (default: host)."
   echo "  --skip-keys     Do not prompt for API keys / Telegram token."
   echo "  --guided        Short interactive tour: OS hint, local-first, Telegram, then bootstrap."
+  echo "  --bootstrap-only Skip the colorful setup wizard; run nexa_bootstrap + optional start."
   echo "  --dry-run       Print planned steps only (no bootstrap, no starts)."
   echo "  -h, --help      This help."
 }
@@ -80,6 +82,7 @@ while [ "${1:-}" != "" ]; do
     --no-clone) NO_CLONE=1; shift ;;
     --dry-run) DRY_RUN=1; shift ;;
     --guided) GUIDED=1; shift ;;
+    --bootstrap-only) BOOTSTRAP_ONLY=1; shift ;;
     --no-docker) shift ;;
     --force-env) BOOTSTRAP_EXTRA+=(--force-env); shift ;;
     --start)
@@ -93,8 +96,17 @@ while [ "${1:-}" != "" ]; do
 done
 
 NONINTERACTIVE="${NEXA_NONINTERACTIVE:-0}"
+SKIP_WIZARD="${AETHOS_SKIP_WIZARD:-0}"
 
 die() { echo "error: $*" >&2; exit 1; }
+
+# Default: full colorful interactive wizard (scripts/setup.py). Fast bootstrap only when opted in.
+if [ "$BOOTSTRAP_ONLY" != 1 ] && [ "$DRY_RUN" != 1 ] && [ "$NONINTERACTIVE" != "1" ] && [ "$SKIP_WIZARD" != "1" ]; then
+  _wizard_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+  if [ -f "${_wizard_root}/scripts/setup.sh" ]; then
+    exec bash "${_wizard_root}/scripts/setup.sh" "$@"
+  fi
+fi
 
 # macOS / bash 3.2 + ``set -u``: ``"${arr[@]}"`` on an empty array is an unbound variable.
 bootstrap_extra_contains() {

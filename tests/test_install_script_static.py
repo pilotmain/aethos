@@ -18,6 +18,13 @@ def test_install_script_exists_and_supports_dry_run() -> None:
     assert "privacy" in text.lower()
 
 
+def test_install_script_defaults_to_setup_wizard() -> None:
+    root = Path(__file__).resolve().parents[1]
+    text = (root / "scripts" / "install.sh").read_text(encoding="utf-8")
+    assert "scripts/setup.sh" in text
+    assert "--bootstrap-only" in text
+
+
 def test_install_script_has_no_rm_rf_root() -> None:
     root = Path(__file__).resolve().parents[1]
     text = (root / "scripts" / "install.sh").read_text(encoding="utf-8")

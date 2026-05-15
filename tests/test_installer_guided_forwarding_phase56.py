@@ -25,8 +25,8 @@ def test_root_install_script_recovers_broken_install_dir() -> None:
     assert "missing scripts/setup.sh" in text
 
 
-def test_piped_install_reexecs_on_disk_copy_after_git_pull() -> None:
+def test_piped_install_runs_on_disk_setup_wizard_after_git_pull() -> None:
     root = Path(__file__).resolve().parents[1]
     text = (root / "install.sh").read_text(encoding="utf-8")
-    assert 'exec bash "${INSTALL_DIR}/install.sh"' in text
+    assert 'exec bash "${INSTALL_DIR}/scripts/setup.sh"' in text
     assert ".setup_complete" not in text

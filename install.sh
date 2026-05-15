@@ -47,5 +47,5 @@ else
   fi
 fi
 
-# Piped curl scripts can be CDN-stale — always delegate to the freshly pulled on-disk copy.
-exec bash "${INSTALL_DIR}/install.sh" "$@"
+# Piped curl scripts can be CDN-stale — always run the on-disk wizard (never trust pipe body routing).
+exec bash "${INSTALL_DIR}/scripts/setup.sh" "$@"
