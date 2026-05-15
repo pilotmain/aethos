@@ -104,6 +104,7 @@ def default_runtime_state(*, workspace_root: Path | None = None) -> dict[str, An
             "operational_workflow_total": 0,
             "coordination_active_agents": 0,
             "coordination_delegations_total": 0,
+            "coordination_policy_assignments_total": 0,
             "coordination_autonomous_loops": 0,
             "coordination_supervisor_restarts": 0,
             "coordination_recovery_loops": 0,

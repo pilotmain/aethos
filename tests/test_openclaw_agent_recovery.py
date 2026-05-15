@@ -21,4 +21,6 @@ def test_boot_marks_running_agent_recovering(tmp_path, monkeypatch) -> None:
     st2 = load_runtime_state()
     out = recover_agent_coordination_on_boot(st2)
     assert out.get("agents_marked_recovering") == 1
-    assert (st2.get("coordination_agents") or {}).get(aid, {}).get("status") == "recovering"
+    ag = (st2.get("coordination_agents") or {}).get(aid, {})
+    assert ag.get("status") == "recovering"
+    assert ag.get("coordination_health") == "recovering"

@@ -96,12 +96,17 @@ def validate_runtime_state(st: dict[str, Any]) -> dict[str, Any]:
             if str(mk) not in tr:
                 issues.append(f"memory_orphan_task:{mk}")
 
+    from app.agents.agent_health import COORDINATION_HEALTH_STATUSES
+
     ca = st.get("coordination_agents") or {}
     if isinstance(ca, dict):
         for aid, ag in ca.items():
             if not isinstance(ag, dict):
                 issues.append(f"coordination_agent_invalid:{aid}")
                 continue
+            ch = str(ag.get("coordination_health") or "").strip()
+            if ch and ch not in COORDINATION_HEALTH_STATUSES:
+                issues.append(f"coordination_agent_bad_health:{aid}:{ch}")
             for atid in ag.get("active_tasks") or []:
                 if str(atid) and str(atid) not in tr:
                     issues.append(f"agent_orphan_active_task:{aid}:{atid}")

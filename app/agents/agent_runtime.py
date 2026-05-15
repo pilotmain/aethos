@@ -27,6 +27,7 @@ def register_coordination_agent(
         "agent_id": aid,
         "agent_type": str(agent_type)[:64],
         "status": str(status)[:32],
+        "coordination_health": "healthy",
         "owner_session_id": str(owner_session_id or ""),
         "user_id": str(user_id),
         "active_tasks": [],
@@ -55,8 +56,16 @@ def heartbeat(st: dict[str, Any], agent_id: str) -> None:
 
 def set_agent_status(st: dict[str, Any], agent_id: str, status: str) -> None:
     prev = get_agent(st, agent_id) or {}
-    upsert_agent(st, agent_id, {"status": str(status)[:32], "last_heartbeat": utc_now_iso()})
-    if status == "failed":
+    s = str(status)[:32]
+    if s in ("failed", "offline"):
+        from app.agents.agent_assignment_policy import reassign_tasks_from_unhealthy_coordination_agent
+
+        reassign_tasks_from_unhealthy_coordination_agent(st, str(agent_id), reason=s)
+    patch: dict[str, Any] = {"status": s, "last_heartbeat": utc_now_iso()}
+    if s in ("failed", "offline"):
+        patch["coordination_health"] = s
+    upsert_agent(st, agent_id, patch)
+    if s == "failed":
         agent_events.emit_agent_event(
             st,
             "agent_failed",

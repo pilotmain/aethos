@@ -20,7 +20,7 @@ def recover_agent_coordination_on_boot(st: dict[str, Any]) -> dict[str, Any]:
         if not isinstance(row, dict):
             continue
         if str(row.get("status") or "") in ("running", "delegating", "retrying"):
-            upsert_agent(st, str(aid), {"status": "recovering", "last_heartbeat": ts})
+            upsert_agent(st, str(aid), {"status": "recovering", "coordination_health": "recovering", "last_heartbeat": ts})
             agent_events.emit_agent_event(
                 st, "agent_recovered", agent_id=str(aid), user_id=str(row.get("user_id") or ""), status="recovering"
             )

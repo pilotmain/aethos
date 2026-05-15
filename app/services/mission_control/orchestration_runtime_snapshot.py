@@ -204,12 +204,19 @@ def _dsched_lens(st: dict[str, Any]) -> dict[str, int]:
 
 
 def _coord_agents_slice(st: dict[str, Any], uid: str) -> dict[str, Any]:
+    from app.agents.agent_health import effective_coordination_health
     from app.agents.agent_registry import list_agents_for_user
 
     if not uid:
-        return {"sample": [], "count": 0}
+        return {"sample": [], "count": 0, "coordination_health_counts": {}}
     rows = list_agents_for_user(st, uid)
-    return {"sample": rows[:40], "count": len(rows)}
+    counts: dict[str, int] = {}
+    for r in rows:
+        if not isinstance(r, dict):
+            continue
+        h = effective_coordination_health(r)
+        counts[h] = counts.get(h, 0) + 1
+    return {"sample": rows[:40], "count": len(rows), "coordination_health_counts": counts}
 
 
 def _delegations_tail(st: dict[str, Any], uid: str) -> list[dict[str, Any]]:
