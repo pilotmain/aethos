@@ -9,6 +9,7 @@
 #
 # One-curl / home install: AETHOS_ONE_CURL=1 or an existing ~/.aethos/.env makes the wizard write
 # ~/.aethos/.env (not repo-root .env). Override with AETHOS_SETUP_REPO_ENV=1. Optional: ./scripts/setup.sh --home-env
+# Ollama: AETHOS_SETUP_SKIP_OLLAMA_BOOTSTRAP=1 skips ``ollama serve`` / ``ollama pull`` during Configure .env (CI / air-gapped).
 
 set -euo pipefail
 
