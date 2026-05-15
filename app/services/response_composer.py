@@ -37,11 +37,29 @@ def _llm_first_gateway_offline_response(ctx: ResponseContext, *, reason: str) ->
         ctx.behavior,
         ctx.intent,
     )
+    s = get_settings()
+    if not bool(getattr(s, "use_real_llm", False)):
+        msg = (
+            "**USE_REAL_LLM** is not enabled for this API process. Set **`USE_REAL_LLM=true`** in the `.env` "
+            "file this server loads (or export it before starting uvicorn), restart the API, then try again.\n\n"
+            "You will also need **cloud API keys** (e.g. `ANTHROPIC_API_KEY` / `OPENAI_API_KEY`) **or** a running "
+            "**Ollama** with **`NEXA_OLLAMA_ENABLED=true`** and at least one pulled model."
+        )
+    elif not providers_available():
+        msg = (
+            "**USE_REAL_LLM** is on, but **no LLM provider is reachable** from this host.\n\n"
+            "**Cloud:** set a supported key (e.g. **`ANTHROPIC_API_KEY`** or **`OPENAI_API_KEY`**) in the same "
+            "environment the API uses, restart, and retry.\n\n"
+            "**Ollama:** run **`ollama serve`**, **`ollama pull`** a model (e.g. `qwen2.5:7b`), set "
+            "**`NEXA_OLLAMA_ENABLED=true`**, restart the API, then retry."
+        )
+    else:
+        msg = (
+            "No language model is available for this reply (unexpected offline). "
+            "Check API logs for the composer path, then try again."
+        )
     return {
-        "message": (
-            "No language model is available for this reply. Set **USE_REAL_LLM=true** with cloud API keys, "
-            "or enable **Ollama** (`NEXA_OLLAMA_ENABLED=true` and a pulled model), then try again."
-        ),
+        "message": msg,
         "should_ask_followup": False,
         "followup_question": None,
         "suggested_microstep": None,
