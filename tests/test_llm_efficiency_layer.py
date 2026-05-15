@@ -79,6 +79,7 @@ def test_llm_call_aggregates_tokens() -> None:
         sub = format_usage_subline(s)
         assert "k" in sub or "120" in sub or "≈" in sub
         assert "system key" in sub
+        assert "gpt-4o-mini" in sub
     finally:
         _clean_user(db, uid)
         db.close()
@@ -108,6 +109,7 @@ def test_byok_in_summary_and_subline() -> None:
         sub = format_usage_subline(s)
         assert "user key" in sub
         assert "BYOK" not in sub  # short form per product copy
+        assert "claude-3-5-sonnet" in sub
     finally:
         _clean_user(db, uid)
         db.close()
@@ -268,3 +270,4 @@ def test_format_subline_null_cost_safety() -> None:
     }
     line = format_usage_subline(s)
     assert isinstance(line, str) and "≈" in line
+    assert "x" in line

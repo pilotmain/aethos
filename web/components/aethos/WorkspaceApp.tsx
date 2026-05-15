@@ -50,6 +50,7 @@ import type {
   WebMe,
   WebResponseSource,
   WebReleaseLatest,
+  UsageSummary,
   WebSessionRow,
   WebWorkContext,
 } from "@/lib/aethos-types";
@@ -74,11 +75,44 @@ type UIMessage = {
   web_tool_line?: string | null;
   /** Server-built line; hidden when “Show cost details” is off */
   usage_subline?: string | null;
+  /** Per-turn provider/model (from POST /web/chat); for Agent / Intent row */
+  usage_summary?: UsageSummary | null;
   decision?: DecisionSummary | null;
   /** Shown after a successful export from this message */
   exportInfo?: { format: string; docId: number; path: string } | null;
   permissionRequired?: PermissionRequiredPayload | null;
 };
+
+/** Short label for chat header (Ollama vs API-backed providers); no secrets. */
+function chatTurnLlmBadge(us: UsageSummary | null | undefined): string | null {
+  if (!us) return null;
+  if (!us.used_llm) return "No LLM";
+  const p = (us.provider || "").toLowerCase().trim();
+  const model = (us.model || "").trim();
+  let label: string;
+  switch (p) {
+    case "ollama":
+      label = "Ollama";
+      break;
+    case "anthropic":
+      label = "Claude";
+      break;
+    case "openai":
+      label = "OpenAI";
+      break;
+    case "deepseek":
+      label = "DeepSeek";
+      break;
+    case "mixed":
+      label = "Mixed providers";
+      break;
+    default:
+      label = p ? p.charAt(0).toUpperCase() + p.slice(1).toLowerCase() : "LLM";
+  }
+  if (model && model !== "mixed") return `${label} · ${model}`;
+  if (model === "mixed") return `${label} · mixed models`;
+  return label;
+}
 
 type WebDocListItem = {
   id: number;
@@ -1687,6 +1721,7 @@ function WorkspaceBody() {
           sources: out.sources ?? [],
           web_tool_line: out.web_tool_line ?? null,
           usage_subline: out.usage_summary?.subline ?? null,
+          usage_summary: out.usage_summary ?? null,
           decision: out.decision_summary ?? null,
         },
       ]);
@@ -2165,6 +2200,7 @@ function WorkspaceBody() {
                 </div>
               );
             }
+            const llmTurnBadge = m.role === "assistant" ? chatTurnLlmBadge(m.usage_summary) : null;
             return (
             <div
               key={m.id}
@@ -2212,6 +2248,14 @@ function WorkspaceBody() {
                       {m.intent && (
                         <span>
                           · Intent: <b className="lowercase text-zinc-400">{m.intent}</b>
+                        </span>
+                      )}
+                      {llmTurnBadge && (
+                        <span className="normal-case">
+                          · Model:{" "}
+                          <b className="font-mono text-[10px] font-normal normal-case text-zinc-400">
+                            {llmTurnBadge}
+                          </b>
                         </span>
                       )}
                     </div>

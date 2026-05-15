@@ -479,13 +479,15 @@ def format_usage_subline(usage: dict[str, Any]) -> str:
     c = usage.get("estimated_cost_usd")
     p = str(usage.get("provider") or "?")
     pcap = "mixed" if p == "mixed" else (p[0:1].upper() + p[1:].lower() if p else "?")
+    mdl = str(usage.get("model") or "").strip()
+    mbit = f" · {mdl}" if mdl else ""
     if usage.get("used_user_key"):
         if c is not None:
-            return f"{tks} tokens · ${float(c):.3f} · user key"
-        return f"{tks} tokens · user key"
+            return f"{tks} tokens · ${float(c):.3f} · {pcap}{mbit} · user key"
+        return f"{tks} tokens · {pcap}{mbit} · user key"
     if c is not None:
-        return f"{tks} tokens · ${float(c):.3f} · {pcap} · system key"
-    return f"{tks} tokens · {pcap} · system key"
+        return f"{tks} tokens · ${float(c):.3f} · {pcap}{mbit} · system key"
+    return f"{tks} tokens · {pcap}{mbit} · system key"
 
 
 def build_llm_usage_summary(
