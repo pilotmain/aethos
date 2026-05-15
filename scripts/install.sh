@@ -12,7 +12,7 @@
 #   NEXA_REPO_URL       — git URL (default: https://github.com/pilotmain/nexa.git)
 #   NEXA_DIR            — clone directory name (default: nexa)
 #   ANTHROPIC_API_KEY, OPENAI_API_KEY, TELEGRAM_BOT_TOKEN — merged into .env when set
-#   NEXA_START          — none | docker | host (default: docker if Docker works, else host)
+#   NEXA_START          — none | docker | host (default: host — no Docker)
 #   PORT                — API port for host mode (default: 8000)
 #   NEXA_NONINTERACTIVE — 1 to skip prompts (use env vars for keys)
 #
@@ -33,8 +33,9 @@ usage() {
   echo ""
   echo "Options:"
   echo "  --no-clone      Assume current directory is the Nexa repo root (or NEXA_ROOT)."
-  echo "  --no-docker     Pass through to nexa_bootstrap.py (venv + .env only)."
-  echo "  --start MODE    none | docker | host (overrides auto detection)."
+  echo "  --no-docker     Deprecated (Docker is off by default)."
+  echo "  --force-env     Refresh .env from .env.example (keeps existing API keys/tokens)."
+  echo "  --start MODE    none | docker | host (default: host)."
   echo "  --skip-keys     Do not prompt for API keys / Telegram token."
   echo "  --guided        Short interactive tour: OS hint, local-first, Telegram, then bootstrap."
   echo "  --dry-run       Print planned steps only (no bootstrap, no starts)."
@@ -79,7 +80,8 @@ while [ "${1:-}" != "" ]; do
     --no-clone) NO_CLONE=1; shift ;;
     --dry-run) DRY_RUN=1; shift ;;
     --guided) GUIDED=1; shift ;;
-    --no-docker) BOOTSTRAP_EXTRA+=(--no-docker); shift ;;
+    --no-docker) shift ;;
+    --force-env) BOOTSTRAP_EXTRA+=(--force-env); shift ;;
     --start)
       START_MODE="${2:-}"
       shift 2 || true
@@ -95,6 +97,17 @@ NONINTERACTIVE="${NEXA_NONINTERACTIVE:-0}"
 die() { echo "error: $*" >&2; exit 1; }
 
 # macOS / bash 3.2 + ``set -u``: ``"${arr[@]}"`` on an empty array is an unbound variable.
+bootstrap_extra_contains() {
+  local needle="$1"
+  local item
+  for item in "${BOOTSTRAP_EXTRA[@]}"; do
+    if [ "$item" = "$needle" ]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
 run_nexa_bootstrap() {
   if ((${#BOOTSTRAP_EXTRA[@]} > 0)); then
     python3 scripts/nexa_bootstrap.py "${BOOTSTRAP_EXTRA[@]}"
@@ -252,16 +265,7 @@ else
   .venv/bin/python3 -c "from app.core.db import ensure_schema; ensure_schema()" || echo "warning: ensure_schema failed — API startup will retry." >&2
 fi
 
-auto_start="${START_MODE:-${NEXA_START:-}}"
-if [ -z "$auto_start" ]; then
-  if [[ " ${BOOTSTRAP_EXTRA[*]} " == *" --no-docker "* ]]; then
-    auto_start="host"
-  elif command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
-    auto_start="docker"
-  else
-    auto_start="host"
-  fi
-fi
+auto_start="${START_MODE:-${NEXA_START:-host}}"
 
 start_docker() {
   command -v docker >/dev/null 2>&1 || die "Docker not installed"

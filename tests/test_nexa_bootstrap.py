@@ -38,6 +38,24 @@ def test_bootstrap_creates_env_if_missing(tmp_path: Path, monkeypatch) -> None:
     assert o2 == out, "second run must not change .env"
 
 
+def test_bootstrap_force_env_refreshes_and_preserves_secrets(tmp_path: Path) -> None:
+    (tmp_path / ".env.example").write_text(
+        "APP_NAME=AethOS\nTELEGRAM_BOT_TOKEN=\nNEW_FLAG=true\n",
+        encoding="utf-8",
+    )
+    (tmp_path / ".env").write_text(
+        "TELEGRAM_BOT_TOKEN=real-token\nLEGACY=drop_me\n",
+        encoding="utf-8",
+    )
+    c, st = nb.sync_env_file(tmp_path, force=True)
+    assert c is True
+    assert st == "refreshed"
+    out = (tmp_path / ".env").read_text(encoding="utf-8")
+    assert "TELEGRAM_BOT_TOKEN=real-token" in out
+    assert "NEW_FLAG=true" in out
+    assert "LEGACY=drop_me" not in out
+
+
 def test_bootstrap_does_not_overwrite_existing_env(tmp_path: Path) -> None:
     p = tmp_path / ".env"
     p.write_text("KEEP=secret_value_do_not_lose\n", encoding="utf-8")

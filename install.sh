@@ -42,4 +42,5 @@ else
 fi
 
 cd "${INSTALL_DIR}"
-exec bash ./scripts/install.sh --no-clone "$@"
+# Host-first reinstall: refresh .env template, never auto-start Docker.
+exec bash ./scripts/install.sh --no-clone --force-env --start host "$@"

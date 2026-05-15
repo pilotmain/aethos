@@ -128,19 +128,109 @@ def _normalize_docker_template_copy(text: str) -> str:
     return out
 
 
-def create_env_file_if_missing(root: Path) -> tuple[bool, str]:
+def _env_template_path(root: Path) -> Path | None:
+    for name in (".env.example", DOCKER_ENV_TEMPLATE):
+        p = root / name
+        if p.is_file():
+            return p
+    return None
+
+
+def _parse_env_file(path: Path) -> dict[str, str]:
+    out: dict[str, str] = {}
+    if not path.is_file():
+        return out
+    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        s = line.strip()
+        if not s or s.startswith("#") or "=" not in s:
+            continue
+        k, _, v = s.partition("=")
+        key = k.strip()
+        if key:
+            out[key] = v.strip()
+    return out
+
+
+def _meaningful_env_value(val: str) -> bool:
+    v = (val or "").strip()
+    if not v:
+        return False
+    if "CHANGE_ME" in v.upper():
+        return False
+    return True
+
+
+def _apply_preserved_env_values(template_text: str, preserved: dict[str, str]) -> str:
+    if not preserved:
+        return template_text
+    lines: list[str] = []
+    for line in template_text.splitlines():
+        s = line.strip()
+        if not s or s.startswith("#") or "=" not in line:
+            lines.append(line)
+            continue
+        k, _, _ = line.partition("=")
+        key = k.strip()
+        old = preserved.get(key)
+        if old is not None and _meaningful_env_value(old):
+            lines.append(f"{key}={old}")
+        else:
+            lines.append(line)
+    text = "\n".join(lines)
+    if template_text.endswith("\n"):
+        text += "\n"
+    return text
+
+
+def _ensure_generated_secrets(text: str) -> str:
+    out = text
+    if not re.search(r"^NEXA_SECRET_KEY=", out, re.MULTILINE):
+        return _append_bootstrap_footer(out)
+    if re.search(r"^NEXA_SECRET_KEY=CHANGE_ME", out, re.MULTILINE | re.IGNORECASE):
+        out = re.sub(
+            r"^NEXA_SECRET_KEY=CHANGE_ME[^\n]*",
+            f"NEXA_SECRET_KEY={_new_secret()}",
+            out,
+            count=1,
+            flags=re.MULTILINE | re.IGNORECASE,
+        )
+    if MARKER not in out:
+        out = _append_bootstrap_footer(out)
+    return out
+
+
+def sync_env_file(root: Path, *, force: bool = False) -> tuple[bool, str]:
+    """
+    Create or refresh ``.env`` from ``.env.example`` (host-first) or ``env.docker.example``.
+
+    When ``force`` is true, existing non-placeholder values are preserved (API keys, tokens).
+    """
     dest = root / ".env"
-    if dest.is_file():
+    preserved = _parse_env_file(dest) if dest.is_file() else {}
+    if dest.is_file() and not force:
         return False, "unchanged"
-    src = root / DOCKER_ENV_TEMPLATE
-    if src.is_file():
-        raw = src.read_text(encoding="utf-8", errors="replace")
+
+    tpl = _env_template_path(root)
+    if tpl is None:
+        data = f"{MARKER}\n" + f"NEXA_SECRET_KEY={_new_secret()}\n" + DEFAULTS_LINES
+    elif tpl.name == DOCKER_ENV_TEMPLATE:
+        raw = tpl.read_text(encoding="utf-8", errors="replace")
         data = _normalize_docker_template_copy(raw)
     else:
-        data = f"{MARKER}\n" + f"NEXA_SECRET_KEY={_new_secret()}\n" + DEFAULTS_LINES
-    data = _append_bootstrap_footer(data)
+        data = tpl.read_text(encoding="utf-8", errors="replace")
+
+    if preserved:
+        data = _apply_preserved_env_values(data, preserved)
+    data = _ensure_generated_secrets(data)
     dest.write_text(data, encoding="utf-8")
+    if force and preserved:
+        return True, "refreshed"
     return True, "created"
+
+
+def create_env_file_if_missing(root: Path) -> tuple[bool, str]:
+    """Backward-compatible wrapper — does not overwrite an existing file."""
+    return sync_env_file(root, force=False)
 
 
 def ensure_venv_with_deps(root: Path) -> str:
@@ -291,7 +381,17 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument(
         "--no-docker",
         action="store_true",
-        help="Skip run_everything.sh start and health wait.",
+        help="Deprecated alias — Docker is off by default; use only with legacy scripts.",
+    )
+    ap.add_argument(
+        "--with-docker",
+        action="store_true",
+        help="Start Postgres/API/bot via run_everything.sh (opt-in; default is host/SQLite).",
+    )
+    ap.add_argument(
+        "--force-env",
+        action="store_true",
+        help="Refresh .env from .env.example; keep existing non-placeholder secrets.",
     )
     ns = ap.parse_args(argv)
     if str(REPO_ROOT) not in sys.path:
@@ -303,11 +403,16 @@ def main(argv: list[str] | None = None) -> int:
     d = detect_environment()
     for k, v in sorted(d.items()):
         print(f"detect: {k}={v}", flush=True)
-    c, st = create_env_file_if_missing(REPO_ROOT)
-    if c:
+    c, st = sync_env_file(REPO_ROOT, force=bool(ns.force_env))
+    if c and st == "refreshed":
+        print(
+            "Nexa: .env refreshed from template (existing API keys/tokens kept).\n",
+            flush=True,
+        )
+    elif c:
         print("Nexa: .env was created. NEXA_SECRET_KEY is in the file (value not shown).\n", flush=True)
     else:
-        print("Nexa: .env already exists; not overwriting.\n", flush=True)
+        print("Nexa: .env already exists; not overwriting (re-run with --force-env to refresh).\n", flush=True)
     s = ensure_venv_with_deps(REPO_ROOT)
     if s == "ok":
         print("Nexa: venv and requirements look good.\n", flush=True)
@@ -320,11 +425,19 @@ def main(argv: list[str] | None = None) -> int:
         )
     if not check_aider():
         print("Aider not found. Dev agent will be limited (CLI/IDE handoff still work).\n", flush=True)
-    if ns.no_docker or not d.get("docker"):
-        if not d.get("docker"):
-            print("Docker not in PATH. Install Docker for Postgres + API + bot, or set USE_SQLITE=1 in .env and use compose sqlite.\n", flush=True)
-        else:
-            print("Skipping Docker (--no-docker).\n", flush=True)
+    if not ns.with_docker:
+        print(
+            "Host install: skipping Docker (SQLite default under ~/.aethos/data). "
+            "Pass --with-docker only if you want the compose stack.\n",
+            flush=True,
+        )
+        print_next_steps()
+        return 0
+    if not d.get("docker"):
+        print(
+            "Docker not in PATH. Use host mode (default) or install Docker and re-run with --with-docker.\n",
+            flush=True,
+        )
         print_next_steps()
         return 0
     r = _run_docker_start(REPO_ROOT)
