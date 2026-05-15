@@ -12,6 +12,7 @@ Start here:
 - [OpenClaw parity audit](OPENCLAW_PARITY_AUDIT.md)
 - [Migrating from OpenClaw](MIGRATING_FROM_OPENCLAW.md)
 - [OpenClaw functional parity directive (master plan)](OPENCLAW_FUNCTIONAL_PARITY_DIRECTIVE.md)
+- [OpenClaw functional parity implementation status](OPENCLAW_FUNCTIONAL_PARITY_STATUS.md)
 
 ## Getting started
 
