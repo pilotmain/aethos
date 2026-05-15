@@ -1,5 +1,5 @@
 ---
-description: Commit and push after each phase/task; canonical GitHub remote for nexa-next
+description: Commit and push after each phase/task; canonical GitHub remote for aethos
 alwaysApply: true
 ---
 
@@ -8,13 +8,13 @@ alwaysApply: true
 ## Canonical remote (this repository)
 
 - **Remote name:** `origin`
-- **URL:** `https://github.com/pilotmain/nexa-next.git`
+- **URL:** `https://github.com/pilotmain/aethos.git`
 - **Default branch:** `main`
 
 If `origin` is missing or wrong, fix it before pushing:
 
 ```bash
-git remote remove origin 2>/dev/null; git remote add origin https://github.com/pilotmain/nexa-next.git
+git remote remove origin 2>/dev/null; git remote add origin https://github.com/pilotmain/aethos.git
 git branch -M main
 git push -u origin main
 ```
@@ -41,7 +41,7 @@ When a task is **finished in this chat** (primary Cursor agent work):
 1. **Commit and push** only the changes from **that** task. Do not mix unrelated diffs, drive-by cleanups, or unreviewed output from other runs unless the user asked to land it.
 2. **Stage** sensibly (respect `.gitignore`; never commit secrets or `.env`).
 3. **Commit** with a clear message (what / why, full sentences).
-4. **Push to `origin/main`** at **`https://github.com/pilotmain/nexa-next.git`** (or merge a short-lived local branch into `main`, then push `main`).
+4. **Push to `origin/main`** at **`https://github.com/pilotmain/aethos.git`** (or merge a short-lived local branch into `main`, then push `main`).
 
 If the user says **not** to push (WIP, hold for review), follow that.
 
