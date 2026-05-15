@@ -322,6 +322,8 @@ def mission_control_gateway_run(
     """Run user text through :class:`~app.services.gateway.runtime.NexaGateway`."""
     text = body.resolved_text()
     user_id = body.resolved_user_id()
+    if not text:
+        return {"mode": "chat", "text": "", "intent": "empty"}
 
     from app.services.gateway.context import GatewayContext
     from app.services.gateway.runtime import NexaGateway
@@ -350,7 +352,10 @@ def mission_control_replay_mission(
             detail="Mission has no stored input_text (created before replay support)",
         )
     ctx = GatewayContext.from_channel(app_user_id, "web", {"via_gateway": True})
-    return NexaGateway().handle_message(ctx, raw, db=db)
+    out = NexaGateway().handle_message(ctx, raw, db=db)
+    if isinstance(out, dict) and not any(k in out for k in ("mode", "text", "ok")):
+        return {**out, "ok": True}
+    return out
 
 
 def _not_found() -> HTTPException:

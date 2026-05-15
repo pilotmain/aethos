@@ -79,7 +79,11 @@ from app.services.self_improvement.proposal import (
     validate_proposal_diff,
 )
 from app.services.self_improvement.sandbox import run_sandbox
-from app.services.user_capabilities import is_privileged_owner_for_web_mutations
+from app.services.user_capabilities import (
+    get_telegram_role_for_app_user,
+    is_owner_role,
+    is_privileged_owner_for_web_mutations,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -110,7 +114,10 @@ def _ensure_enabled() -> None:
 
 
 def _require_owner(db: Session, app_user_id: str) -> None:
-    if not is_privileged_owner_for_web_mutations(db, app_user_id):
+    if not (
+        is_owner_role(get_telegram_role_for_app_user(db, app_user_id))
+        or is_privileged_owner_for_web_mutations(db, app_user_id)
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=(

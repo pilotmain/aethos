@@ -1,5 +1,5 @@
 /**
- * Orchestration sub-agents — Mission Control state first, then ``GET /api/v1/agents/list``.
+ * Orchestration sub-agents — Mission Control state first, then ``GET /agents/list`` (via apiFetch).
  */
 
 import { apiFetch } from "@/lib/api/client";

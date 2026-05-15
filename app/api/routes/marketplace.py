@@ -40,7 +40,11 @@ from app.core.db import get_db
 from app.core.security import get_valid_web_user_id
 from app.services.skills.clawhub_client import ClawHubClient
 from app.services.skills.installer import SkillInstaller
-from app.services.user_capabilities import is_privileged_owner_for_web_mutations
+from app.services.user_capabilities import (
+    get_telegram_role_for_app_user,
+    is_owner_role,
+    is_privileged_owner_for_web_mutations,
+)
 
 router = APIRouter(prefix="/marketplace", tags=["marketplace"])
 
@@ -55,7 +59,10 @@ def _ensure_enabled() -> None:
 
 
 def _require_owner(db: Session, app_user_id: str) -> None:
-    if not is_privileged_owner_for_web_mutations(db, app_user_id):
+    if not (
+        is_owner_role(get_telegram_role_for_app_user(db, app_user_id))
+        or is_privileged_owner_for_web_mutations(db, app_user_id)
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=(

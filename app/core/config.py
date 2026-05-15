@@ -20,6 +20,7 @@ from app.core.paths import get_default_sqlite_database_url
 # Resolve repo root: app/core/config.py -> parents: core, app, project
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 _ENV_FILE = _PROJECT_ROOT / ".env"
+_PYTEST_MODE = (os.environ.get("NEXA_PYTEST") or "").strip().lower() in ("1", "true", "yes")
 # Public path to repo root (bootstrap, dev scripts, self-heal).
 REPO_ROOT: Path = _PROJECT_ROOT
 # Typical location of project `.env` (same file load_dotenv uses in Settings).
@@ -48,7 +49,15 @@ def _normalize_term_for_subprocesses() -> None:
         os.environ.pop("TERMCAP", None)
 
 
-if _ENV_FILE.is_file():
+def _default_workspace_root() -> str:
+    if _PYTEST_MODE:
+        return str((_PROJECT_ROOT / ".runtime" / "pytest-workspace").resolve())
+    return str(Path.home() / "aethos-projects")
+
+
+if _PYTEST_MODE:
+    _normalize_term_for_subprocesses()
+elif _ENV_FILE.is_file():
     load_dotenv(_ENV_FILE, override=True)
     d = dotenv_values(_ENV_FILE) or {}
     t_from_file: str | None = None
@@ -65,7 +74,7 @@ else:
 
 # Phase 62 — machine-local overlay (DATABASE_URL, tokens). Loaded after repo `.env`; overrides duplicate keys.
 _HOME_AETHOS_ENV = Path.home() / ".aethos" / ".env"
-if _HOME_AETHOS_ENV.is_file():
+if _HOME_AETHOS_ENV.is_file() and not _PYTEST_MODE:
     load_dotenv(_HOME_AETHOS_ENV, override=True)
 
 # Phase 36 — AETHOS_* → NEXA_* before Settings() reads os.environ (see app.core.aethos_env.py).
@@ -85,7 +94,7 @@ def ensure_subprocess_term_env() -> None:
     _normalize_term_for_subprocesses()
 
 
-_EnvFile: str | None = str(_ENV_FILE) if _ENV_FILE.is_file() else None
+_EnvFile: str | None = None if _PYTEST_MODE else (str(_ENV_FILE) if _ENV_FILE.is_file() else None)
 
 
 class Settings(BaseSettings):
@@ -335,9 +344,7 @@ class Settings(BaseSettings):
     dev_agent_test_timeout_seconds: int = 600
 
     # Dev workspace: new project scaffold (ask Nexa to create a project for a key) and /dev workspace
-    nexa_workspace_root: str = Field(
-        default_factory=lambda: str(Path.home() / "aethos-projects")
-    )
+    nexa_workspace_root: str = Field(default_factory=_default_workspace_root)
     # Workspace posture for prompts: developer = orchestrator-forward (no false "read-only" refusals);
     # regulated = stricter default wording. See NEXA_WORKSPACE_MODE in .env.example.
     nexa_workspace_mode: str = "regulated"

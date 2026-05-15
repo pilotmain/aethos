@@ -12,9 +12,9 @@ INSTALL_DIR="${NEXA_INSTALL_DIR:-${HOME}/.aethos}"
 # When run from a checkout (not piped stdin), configure this tree — same wizard as one-curl.
 if [[ -n "${BASH_SOURCE[0]:-}" && "${BASH_SOURCE[0]}" != bash && "${BASH_SOURCE[0]}" != "-" ]]; then
   _here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-  if [[ -f "${_here}/scripts/setup.sh" && -f "${_here}/install.sh" ]]; then
+  if [[ -f "${_here}/scripts/install.sh" && -f "${_here}/install.sh" ]]; then
     cd "${_here}"
-    exec bash ./scripts/setup.sh "$@"
+    exec bash ./scripts/install.sh --no-clone "$@"
   fi
 fi
 
@@ -25,8 +25,8 @@ fi
 
 echo "🚀 Installing AethOS..."
 
-if [[ -e "${INSTALL_DIR}" ]] && [[ ! -f "${INSTALL_DIR}/scripts/setup.sh" ]]; then
-  echo "Error: ${INSTALL_DIR} exists but is not an AethOS clone (missing scripts/setup.sh)." >&2
+if [[ -e "${INSTALL_DIR}" ]] && [[ ! -f "${INSTALL_DIR}/scripts/install.sh" ]]; then
+  echo "Error: ${INSTALL_DIR} exists but is not an AethOS clone (missing scripts/install.sh)." >&2
   exit 1
 fi
 
@@ -42,4 +42,4 @@ else
 fi
 
 cd "${INSTALL_DIR}"
-exec bash ./scripts/setup.sh "$@"
+exec bash ./scripts/install.sh --no-clone "$@"

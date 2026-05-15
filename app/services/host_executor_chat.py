@@ -1361,6 +1361,8 @@ def try_apply_host_executor_turn(
             cctx.next_action_pending_inject_json = None
             db.add(cctx)
             db.commit()
+            if not (_confirms_host_executor(t0) or _declines_host_executor(t0)):
+                return None
             return NextActionApplicationResult(
                 (
                     "That confirmation expired. Ask again if you still want something run on your "

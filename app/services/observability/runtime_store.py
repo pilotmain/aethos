@@ -203,7 +203,10 @@ _OBSERVABILITY_REGEX: list[tuple[re.Pattern[str], str]] = [
 
 def parse_observability_intent(text: str) -> str | None:
     """Return dashboard kind: full | alerts | metrics (does not depend on env flags)."""
-    raw = (text or "").strip().splitlines()[0].strip()
+    lines = (text or "").strip().splitlines()
+    if not lines:
+        return None
+    raw = lines[0].strip()
     if not raw:
         return None
     low = raw.lower()

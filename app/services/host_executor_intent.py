@@ -646,7 +646,10 @@ def infer_host_executor_action(user_text: str) -> dict[str, Any] | None:
     if _RE_GIT.search(line):
         return {"host_action": "git_status"}
 
-    if re.search(r"(?i)\brun\s+tests?\b|\brun\s+pytest\b|^pytest\b", low):
+    if re.search(r"(?i)\brun\s+tests?\b|\brun\s+pytest\b", low) or re.match(
+        r"(?i)^pytest(?:\s+(?:-[\w-]+|[\w./:-]*(?:/|\.py|::)[\w./:-]*))*\s*$",
+        line,
+    ):
         return {"host_action": "run_command", "run_name": "pytest"}
 
     command_intent = parse_command_intent(line)

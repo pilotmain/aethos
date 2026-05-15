@@ -264,6 +264,13 @@ def run_browser_workflow(
     ok, reason = _automation_gate()
     if not ok:
         return {"ok": False, "error": reason, "results": []}
+    if not any(isinstance(step, dict) for step in steps):
+        sid = (session_id or uuid.uuid4().hex[:20])[:48]
+        return {
+            "ok": True,
+            "session_id": sid,
+            "results": [{"i": i, "ok": False, "error": "invalid_step"} for i, _ in enumerate(steps)],
+        }
     spw = _try_import_sync_playwright()
     if spw is None:
         return {"ok": False, "error": "playwright_missing", "results": []}

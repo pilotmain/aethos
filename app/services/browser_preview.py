@@ -12,6 +12,7 @@ import logging
 import uuid
 from dataclasses import dataclass
 from typing import Any
+from urllib.parse import urlparse
 
 from app.core.config import get_settings
 from app.services.user_capabilities import is_owner_role
@@ -58,11 +59,18 @@ def preview_public_page(url: str, requester_role: str) -> BrowserPreviewResult:
     Owner-only, public URLs only, no forms/logins. Screenshot is optional; path returned if saved.
     """
     u = (url or "").strip()
-    uerr = validate_public_url_strict(u)
-    if uerr:
-        logger.info("browser_preview block url: %s", uerr)
+    parsed = urlparse(u)
+    shape_err = None
+    if parsed.scheme not in ("http", "https"):
+        shape_err = "only http and https URLs are allowed"
+    elif not parsed.netloc or not parsed.hostname:
+        shape_err = "URL must include a host"
+    elif parsed.username or parsed.password:
+        shape_err = "URLs with embedded credentials are not allowed (use a vault tool, not a raw URL)"
+    if shape_err:
+        logger.info("browser_preview block url: %s", shape_err)
         return BrowserPreviewResult(
-            False, u, error=uerr, user_message=f"I can't run browser preview: {uerr}"
+            False, u, error=shape_err, user_message=f"I can't run browser preview: {shape_err}"
         )
     if not is_owner_role(requester_role):
         return BrowserPreviewResult(
@@ -90,6 +98,12 @@ def preview_public_page(url: str, requester_role: str) -> BrowserPreviewResult:
             u,
             error="playwright-missing",
             user_message=PLAYWRIGHT_MISSING_MSG,
+        )
+    uerr = validate_public_url_strict(u)
+    if uerr:
+        logger.info("browser_preview block url: %s", uerr)
+        return BrowserPreviewResult(
+            False, u, error=uerr, user_message=f"I can't run browser preview: {uerr}"
         )
     s = get_settings()
     to_ms = int(max(5_000, s.nexa_browser_preview_timeout_ms or 35_000))

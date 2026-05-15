@@ -246,21 +246,6 @@ class ClawHubClient:
         results = [self._parse_skill_info(x) for x in items[: max(1, limit)]]
         if results:
             return results
-        if self._fallback_allowed():
-            rows = sort_by_downloads(merged_fallback_skill_dicts(self.settings))
-            # Featured: prefer higher rating, then downloads
-            rows = sorted(
-                rows,
-                key=lambda r: (
-                    float(r.get("rating") or 0.0),
-                    int(r.get("downloads") or 0),
-                ),
-                reverse=True,
-            )
-            out = [self._parse_skill_info(x) for x in rows[: max(1, limit)]]
-            if out:
-                logger.info("clawhub featured using fallback catalog (%s skills)", len(out))
-            return out
         return []
 
     async def download_skill(self, name: str, version: str = "latest") -> bytes | None:

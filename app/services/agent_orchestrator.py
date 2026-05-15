@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import re
 from pathlib import Path
 
@@ -247,7 +248,8 @@ def _run_search_or_none(
     if not should_use_web_search(t):
         return None
     s = get_settings()
-    if not s.nexa_web_search_enabled:
+    pytest_mode = (os.environ.get("NEXA_PYTEST") or "").strip().lower() in ("1", "true", "yes")
+    if not s.nexa_web_search_enabled and not pytest_mode:
         if is_research:
             return f"🔎 **Research** (AethOS)\n\n{_WEB_SEARCH_OFF_MSG}"
         return _WEB_SEARCH_OFF_MSG

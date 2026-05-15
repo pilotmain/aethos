@@ -788,12 +788,17 @@ class AgentExecutor:
         domain: str,
         agent: SubAgent,
     ) -> str:
+        settings = get_settings()
+        auto_approve = bool(getattr(settings, "nexa_auto_approve_enabled", False))
+        auto = bool(getattr(settings, "nexa_agent_orchestration_autoqueue", False))
+        if not auto_approve and not auto and (db is None or not (user_id or "").strip()):
+            return "Cannot queue a host job without an authenticated user and database session."
+
         safe = _validate_enqueue_payload(payload)
         if not safe:
             return "Host tool payload failed validation (disallowed or incomplete)."
 
-        settings = get_settings()
-        if bool(getattr(settings, "nexa_auto_approve_enabled", False)):
+        if auto_approve:
             aa_ok, _aa_reason = should_auto_approve(chat_id, domain, agent=agent)
             if aa_ok:
                 steps = (
@@ -833,8 +838,6 @@ class AgentExecutor:
                 head = get_auto_approve_message(domain, steps)
                 body = (text or "").strip()
                 return f"{head}\n\n{body}" if body else head
-
-        auto = bool(getattr(settings, "nexa_agent_orchestration_autoqueue", False))
 
         if auto:
             run_inline, guard_msg, prefer_queue = should_run_autoqueue_payload(chat_id, domain, agent)
@@ -892,9 +895,6 @@ class AgentExecutor:
                 return str(e)
             record_autoqueue_success(agent.id)
             return (text or "").strip() or "(empty host output)"
-
-        if db is None or not (user_id or "").strip():
-            return "Cannot queue a host job without an authenticated user and database session."
 
         return self._enqueue(
             safe,

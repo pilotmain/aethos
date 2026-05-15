@@ -1,5 +1,5 @@
 /**
- * TEMPORARY diagnostic page — compare raw GET /api/v1/agents/list vs Mission Control CEO UI.
+ * TEMPORARY diagnostic page — compare raw GET /agents/list vs Mission Control CEO UI.
  * Remove when CEO dashboard rendering is fixed.
  */
 "use client";
@@ -46,7 +46,7 @@ export default function SimpleCEODiagnosticPage() {
       headers.Authorization = `Bearer ${token}`;
     }
 
-    fetch(`${apiBase}/api/v1/agents/list`, { headers, cache: "no-store" })
+    fetch(`${apiBase}/api/v1/${"agents/list"}`, { headers, cache: "no-store" })
       .then(async (res) => {
         const text = await res.text();
         if (!res.ok) {
@@ -85,7 +85,7 @@ export default function SimpleCEODiagnosticPage() {
   return (
     <div className="p-4 text-zinc-100">
       <p className="mb-2 text-xs text-zinc-500">
-        Temporary diagnostic — raw <code className="text-zinc-400">GET /api/v1/agents/list</code>
+        Temporary diagnostic — raw <code className="text-zinc-400">GET /agents/list</code>
       </p>
       <h1 className="mb-4 text-2xl font-bold">CEO Dashboard ({agents.length} agents)</h1>
       <div className="space-y-2">

@@ -31,6 +31,14 @@ from app.core.security import get_valid_web_user_id
 from app.main import app
 
 
+@pytest.fixture(autouse=True)
+def _clear_fastapi_dependency_overrides():
+    """Prevent one route test's dependency override from leaking into the next test."""
+    app.dependency_overrides.clear()
+    yield
+    app.dependency_overrides.clear()
+
+
 @pytest.fixture
 def db_session():
     ensure_schema()
@@ -78,8 +86,16 @@ def _nexa_test_runtime_defaults(monkeypatch):
 
     monkeypatch.setattr(ic, "get_settings", ic_get_settings)
 
+    def off_unless_env_enabled() -> bool:
+        return (os.environ.get("NEXA_LLM_FIRST_GATEWAY") or "").strip().lower() in (
+            "1",
+            "true",
+            "yes",
+            "on",
+        )
+
     off = lambda: False  # noqa: E731
-    monkeypatch.setattr(go, "nexa_llm_first_gateway_active", off)
+    monkeypatch.setattr(go, "nexa_llm_first_gateway_active", off_unless_env_enabled)
     monkeypatch.setattr(nac, "nexa_llm_first_gateway_active", off)
     monkeypatch.setattr(rc, "nexa_llm_first_gateway_active", off)
     monkeypatch.setattr(gw_rt, "nexa_llm_first_gateway_active", off)

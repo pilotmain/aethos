@@ -7,6 +7,7 @@ JWT access tokens for the Phase 30 mobile app (HS256, ``NEXA_SECRET_KEY``).
 
 from __future__ import annotations
 
+import os
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
@@ -21,7 +22,7 @@ class MobileTokenError(Exception):
 
 def create_mobile_access_token(user_id: str, display_name: str | None = None) -> str:
     s = get_settings()
-    secret = (s.nexa_secret_key or "").strip()
+    secret = (s.nexa_secret_key or os.environ.get("NEXA_SECRET_KEY") or "").strip()
     if not secret:
         raise RuntimeError("NEXA_SECRET_KEY is required for mobile JWT auth")
     hours = max(1, int(getattr(s, "nexa_mobile_token_ttl_hours", 168) or 168))
@@ -38,7 +39,7 @@ def create_mobile_access_token(user_id: str, display_name: str | None = None) ->
 
 def decode_mobile_access_token(token: str) -> dict[str, Any]:
     s = get_settings()
-    secret = (s.nexa_secret_key or "").strip()
+    secret = (s.nexa_secret_key or os.environ.get("NEXA_SECRET_KEY") or "").strip()
     if not secret:
         raise MobileTokenError("server missing signing key")
     try:

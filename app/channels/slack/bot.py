@@ -8,9 +8,6 @@ from __future__ import annotations
 import asyncio
 import logging
 
-from slack_bolt.adapter.socket_mode.aiohttp import AsyncSocketModeHandler
-from slack_bolt.async_app import AsyncApp
-
 from app.channels.slack.handlers import register_slack_handlers
 from app.core.config import get_settings
 
@@ -19,6 +16,13 @@ _log = logging.getLogger("nexa.channels.slack.bot")
 
 async def run_slack_socket_bot() -> None:
     """Connect one Socket Mode session (blocks until disconnect)."""
+    try:
+        from slack_bolt.adapter.socket_mode.aiohttp import AsyncSocketModeHandler
+        from slack_bolt.async_app import AsyncApp
+    except ImportError:
+        _log.warning("Slack Socket Mode requires the optional slack_bolt package")
+        return
+
     s = get_settings()
     bot = (s.slack_bot_token or "").strip()
     app_tok = (s.slack_app_token or "").strip()

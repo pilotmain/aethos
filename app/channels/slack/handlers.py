@@ -7,9 +7,10 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
-from slack_bolt.async_app import AsyncApp
+if TYPE_CHECKING:  # pragma: no cover - typing-only optional dependency
+    from slack_bolt.async_app import AsyncApp
 
 from app.channels.slack.message_converter import (
     bolt_body_to_raw_event,
@@ -82,7 +83,7 @@ def _deliver_normalized(raw_event: dict[str, Any]) -> tuple[dict[str, Any], str]
         db.close()
 
 
-def register_slack_handlers(app: AsyncApp) -> None:
+def register_slack_handlers(app: "AsyncApp") -> None:
     @app.event("message")
     async def _on_message(body: dict[str, Any], ack: Any) -> None:
         await ack()

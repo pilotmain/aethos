@@ -197,7 +197,7 @@ def list_user_providers(
 
 
 def format_key_list_telegram(db: Session, telegram_user_id: int) -> str:
-    lines: list[str] = ["AethOS API keys (your account)", ""]
+    lines: list[str] = ["AethOS / Nexa API keys (your account)", ""]
     for m in list_user_providers(db, int(telegram_user_id)):
         if m.has_key and m.last4:
             pl = f"{m.provider}: set (…{m.last4})"
