@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# AethOS — one-curl installer (rev 2026-05-15)
+# AethOS — one-curl installer (rev 2026-05-15b)
 # Usage: curl -fsSL https://cdn.jsdelivr.net/gh/pilotmain/aethos@main/install.sh | bash
+#        (raw.githubusercontent.com may lag; jsDelivr tracks main within minutes)
 #
 # Optional: NEXA_REPO_URL, NEXA_INSTALL_DIR
 
@@ -9,12 +10,16 @@ set -e
 REPO_URL="${NEXA_REPO_URL:-https://github.com/pilotmain/aethos.git}"
 INSTALL_DIR="${NEXA_INSTALL_DIR:-${HOME}/.aethos}"
 
-# When run from a checkout (not piped stdin), configure this tree — same wizard as one-curl.
-if [[ -n "${BASH_SOURCE[0]:-}" && "${BASH_SOURCE[0]}" != bash && "${BASH_SOURCE[0]}" != "-" ]]; then
+_aethos_install_is_piped() {
+  [[ "${BASH_SOURCE[0]:-}" == "-" ]] || [[ "${BASH_SOURCE[0]:-}" == "bash" ]]
+}
+
+# Run from a checkout on disk — go straight to the interactive wizard.
+if [[ -n "${BASH_SOURCE[0]:-}" ]] && ! _aethos_install_is_piped; then
   _here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-  if [[ -f "${_here}/scripts/install.sh" && -f "${_here}/install.sh" ]]; then
+  if [[ -f "${_here}/scripts/setup.sh" && -f "${_here}/install.sh" ]]; then
     cd "${_here}"
-    exec bash ./scripts/install.sh --no-clone "$@"
+    exec bash ./scripts/setup.sh "$@"
   fi
 fi
 
@@ -25,8 +30,8 @@ fi
 
 echo "🚀 Installing AethOS..."
 
-if [[ -e "${INSTALL_DIR}" ]] && [[ ! -f "${INSTALL_DIR}/scripts/install.sh" ]]; then
-  echo "⚠️  ${INSTALL_DIR} exists but is not a valid AethOS install (missing scripts/install.sh)."
+if [[ -e "${INSTALL_DIR}" ]] && [[ ! -f "${INSTALL_DIR}/scripts/setup.sh" ]]; then
+  echo "⚠️  ${INSTALL_DIR} exists but is not a valid AethOS install (missing scripts/setup.sh)."
   echo "   Removing leftover directory and re-cloning…"
   rm -rf "${INSTALL_DIR}"
 fi
@@ -42,11 +47,5 @@ else
   fi
 fi
 
-cd "${INSTALL_DIR}"
-# For clean installs, run the full interactive wizard
-if [[ ! -f "${INSTALL_DIR}/.setup_complete" ]]; then
-  exec bash ./scripts/setup.sh
-else
-  # Host-first reinstall: refresh .env template, never auto-start Docker.
-  exec bash ./scripts/install.sh --no-clone --force-env --start host "$@"
-fi
+# Piped curl scripts can be CDN-stale — always delegate to the freshly pulled on-disk copy.
+exec bash "${INSTALL_DIR}/install.sh" "$@"
