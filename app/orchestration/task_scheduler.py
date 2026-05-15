@@ -43,6 +43,12 @@ def _loop() -> None:
                 sch["ticks"] = int(sch.get("ticks") or 0) + 1
                 sch["last_tick"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
                 sch["last_error"] = None
+                try:
+                    from app.runtime.events.runtime_metrics import bump_scheduler_tick
+
+                    bump_scheduler_tick(st, ticks=int(sch["ticks"]))
+                except Exception:
+                    pass
                 res = runtime_dispatcher.dispatch_once(st)
                 if res and not res.get("skipped"):
                     orchestration_log.log_orchestration_event(

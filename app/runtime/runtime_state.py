@@ -80,6 +80,16 @@ def default_runtime_state(*, workspace_root: Path | None = None) -> dict[str, An
                 "last_error": None,
             },
         },
+        "runtime_sessions": {},
+        "runtime_event_buffer": [],
+        "runtime_metrics": {
+            "scheduler_ticks": 0,
+            "last_scheduler_tick_at": None,
+            "queue_dispatch_total": 0,
+            "tasks_completed_total": 0,
+            "tasks_failed_total": 0,
+            "runtime_boot_count": 0,
+        },
     }
 
 
@@ -145,6 +155,24 @@ def ensure_orchestration_schema(st: dict[str, Any]) -> dict[str, Any]:
     return st
 
 
+def ensure_multi_session_schema(st: dict[str, Any]) -> dict[str, Any]:
+    """Merge OpenClaw multi-session + runtime event buffers (forward-compatible)."""
+    base = default_runtime_state()
+    rs = st.setdefault("runtime_sessions", base.get("runtime_sessions") or {})
+    if not isinstance(rs, dict):
+        st["runtime_sessions"] = {}
+    buf = st.setdefault("runtime_event_buffer", base.get("runtime_event_buffer") or [])
+    if not isinstance(buf, list):
+        st["runtime_event_buffer"] = []
+    m = st.setdefault("runtime_metrics", base.get("runtime_metrics") or {})
+    if not isinstance(m, dict):
+        st["runtime_metrics"] = dict(base["runtime_metrics"])
+    else:
+        for k, v in (base.get("runtime_metrics") or {}).items():
+            m.setdefault(k, v)
+    return st
+
+
 def load_runtime_state() -> dict[str, Any]:
     path = get_runtime_state_path()
     if not path.is_file():
@@ -158,6 +186,7 @@ def load_runtime_state() -> dict[str, Any]:
             raise ValueError("root must be object")
         ensure_orchestration_schema(data)
         ensure_execution_schema(data)
+        ensure_multi_session_schema(data)
         return data
     except Exception as exc:
         _LOG.warning("runtime_state.load_failed %s — resetting", exc)

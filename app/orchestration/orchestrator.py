@@ -25,9 +25,22 @@ def orchestration_boot(st: dict[str, Any] | None = None) -> dict[str, Any]:
         st = load_runtime_state()
     rec = task_recovery.recover_orchestration_on_boot(st)
     ex = execution_continuation.recover_execution_on_boot(st)
+    from app.runtime.sessions.session_recovery import recover_runtime_sessions_on_boot
+    from app.runtime.events.runtime_metrics import bump_runtime_boot
+
+    sess = recover_runtime_sessions_on_boot(st)
+    bump_runtime_boot(st)
     orchestration_log.log_orchestration_event(
-        "orchestration_boot", recovery_tasks=rec.get("count", 0), execution_resume_steps=ex.get("count", 0)
+        "orchestration_boot",
+        recovery_tasks=rec.get("count", 0),
+        execution_resume_steps=ex.get("count", 0),
+        runtime_sessions_recovered=sess.get("count", 0),
     )
     task_scheduler.start_scheduler_background()
-    _LOG.info("orchestration.boot recovery=%s execution=%s", rec.get("count", 0), ex.get("count", 0))
-    return {"orchestration": rec, "execution": ex}
+    _LOG.info(
+        "orchestration.boot recovery=%s execution=%s sessions=%s",
+        rec.get("count", 0),
+        ex.get("count", 0),
+        sess.get("count", 0),
+    )
+    return {"orchestration": rec, "execution": ex, "sessions": sess}

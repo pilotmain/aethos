@@ -857,6 +857,9 @@ def build_execution_snapshot(
             },
         }
 
+    from app.services.mission_control.orchestration_runtime_snapshot import (
+        build_orchestration_runtime_snapshot,
+    )
     from app.services.mission_control.safety_readiness import build_safety_readiness_snapshot
 
     exec_payload: dict[str, Any] = {
@@ -894,6 +897,7 @@ def build_execution_snapshot(
         "autonomy_execution_stats": autonomy_execution_stats,
         "phase46": phase46_vnext,
         "safety_readiness": build_safety_readiness_snapshot(user_id=user_id),
+        "orchestration_runtime": build_orchestration_runtime_snapshot(user_id),
     }
 
     uid_early = (user_id or "").strip()

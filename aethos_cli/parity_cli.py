@@ -90,6 +90,9 @@ def cmd_logs(*, lines: int = 80, category: str | None = None) -> int:
         "scheduler",
         "tools",
         "workflows",
+        "runtime_events",
+        "runtime_sessions",
+        "runtime_metrics",
     ):
         from app.core.paths import get_aethos_home_dir
 
@@ -112,7 +115,7 @@ def cmd_logs(*, lines: int = 80, category: str | None = None) -> int:
     if not candidates:
         print(
             "No matching ``*.log`` files.\n"
-            "Try: ``aethos logs`` (all) or ``aethos logs gateway|agents|deployments|runtime|orchestration|recovery|execution|checkpoints|retries|scheduler|tools|workflows``.",
+            "Try: ``aethos logs`` (all) or ``aethos logs gateway|…|runtime_events|runtime_sessions|runtime_metrics``.",
             file=sys.stderr,
         )
         return 0

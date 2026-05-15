@@ -126,6 +126,9 @@ def cmd_status() -> int:
                                 wf_fail += 1
                     print("— Tool workflows —")
                     print(f"workflow tasks:   active={wf_active}  completed={wf_done}  failed={wf_fail}")
+                    rs_doc = doc.get("runtime_sessions") or {}
+                    if isinstance(rs_doc, dict):
+                        print(f"runtime_sessions: {len(rs_doc)}")
                 print()
             except Exception as exc:  # noqa: BLE001
                 print(f"(could not parse runtime file: {exc})", file=sys.stderr)

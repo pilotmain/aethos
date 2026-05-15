@@ -55,6 +55,20 @@ def dispatch_once(st: dict[str, Any]) -> dict[str, Any] | None:
                 orchestration_log.log_agents_event(
                     "task_started", task_id=tid, agent_id=t.get("agent_id"), status="running"
                 )
+            try:
+                from app.runtime.events.runtime_events import emit_runtime_event
+
+                emit_runtime_event(
+                    st,
+                    "task_started",
+                    task_id=tid,
+                    user_id=str(t.get("user_id") or ""),
+                    session_id=str(t.get("owner_session_id") or ""),
+                    status="running",
+                    agent_id=str(t.get("assigned_agent_id") or t.get("agent_id") or ""),
+                )
+            except Exception:
+                pass
         plan_res = tick_planned_task(st, tid, source_queue=src or "")
         term = str(plan_res.get("terminal") or "failed") if plan_res else "failed"
         if term in ("running", "waiting", "retrying"):
@@ -67,6 +81,47 @@ def dispatch_once(st: dict[str, Any]) -> dict[str, Any] | None:
                 status=str(final.get("state")),
                 previous=prev,
             )
+            try:
+                from app.runtime.events.runtime_events import emit_runtime_event
+                from app.runtime.events.runtime_metrics import bump_dispatch
+                from app.runtime.sessions.session_registry import detach_task
+
+                fs = str(final.get("state") or "")
+                if fs == "completed":
+                    emit_runtime_event(
+                        st,
+                        "task_completed",
+                        task_id=tid,
+                        user_id=str(final.get("user_id") or ""),
+                        session_id=str(final.get("owner_session_id") or ""),
+                        status=fs,
+                    )
+                elif fs == "failed":
+                    emit_runtime_event(
+                        st,
+                        "task_failed",
+                        task_id=tid,
+                        user_id=str(final.get("user_id") or ""),
+                        session_id=str(final.get("owner_session_id") or ""),
+                        status=fs,
+                    )
+                if fs in ("completed", "failed"):
+                    bump_dispatch(st, terminal=fs)
+                osid = final.get("owner_session_id")
+                if osid and fs in ("completed", "failed", "cancelled"):
+                    detach_task(st, str(osid), tid)
+                if fs == "completed" and str(final.get("type") or "") == "workflow":
+                    emit_runtime_event(
+                        st,
+                        "workflow_completed",
+                        task_id=tid,
+                        plan_id=str(final.get("execution_plan_id") or ""),
+                        user_id=str(final.get("user_id") or ""),
+                        session_id=str(final.get("owner_session_id") or ""),
+                        status="completed",
+                    )
+            except Exception:
+                pass
         _LOG.debug("orchestration.dispatch task=%s execution terminal=%s", tid, term)
         return {"task_id": tid, "terminal": term, "source_queue": src, "execution": plan_res}
 
@@ -78,6 +133,20 @@ def dispatch_once(st: dict[str, Any]) -> dict[str, Any] | None:
         orchestration_log.log_agents_event(
             "task_started", task_id=tid, agent_id=t.get("agent_id"), status="running"
         )
+    try:
+        from app.runtime.events.runtime_events import emit_runtime_event
+
+        emit_runtime_event(
+            st,
+            "task_started",
+            task_id=tid,
+            user_id=str(t.get("user_id") or ""),
+            session_id=str(t.get("owner_session_id") or ""),
+            status="running",
+            agent_id=str(t.get("assigned_agent_id") or t.get("agent_id") or ""),
+        )
+    except Exception:
+        pass
 
     terminal = runtime_executor.execute_task(st, tid)
     if terminal in task_registry.TASK_STATES:
@@ -92,5 +161,36 @@ def dispatch_once(st: dict[str, Any]) -> dict[str, Any] | None:
         status=str(final.get("state")),
         previous=prev,
     )
+    try:
+        from app.runtime.events.runtime_events import emit_runtime_event
+        from app.runtime.events.runtime_metrics import bump_dispatch
+        from app.runtime.sessions.session_registry import detach_task
+
+        fs = str(final.get("state") or "")
+        if fs == "completed":
+            emit_runtime_event(
+                st,
+                "task_completed",
+                task_id=tid,
+                user_id=str(final.get("user_id") or ""),
+                session_id=str(final.get("owner_session_id") or ""),
+                status=fs,
+            )
+        elif fs == "failed":
+            emit_runtime_event(
+                st,
+                "task_failed",
+                task_id=tid,
+                user_id=str(final.get("user_id") or ""),
+                session_id=str(final.get("owner_session_id") or ""),
+                status=fs,
+            )
+        if fs in ("completed", "failed"):
+            bump_dispatch(st, terminal=fs)
+        osid = final.get("owner_session_id")
+        if osid and fs in ("completed", "failed", "cancelled"):
+            detach_task(st, str(osid), tid)
+    except Exception:
+        pass
     _LOG.debug("orchestration.dispatch task=%s terminal=%s", tid, terminal)
     return {"task_id": tid, "terminal": terminal, "source_queue": src}

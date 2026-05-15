@@ -107,12 +107,19 @@ class MissionControlGatewayRunBody(BaseModel):
         default=False,
         description="When true, enqueue a persistent tool workflow instead of chat gateway.",
     )
+    channel: str | None = Field(
+        default=None,
+        description="Channel for runtime session binding (web, api, telegram, …).",
+    )
 
     def resolved_text(self) -> str:
         return str(self.text or self.raw or self.message or self.prompt or "").strip()
 
     def resolved_user_id(self) -> str:
         return str(self.user_id or "dev_user").strip()
+
+    def resolved_channel(self) -> str:
+        return str(self.channel or "web").strip() or "web"
 
 
 @router.get("/data-inventory")
@@ -338,7 +345,7 @@ def mission_control_gateway_run(
         if raw.lower().startswith("workflow:"):
             raw = raw[len("workflow:") :].lstrip()
         st = load_runtime_state()
-        out = persist_operator_workflow(st, raw, user_id=user_id)
+        out = persist_operator_workflow(st, raw, user_id=user_id, channel=body.resolved_channel())
         save_runtime_state(st)
         return {"mode": "workflow", **out}
 
