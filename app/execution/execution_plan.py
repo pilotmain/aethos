@@ -52,6 +52,15 @@ def create_plan(
         s.setdefault("next_retry_at", None)
         s.setdefault("failure_reason", None)
         s.setdefault("outputs", [])
+        s.setdefault("type", str(s.get("type") or "").strip())
+        s.setdefault("tool", s.get("tool"))
+        s.setdefault("result", None)
+        s.setdefault("error", None)
+        s.setdefault("created_at", _now_iso())
+        s.setdefault("started_at", None)
+        s.setdefault("completed_at", None)
+        s.setdefault("retryable", True)
+        s.setdefault("max_retries", 3)
         norm_steps.append(s)
     row: dict[str, Any] = {
         "plan_id": plan_id,

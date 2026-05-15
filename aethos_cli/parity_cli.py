@@ -88,6 +88,8 @@ def cmd_logs(*, lines: int = 80, category: str | None = None) -> int:
         "checkpoints",
         "retries",
         "scheduler",
+        "tools",
+        "workflows",
     ):
         from app.core.paths import get_aethos_home_dir
 
@@ -110,7 +112,7 @@ def cmd_logs(*, lines: int = 80, category: str | None = None) -> int:
     if not candidates:
         print(
             "No matching ``*.log`` files.\n"
-            "Try: ``aethos logs`` (all) or ``aethos logs gateway|agents|deployments|runtime|orchestration|recovery|execution|checkpoints|retries|scheduler``.",
+            "Try: ``aethos logs`` (all) or ``aethos logs gateway|agents|deployments|runtime|orchestration|recovery|execution|checkpoints|retries|scheduler|tools|workflows``.",
             file=sys.stderr,
         )
         return 0
@@ -226,6 +228,23 @@ def _runtime_doctor_messages() -> list[str]:
                 out.append(f"execution_retry_integrity: FAIL ({bad_retry} step(s))")
             else:
                 out.append("execution_retry_integrity: OK")
+            from app.execution import workflow_recovery
+
+            wrep = workflow_recovery.workflow_integrity_report(st)
+            if wrep.get("ok"):
+                out.append("workflow_plan_integrity: OK")
+            else:
+                out.append(f"workflow_plan_integrity: FAIL {wrep.get('issues')}")
+            try:
+                probe = ws / ".aethos_write_probe"
+                probe.write_text("ok", encoding="utf-8")
+                probe.unlink(missing_ok=True)
+                out.append("workspace_writable: OK")
+            except OSError as exc:
+                out.append(f"workspace_writable: FAIL ({exc})")
+            from app.services.host_executor import is_command_safe
+
+            out.append("shell_allowlist_echo: " + ("OK" if is_command_safe("echo parity_doctor") else "FAIL"))
             pr_ep = execution_plan.prune_orphan_plans(st)
             if pr_ep:
                 out.append(f"execution_plans: pruned {pr_ep} orphan plan(s)")

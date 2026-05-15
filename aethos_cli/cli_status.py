@@ -112,6 +112,20 @@ def cmd_status() -> int:
                     print(f"checkpoint keys:  {chk_count}")
                     print(f"supervisor ticks: {sup_ex.get('ticks', '')}  last_error: {sup_ex.get('last_error', '')}")
                     print(f"recovery events:  {len(rec_ev) if isinstance(rec_ev, list) else 0}")
+                    wf_active = wf_done = wf_fail = 0
+                    if isinstance(tr, dict):
+                        for t in tr.values():
+                            if not isinstance(t, dict) or str(t.get("type") or "") != "workflow":
+                                continue
+                            stwf = str(t.get("state") or "")
+                            if stwf in ("queued", "scheduled", "running", "waiting", "retrying", "recovering"):
+                                wf_active += 1
+                            elif stwf == "completed":
+                                wf_done += 1
+                            elif stwf == "failed":
+                                wf_fail += 1
+                    print("— Tool workflows —")
+                    print(f"workflow tasks:   active={wf_active}  completed={wf_done}  failed={wf_fail}")
                 print()
             except Exception as exc:  # noqa: BLE001
                 print(f"(could not parse runtime file: {exc})", file=sys.stderr)

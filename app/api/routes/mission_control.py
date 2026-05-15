@@ -103,6 +103,11 @@ class MissionControlGatewayRunBody(BaseModel):
     prompt: str | None = Field(default=None, description="Alias for gateway-style prompts.")
     user_id: str | None = Field(default=None, description="Logical user id for GatewayContext.")
 
+    workflow: bool = Field(
+        default=False,
+        description="When true, enqueue a persistent tool workflow instead of chat gateway.",
+    )
+
     def resolved_text(self) -> str:
         return str(self.text or self.raw or self.message or self.prompt or "").strip()
 
@@ -324,6 +329,18 @@ def mission_control_gateway_run(
     user_id = body.resolved_user_id()
     if not text:
         return {"mode": "chat", "text": "", "intent": "empty"}
+
+    if body.workflow or text.lower().startswith("workflow:"):
+        from app.execution.workflow_runner import persist_operator_workflow
+        from app.runtime.runtime_state import load_runtime_state, save_runtime_state
+
+        raw = text
+        if raw.lower().startswith("workflow:"):
+            raw = raw[len("workflow:") :].lstrip()
+        st = load_runtime_state()
+        out = persist_operator_workflow(st, raw, user_id=user_id)
+        save_runtime_state(st)
+        return {"mode": "workflow", **out}
 
     from app.services.gateway.context import GatewayContext
     from app.services.gateway.runtime import NexaGateway

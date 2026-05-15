@@ -11,8 +11,33 @@ from app.execution import execution_log
 from app.execution import execution_memory
 from app.execution import execution_plan
 from app.execution import execution_retry
+from app.execution import tool_step as tool_step_mod
+from app.execution import workflow_events
 from app.orchestration import orchestration_log
 from app.orchestration import task_registry
+
+
+_TOOL_TYPES = frozenset(
+    {
+        "shell",
+        "noop",
+        "file_read",
+        "file_write",
+        "file_patch",
+        "workspace_list",
+        "workspace_search",
+        "deploy",
+        "http_request",
+        "internal_api",
+    }
+)
+
+
+def _step_runs_tools(step: dict[str, Any]) -> bool:
+    tblk = step.get("tool")
+    if isinstance(tblk, dict) and str(tblk.get("name") or "").strip():
+        return True
+    return str(step.get("type") or "").strip() in _TOOL_TYPES
 
 
 def _reconcile_blocked_labels(plan: dict[str, Any]) -> None:
@@ -131,13 +156,81 @@ def tick_planned_task(
         execution_plan.update_plan_timestamp(plan)
         return {"terminal": "retrying", "plan_id": str(pid), "step_id": sid}
 
-    # Successful step body (OpenClaw parity placeholder — real tools wire in later).
-    outs = list(step.get("outputs") or [])
-    outs.append({"ts": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "ok": True})
-    step["outputs"] = outs
-    step["status"] = "completed"
+    start_iso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    step["started_at"] = start_iso
+
+    if _step_runs_tools(step):
+        tname = tool_step_mod.step_tool_name(step)
+        result = tool_step_mod.execute_tool_step(step)
+        step["result"] = result
+        ok = tool_step_mod.tool_result_ok(tname, result)
+        complete_iso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        step["completed_at"] = complete_iso
+        outs = [{"ts": complete_iso, "tool": tname, "result": result}]
+        step["outputs"] = list(step.get("outputs") or []) + outs
+        wf_status = "completed" if ok else "failed"
+        workflow_events.log_tool_event(
+            f"tool_step_{wf_status}",
+            task_id=task_id,
+            plan_id=str(pid),
+            step_id=sid,
+            tool=tname,
+            status=wf_status,
+        )
+        if (
+            tname in ("file_write", "file_patch")
+            and ok
+            and isinstance(result, dict)
+            and result.get("path")
+        ):
+            execution_memory.append_file_mutation(
+                st,
+                task_id,
+                path=str(result.get("path") or ""),
+                action=tname,
+                tool_name=tname,
+                step_id=sid,
+                before_hash=result.get("before_sha256"),
+                after_hash=result.get("after_sha256"),
+            )
+        if not ok:
+            reason = str(result.get("error") or result.get("stderr") or "tool_failed")[:2000]
+            step["error"] = reason
+            max_r = int(step.get("max_retries") or 3)
+            if step.get("retryable", True) and int(step.get("retry_count") or 0) < max_r:
+                execution_retry.schedule_step_retry(plan, step, reason, now_ts=now_ts)
+                task_registry.update_task_state(st, task_id, "retrying")
+                execution_memory.set_continuation(st, task_id, last_step=sid, phase="retry")
+                execution_plan.update_plan_timestamp(plan)
+                return {"terminal": "retrying", "plan_id": str(pid), "step_id": sid}
+            step["status"] = "failed"
+            execution_checkpoint.save_checkpoint(
+                st,
+                str(pid),
+                sid,
+                task_id=task_id,
+                outputs=list(step.get("outputs") or []),
+                metadata={"source_queue": source_queue or "", "tool_failed": True},
+            )
+            execution_plan.update_plan_timestamp(plan)
+            _reconcile_blocked_labels(plan)
+            task_registry.update_task_state(st, task_id, "failed")
+            plan["status"] = "failed"
+            execution_log.log_execution_event(
+                "execution_failed", task_id=task_id, plan_id=str(pid), status="failed"
+            )
+            return {"terminal": "failed", "plan_id": str(pid), "step_id": sid}
+        step["error"] = None
+        step["status"] = "completed"
+    else:
+        outs = list(step.get("outputs") or [])
+        outs.append({"ts": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "ok": True})
+        step["outputs"] = outs
+        step["completed_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        step["status"] = "completed"
+
     execution_checkpoint.save_checkpoint(
-        st, str(pid), sid, task_id=task_id, outputs=outs, metadata={"source_queue": source_queue or ""}
+        st, str(pid), sid, task_id=task_id, outputs=list(step.get("outputs") or []), metadata={"source_queue": source_queue or ""}
     )
     execution_memory.append_output(st, task_id, "step_complete", sid)
     execution_memory.set_continuation(st, task_id, last_completed_step=sid)

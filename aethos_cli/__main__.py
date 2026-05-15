@@ -10,6 +10,7 @@ import json
 import os
 import subprocess
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -255,17 +256,39 @@ def main() -> int:
     msg_sub = sp_message.add_subparsers(dest="message_cmd", required=True)
     sp_msg_send = msg_sub.add_parser("send", help="POST mission-control/gateway/run")
     sp_msg_send.add_argument("text", help="User message body")
+    sp_msg_send.add_argument(
+        "--workflow",
+        action="store_true",
+        help="Enqueue persistent tool workflow (OpenClaw parity) instead of chat.",
+    )
+    sp_msg_send.add_argument(
+        "--wait",
+        action="store_true",
+        help="After enqueue, drive local dispatch loop until terminal (requires local ~/.aethos state).",
+    )
+    sp_msg_send.add_argument("--timeout", type=int, default=120, help="With --wait, max seconds (default 120)")
+    sp_msg_send.add_argument(
+        "--json",
+        action="store_true",
+        dest="json_out",
+        help="Print JSON only (no truncation banner).",
+    )
+
+    sp_task = sub.add_parser("task", help="Runtime workflow task inspection (OpenClaw parity)")
+    task_sub = sp_task.add_subparsers(dest="task_cmd", required=True)
+    sp_task_show = task_sub.add_parser("show", help="GET /api/v1/runtime/tasks/{task_id}")
+    sp_task_show.add_argument("task_id")
 
     sp_logs = sub.add_parser(
         "logs",
-        help="Tail logs: optional category gateway|agents|deployments|runtime|orchestration|recovery|execution|checkpoints|retries|scheduler (runtime = ~/.aethos/aethos.json)",
+        help="Tail logs: optional category gateway|agents|deployments|runtime|orchestration|recovery|execution|checkpoints|retries|scheduler|tools|workflows (runtime = ~/.aethos/aethos.json)",
     )
     sp_logs.add_argument(
         "log_category",
         nargs="?",
         default=None,
         metavar="CATEGORY",
-        help="gateway | agents | deployments | runtime | orchestration | recovery | execution | checkpoints | retries | scheduler",
+        help="gateway | agents | deployments | runtime | orchestration | recovery | execution | checkpoints | retries | scheduler | tools | workflows",
     )
     sp_logs.add_argument("--lines", type=int, default=80, dest="log_lines")
 
@@ -500,13 +523,51 @@ def main() -> int:
 
     if args.cmd == "message":
         if args.message_cmd == "send":
-            payload = json.dumps({"text": args.text, "user_id": uid}).encode()
+            body_obj: dict[str, Any] = {"text": args.text, "user_id": uid}
+            if getattr(args, "workflow", False):
+                body_obj["workflow"] = True
+            payload = json.dumps(body_obj).encode()
             code, body = _req(
                 "POST",
                 "/api/v1/mission-control/gateway/run",
                 uid=uid,
                 body=payload,
             )
+            if code == 200 and getattr(args, "workflow", False) and getattr(args, "wait", False):
+                try:
+                    data = json.loads(body)
+                    tid = str(data.get("task_id") or "")
+                    if tid:
+                        from app.orchestration import runtime_dispatcher
+                        from app.orchestration import task_registry
+                        from app.runtime.runtime_state import load_runtime_state, save_runtime_state
+
+                        deadline = time.time() + max(1, int(getattr(args, "timeout", 120) or 120))
+                        while time.time() < deadline:
+                            st = load_runtime_state()
+                            t = task_registry.get_task(st, tid)
+                            stt = str((t or {}).get("state") or "")
+                            if stt in ("completed", "failed", "cancelled"):
+                                break
+                            runtime_dispatcher.dispatch_once(st)
+                            save_runtime_state(st)
+                            time.sleep(0.02)
+                        st2 = load_runtime_state()
+                        t2 = task_registry.get_task(st2, tid)
+                        data["final_state"] = (t2 or {}).get("state")
+                        body = json.dumps(data, indent=2)
+                except Exception as exc:
+                    body = f"{body}\n(wait loop failed: {exc})"
+            if getattr(args, "json_out", False):
+                print(body)
+            else:
+                print(body[:24000])
+            return 0 if code == 200 else 1
+
+    if args.cmd == "task":
+        if args.task_cmd == "show":
+            tid = urllib.parse.quote(str(args.task_id), safe="")
+            code, body = _req("GET", f"/api/v1/runtime/tasks/{tid}", uid=uid)
             print(body[:24000])
             return 0 if code == 200 else 1
 

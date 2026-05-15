@@ -60,6 +60,7 @@ from app.api.routes import (
     pr_review,
     providers_usage,
     report_watcher,
+    runtime_workflow,
     scraping,
     saas_auth,
     setup_creds,
@@ -445,6 +446,7 @@ app.include_router(mobile.router, prefix=settings.api_v1_prefix)
 app.include_router(dev_runtime.router, prefix=settings.api_v1_prefix)
 app.include_router(agent_runtime_api.router, prefix=settings.api_v1_prefix)
 app.include_router(report_watcher.router, prefix=settings.api_v1_prefix)
+app.include_router(runtime_workflow.router, prefix=settings.api_v1_prefix)
 app.include_router(scraping.router, prefix=settings.api_v1_prefix)
 app.include_router(agent_organization.router, prefix=settings.api_v1_prefix)
 app.include_router(slack.router, prefix=settings.api_v1_prefix)
