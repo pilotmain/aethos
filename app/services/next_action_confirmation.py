@@ -191,6 +191,34 @@ def _only_run_word(t: str) -> bool:
     return bool(re.match(r"^run[!.]*$", t.strip(), flags=re.IGNORECASE))
 
 
+def _llm_first_next_action_explicit_cue(t: str) -> bool:
+    """Under LLM-first, only these lines may be interpreted as next-step UI (no fuzzy NL)."""
+    if _only_digits_choice(t) is not None or _ordinal_index(t) is not None:
+        return True
+    if _only_run_word(t) or _wants_yesish(t) or _wants_proceed_ok(t):
+        return True
+    low = t.lower().strip()
+    if low in (
+        "no",
+        "nope",
+        "nah",
+        "cancel",
+        "canceled",
+        "cancelled",
+        "abort",
+        "stop",
+        "approve",
+        "approved",
+        "deny",
+        "denied",
+        "do it",
+        "do that",
+        "run it",
+    ):
+        return True
+    return False
+
+
 def ack_line_for_injected_command(cmd: str) -> str:
     """User-visible line before the main pipeline runs (Nexa co-pilot / next-step)."""
     c = (cmd or "").strip()
@@ -416,6 +444,10 @@ def interpret_next_action_user_message(
         return NextActionUserTurn(no_match=True)
 
     pcmd0 = _parse_pending_command(pending_json)
+    # LLM-first: only explicit confirm / deny / run tokens or numeric picks (no fuzzy NL).
+    if nexa_llm_first_gateway_active() and not pcmd0:
+        if not _llm_first_next_action_explicit_cue(t):
+            return NextActionUserTurn(no_match=True, clear_suggestions=bool(actions))
     if pcmd0 and is_pending_inject_expired(pending_json):
         return NextActionUserTurn(
             immediate_assistant=(
@@ -431,7 +463,7 @@ def interpret_next_action_user_message(
             ack_line=ack_line_for_injected_command(pcmd0),
         )
 
-    if (not pcmd0) and _wants_action_repeat_phrase(t):
+    if (not pcmd0) and _wants_action_repeat_phrase(t) and not nexa_llm_first_gateway_active():
         lastp = _parse_last_injected(last_injected_json)
         if not lastp:
             return NextActionUserTurn(

@@ -887,8 +887,44 @@ def get_intent(
     t0 = (message or "").strip()
     s = get_settings()
     from app.services.llm.completion import providers_available
+    from app.services.goal_orchestrator import nexa_llm_first_gateway_active
+
+    llm_first_on = nexa_llm_first_gateway_active()
+
+    # Phase 69 — before any LLM classifier (incl. pure-local). Skipped when LLM-first gateway
+    # is on so interrogative lines are classified by the model like other NL.
+    if (
+        not llm_first_on
+        and bool(getattr(s, "nexa_informational_question_skip_llm", True))
+        and looks_like_informational_question(t0, conversation_snapshot)
+    ):
+        fb_intent = classify_intent_fallback(t0, conversation_snapshot)["intent"]
+        if fb_intent in {
+            "stuck_dev",
+            "stuck",
+            "analysis",
+            "external_execution",
+            "external_execution_continue",
+            "external_investigation",
+            "orchestrate_system",
+            "brain_dump",
+        }:
+            return "general_chat"
+        return fb_intent
 
     if bool(getattr(s, "nexa_pure_local_llm_mode", False)):
+        if not providers_available():
+            fb = classify_intent_fallback(t0, conversation_snapshot)
+            return str(fb.get("intent") or "general_chat").strip() or "general_chat"
+        result = classify_intent_llm(
+            message,
+            conversation_snapshot=conversation_snapshot,
+            memory_summary=memory_summary,
+        )
+        return _finalize_intent_from_llm(message, result, conversation_snapshot=conversation_snapshot)
+
+    # LLM-first gateway: skip deterministic intent shortcuts so routing matches the classifier LLM.
+    if llm_first_on:
         if not providers_available():
             fb = classify_intent_fallback(t0, conversation_snapshot)
             return str(fb.get("intent") or "general_chat").strip() or "general_chat"
@@ -930,29 +966,6 @@ def get_intent(
         if hosted_deploy_provider_match(t0):
             return "external_execution"
         return "external_investigation"
-
-    # Phase 69 — interrogative messages with no pain/provider/imperative cues skip the LLM
-    # classifier and route through the deterministic fallback. Action-oriented intents
-    # (stuck_dev / analysis / external_*) are coerced to general_chat because our gate
-    # already verified those patterns aren't a real fit. Prevents the dev pipeline from
-    # hijacking questions like "what do you need to deploy to AWS?".
-    if (
-        get_settings().nexa_informational_question_skip_llm
-        and looks_like_informational_question(t0, conversation_snapshot)
-    ):
-        fb_intent = classify_intent_fallback(t0, conversation_snapshot)["intent"]
-        if fb_intent in {
-            "stuck_dev",
-            "stuck",
-            "analysis",
-            "external_execution",
-            "external_execution_continue",
-            "external_investigation",
-            "orchestrate_system",
-            "brain_dump",
-        }:
-            return "general_chat"
-        return fb_intent
 
     result = classify_intent_llm(
         message,

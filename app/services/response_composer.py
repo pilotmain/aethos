@@ -752,6 +752,17 @@ def fallback_compose_response(
     from app.services.telegram_onboarding import clarify_general_response
 
     logger.error("FALLBACK_TRIGGERED behavior=%s reason=%s", ctx.behavior, reason)
+    if nexa_llm_first_gateway_active():
+        return {
+            "message": (
+                "No template reply in LLM-first mode. Enable **USE_REAL_LLM** and a reachable provider "
+                "(Anthropic/OpenAI keys or Ollama), then send your message again."
+            ),
+            "should_ask_followup": False,
+            "followup_question": None,
+            "suggested_microstep": None,
+            "next_steps": None,
+        }
     b = ctx.behavior
     raw = (ctx.user_message or "").strip()
     tlow = raw.lower()

@@ -811,11 +811,6 @@ class NexaGateway:
         from app.services.memory_service import MemoryService
         from app.services.operator_execution_loop import try_operator_execution
         from app.services.orchestrator_service import OrchestratorService
-        from app.services.sub_agent_natural_creation import (
-            prefers_registry_sub_agent,
-            try_spawn_natural_sub_agents,
-        )
-        from app.services.sub_agent_router import orchestration_chat_key
 
         uid = gctx.user_id
         channel = gctx.channel
@@ -913,18 +908,6 @@ class NexaGateway:
         routing_agent_key = str(gctx.extras.get("routing_agent_key") or "aethos")
 
         uid_stripped = (uid or "").strip()
-        if uid_stripped and prefers_registry_sub_agent(raw):
-            orch_key = orchestration_chat_key(gctx)
-            sub_txt = try_spawn_natural_sub_agents(db, uid, raw, parent_chat_id=orch_key)
-            if sub_txt:
-                return {
-                    "mode": "chat",
-                    "text": gateway_finalize_chat_reply(
-                        sub_txt, source="natural_sub_agent_create", user_text=raw
-                    ),
-                    "intent": "create_sub_agent",
-                }
-
         orchestrator.users.get_or_create(db, uid)
         beh_ctx = build_context(db, uid, memory_service, orchestrator)
         _attach_memory_brain(beh_ctx)
@@ -1351,6 +1334,7 @@ class NexaGateway:
 
             raw_gate = (text or "").strip()
             uid_gate = (gctx.user_id or "").strip()
+            # External-credential capture must stay first; then LLM-first skips all other NL shortcuts below.
             cred_gate = maybe_handle_external_credential_chat_turn(
                 db_inner,
                 user_id=uid_gate,
@@ -1444,12 +1428,6 @@ class NexaGateway:
             agent_os_st = try_agent_os_status_turn(gctx, raw_gate, db_inner)
             if agent_os_st is not None:
                 return agent_os_st
-
-            from app.services.gateway.goal_nl_actions import try_goal_planning_gateway_turn
-
-            goal_nl = try_goal_planning_gateway_turn(gctx, raw_gate, db_inner)
-            if goal_nl is not None:
-                return goal_nl
 
             from app.services.gateway.sandbox_nl import try_sandbox_development_file_fastpath
 

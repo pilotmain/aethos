@@ -112,9 +112,7 @@ def test_llm_first_skips_non_injectable_natural_cue_match(monkeypatch):
         created_at=now,
     )
     monkeypatch.setattr(nac, "_match_suggestion_by_natural_cue", lambda *_a, **_k: fake)
-    from app.services import goal_orchestrator as go
-
-    monkeypatch.setattr(go, "nexa_llm_first_gateway_active", lambda: True)
+    monkeypatch.setattr(nac, "nexa_llm_first_gateway_active", lambda: True)
     t = nac.interpret_next_action_user_message(
         "pair it with a visual or campaign concept to see how it lands",
         [fake],

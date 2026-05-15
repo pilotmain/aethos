@@ -60,6 +60,32 @@ def _reset_provider_rate_limits():
     yield
 
 
+@pytest.fixture(autouse=True)
+def _nexa_test_runtime_defaults(monkeypatch):
+    """Stable defaults for routing tests: pure-local skips deterministic shortcuts in ``get_intent``;
+    LLM-first gateway reads env — force off on modules that bind the helper at import time."""
+    import app.core.config as cfg
+    import app.services.goal_orchestrator as go
+    import app.services.intent_classifier as ic
+    import app.services.next_action_confirmation as nac
+    import app.services.response_composer as rc
+    from app.services.gateway import runtime as gw_rt
+
+    real_settings = cfg.get_settings
+
+    def ic_get_settings():
+        return real_settings().model_copy(update={"nexa_pure_local_llm_mode": False})
+
+    monkeypatch.setattr(ic, "get_settings", ic_get_settings)
+
+    off = lambda: False  # noqa: E731
+    monkeypatch.setattr(go, "nexa_llm_first_gateway_active", off)
+    monkeypatch.setattr(nac, "nexa_llm_first_gateway_active", off)
+    monkeypatch.setattr(rc, "nexa_llm_first_gateway_active", off)
+    monkeypatch.setattr(gw_rt, "nexa_llm_first_gateway_active", off)
+    yield
+
+
 @pytest.fixture
 def nexa_runtime_clean(db_session):
     """Clear Nexa Next DB tables, bus, and ephemeral privacy/provider buffers; yields the session."""
