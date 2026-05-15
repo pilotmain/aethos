@@ -3,7 +3,12 @@
 
 from __future__ import annotations
 
-from app.services.inter_agent_coordinator import parse_inter_agent_steps
+from unittest.mock import MagicMock
+
+import pytest
+
+from app.services.gateway.context import GatewayContext
+from app.services.inter_agent_coordinator import parse_inter_agent_steps, try_inter_agent_gateway_turn
 from app.services.qa_agent.file_analysis import first_path_from_inter_agent_handoff
 
 
@@ -44,3 +49,14 @@ def test_first_path_from_handoff() -> None:
         "Edited `/Users/x/proj/app/main.py` for logging."
     )
     assert first_path_from_inter_agent_handoff(msg) == "/Users/x/proj/app/main.py"
+
+
+def test_try_inter_agent_gateway_user_id_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
+    gctx = GatewayContext.from_channel("", "web", {"web_session_id": "sessX"})
+    mock_run = MagicMock(return_value="combined")
+    monkeypatch.setattr("app.services.inter_agent_coordinator.run_inter_agent_steps", mock_run)
+    text = "ask marketing_agent to create a tagline, then ask qa_agent to review it"
+    out = try_inter_agent_gateway_turn(gctx, text, None)
+    assert out is not None
+    assert mock_run.call_args is not None
+    assert mock_run.call_args.kwargs["user_id"] == "session:sessX"

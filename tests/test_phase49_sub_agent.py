@@ -53,3 +53,10 @@ def test_fsmonitor_watch_registers(tmp_path: Path) -> None:
     wid = fm.watch(str(tmp_path), "*.py", cb, duration_seconds=60.0)
     assert wid
     fm.stop_all()
+
+
+def test_qa_scan_requires_resolvable_path_string() -> None:
+    from app.services.qa_agent.file_analysis import has_absolute_path_for_qa_scan
+
+    assert has_absolute_path_for_qa_scan("analyze /tmp/x.py") is True
+    assert has_absolute_path_for_qa_scan("review it") is False

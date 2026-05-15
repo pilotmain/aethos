@@ -69,6 +69,11 @@ DEFAULT_ALLOWED_COMMANDS: tuple[str, ...] = (
     "chmod",
     "grep",
     "find",
+    "head",
+    "tail",
+    "sort",
+    "uniq",
+    "wc",
 )
 
 _BLOCKED_COMMAND_SUBSTRINGS: tuple[str, ...] = (
@@ -101,6 +106,21 @@ _SHELL_META_TOKENS: tuple[str, ...] = (
 _CHAIN_AND = " && "
 
 _MAX_COMMAND_CHAIN_SEGMENTS = 10
+
+# Single ``|`` between two argv-safe segments (no shell); see :func:`_try_single_pipe_command`.
+_PIPE_FORBIDDEN_IN_SEGMENT: tuple[str, ...] = (
+    "||",
+    "&&",
+    "|",
+    ";",
+    "\n",
+    "\r",
+    ">",
+    "<",
+    "`",
+    "$(",
+    "${",
+)
 
 # Optional git_push remote/ref — argv only (no shell).
 _PUSH_REMOTE_RE = re.compile(r"^[a-zA-Z][a-zA-Z0-9_.-]{0,63}$")
@@ -226,6 +246,24 @@ def _path_allowed_for_io(p: Path) -> None:
             raise ValueError(f"path not allowed (blocked segment): {b}")
 
 
+def _try_single_pipe_command(command_text: str) -> tuple[str, str] | None:
+    """
+    If ``command_text`` contains exactly one ``|``, return left and right segments.
+
+    Rejects nested pipes, ``&&``/``||``, and other shell metacharacters inside either side.
+    """
+    if command_text.count("|") != 1:
+        return None
+    left, right = command_text.split("|", 1)
+    left, right = left.strip(), right.strip()
+    if not left or not right:
+        return None
+    for seg in (left, right):
+        if any(tok in seg for tok in _PIPE_FORBIDDEN_IN_SEGMENT):
+            return None
+    return left, right
+
+
 def _allowed_command_names() -> frozenset[str]:
     s = _host_settings()
     raw = str(
@@ -233,10 +271,11 @@ def _allowed_command_names() -> frozenset[str]:
         or os.getenv("NEXA_ALLOWED_COMMANDS", "")
         or ""
     ).strip()
+    base = frozenset(x.lower() for x in DEFAULT_ALLOWED_COMMANDS)
     if not raw:
-        return frozenset(DEFAULT_ALLOWED_COMMANDS)
+        return base
     names = {x.strip().lower() for x in raw.split(",") if x.strip()}
-    return frozenset(names or DEFAULT_ALLOWED_COMMANDS)
+    return frozenset(names) | base
 
 
 def _split_command(command: str) -> list[str] | None:
@@ -279,6 +318,10 @@ def is_command_safe(command: str, *, _segment: bool = False) -> bool:
     low = command_text.lower()
     if any(pattern in low for pattern in _BLOCKED_COMMAND_SUBSTRINGS):
         return False
+    pipe_seg = _try_single_pipe_command(command_text)
+    if pipe_seg is not None:
+        le, ri = pipe_seg
+        return is_command_safe(le, _segment=True) and is_command_safe(ri, _segment=True)
     if not _segment and _CHAIN_AND in command_text:
         for tok in _SHELL_META_TOKENS:
             if tok in command_text:
@@ -531,6 +574,10 @@ def _execute_command_sync(
                 "command": command_text,
                 "cwd": ecwd,
             }
+    pipe_seg = _try_single_pipe_command(command_text)
+    if pipe_seg is not None:
+        left, right = pipe_seg
+        return _execute_piped_two_sync(left, right, cwd, timeout, user_id, _chain_depth=_chain_depth)
     argv = _split_command(command_text)
     if not argv:
         return {
@@ -735,6 +782,97 @@ def _run_argv(
         r.returncode == 0,
     )
     return r.returncode, out, err
+
+
+def _execute_piped_two_sync(
+    left: str,
+    right: str,
+    cwd: str | None,
+    timeout: int,
+    user_id: str | None,
+    *,
+    _chain_depth: int = 0,
+) -> dict[str, Any]:
+    """Run ``left | right`` with stdout of ``left`` fed as stdin to ``right`` (no shell)."""
+    _ = user_id
+    _ = _chain_depth
+    argv_l = _split_command(left)
+    argv_r = _split_command(right)
+    if not argv_l or not argv_r:
+        return {
+            "success": False,
+            "error": "Invalid pipe segment",
+            "stderr": "Pipe command could not be parsed.",
+            "command": f"{left} | {right}",
+        }
+    try:
+        exec_cwd = _resolve_command_cwd(cwd)
+    except ValueError as exc:
+        return {
+            "success": False,
+            "error": str(exc),
+            "stderr": str(exc),
+            "command": f"{left} | {right}",
+        }
+    exec_timeout = _apply_task_scaffold_timeout(argv_l + argv_r, _command_timeout(timeout))
+    code1, out1, err1 = _run_argv(argv_l, cwd=exec_cwd, timeout=exec_timeout)
+    if code1 != 0:
+        return {
+            "success": False,
+            "stdout": (out1 or "")[:24_000],
+            "stderr": (err1 or "")[:24_000],
+            "return_code": code1,
+            "command": f"{left} | {right}",
+            "cwd": str(exec_cwd),
+        }
+    argv_r2 = apply_operator_cli_absolute_fallback(list(argv_r))
+    try:
+        r = subprocess.run(  # noqa: S603 — argv from allowlisted parse + prior argv-only stage
+            argv_r2,
+            cwd=str(exec_cwd),
+            input=out1,
+            capture_output=True,
+            text=True,
+            timeout=exec_timeout,
+            env=cli_environ_for_operator(),
+        )
+    except subprocess.TimeoutExpired:
+        logger.warning("host_executor pipe timeout argv0=%s", argv_r2[:1])
+        return {
+            "success": False,
+            "stdout": (out1 or "")[:24_000],
+            "stderr": "timeout",
+            "return_code": -1,
+            "command": f"{left} | {right}",
+            "cwd": str(exec_cwd),
+        }
+    except (OSError, FileNotFoundError) as e:
+        return {
+            "success": False,
+            "stdout": (out1 or "")[:24_000],
+            "stderr": str(e)[:2000],
+            "return_code": -1,
+            "command": f"{left} | {right}",
+            "cwd": str(exec_cwd),
+        }
+    out2 = (r.stdout or "")[:24_000]
+    err2 = (r.stderr or "")[:24_000]
+    try:
+        from app.services.observability import get_observability
+
+        obs = get_observability()
+        obs.record_metric("host.command.executions", 1.0, "count")
+        obs.record_metric("host.command.success" if r.returncode == 0 else "host.command.failure", 1.0, "count")
+    except Exception:
+        pass
+    return {
+        "success": r.returncode == 0,
+        "stdout": out2,
+        "stderr": "\n".join(x for x in (err1, err2) if x).strip()[:24_000],
+        "return_code": r.returncode,
+        "command": f"{left} | {right}",
+        "cwd": str(exec_cwd),
+    }
 
 
 # Phase 70 — host actions whose simulation plan is just "would read" (no side effects).

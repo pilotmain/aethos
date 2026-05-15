@@ -14,6 +14,11 @@ from app.core.config import get_settings
 _PATH_RE = re.compile(r"(/[A-Za-z0-9_./\\-]+\.[A-Za-z0-9]{1,16})\b")
 
 
+def has_absolute_path_for_qa_scan(message: str) -> bool:
+    """True if ``message`` contains an absolute ``/path/file.ext`` the QA scanner can open."""
+    return bool(_PATH_RE.search((message or "").strip().replace("\\", "/")))
+
+
 def _allowed_roots() -> list[Path]:
     s = get_settings()
     roots: list[Path] = []
@@ -127,4 +132,4 @@ def run_qa_file_analysis(message: str, *, max_lines: int = 100) -> str:
     return head + body
 
 
-__all__ = ["run_qa_file_analysis"]
+__all__ = ["first_path_from_inter_agent_handoff", "has_absolute_path_for_qa_scan", "run_qa_file_analysis"]

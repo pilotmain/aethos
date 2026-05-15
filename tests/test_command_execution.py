@@ -116,6 +116,27 @@ class TestCommandExecution:
         monkeypatch.setattr(host_executor, "get_settings", lambda: settings)
         assert host_executor.is_command_safe("mkdir -p /tmp/nexa_host_exec_test_dir") is True
 
+    def test_find_pipe_wc_merges_defaults(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Omitted find/wc in ``NEXA_ALLOWED_COMMANDS`` CSV still allow merged defaults; one ``|`` only."""
+        settings = _settings(tmp_path)
+        settings.nexa_allowed_commands = "npm,git,ls"
+        monkeypatch.setattr(host_executor, "get_settings", lambda: settings)
+        assert host_executor.is_command_safe(f"find {tmp_path} -name '*.py' -type f | wc -l") is True
+        assert host_executor.is_command_safe(f"find {tmp_path} | wc -l | cat") is False
+
+    def test_execute_find_pipe_wc(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        settings = _settings(tmp_path)
+        settings.nexa_allowed_commands = "git,ls"
+        monkeypatch.setattr(host_executor, "get_settings", lambda: settings)
+        (tmp_path / "a.py").write_text("x", encoding="utf-8")
+        out = host_executor.execute_payload(
+            {
+                "host_action": "run_command",
+                "command": f"find {tmp_path} -name '*.py' -type f | wc -l",
+            }
+        )
+        assert any(ch.isdigit() for ch in out)
+
     def test_infer_run_mkdir_under_tmp(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         s = _settings(tmp_path)
         monkeypatch.setattr("app.services.host_executor_intent.get_settings", lambda: s)

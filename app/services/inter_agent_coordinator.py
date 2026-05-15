@@ -241,6 +241,16 @@ def try_inter_agent_gateway_turn(
     """Gateway hook: NL agent-to-agent orchestration."""
     uid = (gctx.user_id or "").strip()
     if not uid:
+        tid = str(gctx.extras.get("telegram_user_id") or "").strip()
+        if tid:
+            uid = f"tg_{tid}"
+    if not uid:
+        sid = str(
+            gctx.extras.get("web_session_id") or gctx.extras.get("conversation_id") or ""
+        ).strip()[:80]
+        if sid:
+            uid = f"session:{sid}"
+    if not uid:
         return None
     steps = parse_inter_agent_steps(text)
     if not steps:
