@@ -307,7 +307,11 @@ def get_llm() -> Callable[[str], str] | None:
 
 
 def providers_available() -> bool:
-    """True if at least one Phase 11 backend could be registered and used (Ollama requires a live /api/tags)."""
+    """True if at least one Phase 11 backend could be registered and used.
+
+    Cloud keys (Anthropic/OpenAI/DeepSeek/OpenRouter or ``NEXA_LLM_API_KEY``) short-circuit to True so the
+    gateway can answer when Ollama is down; Ollama alone still requires a live ``/api/tags`` with models.
+    """
     from app.services.llm.bootstrap import is_ollama_ready
     from app.services.llm_key_resolution import get_merged_api_keys
 

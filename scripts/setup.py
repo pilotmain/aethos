@@ -636,11 +636,11 @@ class SetupWizard:
         if ollama_cli_on_path():
             self._update_env_key("NEXA_OLLAMA_ENABLED", "true")
             self._update_env_key("NEXA_LLM_PROVIDER", "ollama")
-            self._upsert_env_if_unset("NEXA_OLLAMA_DEFAULT_MODEL", "qwen2.5:7b")
             self._update_env_key("NEXA_PURE_LOCAL_LLM_MODE", "true")
             print(
                 f"  {Colors.success('Ollama CLI on PATH — local LLM is primary (Ollama enabled, pure local LLM mode on).')}"
             )
+            self._prompt_ollama_default_model_tag()
             self._ensure_ollama_running_and_default_model()
         else:
             print(
@@ -648,21 +648,73 @@ class SetupWizard:
                 f"then re-run this wizard to auto-configure ``NEXA_OLLAMA_*`` and pull a model.{Colors.RESET}"
             )
 
-    def _merge_llm_fallback_provider(self, provider: str) -> None:
-        """Append ``provider`` to ``NEXA_LLM_FALLBACK_PROVIDERS`` when missing (Ollama-primary + cloud keys)."""
-        p = (provider or "").strip().lower()
-        if p not in ("anthropic", "openai", "deepseek", "openrouter", "ollama"):
+    def _prompt_ollama_default_model_tag(self) -> None:
+        """Set ``NEXA_OLLAMA_DEFAULT_MODEL``: non-interactive → ``phi3:mini``; TTY → speed vs accuracy menu."""
+        if not self.env_path.is_file() or not ollama_cli_on_path():
             return
-        cur = (self._get_env_value("NEXA_LLM_FALLBACK_PROVIDERS") or "").strip()
-        parts = [x.strip().lower() for x in cur.split(",") if x.strip()]
-        if p in parts:
+        if _legal_auto_accept_noninteractive():
+            self._update_env_key("NEXA_OLLAMA_DEFAULT_MODEL", "phi3:mini")
+            print(
+                f"  {Colors.success('NEXA_OLLAMA_DEFAULT_MODEL=phi3:mini (non-interactive — fastest default)')}"
+            )
             return
-        parts.append(p)
-        merged = ",".join(parts)
-        self._update_env_key("NEXA_LLM_FALLBACK_PROVIDERS", merged)
         print(
-            f"  {Colors.success('NEXA_LLM_FALLBACK_PROVIDERS=' + merged)} "
-            f"{Colors.DIM}(chain after primary when the primary backend errors){Colors.RESET}"
+            f"\n  {Colors.BOLD}Select Ollama model{Colors.RESET}\n"
+            f"  {Colors.DIM}1.{Colors.RESET} phi3:mini   {Colors.DIM}(fastest, 3.8B, ~2.5GB){Colors.RESET}\n"
+            f"  {Colors.DIM}2.{Colors.RESET} gemma2:2b  {Colors.DIM}(fast, 2B, ~1.5GB){Colors.RESET}\n"
+            f"  {Colors.DIM}3.{Colors.RESET} qwen2.5:7b {Colors.DIM}(slower, 7B, ~4.7GB, more accurate){Colors.RESET}\n"
+        )
+        raw = prompt_line(
+            f"  {Colors.question('Choice [1/2/3] (default: 1 = phi3:mini)')} "
+        ).strip() or "1"
+        tag_by = {"1": "phi3:mini", "2": "gemma2:2b", "3": "qwen2.5:7b"}
+        tag = tag_by.get(raw, "phi3:mini")
+        self._update_env_key("NEXA_OLLAMA_DEFAULT_MODEL", tag)
+        print(f"  {Colors.success(f'NEXA_OLLAMA_DEFAULT_MODEL={tag}')}")
+
+    def _maybe_warn_ollama_cpu_only(self) -> None:
+        """If ``ollama ps`` shows no GPU line, hint that inference may be CPU-bound."""
+        exe = shutil.which("ollama")
+        if not exe:
+            return
+        try:
+            r = subprocess.run([exe, "ps"], capture_output=True, text=True, timeout=8)
+        except (OSError, subprocess.TimeoutExpired):
+            return
+        blob = ((r.stdout or "") + (r.stderr or "")).lower()
+        if "gpu" in blob:
+            return
+        print(
+            f"  {Colors.warning('Ollama appears to be running without a visible GPU entry in `ollama ps`.')}\n"
+            f"  {Colors.DIM}If inference is slow, install GPU drivers / Ollama GPU support for your OS, or use a smaller model (e.g. phi3:mini).{Colors.RESET}"
+        )
+
+    def _any_cloud_llm_configured(self) -> bool:
+        """True when Anthropic, OpenAI, or DeepSeek key in ``.env`` looks non-placeholder."""
+
+        def _ok(key: str, prefix: str | None) -> bool:
+            raw = (self._get_env_value(key) or "").strip()
+            if not raw or raw.startswith("#") or len(raw) <= 8:
+                return False
+            if prefix is not None and not raw.startswith(prefix):
+                return False
+            return True
+
+        return _ok("ANTHROPIC_API_KEY", "sk-ant-") or _ok("OPENAI_API_KEY", "sk-") or _ok("DEEPSEEK_API_KEY", None)
+
+    def _apply_ollama_primary_standard_fallback_chain(self) -> None:
+        """When Ollama is primary and any cloud key exists, set a fixed fallback order for ``primary_complete``."""
+        low = (self._get_env_value("NEXA_OLLAMA_ENABLED") or "").strip().lower()
+        prov = (self._get_env_value("NEXA_LLM_PROVIDER") or "").strip().lower()
+        if low not in ("1", "true", "yes", "on") or prov != "ollama":
+            return
+        if not self._any_cloud_llm_configured():
+            return
+        chain = "anthropic,openai,deepseek"
+        self._update_env_key("NEXA_LLM_FALLBACK_PROVIDERS", chain)
+        print(
+            f"  {Colors.success('NEXA_LLM_FALLBACK_PROVIDERS=' + chain)} "
+            f"{Colors.DIM}(used when Ollama errors; only registered providers run){Colors.RESET}"
         )
 
     def _prefer_anthropic_sonnet_default_for_primary_ollama(self) -> None:
@@ -683,80 +735,82 @@ class SetupWizard:
                 f"  {Colors.DIM}Skipping Ollama start/pull (set AETHOS_SETUP_SKIP_OLLAMA_BOOTSTRAP=1).{Colors.RESET}"
             )
             return
-
-        base = (self._get_env_value("NEXA_OLLAMA_BASE_URL") or "").strip() or "http://127.0.0.1:11434"
-        model = (self._get_env_value("NEXA_OLLAMA_DEFAULT_MODEL") or "qwen2.5:7b").strip() or "qwen2.5:7b"
-        exe = shutil.which("ollama")
-        if not exe:
-            return
-
-        if ollama_get_tags_json(base_url=base) is None:
-            print(f"  {Colors.info('Ollama HTTP API not up — starting `ollama serve` in the background…')}")
-            try:
-                self._ollama_serve_process = subprocess.Popen(
-                    [exe, "serve"],
-                    stdin=subprocess.DEVNULL,
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                    start_new_session=True,
-                )
-            except OSError as exc:
-                print(f"  {Colors.warning(f'Could not start ollama serve: {exc}')}")
-                print(
-                    f"  {Colors.DIM}Start manually in another terminal: ollama serve{Colors.RESET}"
-                )
+        try:
+            base = (self._get_env_value("NEXA_OLLAMA_BASE_URL") or "").strip() or "http://127.0.0.1:11434"
+            model = (self._get_env_value("NEXA_OLLAMA_DEFAULT_MODEL") or "phi3:mini").strip() or "phi3:mini"
+            exe = shutil.which("ollama")
+            if not exe:
                 return
-            deadline = time.monotonic() + 90.0
-            while time.monotonic() < deadline:
-                if ollama_get_tags_json(base_url=base) is not None:
-                    print(f"  {Colors.success('Ollama server is responding on ' + base + '.')}")
-                    break
-                time.sleep(0.5)
+
+            if ollama_get_tags_json(base_url=base) is None:
+                print(f"  {Colors.info('Ollama HTTP API not up — starting `ollama serve` in the background…')}")
+                try:
+                    self._ollama_serve_process = subprocess.Popen(
+                        [exe, "serve"],
+                        stdin=subprocess.DEVNULL,
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                        start_new_session=True,
+                    )
+                except OSError as exc:
+                    print(f"  {Colors.warning(f'Could not start ollama serve: {exc}')}")
+                    print(
+                        f"  {Colors.DIM}Start manually in another terminal: ollama serve{Colors.RESET}"
+                    )
+                    return
+                deadline = time.monotonic() + 90.0
+                while time.monotonic() < deadline:
+                    if ollama_get_tags_json(base_url=base) is not None:
+                        print(f"  {Colors.success('Ollama server is responding on ' + base + '.')}")
+                        break
+                    time.sleep(0.5)
+                else:
+                    print(
+                        f"  {Colors.warning(f'Ollama did not become reachable in 90s — run `ollama serve`, then `ollama pull {model}`.')}"
+                    )
+                    return
+            else:
+                n0 = ollama_tags_model_names(base_url=base)
+                print(
+                    f"  {Colors.success('Ollama API is reachable' + (f' ({len(n0)} model tag(s))' if n0 else ' (no models yet)'))}"
+                )
+
+            names = ollama_tags_model_names(base_url=base)
+            if ollama_tags_include_model(names, model):
+                print(f"  {Colors.success(f'Default model {model!r} is already present in Ollama.')}")
+                return
+
+            print(f"  {Colors.info(f'Pulling Ollama model `{model}` (first download can take several minutes)…')}")
+            try:
+                proc = subprocess.run(
+                    [exe, "pull", model],
+                    capture_output=True,
+                    text=True,
+                    timeout=3600,
+                )
+            except subprocess.TimeoutExpired:
+                print(f"  {Colors.warning(f'ollama pull {model} timed out after 1h — run manually when online.')}")
+                return
+            except OSError as exc:
+                print(f"  {Colors.warning(f'ollama pull failed to start: {exc}')}")
+                return
+
+            if proc.returncode != 0:
+                tail = ((proc.stderr or "") + (proc.stdout or ""))[-500:]
+                print(f"  {Colors.warning(f'ollama pull exited with code {proc.returncode}')}")
+                if tail.strip():
+                    print(f"  {Colors.DIM}{tail.strip()}{Colors.RESET}")
+                return
+
+            names2 = ollama_tags_model_names(base_url=base)
+            if ollama_tags_include_model(names2, model):
+                print(f"  {Colors.success(f'Model `{model}` is ready in Ollama.')}")
             else:
                 print(
-                    f"  {Colors.warning(f'Ollama did not become reachable in 90s — run `ollama serve`, then `ollama pull {model}`.')}"
+                    f"  {Colors.warning(f'Pull finished but `{model}` not listed in /api/tags — check `ollama list`.')}"
                 )
-                return
-        else:
-            n0 = ollama_tags_model_names(base_url=base)
-            print(
-                f"  {Colors.success('Ollama API is reachable' + (f' ({len(n0)} model tag(s))' if n0 else ' (no models yet)'))}"
-            )
-
-        names = ollama_tags_model_names(base_url=base)
-        if ollama_tags_include_model(names, model):
-            print(f"  {Colors.success(f'Default model {model!r} is already present in Ollama.')}")
-            return
-
-        print(f"  {Colors.info(f'Pulling Ollama model `{model}` (first download can take several minutes)…')}")
-        try:
-            proc = subprocess.run(
-                [exe, "pull", model],
-                capture_output=True,
-                text=True,
-                timeout=3600,
-            )
-        except subprocess.TimeoutExpired:
-            print(f"  {Colors.warning(f'ollama pull {model} timed out after 1h — run manually when online.')}")
-            return
-        except OSError as exc:
-            print(f"  {Colors.warning(f'ollama pull failed to start: {exc}')}")
-            return
-
-        if proc.returncode != 0:
-            tail = ((proc.stderr or "") + (proc.stdout or ""))[-500:]
-            print(f"  {Colors.warning(f'ollama pull exited with code {proc.returncode}')}")
-            if tail.strip():
-                print(f"  {Colors.DIM}{tail.strip()}{Colors.RESET}")
-            return
-
-        names2 = ollama_tags_model_names(base_url=base)
-        if ollama_tags_include_model(names2, model):
-            print(f"  {Colors.success(f'Model `{model}` is ready in Ollama.')}")
-        else:
-            print(
-                f"  {Colors.warning(f'Pull finished but `{model}` not listed in /api/tags — check `ollama list`.')}"
-            )
+        finally:
+            self._maybe_warn_ollama_cpu_only()
 
     def _print_llm_configuration_summary(self) -> None:
         """Summarize primary vs optional cloud fallbacks after .env is written."""
@@ -772,7 +826,7 @@ class SetupWizard:
         ollama_primary = _truthy(self._get_env_value("NEXA_OLLAMA_ENABLED")) and (
             (self._get_env_value("NEXA_LLM_PROVIDER") or "").strip().lower() == "ollama"
         )
-        model = (self._get_env_value("NEXA_OLLAMA_DEFAULT_MODEL") or "qwen2.5:7b").strip()
+        model = (self._get_env_value("NEXA_OLLAMA_DEFAULT_MODEL") or "phi3:mini").strip()
         if ollama_primary:
             print(f"  {Colors.success('Primary:')} Ollama (local) — default model tag: {model}")
         elif ollama_cli_on_path():
@@ -1243,14 +1297,8 @@ SSO_POST_LOGIN_REDIRECT=http://localhost:3000/login
             if already:
                 print(f"  {Colors.success(f'{name}: already set in .env')}")
                 configured += 1
-                if ollama_primary:
-                    if env_key == "ANTHROPIC_API_KEY":
-                        self._merge_llm_fallback_provider("anthropic")
-                        self._prefer_anthropic_sonnet_default_for_primary_ollama()
-                    elif env_key == "OPENAI_API_KEY":
-                        self._merge_llm_fallback_provider("openai")
-                    elif env_key == "DEEPSEEK_API_KEY":
-                        self._merge_llm_fallback_provider("deepseek")
+                if ollama_primary and env_key == "ANTHROPIC_API_KEY":
+                    self._prefer_anthropic_sonnet_default_for_primary_ollama()
                 continue
             yn = prompt_line(
                 f"  {Colors.question(f'Add {name} API key as optional fallback? [y/N]')} "
@@ -1269,16 +1317,12 @@ SSO_POST_LOGIN_REDIRECT=http://localhost:3000/login
             self._update_env_key(env_key, key)
             print(f"  {Colors.success(f'{name} saved to .env (fallback when configured)')}")
             configured += 1
-            if ollama_primary:
-                if env_key == "ANTHROPIC_API_KEY":
-                    self._merge_llm_fallback_provider("anthropic")
-                    self._prefer_anthropic_sonnet_default_for_primary_ollama()
-                elif env_key == "OPENAI_API_KEY":
-                    self._merge_llm_fallback_provider("openai")
-                elif env_key == "DEEPSEEK_API_KEY":
-                    self._merge_llm_fallback_provider("deepseek")
+            if ollama_primary and env_key == "ANTHROPIC_API_KEY":
+                self._prefer_anthropic_sonnet_default_for_primary_ollama()
         if configured == 0:
             print(f"\n  {Colors.warning('No new cloud LLM keys added — you can edit .env later.')}")
+        if ollama_primary and self._any_cloud_llm_configured():
+            self._apply_ollama_primary_standard_fallback_chain()
         if self.env_path.is_file():
             dedupe_env_assignment_lines(self.env_path)
         self._print_llm_configuration_summary()
