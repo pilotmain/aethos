@@ -1,9 +1,13 @@
 ---
-description: Commit and push after each phase/task; canonical GitHub remote for aethos
+description: Commit and push after each phase/task; always push when work is complete; canonical remote for aethos
 alwaysApply: true
 ---
 
 # Where to commit and push
+
+## Always push
+
+When agent work in this repository produces a **commit** that finishes a task (or a logical slice the user treats as done), **`git push`** to the appropriate remote branch **in the same turn**, unless the user explicitly asked to hold or use a PR branch. **Do not leave completed work only on disk** when the user expects GitHub to match.
 
 ## Canonical remote (this repository)
 
