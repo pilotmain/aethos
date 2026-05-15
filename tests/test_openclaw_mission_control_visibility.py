@@ -19,3 +19,6 @@ def test_mission_control_state_includes_runtime_visibility(db_session) -> None:
     assert "outcomes_tail" in pln
     assert "reasoning_tail" in pln
     assert "optimization_tail" in pln
+    res = ort.get("resilience") or {}
+    assert "integrity_ok" in res
+    assert "backup_files_on_disk" in res

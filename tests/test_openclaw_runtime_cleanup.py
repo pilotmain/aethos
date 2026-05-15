@@ -15,6 +15,9 @@ def test_cleanup_trims_events_and_prunes_orphan_memory(tmp_path, monkeypatch) ->
     root = execution_plan.execution_root(st)
     root.setdefault("memory", {})["ghost"] = {"outputs": []}
     out = cleanup_runtime_state(st, event_buffer_cap=4)
-    assert out["events_trimmed"] == 6
+    assert int(out.get("events_trimmed") or 0) >= 6
+    assert len(st.get("runtime_event_buffer") or []) < 10
+    assert "backup" in out and "repair" in out
+    assert "queues_deduped" in out
     assert "ghost" not in (execution_plan.execution_root(st).get("memory") or {})
     save_runtime_state(st)

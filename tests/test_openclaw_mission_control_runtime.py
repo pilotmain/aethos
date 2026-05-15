@@ -18,3 +18,4 @@ def test_mission_control_snapshot_includes_orchestration_runtime(db_session) -> 
     assert isinstance(pln, dict)
     assert "records_tail" in pln
     assert "outcomes_tail" in pln
+    assert "resilience" in ort and isinstance(ort.get("resilience"), dict)

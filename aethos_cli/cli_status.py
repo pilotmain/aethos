@@ -172,6 +172,29 @@ def cmd_status() -> int:
                             f"adaptive_retry={int(rmx.get('adaptive_retry_total') or 0)} "
                             f"reasoning={int(rmx.get('reasoning_cycles_total') or 0)}"
                         )
+                        try:
+                            from app.runtime.backups.runtime_snapshots import list_runtime_backup_files
+                            from app.runtime.corruption.runtime_validation import scan_queue_duplicates_and_shape
+
+                            nb = len(list_runtime_backup_files(limit=500))
+                            sig = scan_queue_duplicates_and_shape(doc)
+                            qc = doc.get("runtime_corruption_quarantine")
+                            qc_n = len(qc) if isinstance(qc, list) else 0
+                            rsl = doc.get("runtime_resilience") if isinstance(doc.get("runtime_resilience"), dict) else {}
+                            lc = rsl.get("last_cleanup") if isinstance(rsl.get("last_cleanup"), dict) else {}
+                            print("— Runtime resilience —")
+                            print(
+                                f"backups_on_disk: {nb}  backups_total_metric: {int(rmx.get('runtime_backups_total') or 0)} "
+                                f"queue_dup_signal: {int(sig.get('duplicate_queue_entries') or 0)} "
+                                f"quarantine: {qc_n}"
+                            )
+                            if lc:
+                                print(
+                                    f"last_cleanup: queues_pruned={lc.get('queues_pruned')} "
+                                    f"deduped={lc.get('queues_deduped')} plans_pruned={lc.get('plans_pruned')}"
+                                )
+                        except Exception as exc:
+                            print(f"runtime resilience: skip ({exc})")
                 print()
             except Exception as exc:  # noqa: BLE001
                 print(f"(could not parse runtime file: {exc})", file=sys.stderr)

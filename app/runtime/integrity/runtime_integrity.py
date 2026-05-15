@@ -143,4 +143,10 @@ def validate_runtime_state(st: dict[str, Any]) -> dict[str, Any]:
             if pplan and pplan not in plans2:
                 issues.append(f"planning_orphan_plan:{plnid}:{pplan}")
 
+    from app.runtime.corruption.runtime_validation import scan_queue_duplicates_and_shape
+
+    sig = scan_queue_duplicates_and_shape(st)
+    if int(sig.get("duplicate_queue_entries") or 0) > 0:
+        issues.append(f"queue_duplicate_entries:{sig.get('duplicate_queue_entries')}")
+
     return {"ok": len(issues) == 0, "issues": issues, "issue_count": len(issues)}

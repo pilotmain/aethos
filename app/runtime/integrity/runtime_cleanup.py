@@ -17,6 +17,28 @@ def cleanup_runtime_state(st: dict[str, Any], *, event_buffer_cap: int = 3000) -
     Does **not** delete active tasks, sessions, or non-orphan plans.
     """
     out: dict[str, Any] = {}
+    from app.runtime.backups.runtime_backups import backup_runtime_state_dict
+
+    bk = backup_runtime_state_dict(st, reason="cleanup_runtime_state")
+    out["backup"] = bk
+
+    from app.runtime.corruption.runtime_repair import repair_runtime_queues_and_metrics
+
+    out["repair"] = repair_runtime_queues_and_metrics(st)
+    out["queues_deduped"] = task_queue.dedupe_queue_entries(st)
+    if out["queues_deduped"]:
+        m = st.setdefault("runtime_metrics", {})
+        if isinstance(m, dict):
+            m["queue_dedupe_total"] = int(m.get("queue_dedupe_total") or 0) + int(out["queues_deduped"])
+            try:
+                from app.runtime.events.runtime_events import emit_runtime_event
+
+                emit_runtime_event(st, "queue_repaired", removed_duplicates=int(out["queues_deduped"]))
+            except Exception:
+                pass
+            from app.orchestration import orchestration_log as _olog
+
+            _olog.append_json_log("queue_repair", "queue_repaired", removed_duplicates=int(out["queues_deduped"]))
     out["queues_pruned"] = task_queue.prune_orphan_queue_entries(st)
     out["plans_pruned"] = execution_plan.prune_orphan_plans(st)
 
@@ -51,4 +73,25 @@ def cleanup_runtime_state(st: dict[str, Any], *, event_buffer_cap: int = 3000) -
                 removed_cp += 1
     out["checkpoints_pruned"] = removed_cp
 
+    rs = st.setdefault("runtime_resilience", {})
+    if isinstance(rs, dict):
+        from app.runtime.runtime_state import utc_now_iso
+
+        rs["last_cleanup"] = {**out, "ts": utc_now_iso()}
+    try:
+        from app.runtime.events.runtime_events import emit_runtime_event
+
+        emit_runtime_event(
+            st,
+            "cleanup_completed",
+            queues_pruned=int(out.get("queues_pruned") or 0),
+            queues_deduped=int(out.get("queues_deduped") or 0),
+            plans_pruned=int(out.get("plans_pruned") or 0),
+            events_trimmed=int(out.get("events_trimmed") or 0),
+        )
+    except Exception:
+        pass
+    from app.orchestration import orchestration_log
+
+    orchestration_log.append_json_log("cleanup", "cleanup_completed", **{k: str(v)[:500] for k, v in out.items()})
     return out

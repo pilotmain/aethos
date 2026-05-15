@@ -112,6 +112,9 @@ def default_runtime_state(*, workspace_root: Path | None = None) -> dict[str, An
             "adaptive_retry_total": 0,
             "reasoning_cycles_total": 0,
             "optimization_success_total": 0,
+            "runtime_backups_total": 0,
+            "runtime_corruption_repairs_total": 0,
+            "queue_dedupe_total": 0,
         },
         "coordination_agents": {},
         "agent_delegations": {},
@@ -119,6 +122,8 @@ def default_runtime_state(*, workspace_root: Path | None = None) -> dict[str, An
         "runtime_supervisors": {},
         "planning_records": {},
         "planning_outcomes": [],
+        "runtime_resilience": {},
+        "runtime_corruption_quarantine": [],
     }
 
 
@@ -254,6 +259,24 @@ def ensure_planning_intelligence_schema(st: dict[str, Any]) -> dict[str, Any]:
     return st
 
 
+def ensure_resilience_schema(st: dict[str, Any]) -> dict[str, Any]:
+    """Merge resilience / quarantine keys (OpenClaw recovery hardening parity)."""
+    base = default_runtime_state()
+    rs = st.setdefault("runtime_resilience", base.get("runtime_resilience") or {})
+    if not isinstance(rs, dict):
+        st["runtime_resilience"] = {}
+    cq = st.setdefault("runtime_corruption_quarantine", base.get("runtime_corruption_quarantine") or [])
+    if not isinstance(cq, list):
+        st["runtime_corruption_quarantine"] = []
+    m = st.setdefault("runtime_metrics", base.get("runtime_metrics") or {})
+    if not isinstance(m, dict):
+        st["runtime_metrics"] = dict(base["runtime_metrics"])
+        m = st["runtime_metrics"]
+    for k, v in (base.get("runtime_metrics") or {}).items():
+        m.setdefault(k, v)
+    return st
+
+
 def ensure_multi_session_schema(st: dict[str, Any]) -> dict[str, Any]:
     """Merge OpenClaw multi-session + runtime event buffers (forward-compatible)."""
     base = default_runtime_state()
@@ -281,6 +304,20 @@ def load_runtime_state() -> dict[str, Any]:
     try:
         raw = path.read_text(encoding="utf-8")
         data = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        _LOG.warning("runtime_state.json_corrupt %s — quarantine + reset", exc)
+        from app.runtime.corruption.runtime_corruption import quarantine_corrupt_runtime_file
+
+        quarantine_corrupt_runtime_file(path, reason=f"json_decode:{exc}")
+        st = default_runtime_state()
+        save_runtime_state(st)
+        return st
+    except OSError as exc:
+        _LOG.warning("runtime_state.read_failed %s — resetting", exc)
+        st = default_runtime_state()
+        save_runtime_state(st)
+        return st
+    try:
         if not isinstance(data, dict):
             raise ValueError("root must be object")
         ensure_orchestration_schema(data)
@@ -289,6 +326,14 @@ def load_runtime_state() -> dict[str, Any]:
         ensure_deployment_environment_schema(data)
         ensure_agent_coordination_schema(data)
         ensure_planning_intelligence_schema(data)
+        from app.runtime.corruption.runtime_repair import repair_runtime_queues_and_metrics
+
+        repaired = repair_runtime_queues_and_metrics(data)
+        if int(repaired.get("queues_coerced") or 0) or int(repaired.get("metrics_coerced") or 0):
+            m = data.setdefault("runtime_metrics", {})
+            if isinstance(m, dict):
+                m["runtime_corruption_repairs_total"] = int(m.get("runtime_corruption_repairs_total") or 0) + 1
+        ensure_resilience_schema(data)
         return data
     except Exception as exc:
         _LOG.warning("runtime_state.load_failed %s — resetting", exc)
@@ -300,6 +345,14 @@ def load_runtime_state() -> dict[str, Any]:
 def save_runtime_state(data: dict[str, Any]) -> None:
     path = get_runtime_state_path()
     path.parent.mkdir(parents=True, exist_ok=True)
+    lock_fd: int | None = None
+    try:
+        import fcntl
+
+        lock_fd = os.open(str(path.parent / "aethos.json.write.lock"), os.O_CREAT | os.O_RDWR, 0o644)
+        fcntl.flock(lock_fd, fcntl.LOCK_EX)
+    except Exception:
+        lock_fd = None
     payload = json.dumps(data, indent=2, sort_keys=False) + "\n"
     fd, tmp = tempfile.mkstemp(prefix="aethos-runtime-", suffix=".json", dir=str(path.parent))
     try:
@@ -314,6 +367,15 @@ def save_runtime_state(data: dict[str, Any]) -> None:
         except OSError:
             pass
         raise
+    finally:
+        if lock_fd is not None:
+            try:
+                import fcntl
+
+                fcntl.flock(lock_fd, fcntl.LOCK_UN)
+                os.close(lock_fd)
+            except Exception:
+                pass
 
 
 def mark_gateway_stopped() -> None:

@@ -74,6 +74,18 @@ def _log_name_matches_category(name: str, category: str | None) -> bool:
         return n == "adaptive_execution.log"
     if category == "delegation_optimization":
         return n == "delegation_optimization.log"
+    if category == "runtime_backups":
+        return n == "runtime_backups.log"
+    if category == "runtime_corruption":
+        return n == "runtime_corruption.log"
+    if category == "queue_repair":
+        return n == "queue_repair.log"
+    if category == "cleanup":
+        return n == "cleanup.log"
+    if category == "runtime_recovery":
+        return n == "runtime_recovery.log"
+    if category == "runtime_integrity":
+        return n == "runtime_integrity.log"
     return True
 
 
@@ -120,6 +132,12 @@ def cmd_logs(*, lines: int = 80, category: str | None = None) -> int:
         "replanning",
         "adaptive_execution",
         "delegation_optimization",
+        "runtime_backups",
+        "runtime_corruption",
+        "queue_repair",
+        "cleanup",
+        "runtime_recovery",
+        "runtime_integrity",
     ):
         from app.core.paths import get_aethos_home_dir
 
@@ -284,6 +302,19 @@ def _runtime_doctor_messages() -> list[str]:
                 out.append(f"runtime_integrity: FAIL ({inv.get('issue_count', 0)} issue(s))")
                 for i in (inv.get("issues") or [])[:15]:
                     out.append(f"  - {i}")
+            from app.runtime.backups.runtime_snapshots import list_runtime_backup_files
+            from app.runtime.corruption.runtime_validation import scan_queue_duplicates_and_shape
+
+            sig = scan_queue_duplicates_and_shape(st)
+            out.append(f"queue_duplicate_signal: {int(sig.get('duplicate_queue_entries') or 0)}")
+            try:
+                nb = len(list_runtime_backup_files(limit=500))
+                out.append(f"runtime_backups_on_disk: {nb}")
+            except OSError as exc:
+                out.append(f"runtime_backups_on_disk: skip ({exc})")
+            qc = st.get("runtime_corruption_quarantine")
+            if isinstance(qc, list) and qc:
+                out.append(f"runtime_corruption_quarantine: {len(qc)} record(s)")
             pr_ep = execution_plan.prune_orphan_plans(st)
             if pr_ep:
                 out.append(f"execution_plans: pruned {pr_ep} orphan plan(s)")

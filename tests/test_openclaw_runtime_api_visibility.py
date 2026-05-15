@@ -24,6 +24,9 @@ def test_runtime_api_sessions_metrics_health(api_client) -> None:
         "/api/v1/runtime/reasoning",
         "/api/v1/runtime/optimization",
         "/api/v1/runtime/replanning",
+        "/api/v1/runtime/recovery",
+        "/api/v1/runtime/backups",
+        "/api/v1/runtime/corruption",
     ):
         r = client.get(path)
         assert r.status_code == 200, path

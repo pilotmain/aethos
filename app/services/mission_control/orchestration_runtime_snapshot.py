@@ -109,6 +109,30 @@ def build_orchestration_runtime_snapshot(user_id: str | None) -> dict[str, Any]:
             "reasoning_tail": _planning_reasoning_tail(st, uid),
             "optimization_tail": _planning_optimization_tail(st, uid),
         },
+        "resilience": _resilience_slice(st),
+    }
+
+
+def _resilience_slice(st: dict[str, Any]) -> dict[str, Any]:
+    from app.runtime.backups.runtime_snapshots import list_runtime_backup_files
+    from app.runtime.corruption.runtime_validation import scan_queue_duplicates_and_shape
+    from app.runtime.integrity.runtime_integrity import validate_runtime_state
+
+    m = st.get("runtime_metrics") if isinstance(st.get("runtime_metrics"), dict) else {}
+    rs = st.get("runtime_resilience") if isinstance(st.get("runtime_resilience"), dict) else {}
+    qc = st.get("runtime_corruption_quarantine")
+    inv = validate_runtime_state(st)
+    bk = list_runtime_backup_files(limit=200)
+    sig = scan_queue_duplicates_and_shape(st)
+    return {
+        "integrity_ok": bool(inv.get("ok")),
+        "integrity_issue_count": int(inv.get("issue_count") or 0),
+        "queue_duplicate_entries_signal": int(sig.get("duplicate_queue_entries") or 0),
+        "runtime_backups_total": int(m.get("runtime_backups_total") or 0),
+        "backup_files_on_disk": len(bk),
+        "quarantine_records": len(qc) if isinstance(qc, list) else 0,
+        "last_cleanup": rs.get("last_cleanup"),
+        "last_backup": rs.get("last_backup"),
     }
 
 

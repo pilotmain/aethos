@@ -456,6 +456,21 @@ def get_runtime_health(app_user_id: str = Depends(get_valid_web_user_id)) -> dic
         "adaptive_retry_total": int(rm.get("adaptive_retry_total") or 0),
         "reasoning_cycles_total": int(rm.get("reasoning_cycles_total") or 0),
     }
+    from app.runtime.backups.runtime_snapshots import list_runtime_backup_files
+    from app.runtime.corruption.runtime_validation import scan_queue_duplicates_and_shape
+
+    rsl = st.get("runtime_resilience") if isinstance(st.get("runtime_resilience"), dict) else {}
+    qc = st.get("runtime_corruption_quarantine")
+    qc_n = len(qc) if isinstance(qc, list) else 0
+    backups_on_disk = list_runtime_backup_files(limit=500)
+    sig = scan_queue_duplicates_and_shape(st)
+    resilience = {
+        "runtime_backups_total": int(rm.get("runtime_backups_total") or 0),
+        "backup_files_on_disk": len(backups_on_disk),
+        "queue_duplicate_entries_signal": int(sig.get("duplicate_queue_entries") or 0),
+        "quarantine_records": qc_n,
+        "last_cleanup": rsl.get("last_cleanup"),
+    }
     return {
         "gateway_running": bool(gw.get("running")),
         "scheduler_running": bool(sch.get("running")),
@@ -478,6 +493,7 @@ def get_runtime_health(app_user_id: str = Depends(get_valid_web_user_id)) -> dic
             "supervisors": sup_n,
         },
         "planning": planning_block,
+        "resilience": resilience,
     }
 
 
@@ -488,6 +504,53 @@ def get_runtime_integrity(app_user_id: str = Depends(get_valid_web_user_id)) -> 
     from app.runtime.integrity.runtime_integrity import validate_runtime_state
 
     return validate_runtime_state(st)
+
+
+@router.get("/recovery")
+def get_runtime_recovery_summary(app_user_id: str = Depends(get_valid_web_user_id)) -> dict[str, Any]:
+    _ = app_user_id
+    st = load_runtime_state()
+    rs = st.get("runtime_resilience") if isinstance(st.get("runtime_resilience"), dict) else {}
+    rec = st.get("recovery") if isinstance(st.get("recovery"), dict) else {}
+    events = rec.get("events") if isinstance(rec.get("events"), list) else []
+    from app.runtime.corruption.runtime_validation import scan_queue_duplicates_and_shape
+    from app.runtime.integrity.runtime_integrity import validate_runtime_state
+
+    inv = validate_runtime_state(st)
+    return {
+        "last_cleanup": rs.get("last_cleanup"),
+        "last_backup": rs.get("last_backup"),
+        "last_queue_repair": rs.get("last_queue_repair"),
+        "recovery_events_tail": list(events[-30:]),
+        "integrity_ok": bool(inv.get("ok")),
+        "integrity_issue_count": int(inv.get("issue_count") or 0),
+        "queue_duplicate_signals": scan_queue_duplicates_and_shape(st),
+    }
+
+
+@router.get("/backups")
+def list_runtime_backups_api(app_user_id: str = Depends(get_valid_web_user_id)) -> dict[str, Any]:
+    _ = app_user_id
+    from app.runtime.backups.runtime_snapshots import list_runtime_backup_files
+
+    rows = list_runtime_backup_files(limit=50)
+    return {"backups": rows, "count": len(rows)}
+
+
+@router.get("/corruption")
+def get_runtime_corruption_summary(app_user_id: str = Depends(get_valid_web_user_id)) -> dict[str, Any]:
+    _ = app_user_id
+    st = load_runtime_state()
+    q = st.get("runtime_corruption_quarantine")
+    n = len(q) if isinstance(q, list) else 0
+    tail = list(q[-40:]) if isinstance(q, list) else []
+    from app.runtime.corruption.runtime_validation import scan_queue_duplicates_and_shape
+
+    return {
+        "quarantine_tail": tail,
+        "quarantine_count": n,
+        "queue_duplicate_signals": scan_queue_duplicates_and_shape(st),
+    }
 
 
 @router.get("/logs")
@@ -524,6 +587,12 @@ def tail_runtime_logs(
         "replanning",
         "adaptive_execution",
         "delegation_optimization",
+        "runtime_backups",
+        "runtime_corruption",
+        "queue_repair",
+        "cleanup",
+        "runtime_recovery",
+        "runtime_integrity",
     }
     if stem not in allowed:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=f"stem must be one of {sorted(allowed)}")

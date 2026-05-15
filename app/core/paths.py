@@ -43,6 +43,16 @@ def get_runtime_state_path() -> Path:
     return get_aethos_home_dir() / "aethos.json"
 
 
+def get_runtime_backups_dir() -> Path:
+    """Timestamped ``aethos.*.json`` snapshots (OpenClaw resilience parity)."""
+    return get_aethos_home_dir() / "backups"
+
+
+def get_runtime_corruption_quarantine_dir() -> Path:
+    """Invalid / replaced ``aethos.json`` payloads moved aside for inspection."""
+    return get_aethos_home_dir() / "corruption_quarantine"
+
+
 def get_aethos_workspace_root() -> Path:
     """Default workspace root for execution artifacts (``~/.aethos/workspace``)."""
     raw = (os.environ.get("AETHOS_WORKSPACE_HOME") or "").strip()
@@ -83,6 +93,8 @@ __all__ = [
     "get_aethos_workspace_root",
     "get_default_database_path",
     "get_default_sqlite_database_url",
+    "get_runtime_backups_dir",
+    "get_runtime_corruption_quarantine_dir",
     "get_runtime_state_path",
     "is_valid_sqlalchemy_database_url",
 ]

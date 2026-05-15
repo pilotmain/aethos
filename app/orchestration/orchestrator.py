@@ -23,6 +23,12 @@ def orchestration_boot(st: dict[str, Any] | None = None) -> dict[str, Any]:
         from app.runtime.runtime_state import load_runtime_state
 
         st = load_runtime_state()
+    try:
+        from app.runtime.events.runtime_events import emit_runtime_event
+
+        emit_runtime_event(st, "runtime_recovery_started", stage="orchestration_boot")
+    except Exception:
+        pass
     rec = task_recovery.recover_orchestration_on_boot(st)
     ex = execution_continuation.recover_execution_on_boot(st)
     from app.runtime.sessions.session_recovery import recover_runtime_sessions_on_boot
@@ -66,6 +72,18 @@ def orchestration_boot(st: dict[str, Any] | None = None) -> dict[str, Any]:
         cleanup_queues_pruned=clean.get("queues_pruned"),
         cleanup_plans_pruned=clean.get("plans_pruned"),
     )
+    try:
+        from app.runtime.events.runtime_events import emit_runtime_event
+
+        emit_runtime_event(
+            st,
+            "runtime_recovery_completed",
+            recovery_tasks=int(rec.get("count") or 0),
+            execution_resume_steps=int(ex.get("count") or 0),
+            cleanup_queues_pruned=int(clean.get("queues_pruned") or 0),
+        )
+    except Exception:
+        pass
     task_scheduler.start_scheduler_background()
     _LOG.info(
         "orchestration.boot recovery=%s execution=%s sessions=%s",

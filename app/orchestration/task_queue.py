@@ -58,3 +58,25 @@ def prune_orphan_queue_entries(st: dict[str, Any]) -> int:
         removed += len(q) - len(kept)
         st[name] = kept
     return removed
+
+
+def dedupe_queue_entries(st: dict[str, Any]) -> int:
+    """Remove duplicate task ids within each queue (stable: keep first occurrence)."""
+    removed = 0
+    for name in QUEUE_NAMES:
+        q = ensure_queue(st, name)
+        seen: set[str] = set()
+        out: list[Any] = []
+        for x in q:
+            s = str(x)
+            if not s:
+                removed += 1
+                continue
+            if s in seen:
+                removed += 1
+                continue
+            seen.add(s)
+            out.append(x)
+        if len(out) != len(q):
+            st[name] = out
+    return removed
