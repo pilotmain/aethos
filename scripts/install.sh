@@ -94,6 +94,15 @@ NONINTERACTIVE="${NEXA_NONINTERACTIVE:-0}"
 
 die() { echo "error: $*" >&2; exit 1; }
 
+# macOS / bash 3.2 + ``set -u``: ``"${arr[@]}"`` on an empty array is an unbound variable.
+run_nexa_bootstrap() {
+  if ((${#BOOTSTRAP_EXTRA[@]} > 0)); then
+    python3 scripts/nexa_bootstrap.py "${BOOTSTRAP_EXTRA[@]}"
+  else
+    python3 scripts/nexa_bootstrap.py
+  fi
+}
+
 command -v git >/dev/null 2>&1 || die "git is required"
 command -v python3 >/dev/null 2>&1 || die "python3 is required"
 python3 -c "import sys; sys.exit(0 if sys.version_info >= (3, 10) else 1)" || die "Python 3.10+ required"
@@ -119,7 +128,11 @@ fi
 
 if [ "$DRY_RUN" = 1 ]; then
   echo "[dry-run] Repository root: ${ROOT}"
-  echo "[dry-run] Would run: python3 scripts/nexa_bootstrap.py ${BOOTSTRAP_EXTRA[*]}"
+  if ((${#BOOTSTRAP_EXTRA[@]} > 0)); then
+    echo "[dry-run] Would run: python3 scripts/nexa_bootstrap.py ${BOOTSTRAP_EXTRA[*]}"
+  else
+    echo "[dry-run] Would run: python3 scripts/nexa_bootstrap.py"
+  fi
   echo "[dry-run] Privacy-first defaults: set NEXA_LOCAL_FIRST=true and review docs/INSTALL.md before exposing keys."
   echo "[dry-run] Would merge keys from env when non-interactive (see merge_keys_from_env in script)."
   echo "[dry-run] No file changes, no services started. Re-run without --dry-run to apply."
@@ -135,7 +148,7 @@ if [ "$GUIDED" = 1 ]; then
 fi
 
 echo "Running: python3 scripts/nexa_bootstrap.py ..."
-python3 scripts/nexa_bootstrap.py "${BOOTSTRAP_EXTRA[@]}"
+run_nexa_bootstrap
 
 merge_keys_from_env() {
   # Patch .env from exported variables (non-interactive).
