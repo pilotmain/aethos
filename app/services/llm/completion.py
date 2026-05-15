@@ -48,6 +48,14 @@ def _build_chain() -> list[str]:
         for p in fb:
             if p not in chain:
                 chain.append(p)
+        # Explicit Ollama as primary: still walk registered cloud providers after
+        # Ollama so composer/intent can fail over when local returns errors, empty
+        # JSON, or timeouts (setup often adds keys without listing them in
+        # NEXA_LLM_FALLBACK_PROVIDERS).
+        if primary == "ollama":
+            for p in _AUTO_ORDER:
+                if p != "ollama" and p not in chain and reg.get_provider(p):
+                    chain.append(p)
 
     # Phase 72 — append the cost-aware fallback provider as the absolute last
     # entry so a local Ollama install becomes the safety net when remote
@@ -59,6 +67,14 @@ def _build_chain() -> list[str]:
             chain.append(fp)
     # Pure local-first: try Ollama before cloud when the local backend is registered.
     if bool(getattr(s, "nexa_pure_local_llm_mode", False)) and reg.get_provider("ollama"):
+        chain = ["ollama"] + [p for p in chain if p != "ollama"]
+    # Setup "local first" with auto routing: same Ollama-first order, cloud remains
+    # in chain for failover (unlike explicit ollama-only before cloud append above).
+    elif (
+        bool(getattr(s, "nexa_local_first", False))
+        and primary in ("", "auto")
+        and reg.get_provider("ollama")
+    ):
         chain = ["ollama"] + [p for p in chain if p != "ollama"]
     return chain
 
