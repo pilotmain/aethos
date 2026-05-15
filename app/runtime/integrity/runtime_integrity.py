@@ -149,4 +149,31 @@ def validate_runtime_state(st: dict[str, Any]) -> dict[str, Any]:
     if int(sig.get("duplicate_queue_entries") or 0) > 0:
         issues.append(f"queue_duplicate_entries:{sig.get('duplicate_queue_entries')}")
 
+    from app.deployments.deployment_registry import deployment_records
+    from app.deployments.deployment_stages import is_known_stage
+    from app.environments import environment_registry
+    from app.environments.environment_locks import locks_map
+
+    env_rows = environment_registry.environments_map(st)
+    for did, drow in deployment_records(st).items():
+        if not isinstance(drow, dict):
+            issues.append(f"deployment_record_invalid:{did}")
+            continue
+        eid = str(drow.get("environment_id") or "").strip()
+        if eid and eid not in env_rows:
+            issues.append(f"deployment_unknown_environment:{did}:{eid}")
+        dst = str(drow.get("deployment_stage") or "").strip()
+        if dst and not is_known_stage(dst):
+            issues.append(f"deployment_bad_stage:{did}:{dst}")
+        tid_ref = str(drow.get("task_id") or "").strip()
+        if tid_ref and tid_ref not in tr:
+            issues.append(f"deployment_orphan_task:{did}:{tid_ref}")
+    for eid, lk in locks_map(st).items():
+        if not isinstance(lk, dict):
+            issues.append(f"environment_lock_invalid:{eid}")
+            continue
+        ldid = str(lk.get("locked_by_deployment_id") or "")
+        if ldid and ldid not in deployment_records(st):
+            issues.append(f"environment_lock_orphan_deployment:{eid}:{ldid}")
+
     return {"ok": len(issues) == 0, "issues": issues, "issue_count": len(issues)}

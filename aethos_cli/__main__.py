@@ -286,10 +286,16 @@ def main() -> int:
     sp_dep_show.add_argument("deployment_id")
     sp_dep_logs = dep_sub.add_parser("logs", help="GET /api/v1/deployments/{id}/logs")
     sp_dep_logs.add_argument("deployment_id")
+    sp_dep_art = dep_sub.add_parser("artifacts", help="GET /api/v1/deployments/{id}/artifacts")
+    sp_dep_art.add_argument("deployment_id")
+    sp_dep_rb = dep_sub.add_parser("rollback", help="POST /api/v1/deployments/{id}/rollback")
+    sp_dep_rb.add_argument("deployment_id")
+    sp_dep_rb.add_argument("--reason", default="", help="Optional rollback reason")
 
     sp_env = sub.add_parser("environments", help="Environment runtime API (OpenClaw infra parity)")
     env_sub = sp_env.add_subparsers(dest="env_cmd", required=True)
     env_sub.add_parser("list", help="GET /api/v1/environments")
+    env_sub.add_parser("locks", help="GET /api/v1/environments/locks")
     sp_env_show = env_sub.add_parser("show", help="GET /api/v1/environments/{id}")
     sp_env_show.add_argument("environment_id")
 
@@ -630,10 +636,25 @@ def main() -> int:
             code, body = _req("GET", f"/api/v1/deployments/{did}/logs", uid=uid)
             print(body[:24000])
             return 0 if code == 200 else 1
+        if args.dep_cmd == "artifacts":
+            did = urllib.parse.quote(str(args.deployment_id), safe="")
+            code, body = _req("GET", f"/api/v1/deployments/{did}/artifacts", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.dep_cmd == "rollback":
+            did = urllib.parse.quote(str(args.deployment_id), safe="")
+            payload = json.dumps({"reason": str(getattr(args, "reason", "") or "")}).encode()
+            code, body = _req("POST", f"/api/v1/deployments/{did}/rollback", uid=uid, body=payload)
+            print(body[:24000])
+            return 0 if code == 200 else 1
 
     if args.cmd == "environments":
         if args.env_cmd == "list":
             code, body = _req("GET", "/api/v1/environments", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.env_cmd == "locks":
+            code, body = _req("GET", "/api/v1/environments/locks", uid=uid)
             print(body[:24000])
             return 0 if code == 200 else 1
         if args.env_cmd == "show":

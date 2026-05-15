@@ -138,11 +138,40 @@ def _resilience_slice(st: dict[str, Any]) -> dict[str, Any]:
 
 def _deployments_slice(st: dict[str, Any], uid: str) -> dict[str, Any]:
     from app.deployments.deployment_registry import list_deployments_for_user
+    from app.environments import environment_locks
 
     if not uid:
-        return {"sample": [], "count": 0}
+        return {"sample": [], "count": 0, "environment_locks": []}
     rows = list_deployments_for_user(st, uid)
-    return {"sample": rows[:40], "count": len(rows)}
+    sample: list[dict[str, Any]] = []
+    for r in rows[:40]:
+        if not isinstance(r, dict):
+            continue
+        hist = r.get("stage_history")
+        hist_tail = list(hist[-12:]) if isinstance(hist, list) else []
+        lg = r.get("logs")
+        latest = lg[-1] if isinstance(lg, list) and lg else None
+        arts = r.get("artifacts")
+        ac = len(arts) if isinstance(arts, list) else 0
+        sample.append(
+            {
+                "deployment_id": r.get("deployment_id"),
+                "deployment_stage": r.get("deployment_stage"),
+                "status": r.get("status"),
+                "environment_id": r.get("environment_id"),
+                "stage_history_tail": hist_tail,
+                "rollback": r.get("rollback"),
+                "artifacts_count": ac,
+                "recovery": r.get("recovery"),
+                "latest_log": latest,
+                "failure_reason": r.get("failure_reason"),
+            }
+        )
+    return {
+        "sample": sample,
+        "count": len(rows),
+        "environment_locks": environment_locks.list_locks_for_user(st, uid)[:40],
+    }
 
 
 def _environments_slice(st: dict[str, Any], uid: str) -> dict[str, Any]:

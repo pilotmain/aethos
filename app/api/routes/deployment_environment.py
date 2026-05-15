@@ -109,6 +109,15 @@ def list_environments(app_user_id: str = Depends(get_valid_web_user_id)) -> dict
     return {"environments": rows, "count": len(rows)}
 
 
+@router.get("/environments/locks")
+def list_environment_locks(app_user_id: str = Depends(get_valid_web_user_id)) -> dict[str, Any]:
+    from app.environments import environment_locks
+
+    st = load_runtime_state()
+    rows = environment_locks.list_locks_for_user(st, app_user_id)
+    return {"locks": rows, "count": len(rows)}
+
+
 @router.get("/environments/{environment_id}")
 def get_environment_detail(environment_id: str, app_user_id: str = Depends(get_valid_web_user_id)) -> dict[str, Any]:
     st = load_runtime_state()

@@ -86,6 +86,7 @@ def default_runtime_state(*, workspace_root: Path | None = None) -> dict[str, An
         "environments": {},
         "operational_workflows": [],
         "deployment_scheduler": {"pending": [], "locks": {}},
+        "environment_locks": {},
         "runtime_metrics": {
             "scheduler_ticks": 0,
             "last_scheduler_tick_at": None,
@@ -198,6 +199,8 @@ def ensure_deployment_environment_schema(st: dict[str, Any]) -> dict[str, Any]:
         st["environments"] = dict(base.get("environments") or {})
     if "operational_workflows" not in st or not isinstance(st.get("operational_workflows"), list):
         st["operational_workflows"] = list(base.get("operational_workflows") or [])
+    if "environment_locks" not in st or not isinstance(st.get("environment_locks"), dict):
+        st["environment_locks"] = dict(base.get("environment_locks") or {})
     ds = st.setdefault("deployment_scheduler", base.get("deployment_scheduler") or {})
     if not isinstance(ds, dict):
         st["deployment_scheduler"] = dict(base["deployment_scheduler"])

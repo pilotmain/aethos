@@ -9,7 +9,9 @@ from typing import Any
 
 from app.deployments.deployment_artifacts import artifacts_from_plan
 from app.deployments.deployment_environments import resolve_environment_id
+from app.deployments.deployment_lifecycle import bootstrap_new_deployment, transition_deployment_stage
 from app.deployments.deployment_registry import get_deployment, upsert_deployment
+from app.environments import environment_locks
 from app.orchestration import orchestration_log
 from app.runtime.events.runtime_events import emit_runtime_event
 from app.runtime.runtime_state import utc_now_iso
@@ -96,6 +98,14 @@ def on_operator_plan_created_if_deploy(
         environment_id=env_id,
         status="running",
     )
+    bootstrap_new_deployment(
+        st,
+        did,
+        environment_id=env_id,
+        user_id=str(user_id),
+        task_id=str(task_id),
+        plan_id=str(plan_id),
+    )
     from app.environments import environment_runtime
 
     environment_runtime.touch_deployment_count(st, env_id, delta=1)
@@ -112,8 +122,18 @@ def note_deploy_step_started(st: dict[str, Any], *, task_id: str, plan: dict[str
     row = upsert_deployment(st, did, {})
     if not row:
         return
+    env_id = str(row.get("environment_id") or "")
+    if not environment_locks.acquire_lock(
+        st,
+        env_id,
+        did,
+        user_id=str(row.get("user_id") or ""),
+    ):
+        transition_deployment_stage(st, did, "failed", reason="environment_lock_contention", sync_status=True)
+        return
     ts = utc_now_iso()
     first = not bool(row.get("execution_started_logged"))
+    transition_deployment_stage(st, did, "deploying", reason="deploy_step_started", sync_status=True)
     patch: dict[str, Any] = {
         "updated_at": ts,
         "status": "running",
@@ -155,7 +175,13 @@ def sync_deployment_terminal(
     prev = upsert_deployment(st, did, {})
     env_id = str(prev.get("environment_id") or resolve_environment_id(st, explicit=None, user_id=str(prev.get("user_id") or "")))
     status = "completed" if terminal == "completed" else "failed"
-    logs = list(prev.get("logs") or [])
+    if terminal == "completed":
+        transition_deployment_stage(st, did, "verifying", reason="plan_terminal_pre_complete", sync_status=True)
+        transition_deployment_stage(st, did, "completed", reason="plan_terminal", sync_status=True)
+    else:
+        transition_deployment_stage(st, did, "failed", reason=f"plan_terminal:{terminal}", sync_status=True)
+    row2 = get_deployment(st, did) or prev
+    logs = list(row2.get("logs") or [])
     if isinstance(logs, list):
         logs.append({"ts": ts, "message": f"terminal:{terminal}", "task_id": str(task_id)})
     upsert_deployment(
@@ -170,6 +196,7 @@ def sync_deployment_terminal(
             "rollback_available": terminal == "completed",
         },
     )
+    environment_locks.release_lock(st, env_id, did)
     orchestration_log.log_deployments_event(
         "deployment_completed" if terminal == "completed" else "deployment_failed",
         deployment_id=did,
