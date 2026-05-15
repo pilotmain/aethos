@@ -42,5 +42,10 @@ else
 fi
 
 cd "${INSTALL_DIR}"
-# Host-first reinstall: refresh .env template, never auto-start Docker.
-exec bash ./scripts/install.sh --no-clone --force-env --start host "$@"
+# For clean installs, run the full interactive wizard
+if [[ ! -f "${INSTALL_DIR}/.setup_complete" ]]; then
+  exec bash ./scripts/setup.sh
+else
+  # Host-first reinstall: refresh .env template, never auto-start Docker.
+  exec bash ./scripts/install.sh --no-clone --force-env --start host "$@"
+fi

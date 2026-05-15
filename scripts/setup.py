@@ -1968,6 +1968,11 @@ SSO_POST_LOGIN_REDIRECT=http://localhost:3000/login
         else:
             tok_show = "(set NEXA_WEB_API_TOKEN in .env)"
 
+        (_REPO_ROOT / ".setup_complete").write_text(
+            datetime.now().isoformat(timespec="seconds") + "\n",
+            encoding="utf-8",
+        )
+
         print(
             f"""
 {Colors.GREEN}✅ AethOS is now installed and running!{Colors.RESET}
