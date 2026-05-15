@@ -13,6 +13,8 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
 
+from app.services.goal_orchestrator import nexa_llm_first_gateway_active
+
 SUGGESTED_TTL_SECONDS = 30 * 60
 # Host-executor pending confirms for browser automation (navigate + screenshot chains) may wait on user approval.
 HOST_BROWSER_PENDING_INJECT_TTL_SECONDS = 120 * 60
@@ -402,7 +404,11 @@ def interpret_next_action_user_message(
     now: datetime | None = None,
 ) -> NextActionUserTurn:
     """
-    Interpret user line against last suggestions and optional pending 'run' gate for unknown commands.
+    Interpret user line against stored suggestions or optional pending inject (``run`` / repeat).
+
+    Freeform suggestion commands reprocess immediately (no ``Reply run`` gate). When
+    :func:`~app.services.goal_orchestrator.nexa_llm_first_gateway_active` is true, fuzzy natural-cue
+    matches on non-injectable lines return ``no_match`` so general chat reaches the LLM.
     """
     now = now or datetime.now(timezone.utc)
     t = (user_text or "").strip()
@@ -542,6 +548,10 @@ def interpret_next_action_user_message(
             ack_line=ack_line_for_injected_command(ncu.command),
         )
     if ncu is not None and not is_injectable_command(ncu.command):
+        # LLM-first: fuzzy cue match must not replace the user's message with a stored freeform line
+        # (avoids "Reply run" / co-pilot loops on creative chat).
+        if nexa_llm_first_gateway_active():
+            return NextActionUserTurn(no_match=True, clear_suggestions=True)
         return _pending_for_unknown(ncu.command)
 
     return NextActionUserTurn(no_match=True)
@@ -584,16 +594,12 @@ def is_pending_inject_expired(pending_json: str | None) -> bool:
 
 
 def _pending_for_unknown(cmd: str) -> NextActionUserTurn:
-    """Ask once; we store command until user types `run` or re-picks something else that clears."""
+    """Non-``@`` / non-``/`` suggestion lines: send through the normal pipeline (no ``Reply run`` gate)."""
     c = (cmd or "").strip()
     if not c:
         return NextActionUserTurn(no_match=True)
-    short = c[:500] + ("…" if len(c) > 500 else "")
     return NextActionUserTurn(
-        store_pending_command=c,
-        clear_suggestions=False,  # keep list until they run; pending stored separately
-        immediate_assistant=(
-            f"I can use this as your next message in chat (same as if you typed it yourself):\n\n`{short}`\n\n"
-            f"Reply `run` once to send it, or copy the line and paste it."
-        ),
+        reprocess_user_text=c,
+        clear_suggestions=True,
+        ack_line=ack_line_for_injected_command(c),
     )

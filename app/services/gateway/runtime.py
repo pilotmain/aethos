@@ -1004,6 +1004,8 @@ class NexaGateway:
             )
 
         if nexa_llm_first_gateway_active():
+            # Co-pilot next-step parsing must not intercept general NL; see ``next_action_confirmation``
+            # (no "Reply run" / fuzzy substitution when LLM-first is on).
             return self._handle_full_chat_llm_first_tail(gctx, text, db=db)
 
         _ws_full = str(gctx.extras.get("web_session_id") or "default").strip()[:64] or "default"
@@ -1364,6 +1366,7 @@ class NexaGateway:
                 )
 
             if nexa_llm_first_gateway_active():
+                # Same as full-chat path: LLM-first before co-pilot / deterministic NL (``next_action_confirmation``).
                 return self._route_gateway_llm_first(db_inner, gctx, raw_gate, text)
 
             from app.services.config_query import handle_config_query

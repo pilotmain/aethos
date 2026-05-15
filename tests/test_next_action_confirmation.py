@@ -90,20 +90,39 @@ def test_injectable_doc_routes() -> None:
     assert t.reprocess_user_text and t.reprocess_user_text.startswith("/doc")
 
 
-def test_unknown_phrase_needs_run_flow() -> None:
-    """Non-@, non-/ lines go through pending, not reprocess, until 'run'."""
+def test_unknown_phrase_reprocesses_without_run_gate() -> None:
+    """Non-@, non-/ lines inject on ``yes`` without a ``Reply run`` confirmation step."""
     actions = _one_action("some freeform marketing idea for this week")
     t0 = nac.interpret_next_action_user_message("yes", actions, None)
-    assert t0.store_pending_command
-    assert t0.immediate_assistant and "run" in t0.immediate_assistant.lower()
-    pend = {
-        "command": t0.store_pending_command,
-        "created_at": datetime.now(timezone.utc).isoformat(),
-    }
-    t1 = nac.interpret_next_action_user_message(
-        "run", [], json.dumps(pend, ensure_ascii=False)
+    assert not t0.no_match
+    assert t0.reprocess_user_text == "some freeform marketing idea for this week"
+    assert t0.clear_suggestions
+    assert not t0.store_pending_command
+    assert t0.ack_line and "Running next step" in t0.ack_line
+
+
+def test_llm_first_skips_non_injectable_natural_cue_match(monkeypatch):
+    """LLM-first gateway: fuzzy cue match on freeform commands must not hijack general chat."""
+    now = datetime.now(timezone.utc).isoformat()
+    fake = nac.SuggestedAction(
+        index=1,
+        label="idea",
+        command="draft a tagline in three variants",
+        risk="low",
+        created_at=now,
     )
-    assert t1.reprocess_user_text == t0.store_pending_command
+    monkeypatch.setattr(nac, "_match_suggestion_by_natural_cue", lambda *_a, **_k: fake)
+    from app.services import goal_orchestrator as go
+
+    monkeypatch.setattr(go, "nexa_llm_first_gateway_active", lambda: True)
+    t = nac.interpret_next_action_user_message(
+        "pair it with a visual or campaign concept to see how it lands",
+        [fake],
+        None,
+        None,
+    )
+    assert t.no_match is True
+    assert t.clear_suggestions is True
 
 
 def test_at_dev_inject_still_uses_inject() -> None:
