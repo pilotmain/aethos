@@ -87,7 +87,7 @@ async function fetchOrNetworkHint(urlStr: string, init?: RequestInit): Promise<R
       const origin =
         typeof window !== "undefined" ? window.location.origin : "(browser origin)";
       throw new Error(
-        `Cannot reach API (wrong URL/port, server down, or CORS). In Login → Connection, set API base to where /api/v1/health works (e.g. http://127.0.0.1:8120 if you use scripts/nexa_next_local_all.sh, or http://127.0.0.1:8010 with Docker). This page is ${origin}.`,
+        `Cannot reach API (wrong URL/port, server down, or CORS). In Login → Connection, set API base to where /api/v1/health works (must match API_BASE_URL in your .env). Typical: http://127.0.0.1:8010 (wizard default), http://127.0.0.1:8000 (scripts/install.sh host), http://127.0.0.1:8120 (scripts/nexa_next_local_all.sh), or http://127.0.0.1:8010 (Docker host port). This page is ${origin}.`,
       );
     }
     throw e;

@@ -53,18 +53,9 @@ export const defaultConfig: AethosWebConfig = {
   token: "",
 };
 
-/** One-time migration when Docker moved published API port 8000 → 8010 on host. */
+/** Normalize stored API origin (trailing slash). Do not rewrite port 8000 — host installs use it. */
 function migrateStoredApiBase(raw: string | undefined): string {
-  const s = (raw || "").trim().replace(/\/$/, "");
-  if (
-    s === "http://127.0.0.1:8000" ||
-    s === "http://localhost:8000" ||
-    s === "http://127.0.0.1:8000/" ||
-    s === "http://localhost:8000/"
-  ) {
-    return DEFAULT_API_BASE;
-  }
-  return raw?.trim() ? raw.trim().replace(/\/$/, "") : "";
+  return (raw || "").trim().replace(/\/$/, "");
 }
 
 function readStandaloneConfig(): Partial<AethosWebConfig> {
