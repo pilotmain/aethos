@@ -262,7 +262,16 @@ if [ ! -x .venv/bin/python3 ]; then
 else
   echo "Ensuring database schema (ensure_schema) ..."
   cd "$ROOT"
-  .venv/bin/python3 -c "from app.core.db import ensure_schema; ensure_schema()" || echo "warning: ensure_schema failed — API startup will retry." >&2
+  .venv/bin/python3 -c "
+from pathlib import Path
+from app.services.nexa_bootstrap import repair_env_database_url
+from app.core.config import get_settings
+from app.core.db import ensure_schema
+
+repair_env_database_url(Path('.').resolve())
+get_settings.cache_clear()
+ensure_schema()
+" || echo "warning: ensure_schema failed — API startup will retry." >&2
 fi
 
 auto_start="${START_MODE:-${NEXA_START:-host}}"

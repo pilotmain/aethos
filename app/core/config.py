@@ -15,7 +15,7 @@ from dotenv import dotenv_values, load_dotenv
 from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from app.core.paths import get_default_sqlite_database_url
+from app.core.paths import get_default_sqlite_database_url, is_valid_sqlalchemy_database_url
 
 # Resolve repo root: app/core/config.py -> parents: core, app, project
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -225,6 +225,14 @@ class Settings(BaseSettings):
     api_v1_prefix: str = "/api/v1"
     # Phase 60: default absolute SQLite under ~/.aethos/data (API + bot same file); override with DATABASE_URL.
     database_url: str = Field(default_factory=get_default_sqlite_database_url)
+
+    @field_validator("database_url", mode="before")
+    @classmethod
+    def _coerce_database_url(cls, v: object) -> str:
+        s = str(v or "").strip()
+        if is_valid_sqlalchemy_database_url(s):
+            return s
+        return get_default_sqlite_database_url()
 
     anthropic_api_key: str | None = None
     # Default: current Haiku (3.5 snapshot `claude-3-5-haiku-20241022` is retired on the API)

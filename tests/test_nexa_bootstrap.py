@@ -38,6 +38,25 @@ def test_bootstrap_creates_env_if_missing(tmp_path: Path, monkeypatch) -> None:
     assert o2 == out, "second run must not change .env"
 
 
+def test_bootstrap_repairs_invalid_database_url_blob(tmp_path: Path) -> None:
+    bad = (
+        "DATABASE_URL=# Week 4 — docs\n"
+        "# Database — SINGLE SOURCE OF TRUTH\n"
+        "sqlite:///./data/aethos.db\n"
+        "sqlite://///Users/raya/.aethos/data/aethos.db\n"
+    )
+    (tmp_path / ".env").write_text(bad, encoding="utf-8")
+    assert nb.repair_env_database_url(tmp_path) is True
+    out = (tmp_path / ".env").read_text(encoding="utf-8")
+    assert out.count("DATABASE_URL=") == 1
+    assert "Week 4" not in out
+    assert "sqlite:///" in out
+    from app.core.paths import is_valid_sqlalchemy_database_url
+
+    db_line = next(l for l in out.splitlines() if l.startswith("DATABASE_URL="))
+    assert is_valid_sqlalchemy_database_url(db_line.split("=", 1)[1])
+
+
 def test_bootstrap_force_env_refreshes_and_preserves_secrets(tmp_path: Path) -> None:
     (tmp_path / ".env.example").write_text(
         "APP_NAME=AethOS\nTELEGRAM_BOT_TOKEN=\nNEW_FLAG=true\n",

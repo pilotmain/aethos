@@ -151,12 +151,78 @@ def _parse_env_file(path: Path) -> dict[str, str]:
     return out
 
 
-def _meaningful_env_value(val: str) -> bool:
+def _meaningful_env_value(val: str, *, key: str = "") -> bool:
     v = (val or "").strip()
     if not v:
         return False
     if "CHANGE_ME" in v.upper():
         return False
+    if key == "DATABASE_URL":
+        from app.core.paths import is_valid_sqlalchemy_database_url
+
+        return is_valid_sqlalchemy_database_url(v)
+    return True
+
+
+def _orphan_database_url_line(line: str) -> bool:
+    s = (line or "").strip()
+    return bool(re.match(r"^(sqlite(\+[a-z0-9]+)?|postgresql(\+psycopg2)?)://", s, re.I))
+
+
+def _finalize_env_database_url(text: str, preserved: dict[str, str]) -> str:
+    """Ensure exactly one valid ``DATABASE_URL=`` line; drop pasted doc/example URL lines."""
+    from app.core.paths import get_default_sqlite_database_url, is_valid_sqlalchemy_database_url
+
+    preserved_url = (preserved.get("DATABASE_URL") or "").strip()
+    url = (
+        preserved_url
+        if is_valid_sqlalchemy_database_url(preserved_url)
+        else get_default_sqlite_database_url()
+    )
+
+    out_lines: list[str] = []
+    saw_db_key = False
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("DATABASE_URL="):
+            if not saw_db_key:
+                out_lines.append(f"DATABASE_URL={url}")
+                saw_db_key = True
+            continue
+        if "=" not in line and _orphan_database_url_line(stripped):
+            continue
+        out_lines.append(line)
+
+    if not saw_db_key:
+        insert_at: int | None = None
+        for i, line in enumerate(out_lines):
+            if "Database" in line and line.strip().startswith("#"):
+                insert_at = i + 1
+                break
+        row = f"DATABASE_URL={url}"
+        if insert_at is not None:
+            out_lines.insert(insert_at, row)
+        else:
+            out_lines.append(row)
+
+    text_out = "\n".join(out_lines)
+    if not text_out.endswith("\n"):
+        text_out += "\n"
+    return text_out
+
+
+def repair_env_database_url(root: Path | None = None) -> bool:
+    """Rewrite ``.env`` when ``DATABASE_URL`` is missing or invalid (install recovery)."""
+    root = root or REPO_ROOT
+    dest = root / ".env"
+    if not dest.is_file():
+        return False
+    raw = dest.read_text(encoding="utf-8", errors="replace")
+    preserved = _parse_env_file(dest)
+    fixed = _finalize_env_database_url(raw, preserved)
+    if fixed == raw:
+        return False
+    dest.write_text(fixed, encoding="utf-8")
     return True
 
 
@@ -172,7 +238,7 @@ def _apply_preserved_env_values(template_text: str, preserved: dict[str, str]) -
         k, _, _ = line.partition("=")
         key = k.strip()
         old = preserved.get(key)
-        if old is not None and _meaningful_env_value(old):
+        if old is not None and _meaningful_env_value(old, key=key):
             lines.append(f"{key}={old}")
         else:
             lines.append(line)
@@ -222,6 +288,7 @@ def sync_env_file(root: Path, *, force: bool = False) -> tuple[bool, str]:
     if preserved:
         data = _apply_preserved_env_values(data, preserved)
     data = _ensure_generated_secrets(data)
+    data = _finalize_env_database_url(data, preserved)
     dest.write_text(data, encoding="utf-8")
     if force and preserved:
         return True, "refreshed"
