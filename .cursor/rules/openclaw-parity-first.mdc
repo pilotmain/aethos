@@ -1,0 +1,40 @@
+---
+description: Enforce OpenClaw parity-first development for AethOS/nexa-next
+globs:
+  - "**/*"
+alwaysApply: true
+---
+
+# OpenClaw parity-first rule
+
+The final objective for Phase 1 is exact functional parity with OpenClaw as it exists today.
+
+Work in this repo must prioritize reproducing OpenClaw behavior before privacy, PII filtering, local-first differentiation, cost transparency, custom UX, or novel architecture.
+
+## Required behavior
+
+- Prefer the change that gets closer to OpenClaw parity.
+- Do not introduce architectural divergence unless required to reproduce OpenClaw behavior.
+- Treat privacy/PII/local-first improvements as Phase 2 unless required for current OpenClaw-compatible behavior.
+- Keep parity docs and tests updated when behavior changes.
+
+## PR checklist
+
+Every feature/change should answer:
+
+```text
+OpenClaw behavior reproduced:
+Parity checkpoint advanced:
+Verification performed:
+Remaining divergence:
+```
+
+## Verification
+
+Run before considering development complete:
+
+```bash
+python -m compileall -q app
+pytest
+pytest tests/test_openclaw_parity.py
+```

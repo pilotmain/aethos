@@ -1,9 +1,23 @@
 # AethOS documentation
 
+## Current objective
+
+AethOS is in a strict OpenClaw parity-first phase. The project must reproduce OpenClaw exactly as it works today before prioritizing privacy, PII filtering, local-first differentiation, cost transparency, or custom AethOS-specific architecture.
+
+Do not introduce architectural divergence unless required to reproduce OpenClaw behavior.
+
+Start here:
+
+- [Project handoff](../PROJECT_HANDOFF.md)
+- [OpenClaw parity audit](OPENCLAW_PARITY_AUDIT.md)
+- [Migrating from OpenClaw](MIGRATING_FROM_OPENCLAW.md)
+
 ## Getting started
 
 - [Installation](installation.md)
 - [Configuration](configuration.md)
+- [Setup](SETUP.md)
+- [Web UI / Mission Control](WEB_UI.md)
 
 ## Features
 
@@ -22,13 +36,13 @@
 
 ## Legal
 
-- [Legal overview (disclaimer, privacy, terms summary)](legal.md)
+- [Legal overview](legal.md)
 - [Trademark](legal/TRADEMARK.md)
 
 ## Business
 
 - [Open core model](open-core.md)
 
-## More (long-form)
+## More
 
-Operational and phase-specific guides (API, LLM, operations, roadmap) remain as separate files in this `docs/` directory — browse the folder or your editor’s file tree.
+Operational and phase-specific guides remain as separate files in this `docs/` directory. During Phase 1, update docs whenever behavior changes and keep all claims tied to OpenClaw parity status.
