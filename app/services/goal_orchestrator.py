@@ -16,6 +16,12 @@ from app.core.config import get_settings
 from app.services.batch_executor import create_batch_files
 from app.services.execution_templates import todo_static_bundle
 
+
+def nexa_llm_first_gateway_active() -> bool:
+    """True only when ``nexa_llm_first_gateway`` is explicitly enabled (literal ``True`` on Settings)."""
+    return get_settings().nexa_llm_first_gateway is True
+
+
 _GOAL_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"^build\s+(?:a|an)\s+(\w+)\s+app$", re.I), "goal_build_app"),
     (re.compile(r"^create\s+(?:a|an)\s+(\w+)\s+project$", re.I), "goal_create_project"),
@@ -57,7 +63,7 @@ class Goal:
 
 def parse_goal_intent(text: str) -> dict[str, Any] | None:
     """Match first line against autonomous goal patterns."""
-    if bool(getattr(get_settings(), "nexa_llm_first_gateway", False)):
+    if nexa_llm_first_gateway_active():
         return None
     raw = (text or "").strip()
     if not raw:

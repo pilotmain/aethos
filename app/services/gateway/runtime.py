@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.services.gateway.context import GatewayContext
+from app.services.goal_orchestrator import nexa_llm_first_gateway_active
 from app.services.logging.logger import get_logger
 from app.services.metrics.runtime import record_mission_completed, record_mission_timeout
 
@@ -1002,7 +1003,7 @@ class NexaGateway:
                 payload=cred_full,
             )
 
-        if bool(getattr(get_settings(), "nexa_llm_first_gateway", False)):
+        if nexa_llm_first_gateway_active():
             return self._handle_full_chat_llm_first_tail(gctx, text, db=db)
 
         _ws_full = str(gctx.extras.get("web_session_id") or "default").strip()[:64] or "default"
@@ -1362,7 +1363,7 @@ class NexaGateway:
                     payload=cred_gate,
                 )
 
-            if bool(getattr(get_settings(), "nexa_llm_first_gateway", False)):
+            if nexa_llm_first_gateway_active():
                 return self._route_gateway_llm_first(db_inner, gctx, raw_gate, text)
 
             from app.services.config_query import handle_config_query

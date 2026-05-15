@@ -13,7 +13,12 @@ from app.core.config import get_settings
 from app.services.gateway.context import GatewayContext
 from app.services.gateway.early_nl_host_actions import _workspace_root_for_nl
 from app.services.execution_planner import acquire_plan_slot, release_plan_slot
-from app.services.goal_orchestrator import GoalOrchestrator, format_goal_result, parse_goal_intent
+from app.services.goal_orchestrator import (
+    GoalOrchestrator,
+    format_goal_result,
+    nexa_llm_first_gateway_active,
+    parse_goal_intent,
+)
 from app.services.user_capabilities import is_privileged_owner_for_web_mutations
 
 
@@ -28,7 +33,7 @@ def try_goal_planning_gateway_turn(
     Requires ``nexa_autonomous_goal_planning``, privileged owner, and ``nexa_auto_approve_owner``.
     """
     _ = db
-    if bool(getattr(get_settings(), "nexa_llm_first_gateway", False)):
+    if nexa_llm_first_gateway_active():
         return None
     if not bool(getattr(get_settings(), "nexa_autonomous_goal_planning", False)):
         return None

@@ -788,6 +788,12 @@ class SetupWizard:
         self._configure_playwright_after_env()
         self._apply_setup_default_env_overlay()
         self._apply_ollama_autodetect_to_env()
+        # One-curl / wizard installs: OpenClaw-style gateway (tools/NL first, then trust the LLM for chat).
+        self._update_env_key("NEXA_LLM_FIRST_GATEWAY", "true")
+        self._update_env_key("USE_REAL_LLM", "true")
+        print(
+            f"  {Colors.success('NEXA_LLM_FIRST_GATEWAY=true; USE_REAL_LLM=true (restart API to load if already running)')}"
+        )
         dedupe_env_assignment_lines(self.env_path)
         print(
             f"\n  {Colors.success('Environment file (deduplicated keys):')} "

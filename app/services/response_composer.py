@@ -12,6 +12,7 @@ import re
 from typing import Any, TypedDict
 
 from app.core.config import get_settings
+from app.services.goal_orchestrator import nexa_llm_first_gateway_active
 from app.services.llm.base import Message
 from app.services.llm.completion import primary_complete_messages, providers_available
 from app.services.memory_preferences import (
@@ -993,7 +994,7 @@ def _run_strategy(ctx: ResponseContext, strategy_body: str) -> ComposedResponse:
             )
         except Exception as exc:
             logger.warning("compose strategy failed: %s", exc)
-        if bool(getattr(get_settings(), "nexa_llm_first_gateway", False)):
+        if nexa_llm_first_gateway_active():
             return _llm_first_gateway_offline_response(ctx, reason="llm_failed_empty_or_invalid_json")
         return fallback_compose_response(
             ctx, reason="llm_failed_empty_or_invalid_json"
@@ -1025,10 +1026,9 @@ def compose_unstick_response(ctx: ResponseContext) -> ComposedResponse:
 
 
 def compose_clarify_response(ctx: ResponseContext) -> ComposedResponse:
-    s = get_settings()
     if (
         not _pure_local_llm_chat_mode()
-        and not bool(getattr(s, "nexa_llm_first_gateway", False))
+        and not nexa_llm_first_gateway_active()
         and ctx.intent == "capability_question"
     ):
         from app.services.research_capability_copy import (
@@ -1060,7 +1060,7 @@ def compose_response(ctx: ResponseContext) -> ComposedResponse:
     )
     if not ur:
         s = get_settings()
-        if bool(getattr(s, "nexa_llm_first_gateway", False)):
+        if nexa_llm_first_gateway_active():
             return _apply_decisive_dev_composer_guard(
                 _apply_composed_identity_guards(
                     _llm_first_gateway_offline_response(ctx, reason="llm_disabled_or_missing_api_key"),
@@ -1112,7 +1112,7 @@ def compose_response(ctx: ResponseContext) -> ComposedResponse:
         )
     except Exception as exc:
         logger.exception("compose_response: %s", exc)
-        if bool(getattr(get_settings(), "nexa_llm_first_gateway", False)):
+        if nexa_llm_first_gateway_active():
             return _apply_decisive_dev_composer_guard(
                 _apply_composed_identity_guards(
                     _llm_first_gateway_offline_response(ctx, reason="compose_response_exception"),

@@ -8,7 +8,17 @@ from pathlib import Path
 
 import pytest
 
+from app.core.config import get_settings
 from app.services.goal_orchestrator import GoalOrchestrator, is_goal_planning_line, parse_goal_intent
+
+
+@pytest.fixture(autouse=True)
+def _goal_tests_ignore_home_llm_first(monkeypatch: pytest.MonkeyPatch) -> None:
+    """``~/.aethos/.env`` may set NEXA_LLM_FIRST_GATEWAY=true; goal unit tests need deterministic parsing."""
+    monkeypatch.setenv("NEXA_LLM_FIRST_GATEWAY", "false")
+    get_settings.cache_clear()
+    yield
+    get_settings.cache_clear()
 
 
 def test_parse_goal_build_app() -> None:
@@ -18,14 +28,12 @@ def test_parse_goal_build_app() -> None:
 
 
 def test_parse_goal_skipped_when_llm_first_gateway(monkeypatch: pytest.MonkeyPatch) -> None:
-    from app.core.config import get_settings
-
     monkeypatch.setenv("NEXA_LLM_FIRST_GATEWAY", "true")
     get_settings.cache_clear()
     try:
         assert parse_goal_intent("build a todo app") is None
     finally:
-        monkeypatch.delenv("NEXA_LLM_FIRST_GATEWAY", raising=False)
+        monkeypatch.setenv("NEXA_LLM_FIRST_GATEWAY", "false")
         get_settings.cache_clear()
 
 
