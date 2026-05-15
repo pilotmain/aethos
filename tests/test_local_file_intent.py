@@ -206,3 +206,36 @@ def test_ls_flags_not_list_directory_path(tmp_path: Path, monkeypatch: pytest.Mo
     with patch("app.services.local_file_intent.get_settings", return_value=S()):
         lf = infer_local_file_request("ls -la", default_relative_base=".")
     assert not lf.matched
+
+
+def test_explain_philosophical_prose_not_local_file_clarify(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Long 'Explain …' essay prompts must not hit host path clarification (LLM-first / web chat)."""
+    monkeypatch.chdir(tmp_path)
+    root = str(tmp_path.resolve())
+
+    class S:
+        host_executor_work_root = root
+
+    msg = (
+        "Explain the philosophical implications of quantum entanglement on free will, "
+        "in the style of Nietzsche."
+    )
+    with patch("app.services.local_file_intent.get_settings", return_value=S()):
+        lf = infer_local_file_request(msg)
+    assert not lf.matched
+
+
+def test_explain_short_still_allows_path_clarify(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    root = str(tmp_path.resolve())
+
+    class S:
+        host_executor_work_root = root
+
+    with patch("app.services.local_file_intent.get_settings", return_value=S()):
+        lf = infer_local_file_request("explain this")
+    assert lf.matched and lf.clarification_message

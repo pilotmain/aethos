@@ -262,6 +262,47 @@ _RE_FOLDER_VERB = re.compile(
     r"|read|look\s+(?:at|into)|what(?:'s| is)\s+in)\s+"
 )
 
+# Leading doc verbs that also start normal English ("Explain quantum…") — require FS cues or a very short line.
+_AMBIGUOUS_DOC_LEAD_VERB = re.compile(
+    r"(?i)^(explain|describe|analyse|analyze|summarize|review|overview)\s+"
+)
+
+
+def _ambiguous_doc_verb_has_filesystem_cues(line: str, *, path_guess: str) -> bool:
+    if (path_guess or "").strip():
+        return True
+    low = (line or "").lower()
+    if re.search(
+        r"\b(folder|directories|directory|projects?|repos?|workspace|codebase|"
+        r"package\.json|node_modules|\.git|files?\s+in)\b",
+        low,
+    ):
+        return True
+    if re.search(r"(?:/Users/|/home/|/tmp/|~/|\./)", line):
+        return True
+    if re.search(r"\b(?:src|lib|test|tests|docs)/", low):
+        return True
+    return False
+
+
+def _skip_broad_folder_read_for_general_prose(line: str, *, path_guess: str, intel_op: str) -> bool:
+    """
+    Avoid treating intellectual prose (e.g. "Explain the philosophical implications…")
+    as on-disk read requests when no path/repo/folder cues exist.
+    """
+    if intel_op == "structure":
+        return False
+    s = (line or "").strip()
+    if not _AMBIGUOUS_DOC_LEAD_VERB.match(s):
+        return False
+    if _ambiguous_doc_verb_has_filesystem_cues(s, path_guess=path_guess):
+        return False
+    # Very short lines keep legacy path-clarification ("explain this", "summarize that").
+    if len(s.split()) <= 4 and len(s) <= 72:
+        return False
+    return True
+
+
 _RE_PATH_TAIL = re.compile(
     r"(?:folder|directory|project|path)?\s*[:.]?\s*"
     r"([\w~./\\-]{1,400})"
@@ -700,6 +741,8 @@ def infer_local_file_request(
     # Broad folder requests: verb + path
     if _RE_FOLDER_VERB.search(line) or intel_op == "structure":
         path_guess = _extract_path_fragment(line)
+        if _skip_broad_folder_read_for_general_prose(line, path_guess=path_guess, intel_op=intel_op):
+            return LocalFileIntent(matched=False)
         if not path_guess:
             mf_abs = re.search(r"(?i)\b(?:folder|directory|project)\s+(/\S+)", line)
             if mf_abs:
