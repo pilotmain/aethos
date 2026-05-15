@@ -26,8 +26,9 @@ fi
 echo "🚀 Installing AethOS..."
 
 if [[ -e "${INSTALL_DIR}" ]] && [[ ! -f "${INSTALL_DIR}/scripts/install.sh" ]]; then
-  echo "Error: ${INSTALL_DIR} exists but is not an AethOS clone (missing scripts/install.sh)." >&2
-  exit 1
+  echo "⚠️  ${INSTALL_DIR} exists but is not a valid AethOS install (missing scripts/install.sh)."
+  echo "   Removing leftover directory and re-cloning…"
+  rm -rf "${INSTALL_DIR}"
 fi
 
 if [[ ! -d "${INSTALL_DIR}" ]]; then
