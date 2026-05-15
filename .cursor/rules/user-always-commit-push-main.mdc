@@ -1,0 +1,12 @@
+---
+description: Operator preference — finish tasks with commit + push to main
+globs:
+  - "**/*"
+alwaysApply: true
+---
+
+# Commit and push to `main`
+
+When work in this repository reaches a **coherent, verified slice** (tests pass, no intentional WIP left staged), the agent should **commit** and **`git push origin main`** in the same turn unless the user explicitly says to hold, use a branch, or skip push.
+
+Do not leave completed parity or feature work only on disk when the user expects GitHub to match `main`.
