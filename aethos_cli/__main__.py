@@ -288,7 +288,7 @@ def main() -> int:
         nargs="?",
         default=None,
         metavar="CATEGORY",
-        help="gateway | agents | … | tools | workflows | runtime_events | runtime_sessions | runtime_metrics",
+        help="gateway | agents | ... | tools | workflows | runtime_events | runtime_sessions | runtime_metrics",
     )
     sp_logs.add_argument("--lines", type=int, default=80, dest="log_lines")
 
