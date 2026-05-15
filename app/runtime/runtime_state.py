@@ -82,6 +82,10 @@ def default_runtime_state(*, workspace_root: Path | None = None) -> dict[str, An
         },
         "runtime_sessions": {},
         "runtime_event_buffer": [],
+        "deployment_records": {},
+        "environments": {},
+        "operational_workflows": [],
+        "deployment_scheduler": {"pending": [], "locks": {}},
         "runtime_metrics": {
             "scheduler_ticks": 0,
             "last_scheduler_tick_at": None,
@@ -89,7 +93,32 @@ def default_runtime_state(*, workspace_root: Path | None = None) -> dict[str, An
             "tasks_completed_total": 0,
             "tasks_failed_total": 0,
             "runtime_boot_count": 0,
+            "deployment_started_total": 0,
+            "deployment_completed_total": 0,
+            "deployment_failed_total": 0,
+            "rollback_started_total": 0,
+            "rollback_completed_total": 0,
+            "deployment_recovery_boot_total": 0,
+            "environment_recovery_boot_total": 0,
+            "operational_workflow_total": 0,
+            "coordination_active_agents": 0,
+            "coordination_delegations_total": 0,
+            "coordination_autonomous_loops": 0,
+            "coordination_supervisor_restarts": 0,
+            "coordination_recovery_loops": 0,
+            "planning_generated_total": 0,
+            "replanning_total": 0,
+            "optimization_cycles_total": 0,
+            "adaptive_retry_total": 0,
+            "reasoning_cycles_total": 0,
+            "optimization_success_total": 0,
         },
+        "coordination_agents": {},
+        "agent_delegations": {},
+        "autonomous_loops": [],
+        "runtime_supervisors": {},
+        "planning_records": {},
+        "planning_outcomes": [],
     }
 
 
@@ -155,6 +184,76 @@ def ensure_orchestration_schema(st: dict[str, Any]) -> dict[str, Any]:
     return st
 
 
+def ensure_deployment_environment_schema(st: dict[str, Any]) -> dict[str, Any]:
+    """Merge deployment + environment runtime keys (OpenClaw infra ops parity)."""
+    base = default_runtime_state()
+    if "deployment_records" not in st or not isinstance(st.get("deployment_records"), dict):
+        st["deployment_records"] = dict(base.get("deployment_records") or {})
+    if "environments" not in st or not isinstance(st.get("environments"), dict):
+        st["environments"] = dict(base.get("environments") or {})
+    if "operational_workflows" not in st or not isinstance(st.get("operational_workflows"), list):
+        st["operational_workflows"] = list(base.get("operational_workflows") or [])
+    ds = st.setdefault("deployment_scheduler", base.get("deployment_scheduler") or {})
+    if not isinstance(ds, dict):
+        st["deployment_scheduler"] = dict(base["deployment_scheduler"])
+        ds = st["deployment_scheduler"]
+    ds.setdefault("pending", [])
+    ds.setdefault("locks", {})
+    if not isinstance(ds.get("pending"), list):
+        ds["pending"] = []
+    if not isinstance(ds.get("locks"), dict):
+        ds["locks"] = {}
+    m = st.setdefault("runtime_metrics", base.get("runtime_metrics") or {})
+    if not isinstance(m, dict):
+        st["runtime_metrics"] = dict(base["runtime_metrics"])
+        m = st["runtime_metrics"]
+    for k, v in (base.get("runtime_metrics") or {}).items():
+        m.setdefault(k, v)
+    return st
+
+
+def ensure_agent_coordination_schema(st: dict[str, Any]) -> dict[str, Any]:
+    """Merge autonomous multi-agent coordination keys (OpenClaw parity)."""
+    base = default_runtime_state()
+    ca = st.setdefault("coordination_agents", base.get("coordination_agents") or {})
+    if not isinstance(ca, dict):
+        st["coordination_agents"] = {}
+    ad = st.setdefault("agent_delegations", base.get("agent_delegations") or {})
+    if not isinstance(ad, dict):
+        st["agent_delegations"] = {}
+    al = st.setdefault("autonomous_loops", base.get("autonomous_loops") or [])
+    if not isinstance(al, list):
+        st["autonomous_loops"] = []
+    rs = st.setdefault("runtime_supervisors", base.get("runtime_supervisors") or {})
+    if not isinstance(rs, dict):
+        st["runtime_supervisors"] = {}
+    m = st.setdefault("runtime_metrics", base.get("runtime_metrics") or {})
+    if not isinstance(m, dict):
+        st["runtime_metrics"] = dict(base["runtime_metrics"])
+        m = st["runtime_metrics"]
+    for k, v in (base.get("runtime_metrics") or {}).items():
+        m.setdefault(k, v)
+    return st
+
+
+def ensure_planning_intelligence_schema(st: dict[str, Any]) -> dict[str, Any]:
+    """Merge adaptive planning + intelligence runtime keys (OpenClaw parity)."""
+    base = default_runtime_state()
+    pr = st.setdefault("planning_records", base.get("planning_records") or {})
+    if not isinstance(pr, dict):
+        st["planning_records"] = {}
+    po = st.setdefault("planning_outcomes", base.get("planning_outcomes") or [])
+    if not isinstance(po, list):
+        st["planning_outcomes"] = []
+    m = st.setdefault("runtime_metrics", base.get("runtime_metrics") or {})
+    if not isinstance(m, dict):
+        st["runtime_metrics"] = dict(base["runtime_metrics"])
+        m = st["runtime_metrics"]
+    for k, v in (base.get("runtime_metrics") or {}).items():
+        m.setdefault(k, v)
+    return st
+
+
 def ensure_multi_session_schema(st: dict[str, Any]) -> dict[str, Any]:
     """Merge OpenClaw multi-session + runtime event buffers (forward-compatible)."""
     base = default_runtime_state()
@@ -187,6 +286,9 @@ def load_runtime_state() -> dict[str, Any]:
         ensure_orchestration_schema(data)
         ensure_execution_schema(data)
         ensure_multi_session_schema(data)
+        ensure_deployment_environment_schema(data)
+        ensure_agent_coordination_schema(data)
+        ensure_planning_intelligence_schema(data)
         return data
     except Exception as exc:
         _LOG.warning("runtime_state.load_failed %s — resetting", exc)

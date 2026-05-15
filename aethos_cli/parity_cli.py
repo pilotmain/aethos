@@ -62,6 +62,18 @@ def _log_name_matches_category(name: str, category: str | None) -> bool:
         return "retries" in n
     if category == "scheduler":
         return n == "scheduler.log"
+    if category == "planning":
+        return n == "planning.log"
+    if category == "reasoning":
+        return n == "reasoning.log"
+    if category == "optimization":
+        return n == "optimization.log"
+    if category == "replanning":
+        return n == "replanning.log"
+    if category == "adaptive_execution":
+        return n == "adaptive_execution.log"
+    if category == "delegation_optimization":
+        return n == "delegation_optimization.log"
     return True
 
 
@@ -82,8 +94,17 @@ def cmd_logs(*, lines: int = 80, category: str | None = None) -> int:
         "orchestration",
         "recovery",
         "deployments",
-        "gateway",
+        "deployment_health",
+        "deployment_recovery",
+        "environments",
+        "rollback",
+        "operations",
         "agents",
+        "agent_supervisor",
+        "agent_delegation",
+        "autonomous_loops",
+        "runtime_supervision",
+        "gateway",
         "execution",
         "checkpoints",
         "retries",
@@ -93,6 +114,12 @@ def cmd_logs(*, lines: int = 80, category: str | None = None) -> int:
         "runtime_events",
         "runtime_sessions",
         "runtime_metrics",
+        "planning",
+        "reasoning",
+        "optimization",
+        "replanning",
+        "adaptive_execution",
+        "delegation_optimization",
     ):
         from app.core.paths import get_aethos_home_dir
 
@@ -248,6 +275,15 @@ def _runtime_doctor_messages() -> list[str]:
             from app.services.host_executor import is_command_safe
 
             out.append("shell_allowlist_echo: " + ("OK" if is_command_safe("echo parity_doctor") else "FAIL"))
+            from app.runtime.integrity.runtime_integrity import validate_runtime_state
+
+            inv = validate_runtime_state(st)
+            if inv.get("ok"):
+                out.append("runtime_integrity: OK")
+            else:
+                out.append(f"runtime_integrity: FAIL ({inv.get('issue_count', 0)} issue(s))")
+                for i in (inv.get("issues") or [])[:15]:
+                    out.append(f"  - {i}")
             pr_ep = execution_plan.prune_orphan_plans(st)
             if pr_ep:
                 out.append(f"execution_plans: pruned {pr_ep} orphan plan(s)")

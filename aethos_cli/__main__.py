@@ -279,16 +279,60 @@ def main() -> int:
     sp_task_show = task_sub.add_parser("show", help="GET /api/v1/runtime/tasks/{task_id}")
     sp_task_show.add_argument("task_id")
 
+    sp_dep = sub.add_parser("deployments", help="Deployment runtime API (OpenClaw infra parity)")
+    dep_sub = sp_dep.add_subparsers(dest="dep_cmd", required=True)
+    dep_sub.add_parser("list", help="GET /api/v1/deployments")
+    sp_dep_show = dep_sub.add_parser("show", help="GET /api/v1/deployments/{id}")
+    sp_dep_show.add_argument("deployment_id")
+    sp_dep_logs = dep_sub.add_parser("logs", help="GET /api/v1/deployments/{id}/logs")
+    sp_dep_logs.add_argument("deployment_id")
+
+    sp_env = sub.add_parser("environments", help="Environment runtime API (OpenClaw infra parity)")
+    env_sub = sp_env.add_subparsers(dest="env_cmd", required=True)
+    env_sub.add_parser("list", help="GET /api/v1/environments")
+    sp_env_show = env_sub.add_parser("show", help="GET /api/v1/environments/{id}")
+    sp_env_show.add_argument("environment_id")
+
+    sp_agents = sub.add_parser("agents", help="Coordination agent API (multi-agent parity)")
+    ag_sub = sp_agents.add_subparsers(dest="agents_cmd", required=True)
+    ag_sub.add_parser("list", help="GET /api/v1/runtime/agents/")
+    sp_ag_show = ag_sub.add_parser("show", help="GET /api/v1/runtime/agents/{id}")
+    sp_ag_show.add_argument("agent_id")
+    sp_ag_tasks = ag_sub.add_parser("tasks", help="GET /api/v1/runtime/agents/{id}/tasks")
+    sp_ag_tasks.add_argument("agent_id")
+
+    sp_planning = sub.add_parser("planning", help="Adaptive planning runtime API (OpenClaw parity)")
+    plan_sub = sp_planning.add_subparsers(dest="planning_cmd", required=True)
+    plan_sub.add_parser("list", help="GET /api/v1/runtime/planning")
+    sp_plan_show = plan_sub.add_parser("show", help="GET /api/v1/runtime/planning/{planning_id}")
+    sp_plan_show.add_argument("planning_id")
+
+    sp_optimization = sub.add_parser(
+        "optimization",
+        help="Runtime optimization snapshot (OpenClaw parity; default: metrics)",
+    )
+    opt_sub = sp_optimization.add_subparsers(dest="optimization_cmd", required=False)
+    opt_sub.add_parser("metrics", help="GET /api/v1/runtime/optimization")
+
+    sp_ops = sub.add_parser("operations", help="Operational workflow queue API")
+    ops_sub = sp_ops.add_subparsers(dest="ops_cmd", required=True)
+    ops_sub.add_parser("list", help="GET /api/v1/operations")
+    ops_sub.add_parser("supervisors", help="GET /api/v1/runtime/supervisors")
+    ops_sub.add_parser("loops", help="GET /api/v1/runtime/loops")
+    sp_ops_run = ops_sub.add_parser("run", help="POST /api/v1/operations/run")
+    sp_ops_run.add_argument("op_type", help="deploy | rollback | health_check | …")
+    sp_ops_run.add_argument("--environment-id", default=None, dest="environment_id")
+
     sp_logs = sub.add_parser(
         "logs",
-        help="Tail logs: optional category gateway|agents|deployments|runtime|orchestration|recovery|execution|checkpoints|retries|scheduler|tools|workflows (runtime = ~/.aethos/aethos.json)",
+        help="Tail logs: optional category gateway|agents|…|planning|reasoning|optimization|replanning|adaptive_execution|delegation_optimization|… (runtime = ~/.aethos/aethos.json)",
     )
     sp_logs.add_argument(
         "log_category",
         nargs="?",
         default=None,
         metavar="CATEGORY",
-        help="gateway | agents | ... | tools | workflows | runtime_events | runtime_sessions | runtime_metrics",
+        help="gateway | agents | ... | planning | reasoning | optimization | replanning | adaptive_execution | delegation_optimization | tools | workflows | runtime_events | runtime_sessions | runtime_metrics",
     )
     sp_logs.add_argument("--lines", type=int, default=80, dest="log_lines")
 
@@ -568,6 +612,88 @@ def main() -> int:
         if args.task_cmd == "show":
             tid = urllib.parse.quote(str(args.task_id), safe="")
             code, body = _req("GET", f"/api/v1/runtime/tasks/{tid}", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+
+    if args.cmd == "deployments":
+        if args.dep_cmd == "list":
+            code, body = _req("GET", "/api/v1/deployments", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.dep_cmd == "show":
+            did = urllib.parse.quote(str(args.deployment_id), safe="")
+            code, body = _req("GET", f"/api/v1/deployments/{did}", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.dep_cmd == "logs":
+            did = urllib.parse.quote(str(args.deployment_id), safe="")
+            code, body = _req("GET", f"/api/v1/deployments/{did}/logs", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+
+    if args.cmd == "environments":
+        if args.env_cmd == "list":
+            code, body = _req("GET", "/api/v1/environments", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.env_cmd == "show":
+            eid = urllib.parse.quote(str(args.environment_id), safe="")
+            code, body = _req("GET", f"/api/v1/environments/{eid}", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+
+    if args.cmd == "agents":
+        if args.agents_cmd == "list":
+            code, body = _req("GET", "/api/v1/runtime/agents/", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.agents_cmd == "show":
+            aid = urllib.parse.quote(str(args.agent_id), safe="")
+            code, body = _req("GET", f"/api/v1/runtime/agents/{aid}", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.agents_cmd == "tasks":
+            aid = urllib.parse.quote(str(args.agent_id), safe="")
+            code, body = _req("GET", f"/api/v1/runtime/agents/{aid}/tasks", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+
+    if args.cmd == "planning":
+        if args.planning_cmd == "list":
+            code, body = _req("GET", "/api/v1/runtime/planning", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.planning_cmd == "show":
+            pl = urllib.parse.quote(str(args.planning_id), safe="")
+            code, body = _req("GET", f"/api/v1/runtime/planning/{pl}", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+
+    if args.cmd == "optimization":
+        subc = getattr(args, "optimization_cmd", None) or "metrics"
+        if subc == "metrics":
+            code, body = _req("GET", "/api/v1/runtime/optimization", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        print("Unknown optimization subcommand", file=sys.stderr)
+        return 1
+
+    if args.cmd == "operations":
+        if args.ops_cmd == "list":
+            code, body = _req("GET", "/api/v1/operations", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.ops_cmd == "supervisors":
+            code, body = _req("GET", "/api/v1/runtime/supervisors", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.ops_cmd == "loops":
+            code, body = _req("GET", "/api/v1/runtime/loops", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.ops_cmd == "run":
+            payload = json.dumps({"op_type": str(args.op_type), "environment_id": args.environment_id}).encode()
+            code, body = _req("POST", "/api/v1/operations/run", uid=uid, body=payload)
             print(body[:24000])
             return 0 if code == 200 else 1
 

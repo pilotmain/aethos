@@ -44,6 +44,14 @@ def persist_operator_workflow(
     )
     pid = execution_plan.create_plan(st, tid, steps)
     execution_plan.attach_plan_to_task(st, tid, pid)
+    from app.deployments.deployment_runtime import on_operator_plan_created_if_deploy
+
+    on_operator_plan_created_if_deploy(
+        st, task_id=tid, plan_id=str(pid), user_id=user_id, session_id=sid, steps=steps
+    )
+    from app.planning.planner_runtime import ensure_planning_record_for_plan
+
+    ensure_planning_record_for_plan(st, task_id=tid, plan_id=str(pid), user_id=user_id)
     task_queue.enqueue_task_id(st, "execution_queue", tid)
     attach_task(st, sid, tid)
     workflow_events.log_workflow_event(

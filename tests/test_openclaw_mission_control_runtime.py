@@ -14,3 +14,7 @@ def test_mission_control_snapshot_includes_orchestration_runtime(db_session) -> 
     assert "queues" in ort
     assert "metrics" in ort
     assert "sessions" in ort
+    pln = ort.get("planning") or {}
+    assert isinstance(pln, dict)
+    assert "records_tail" in pln
+    assert "outcomes_tail" in pln

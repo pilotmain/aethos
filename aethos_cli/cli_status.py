@@ -129,6 +129,49 @@ def cmd_status() -> int:
                     rs_doc = doc.get("runtime_sessions") or {}
                     if isinstance(rs_doc, dict):
                         print(f"runtime_sessions: {len(rs_doc)}")
+                    try:
+                        from app.runtime.integrity.runtime_integrity import validate_runtime_state
+
+                        inv = validate_runtime_state(doc)
+                        print(
+                            f"runtime_integrity: {'OK' if inv.get('ok') else 'ISSUES'} "
+                            f"({int(inv.get('issue_count') or 0)} issue(s))"
+                        )
+                    except Exception as exc:
+                        print(f"runtime_integrity: skip ({exc})")
+                    buf = doc.get("runtime_event_buffer")
+                    if isinstance(buf, list):
+                        print(f"runtime_event_buffer: {len(buf)} entries")
+                    ca = doc.get("coordination_agents") or {}
+                    ad = doc.get("agent_delegations") or {}
+                    lo = doc.get("autonomous_loops") or []
+                    sup = doc.get("runtime_supervisors") or {}
+                    if isinstance(ca, dict):
+                        d_ag = sum(1 for r in ca.values() if isinstance(r, dict) and str(r.get("status")) == "delegating")
+                        r_ag = sum(1 for r in ca.values() if isinstance(r, dict) and str(r.get("status")) == "running")
+                        print("— Agent coordination —")
+                        print(f"coordination_agents: {len(ca)}  running={r_ag}  delegating={d_ag}")
+                    if isinstance(ad, dict):
+                        print(f"agent_delegations:   {len(ad)}")
+                    if isinstance(lo, list):
+                        lr = sum(1 for x in lo if isinstance(x, dict) and str(x.get("status")) == "running")
+                        print(f"autonomous_loops:    {len(lo)}  running={lr}")
+                    if isinstance(sup, dict):
+                        print(f"runtime_supervisors: {len(sup)}")
+                    prm = doc.get("planning_records") or {}
+                    po = doc.get("planning_outcomes") or []
+                    rmx = doc.get("runtime_metrics") or {}
+                    if isinstance(prm, dict) and isinstance(rmx, dict):
+                        print("— Planning intelligence —")
+                        print(f"planning_records:    {len(prm)}")
+                        print(f"planning_outcomes:   {len(po) if isinstance(po, list) else 0}")
+                        print(
+                            f"metrics: planning_gen={int(rmx.get('planning_generated_total') or 0)} "
+                            f"replan={int(rmx.get('replanning_total') or 0)} "
+                            f"opt_cycles={int(rmx.get('optimization_cycles_total') or 0)} "
+                            f"adaptive_retry={int(rmx.get('adaptive_retry_total') or 0)} "
+                            f"reasoning={int(rmx.get('reasoning_cycles_total') or 0)}"
+                        )
                 print()
             except Exception as exc:  # noqa: BLE001
                 print(f"(could not parse runtime file: {exc})", file=sys.stderr)

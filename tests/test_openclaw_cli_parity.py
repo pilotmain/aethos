@@ -22,7 +22,7 @@ def test_cli_help_lists_openclaw_class_commands() -> None:
     )
     assert r.returncode == 0, r.stderr
     out = (r.stdout or "") + (r.stderr or "")
-    for cmd in ("onboard", "gateway", "message", "status", "logs", "doctor"):
+    for cmd in ("onboard", "gateway", "message", "status", "logs", "doctor", "planning", "optimization"):
         assert cmd in out, f"CLI help must advertise `{cmd}` for OpenClaw-class parity"
 
 

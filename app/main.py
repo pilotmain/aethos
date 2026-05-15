@@ -19,6 +19,7 @@ from app.api.routes import (
     admin_privacy,
     budget_settings,
     agent_organization,
+    agent_coordination,
     agent_spawn,
     agent_runtime_api,
     apple_messages,
@@ -34,6 +35,7 @@ from app.api.routes import (
     cron_automation,
     custom_agents_api,
     dashboard,
+    deployment_environment,
     dev_runtime,
     dumps,
     email,
@@ -423,8 +425,9 @@ app.include_router(multimodal.router, prefix=settings.api_v1_prefix)
 app.include_router(nexa_scheduler_api.router, prefix=settings.api_v1_prefix)
 app.include_router(nexa_skills_api.router, prefix=settings.api_v1_prefix)
 app.include_router(orchestration.router, prefix=settings.api_v1_prefix)
-# Sub-agent CRUD + POST …/agents/execute/{agent_name} (orchestration registry)
+# Coordination agents: GET /api/v1/agents/* (multi-agent parity)
 app.include_router(agent_spawn.router, prefix=settings.api_v1_prefix)
+app.include_router(agent_coordination.router, prefix=settings.api_v1_prefix)
 app.include_router(ceo_dashboard.router, prefix=settings.api_v1_prefix)
 app.include_router(mission_agents.router, prefix=settings.api_v1_prefix)
 app.include_router(jobs.router, prefix=settings.api_v1_prefix)
@@ -447,6 +450,7 @@ app.include_router(dev_runtime.router, prefix=settings.api_v1_prefix)
 app.include_router(agent_runtime_api.router, prefix=settings.api_v1_prefix)
 app.include_router(report_watcher.router, prefix=settings.api_v1_prefix)
 app.include_router(runtime_workflow.router, prefix=settings.api_v1_prefix)
+app.include_router(deployment_environment.router, prefix=settings.api_v1_prefix)
 app.include_router(scraping.router, prefix=settings.api_v1_prefix)
 app.include_router(agent_organization.router, prefix=settings.api_v1_prefix)
 app.include_router(slack.router, prefix=settings.api_v1_prefix)

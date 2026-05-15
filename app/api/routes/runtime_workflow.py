@@ -261,7 +261,6 @@ def list_runtime_events(
 
 @router.get("/metrics")
 def get_runtime_metrics(app_user_id: str = Depends(get_valid_web_user_id)) -> dict[str, Any]:
-    _ = app_user_id
     st = load_runtime_state()
     m = dict(st.get("runtime_metrics") or {}) if isinstance(st.get("runtime_metrics"), dict) else {}
     queues = {qn: task_queue.queue_len(st, qn) for qn in task_queue.QUEUE_NAMES}
@@ -269,7 +268,17 @@ def get_runtime_metrics(app_user_id: str = Depends(get_valid_web_user_id)) -> di
     rs = st.get("runtime_sessions")
     if isinstance(rs, dict):
         sess_n = len(rs)
-    return {"metrics": m, "queues": queues, "session_count": sess_n}
+    from app.deployments.deployment_health import deployment_health_summary, environment_health_bridge
+
+    dep_h = deployment_health_summary(st, user_id=app_user_id)
+    env_h = environment_health_bridge(st, user_id=app_user_id)
+    return {
+        "metrics": m,
+        "queues": queues,
+        "session_count": sess_n,
+        "deployment_health": dep_h,
+        "environment_health": env_h,
+    }
 
 
 @router.get("/queues")
@@ -279,9 +288,118 @@ def get_runtime_queues(app_user_id: str = Depends(get_valid_web_user_id)) -> dic
     return {qn: task_queue.queue_len(st, qn) for qn in task_queue.QUEUE_NAMES}
 
 
+@router.get("/supervisors")
+def list_runtime_supervisors(app_user_id: str = Depends(get_valid_web_user_id)) -> dict[str, Any]:
+    st = load_runtime_state()
+    rs = st.get("runtime_supervisors")
+    rows: list[dict[str, Any]] = []
+    if isinstance(rs, dict):
+        for row in rs.values():
+            if not isinstance(row, dict):
+                continue
+            if str(row.get("user_id") or "") and str(row.get("user_id") or "") != str(app_user_id):
+                continue
+            rows.append(dict(row))
+    return {"supervisors": rows, "count": len(rows)}
+
+
+@router.get("/loops")
+def list_autonomous_loops(app_user_id: str = Depends(get_valid_web_user_id)) -> dict[str, Any]:
+    st = load_runtime_state()
+    lo = st.get("autonomous_loops")
+    rows: list[dict[str, Any]] = []
+    if isinstance(lo, list):
+        for row in lo:
+            if not isinstance(row, dict):
+                continue
+            if str(row.get("user_id") or "") and str(row.get("user_id") or "") != str(app_user_id):
+                continue
+            rows.append(dict(row))
+    return {"loops": rows, "count": len(rows)}
+
+
+@router.get("/planning")
+def list_planning_runtime(app_user_id: str = Depends(get_valid_web_user_id)) -> dict[str, Any]:
+    st = load_runtime_state()
+    from app.planning.planner_runtime import list_planning_for_user
+
+    rows = list_planning_for_user(st, app_user_id)
+    return {"planning": rows, "count": len(rows)}
+
+
+@router.get("/planning/{planning_id}")
+def get_planning_runtime(planning_id: str, app_user_id: str = Depends(get_valid_web_user_id)) -> dict[str, Any]:
+    st = load_runtime_state()
+    from app.planning.planner_runtime import get_planning
+
+    row = get_planning(st, planning_id)
+    if not row or str(row.get("user_id") or "") != str(app_user_id):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="unknown planning_id")
+    return {"planning": row}
+
+
+@router.get("/reasoning")
+def list_reasoning_runtime(app_user_id: str = Depends(get_valid_web_user_id)) -> dict[str, Any]:
+    st = load_runtime_state()
+    from app.planning.planner_runtime import list_planning_for_user
+
+    rows = list_planning_for_user(st, app_user_id)
+    out = [
+        {
+            "planning_id": r.get("planning_id"),
+            "task_id": r.get("task_id"),
+            "plan_id": r.get("plan_id"),
+            "reasoning_state": r.get("reasoning_state"),
+        }
+        for r in rows
+    ]
+    return {"reasoning": out, "count": len(out)}
+
+
+@router.get("/optimization")
+def get_optimization_runtime(app_user_id: str = Depends(get_valid_web_user_id)) -> dict[str, Any]:
+    st = load_runtime_state()
+    m = dict(st.get("runtime_metrics") or {}) if isinstance(st.get("runtime_metrics"), dict) else {}
+    from app.planning.planner_runtime import list_planning_for_user
+
+    rows = list_planning_for_user(st, app_user_id)
+    samples = [
+        {"planning_id": r.get("planning_id"), "optimization_state": r.get("optimization_state")}
+        for r in rows[:50]
+    ]
+    return {
+        "metrics": {
+            "optimization_cycles_total": int(m.get("optimization_cycles_total") or 0),
+            "optimization_success_total": int(m.get("optimization_success_total") or 0),
+        },
+        "planning_samples": samples,
+    }
+
+
+@router.get("/replanning")
+def get_replanning_runtime(app_user_id: str = Depends(get_valid_web_user_id)) -> dict[str, Any]:
+    st = load_runtime_state()
+    tr = task_registry.registry(st)
+    ol = st.get("planning_outcomes")
+    tail: list[dict[str, Any]] = []
+    if isinstance(ol, list):
+        for snap in ol[-120:]:
+            if not isinstance(snap, dict):
+                continue
+            tid = str(snap.get("task_id") or "")
+            t = tr.get(tid) if tid else None
+            if isinstance(t, dict) and str(t.get("user_id") or "") == str(app_user_id):
+                tail.append(dict(snap))
+    m = dict(st.get("runtime_metrics") or {}) if isinstance(st.get("runtime_metrics"), dict) else {}
+    return {
+        "outcomes_tail": tail[-40:],
+        "replanning_total": int(m.get("replanning_total") or 0),
+        "adaptive_retry_total": int(m.get("adaptive_retry_total") or 0),
+    }
+
+
 @router.get("/health")
 def get_runtime_health(app_user_id: str = Depends(get_valid_web_user_id)) -> dict[str, Any]:
-    _ = app_user_id
     st = load_runtime_state()
     gw = dict(st.get("gateway") or {}) if isinstance(st.get("gateway"), dict) else {}
     sch = {}
@@ -290,13 +408,86 @@ def get_runtime_health(app_user_id: str = Depends(get_valid_web_user_id)) -> dic
         sch = dict(orch["scheduler"])
     buf = st.get("runtime_event_buffer")
     ev_ok = isinstance(buf, list)
+    ev_len = len(buf) if ev_ok else 0
+    from app.deployments.deployment_health import deployment_health_summary, environment_health_bridge
+
+    dep_h = deployment_health_summary(st, user_id=app_user_id)
+    env_h = environment_health_bridge(st, user_id=app_user_id)
+    ow = st.get("operational_workflows")
+    ow_n = len(ow) if isinstance(ow, list) else 0
+    ds = st.get("deployment_scheduler")
+    ds_p = len(ds.get("pending") or []) if isinstance(ds, dict) and isinstance(ds.get("pending"), list) else 0
+    from app.runtime.integrity.runtime_integrity import validate_runtime_state
+
+    inv = validate_runtime_state(st)
+    rec = st.get("recovery") or {}
+    rec_events = rec.get("events") if isinstance(rec, dict) else None
+    rec_n = len(rec_events) if isinstance(rec_events, list) else 0
+    from app.agents.agent_delegation import delegations_map
+    from app.agents.agent_registry import list_agents_for_user
+
+    agents_u = list_agents_for_user(st, app_user_id)
+    del_n = sum(
+        1
+        for d in delegations_map(st).values()
+        if isinstance(d, dict) and str(d.get("user_id") or "") == str(app_user_id)
+    )
+    lo2 = st.get("autonomous_loops") if isinstance(st.get("autonomous_loops"), list) else []
+    loops_run = sum(
+        1
+        for x in lo2
+        if isinstance(x, dict)
+        and str(x.get("user_id") or "") == str(app_user_id)
+        and str(x.get("status")) == "running"
+    )
+    supm = st.get("runtime_supervisors") if isinstance(st.get("runtime_supervisors"), dict) else {}
+    sup_n = sum(
+        1 for x in supm.values() if isinstance(x, dict) and str(x.get("user_id") or "") == str(app_user_id)
+    )
+    from app.planning.planner_runtime import list_planning_for_user
+
+    pr_rows = list_planning_for_user(st, app_user_id)
+    rm = st.get("runtime_metrics") if isinstance(st.get("runtime_metrics"), dict) else {}
+    planning_block = {
+        "records": len(pr_rows),
+        "planning_generated_total": int(rm.get("planning_generated_total") or 0),
+        "replanning_total": int(rm.get("replanning_total") or 0),
+        "optimization_cycles_total": int(rm.get("optimization_cycles_total") or 0),
+        "adaptive_retry_total": int(rm.get("adaptive_retry_total") or 0),
+        "reasoning_cycles_total": int(rm.get("reasoning_cycles_total") or 0),
+    }
     return {
         "gateway_running": bool(gw.get("running")),
         "scheduler_running": bool(sch.get("running")),
         "scheduler_ticks": sch.get("ticks"),
+        "scheduler_last_error": sch.get("last_error"),
         "runtime_event_buffer_ok": ev_ok,
+        "runtime_event_buffer_size": ev_len,
+        "recovery_events": rec_n,
+        "integrity_ok": bool(inv.get("ok")),
+        "integrity_issue_count": int(inv.get("issue_count") or 0),
         "workspace_root": str((st.get("workspace") or {}).get("root") or ""),
+        "deployment_health": dep_h,
+        "environment_health": env_h,
+        "operational_workflows_count": ow_n,
+        "deployment_scheduler_pending": ds_p,
+        "coordination": {
+            "agents": len(agents_u),
+            "delegations": del_n,
+            "loops_running": loops_run,
+            "supervisors": sup_n,
+        },
+        "planning": planning_block,
     }
+
+
+@router.get("/integrity")
+def get_runtime_integrity(app_user_id: str = Depends(get_valid_web_user_id)) -> dict[str, Any]:
+    _ = app_user_id
+    st = load_runtime_state()
+    from app.runtime.integrity.runtime_integrity import validate_runtime_state
+
+    return validate_runtime_state(st)
 
 
 @router.get("/logs")
@@ -316,6 +507,23 @@ def tail_runtime_logs(
         "runtime_events",
         "runtime_sessions",
         "runtime_metrics",
+        "deployments",
+        "deployment_health",
+        "deployment_recovery",
+        "environments",
+        "rollback",
+        "operations",
+        "agents",
+        "agent_supervisor",
+        "agent_delegation",
+        "autonomous_loops",
+        "runtime_supervision",
+        "planning",
+        "reasoning",
+        "optimization",
+        "replanning",
+        "adaptive_execution",
+        "delegation_optimization",
     }
     if stem not in allowed:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=f"stem must be one of {sorted(allowed)}")
@@ -336,15 +544,23 @@ async def runtime_events_websocket(ws: WebSocket, user_id: str | None = Query(No
     await ws.accept()
     uid = (user_id or "").strip()
     queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue(maxsize=500)
+    loop = asyncio.get_running_loop()
 
     def push(event: dict[str, Any]) -> None:
         if uid:
             pl = event.get("payload")
             if not isinstance(pl, dict) or str(pl.get("user_id") or "") != uid:
                 return
+
+        def _enqueue() -> None:
+            try:
+                queue.put_nowait(event)
+            except asyncio.QueueFull:
+                pass
+
         try:
-            queue.put_nowait(event)
-        except asyncio.QueueFull:
+            loop.call_soon_threadsafe(_enqueue)
+        except RuntimeError:
             pass
 
     subscribe(push)

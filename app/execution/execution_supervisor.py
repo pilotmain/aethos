@@ -33,6 +33,12 @@ _TOOL_TYPES = frozenset(
 )
 
 
+def _sync_deployment_terminal(st: dict[str, Any], task_id: str, plan: dict[str, Any], terminal: str) -> None:
+    from app.deployments.deployment_runtime import sync_deployment_terminal
+
+    sync_deployment_terminal(st, task_id=task_id, plan=plan, terminal=terminal)
+
+
 def _step_runs_tools(step: dict[str, Any]) -> bool:
     tblk = step.get("tool")
     if isinstance(tblk, dict) and str(tblk.get("name") or "").strip():
@@ -83,11 +89,17 @@ def tick_planned_task(
     if not plan:
         task_registry.update_task_state(st, task_id, "failed", reason="missing_execution_plan")
         _note_supervisor(st, error="missing_plan")
+        from app.planning.replanning_runtime import on_plan_terminal_failure
+
+        on_plan_terminal_failure(st, task_id=task_id, plan_id=str(pid), reason="missing_plan")
         return {"terminal": "failed", "plan_id": str(pid), "reason": "missing_plan"}
 
     if not execution_dependencies.validate_plan_dependency_dag(plan):
         task_registry.update_task_state(st, task_id, "failed", reason="invalid_dependency_dag")
         _note_supervisor(st, error="dependency_cycle")
+        from app.planning.replanning_runtime import on_plan_terminal_failure
+
+        on_plan_terminal_failure(st, task_id=task_id, plan_id=str(pid), reason="dependency_cycle")
         return {"terminal": "failed", "plan_id": str(pid), "reason": "dependency_cycle"}
 
     _reconcile_blocked_labels(plan)
@@ -100,6 +112,10 @@ def tick_planned_task(
         execution_log.log_execution_event(
             "execution_failed", task_id=task_id, plan_id=str(pid), status="failed"
         )
+        _sync_deployment_terminal(st, task_id, plan, "failed")
+        from app.planning.replanning_runtime import on_plan_terminal_failure
+
+        on_plan_terminal_failure(st, task_id=task_id, plan_id=str(pid), reason="any_step_failed")
         return {"terminal": "failed", "plan_id": str(pid)}
 
     if execution_plan.all_steps_terminal(plan):
@@ -125,6 +141,7 @@ def tick_planned_task(
         execution_log.log_execution_event(
             "execution_completed", task_id=task_id, plan_id=str(pid), status="completed"
         )
+        _sync_deployment_terminal(st, task_id, plan, "completed")
         return {"terminal": "completed", "plan_id": str(pid)}
 
     ready = execution_dependencies.ready_steps(plan, now_ts=now_ts)
@@ -139,6 +156,9 @@ def tick_planned_task(
     step = ready[0]
     sid = str(step.get("step_id"))
     step["status"] = "running"
+    from app.deployments.deployment_runtime import note_deploy_step_started
+
+    note_deploy_step_started(st, task_id=task_id, plan=plan, step=step)
     execution_log.log_execution_event(
         "execution_step_started",
         task_id=task_id,
@@ -154,6 +174,11 @@ def tick_planned_task(
         task_registry.update_task_state(st, task_id, "retrying")
         execution_memory.set_continuation(st, task_id, last_step=sid, phase="retry")
         execution_plan.update_plan_timestamp(plan)
+        from app.planning.adaptive_execution import notify_retry_scheduled
+
+        notify_retry_scheduled(
+            st, task_id=task_id, plan_id=str(pid), step_id=sid, reason="simulated_failure"
+        )
         return {"terminal": "retrying", "plan_id": str(pid), "step_id": sid}
 
     start_iso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
@@ -202,6 +227,9 @@ def tick_planned_task(
                 task_registry.update_task_state(st, task_id, "retrying")
                 execution_memory.set_continuation(st, task_id, last_step=sid, phase="retry")
                 execution_plan.update_plan_timestamp(plan)
+                from app.planning.adaptive_execution import notify_retry_scheduled
+
+                notify_retry_scheduled(st, task_id=task_id, plan_id=str(pid), step_id=sid, reason=reason)
                 return {"terminal": "retrying", "plan_id": str(pid), "step_id": sid}
             step["status"] = "failed"
             execution_checkpoint.save_checkpoint(
@@ -219,6 +247,10 @@ def tick_planned_task(
             execution_log.log_execution_event(
                 "execution_failed", task_id=task_id, plan_id=str(pid), status="failed"
             )
+            _sync_deployment_terminal(st, task_id, plan, "failed")
+            from app.planning.replanning_runtime import on_plan_terminal_failure
+
+            on_plan_terminal_failure(st, task_id=task_id, plan_id=str(pid), reason=reason)
             return {"terminal": "failed", "plan_id": str(pid), "step_id": sid}
         step["error"] = None
         step["status"] = "completed"
@@ -259,6 +291,7 @@ def tick_planned_task(
         execution_log.log_execution_event(
             "execution_completed", task_id=task_id, plan_id=str(pid), status="completed"
         )
+        _sync_deployment_terminal(st, task_id, plan, "completed")
         return {"terminal": "completed", "plan_id": str(pid), "step_id": sid}
 
     task_registry.update_task_state(st, task_id, "running")

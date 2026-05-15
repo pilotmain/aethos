@@ -296,11 +296,18 @@ async def mission_control_events_ws(ws: WebSocket) -> None:
 
     await ws.accept()
     queue: asyncio.Queue[dict] = asyncio.Queue(maxsize=500)
+    loop = asyncio.get_running_loop()
 
     def push(event: dict) -> None:
+        def _enqueue() -> None:
+            try:
+                queue.put_nowait(event)
+            except asyncio.QueueFull:
+                pass
+
         try:
-            queue.put_nowait(event)
-        except asyncio.QueueFull:
+            loop.call_soon_threadsafe(_enqueue)
+        except RuntimeError:
             pass
 
     subscribe(push)
