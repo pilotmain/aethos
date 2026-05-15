@@ -669,34 +669,40 @@ def evaluate_deterministic_host_permission_turn(
 
         inferred = try_infer_readme_push_chain_nl(t0)
     if not inferred:
-        lf = infer_local_file_request(t0, default_relative_base=base)
-        if lf.matched and lf.error_message:
-            return NextActionApplicationResult(
-                lf.error_message,
-                t0,
-                False,
-                True,
-                None,
-            )
-        if lf.matched and lf.clarification_message:
-            return NextActionApplicationResult(
-                lf.clarification_message,
-                t0,
-                False,
-                True,
-                None,
-            )
-        if lf.matched and lf.path_resolution_failed:
-            return NextActionApplicationResult(
-                "That folder isn’t under Nexa’s configured host work root (`HOST_EXECUTOR_WORK_ROOT`). "
-                "Adjust the work root to include it, register it with `/workspace add`, then ask again.",
-                t0,
-                False,
-                True,
-                None,
-            )
-        if lf.matched and lf.payload:
-            inferred = lf.payload
+        # LLM-first gateway: fuzzy local-path heuristics run before the model and can
+        # hijack conversational lines ("sure, check that") with "What path should I use?".
+        # Skip this branch so general NL reaches the LLM; explicit host verbs still match above.
+        from app.services.goal_orchestrator import nexa_llm_first_gateway_active
+
+        if not nexa_llm_first_gateway_active():
+            lf = infer_local_file_request(t0, default_relative_base=base)
+            if lf.matched and lf.error_message:
+                return NextActionApplicationResult(
+                    lf.error_message,
+                    t0,
+                    False,
+                    True,
+                    None,
+                )
+            if lf.matched and lf.clarification_message:
+                return NextActionApplicationResult(
+                    lf.clarification_message,
+                    t0,
+                    False,
+                    True,
+                    None,
+                )
+            if lf.matched and lf.path_resolution_failed:
+                return NextActionApplicationResult(
+                    "That folder isn’t under Nexa’s configured host work root (`HOST_EXECUTOR_WORK_ROOT`). "
+                    "Adjust the work root to include it, register it with `/workspace add`, then ask again.",
+                    t0,
+                    False,
+                    True,
+                    None,
+                )
+            if lf.matched and lf.payload:
+                inferred = lf.payload
     if not inferred:
         return None
 
