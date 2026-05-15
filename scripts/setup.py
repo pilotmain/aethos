@@ -62,6 +62,20 @@ def get_canonical_user_id(telegram_id: str | None = None) -> str:
     return f"web_{uuid.uuid4().hex[:16]}"
 
 
+def _env_value_is_obvious_placeholder(val: str, *, key: str = "") -> bool:
+    """True when ``.env.example`` left instructional placeholders that must be replaced."""
+    _ = key
+    v = (val or "").strip()
+    if not v:
+        return True
+    if "CHANGE_ME" in v.upper():
+        return True
+    low = v.lower()
+    if low in ("changeme", "change-me-in-production"):
+        return True
+    return False
+
+
 def _legal_auto_accept_noninteractive() -> bool:
     """True for piped stdin (e.g. curl | bash), Docker, or CI runners — no extra env vars needed."""
     if not sys.stdin.isatty():
@@ -972,6 +986,8 @@ class SetupWizard:
             except ValueError:
                 print(f"  {Colors.error('Invalid port')}")
 
+        self._update_env_key("PORT", str(port))
+
         db_choice = prompt_line(
             f"  {Colors.question('Database [sqlite/postgres] (default: sqlite)')} "
         ).strip().lower()
@@ -994,14 +1010,14 @@ class SetupWizard:
             self._update_env_key("DATABASE_URL", db_url)
             print(f"  {Colors.success(f'SQLite configured — {db_url}')}")
 
-        sk = self._get_env_value("NEXA_SECRET_KEY")
-        if not sk or sk.strip().lower() in ("change-me-in-production", "changeme"):
+        sk = (self._get_env_value("NEXA_SECRET_KEY") or "").strip()
+        if _env_value_is_obvious_placeholder(sk, key="NEXA_SECRET_KEY"):
             new_secret = secrets.token_urlsafe(32)
             self._update_env_key("NEXA_SECRET_KEY", new_secret)
             print(f"  {Colors.success('Generated NEXA_SECRET_KEY')}")
 
-        tok = self._get_env_value("NEXA_WEB_API_TOKEN")
-        if not tok:
+        tok = (self._get_env_value("NEXA_WEB_API_TOKEN") or "").strip()
+        if _env_value_is_obvious_placeholder(tok, key="NEXA_WEB_API_TOKEN"):
             wt = generate_web_api_token()
             self._update_env_key("NEXA_WEB_API_TOKEN", wt)
             print(f"  {Colors.success('Generated NEXA_WEB_API_TOKEN (for Mission Control auth)')}")
@@ -1151,7 +1167,7 @@ class SetupWizard:
             print(f"  {Colors.DIM}Skipping Telegram.{Colors.RESET}")
 
         web_token = (self._get_env_value("NEXA_WEB_API_TOKEN") or "").strip()
-        if not web_token:
+        if _env_value_is_obvious_placeholder(web_token, key="NEXA_WEB_API_TOKEN"):
             web_token = generate_web_api_token()
             self._update_env_key("NEXA_WEB_API_TOKEN", web_token)
 
@@ -1165,6 +1181,14 @@ class SetupWizard:
         )
 
         self._save_credentials_file(user_id, web_token)
+        try:
+            sys.path.insert(0, str(self.repo_root))
+            from app.core.setup_creds_file import merge_setup_creds
+
+            ab = (self._get_env_value("API_BASE_URL") or "http://127.0.0.1:8010").strip().rstrip("/")
+            merge_setup_creds(api_base=ab, user_id=user_id, bearer_token=web_token)
+        except Exception:
+            pass
         print(f"  {Colors.DIM}Credentials file: {CREDS_FILE_HOME}{Colors.RESET}\n")
 
         self._configure_enterprise_sso_and_audit()
@@ -1999,7 +2023,7 @@ SSO_POST_LOGIN_REDIRECT=http://localhost:3000/login
   • Bearer token: {Colors.BOLD}{tok_show}{Colors.RESET}
   • X-User-Id: {Colors.BOLD}{connect_uid}{Colors.RESET}
 
-{Colors.DIM}If a field is empty, open Login — the app calls /api/setup-creds using your repo .env.{Colors.RESET}
+{Colors.DIM}Mission Control reads /api/setup-creds (merges this repo’s .env and ~/.aethos/.env). Keep the API running on the same host/port as API_BASE_URL — quick check: curl -s -o /dev/null -w "%{{http_code}}" {api_base.rstrip('/')}/api/v1/health (expect 200).{Colors.RESET}
 
 {Colors.BOLD}💡 Next steps:{Colors.RESET}
   • If the browser did not open, visit {Colors.CYAN}http://localhost:{web_port}{Colors.RESET}

@@ -13,7 +13,7 @@
 #   NEXA_DIR            — clone directory name (default: nexa)
 #   ANTHROPIC_API_KEY, OPENAI_API_KEY, TELEGRAM_BOT_TOKEN — merged into .env when set
 #   NEXA_START          — none | docker | host (default: host — no Docker)
-#   PORT                — API port for host mode (default: 8000)
+#   PORT                — API port for host mode (default: 8010, aligned with API_BASE_URL)
 #   NEXA_NONINTERACTIVE — 1 to skip prompts (use env vars for keys)
 #
 set -euo pipefail
@@ -299,7 +299,7 @@ start_docker() {
 start_host() {
   command -v npm >/dev/null 2>&1 || die "Node/npm required for web UI — install Node or use --start docker"
   chmod +x "${ROOT}/run_dev_stack.sh" 2>/dev/null || true
-  PORT="${PORT:-8000}"
+  PORT="${PORT:-8010}"
   echo "Starting API + web on host (SQLite default; API port ${PORT}) ..."
   pkill -f "uvicorn app.main:app" 2>/dev/null || true
   mkdir -p "${ROOT}/.runtime"
