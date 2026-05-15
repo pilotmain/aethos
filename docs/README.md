@@ -11,6 +11,7 @@ Start here:
 - [Project handoff](../PROJECT_HANDOFF.md)
 - [OpenClaw parity audit](OPENCLAW_PARITY_AUDIT.md)
 - [Migrating from OpenClaw](MIGRATING_FROM_OPENCLAW.md)
+- [OpenClaw functional parity directive (master plan)](OPENCLAW_FUNCTIONAL_PARITY_DIRECTIVE.md)
 
 ## Getting started
 

@@ -8,6 +8,10 @@ AethOS must reproduce OpenClaw exactly as it works today before the project prio
 
 Phase 1 is complete only when OpenClaw-equivalent workflows can be installed, configured, run, tested, and demonstrated without relying on future Phase 2 differentiators.
 
+## Master implementation plan
+
+Priorities **P1–P4**, required **CLI** surfaces (`aethos onboard`, `aethos gateway`, `aethos message send`, `aethos status`, `aethos logs`, `aethos doctor`), workspace layout targets, and the parity **test file matrix** are defined in **[OPENCLAW_FUNCTIONAL_PARITY_DIRECTIVE.md](OPENCLAW_FUNCTIONAL_PARITY_DIRECTIVE.md)**. This audit tracks **gaps**; the directive defines **scope and execution order**.
+
 ## Hard rule
 
 Do not introduce architectural divergence unless required to reproduce OpenClaw behavior.
@@ -125,4 +129,4 @@ Remaining divergence:
 
 ---
 
-See also: [PROJECT_HANDOFF.md](../PROJECT_HANDOFF.md), [MIGRATING_FROM_OPENCLAW.md](MIGRATING_FROM_OPENCLAW.md), [OPENCLAW_SUCCESSOR_AUDIT.md](OPENCLAW_SUCCESSOR_AUDIT.md), and `tests/test_openclaw_parity.py`.
+See also: [PROJECT_HANDOFF.md](../PROJECT_HANDOFF.md), [OPENCLAW_FUNCTIONAL_PARITY_DIRECTIVE.md](OPENCLAW_FUNCTIONAL_PARITY_DIRECTIVE.md), [MIGRATING_FROM_OPENCLAW.md](MIGRATING_FROM_OPENCLAW.md), [OPENCLAW_SUCCESSOR_AUDIT.md](OPENCLAW_SUCCESSOR_AUDIT.md), and `tests/test_openclaw_parity.py` plus `tests/test_openclaw_*_parity.py`.

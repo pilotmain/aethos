@@ -15,7 +15,7 @@ During this phase:
 - privacy/PII/local-first improvements are Phase 2 unless they are required for current OpenClaw-compatible behavior;
 - major refactors and novel UX/orchestration patterns should wait until parity is verified.
 
-See [PROJECT_HANDOFF.md](PROJECT_HANDOFF.md) and [docs/OPENCLAW_PARITY_AUDIT.md](docs/OPENCLAW_PARITY_AUDIT.md).
+See [PROJECT_HANDOFF.md](PROJECT_HANDOFF.md), [docs/OPENCLAW_PARITY_AUDIT.md](docs/OPENCLAW_PARITY_AUDIT.md), and [docs/OPENCLAW_FUNCTIONAL_PARITY_DIRECTIVE.md](docs/OPENCLAW_FUNCTIONAL_PARITY_DIRECTIVE.md) (master implementation plan).
 
 ## One-curl install
 
@@ -63,6 +63,8 @@ Before opening a PR, run:
 python -m compileall -q app
 pytest
 pytest tests/test_openclaw_parity.py
+pytest tests/test_openclaw_*_parity.py
+pytest tests/test_openclaw_doctrine_docs.py
 ```
 
 Each PR should state which OpenClaw behavior it reproduces and which parity checkpoint it advances.
@@ -76,6 +78,7 @@ Key parity docs:
 - [PROJECT_HANDOFF.md](PROJECT_HANDOFF.md)
 - [docs/OPENCLAW_PARITY_AUDIT.md](docs/OPENCLAW_PARITY_AUDIT.md)
 - [docs/MIGRATING_FROM_OPENCLAW.md](docs/MIGRATING_FROM_OPENCLAW.md)
+- [docs/OPENCLAW_FUNCTIONAL_PARITY_DIRECTIVE.md](docs/OPENCLAW_FUNCTIONAL_PARITY_DIRECTIVE.md)
 
 ## Contributing
 

@@ -41,6 +41,8 @@ Run before opening a PR:
 python -m compileall -q app
 pytest
 pytest tests/test_openclaw_parity.py
+pytest tests/test_openclaw_*_parity.py
+pytest tests/test_openclaw_doctrine_docs.py
 ```
 
 Optional style check:

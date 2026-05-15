@@ -8,6 +8,8 @@ This document is the repo-local handoff for reproducing and developing the AethO
 
 No contributor should optimize for novelty, differentiation, branding, or architectural preference until OpenClaw behavioral parity has been achieved and verified.
 
+**Master implementation plan:** [docs/OPENCLAW_FUNCTIONAL_PARITY_DIRECTIVE.md](docs/OPENCLAW_FUNCTIONAL_PARITY_DIRECTIVE.md) — CLI + gateway command matrix (`aethos onboard`, `aethos gateway`, `aethos message send`, …), workspace layout targets (`~/.aethos/…`), required parity **test modules**, and priorities **P1–P4**.
+
 ---
 
 ## 1. What you are reproducing
@@ -191,6 +193,8 @@ For parity work, also run or update:
 
 ```bash
 pytest tests/test_openclaw_parity.py
+pytest tests/test_openclaw_*_parity.py
+pytest tests/test_openclaw_doctrine_docs.py
 ```
 
 A PR is not ready unless it states:
@@ -209,11 +213,12 @@ Read in this order:
 1. `README.md` — install and top-level parity objective.
 2. `PROJECT_HANDOFF.md` — this doctrine and reproduction guide.
 3. `.env.example` — exhaustive environment catalog.
-4. `docs/OPENCLAW_PARITY_AUDIT.md` — parity checkpoints and gaps.
-5. `docs/MIGRATING_FROM_OPENCLAW.md` — migration framed as exact parity first.
-6. `docs/SETUP.md`, `docs/installation.md`, `docs/configuration.md` — setup details.
-7. `docs/WEB_UI.md` — Mission Control behavior.
-8. `CONTRIBUTING.md` and `.cursor/rules/openclaw-parity-first.mdc` — contributor enforcement.
+4. `docs/OPENCLAW_FUNCTIONAL_PARITY_DIRECTIVE.md` — **master implementation plan** (CLI matrix, priorities P1–P4, test module matrix).
+5. `docs/OPENCLAW_PARITY_AUDIT.md` — parity checkpoints and gaps.
+6. `docs/MIGRATING_FROM_OPENCLAW.md` — migration framed as exact parity first.
+7. `docs/SETUP.md`, `docs/installation.md`, `docs/configuration.md` — setup details.
+8. `docs/WEB_UI.md` — Mission Control behavior.
+9. `CONTRIBUTING.md` and `.cursor/rules/openclaw-parity-first.mdc` — contributor enforcement.
 
 When docs and code disagree, trust code plus parity tests, then fix the docs.
 
@@ -231,7 +236,7 @@ When docs and code disagree, trust code plus parity tests, then fix the docs.
 - [ ] Start API.
 - [ ] Start web.
 - [ ] Start channel workers only when configured and not embedded.
-- [ ] Run `python -m compileall -q app`, `pytest`, and `pytest tests/test_openclaw_parity.py`.
+- [ ] Run `python -m compileall -q app`, `pytest`, `pytest tests/test_openclaw_parity.py`, `pytest tests/test_openclaw_*_parity.py`, and `pytest tests/test_openclaw_doctrine_docs.py`.
 - [ ] Record remaining OpenClaw divergences in `docs/OPENCLAW_PARITY_AUDIT.md`.
 
 ---

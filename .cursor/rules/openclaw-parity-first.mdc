@@ -11,6 +11,8 @@ The final objective for Phase 1 is exact functional parity with OpenClaw as it e
 
 Work in this repo must prioritize reproducing OpenClaw behavior before privacy, PII filtering, local-first differentiation, cost transparency, custom UX, or novel architecture.
 
+Canonical scope and priorities: `docs/OPENCLAW_FUNCTIONAL_PARITY_DIRECTIVE.md`.
+
 ## Required behavior
 
 - Prefer the change that gets closer to OpenClaw parity.
@@ -37,4 +39,6 @@ Run before considering development complete:
 python -m compileall -q app
 pytest
 pytest tests/test_openclaw_parity.py
+pytest tests/test_openclaw_*_parity.py
+pytest tests/test_openclaw_doctrine_docs.py
 ```

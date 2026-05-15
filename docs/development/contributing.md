@@ -21,7 +21,11 @@ Remaining divergence:
 python -m compileall -q app
 pytest
 pytest tests/test_openclaw_parity.py
+pytest tests/test_openclaw_*_parity.py
+pytest tests/test_openclaw_doctrine_docs.py
 ```
+
+See [../OPENCLAW_FUNCTIONAL_PARITY_DIRECTIVE.md](../OPENCLAW_FUNCTIONAL_PARITY_DIRECTIVE.md) for the master plan (CLI matrix, priorities, test modules).
 
 ## Deferred until after parity
 

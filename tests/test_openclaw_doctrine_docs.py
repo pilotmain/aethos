@@ -10,6 +10,7 @@ REQUIRED_FILES = [
     "PROJECT_HANDOFF.md",
     "CONTRIBUTING.md",
     "docs/OPENCLAW_PARITY_AUDIT.md",
+    "docs/OPENCLAW_FUNCTIONAL_PARITY_DIRECTIVE.md",
     "docs/MIGRATING_FROM_OPENCLAW.md",
     "docs/README.md",
     ".cursor/rules/openclaw-parity-first.mdc",

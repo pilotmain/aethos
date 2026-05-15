@@ -6,7 +6,7 @@ This guide is now governed by the Phase 1 **OpenClaw parity** objective:
 
 Do not introduce architectural divergence unless required to reproduce OpenClaw behavior.
 
-Use this guide to map an OpenClaw-style setup into AethOS while preserving behavior first.
+Use this guide to map an OpenClaw-style setup into AethOS while preserving behavior first. The **master implementation plan** (CLI matrix, priorities, test modules) is [OPENCLAW_FUNCTIONAL_PARITY_DIRECTIVE.md](OPENCLAW_FUNCTIONAL_PARITY_DIRECTIVE.md).
 
 ## Migration rule
 
