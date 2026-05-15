@@ -15,6 +15,7 @@ import httpx
 
 from app.services.llm.base import LLMProvider, Message, ModelInfo, Tool
 from app.services.llm.content_parts import flatten_openai_content_to_text, parse_data_url
+from app.services.llm_usage_recorder import record_llm_usage
 
 logger = logging.getLogger(__name__)
 
@@ -75,8 +76,30 @@ class OllamaBackend(LLMProvider):
             raise
         msg = data.get("message") if isinstance(data, dict) else None
         if isinstance(msg, dict):
-            return str(msg.get("content") or "").strip()
-        return str(data.get("response") or "").strip()
+            out = str(msg.get("content") or "").strip()
+        else:
+            out = str(data.get("response") or "").strip()
+        if isinstance(data, dict):
+            self._record_chat_usage(data, success=True)
+        return out
+
+    def _record_chat_usage(self, data: dict[str, Any], *, success: bool, error_type: str | None = None) -> None:
+        """Persist per-request usage so web chat can show provider/model (``build_usage_summary_for_request``)."""
+        try:
+            it = int(data.get("prompt_eval_count") or 0)
+            ot = int(data.get("eval_count") or 0)
+            record_llm_usage(
+                None,
+                provider="ollama",
+                model=self._model,
+                input_tokens=it,
+                output_tokens=ot,
+                used_user_key=False,
+                success=success,
+                error_type=error_type,
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("ollama usage record skipped: %s", exc)
 
     async def complete_chat_streaming(
         self,
