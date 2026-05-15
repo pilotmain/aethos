@@ -11,7 +11,7 @@ This document is a **point-in-time implementation status** snapshot (update when
 | --- | --- |
 | Branch | `main` (pushed) |
 | Baseline (doctrine + CLI surface) | `76f7d65` |
-| Persistent runtime slice | `app/runtime/`, `~/.aethos/aethos.json`, FastAPI lifespan hooks (skipped under `NEXA_PYTEST` unless `AETHOS_RUNTIME_ENABLE_IN_PYTEST=1`) |
+| Persistent runtime slice | `7c9d014` — `app/runtime/`, `~/.aethos/aethos.json`, lifespan + heartbeat (skipped under `NEXA_PYTEST` unless `AETHOS_RUNTIME_ENABLE_IN_PYTEST=1`) |
 | Follow-up | `73ba225` — Cursor rule: prefer commit + push to `main` when slices are done |
 
 ### Verification (reported green)
