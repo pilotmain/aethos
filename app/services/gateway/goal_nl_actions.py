@@ -28,6 +28,8 @@ def try_goal_planning_gateway_turn(
     Requires ``nexa_autonomous_goal_planning``, privileged owner, and ``nexa_auto_approve_owner``.
     """
     _ = db
+    if bool(getattr(get_settings(), "nexa_llm_first_gateway", False)):
+        return None
     if not bool(getattr(get_settings(), "nexa_autonomous_goal_planning", False)):
         return None
     if not bool(getattr(get_settings(), "nexa_auto_approve_owner", True)):

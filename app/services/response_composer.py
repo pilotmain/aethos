@@ -28,6 +28,26 @@ logger = logging.getLogger(__name__)
 VOICE_STYLES = ("calm", "direct", "supportive", "light")
 
 
+def _llm_first_gateway_offline_response(ctx: ResponseContext, *, reason: str) -> ComposedResponse:
+    """Single minimal reply when the LLM path is unavailable (``nexa_llm_first_gateway``)."""
+    logger.warning(
+        "LLM_FIRST_OFFLINE reason=%s behavior=%s intent=%s",
+        reason,
+        ctx.behavior,
+        ctx.intent,
+    )
+    return {
+        "message": (
+            "No language model is available for this reply. Set **USE_REAL_LLM=true** with cloud API keys, "
+            "or enable **Ollama** (`NEXA_OLLAMA_ENABLED=true` and a pulled model), then try again."
+        ),
+        "should_ask_followup": False,
+        "followup_question": None,
+        "suggested_microstep": None,
+        "next_steps": None,
+    }
+
+
 def pick_voice_style() -> str:
     return random.choice(VOICE_STYLES)  # noqa: S311 — intentional reply variation
 
@@ -973,6 +993,8 @@ def _run_strategy(ctx: ResponseContext, strategy_body: str) -> ComposedResponse:
             )
         except Exception as exc:
             logger.warning("compose strategy failed: %s", exc)
+        if bool(getattr(get_settings(), "nexa_llm_first_gateway", False)):
+            return _llm_first_gateway_offline_response(ctx, reason="llm_failed_empty_or_invalid_json")
         return fallback_compose_response(
             ctx, reason="llm_failed_empty_or_invalid_json"
         )
@@ -1003,7 +1025,12 @@ def compose_unstick_response(ctx: ResponseContext) -> ComposedResponse:
 
 
 def compose_clarify_response(ctx: ResponseContext) -> ComposedResponse:
-    if not _pure_local_llm_chat_mode() and ctx.intent == "capability_question":
+    s = get_settings()
+    if (
+        not _pure_local_llm_chat_mode()
+        and not bool(getattr(s, "nexa_llm_first_gateway", False))
+        and ctx.intent == "capability_question"
+    ):
         from app.services.research_capability_copy import (
             format_research_capability_message,
             is_research_capability_question,
@@ -1033,6 +1060,14 @@ def compose_response(ctx: ResponseContext) -> ComposedResponse:
     )
     if not ur:
         s = get_settings()
+        if bool(getattr(s, "nexa_llm_first_gateway", False)):
+            return _apply_decisive_dev_composer_guard(
+                _apply_composed_identity_guards(
+                    _llm_first_gateway_offline_response(ctx, reason="llm_disabled_or_missing_api_key"),
+                    user_message=ctx.user_message,
+                ),
+                ctx,
+            )
         if bool(getattr(s, "nexa_pure_local_llm_mode", False)):
             offline: ComposedResponse = {
                 "message": (
@@ -1077,6 +1112,14 @@ def compose_response(ctx: ResponseContext) -> ComposedResponse:
         )
     except Exception as exc:
         logger.exception("compose_response: %s", exc)
+        if bool(getattr(get_settings(), "nexa_llm_first_gateway", False)):
+            return _apply_decisive_dev_composer_guard(
+                _apply_composed_identity_guards(
+                    _llm_first_gateway_offline_response(ctx, reason="compose_response_exception"),
+                    user_message=ctx.user_message,
+                ),
+                ctx,
+            )
         return _apply_decisive_dev_composer_guard(
             _apply_composed_identity_guards(
                 fallback_compose_response(ctx, reason="compose_response_exception"),

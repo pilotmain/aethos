@@ -57,6 +57,8 @@ class Goal:
 
 def parse_goal_intent(text: str) -> dict[str, Any] | None:
     """Match first line against autonomous goal patterns."""
+    if bool(getattr(get_settings(), "nexa_llm_first_gateway", False)):
+        return None
     raw = (text or "").strip()
     if not raw:
         return None

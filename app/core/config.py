@@ -893,6 +893,10 @@ class Settings(BaseSettings):
     # prefer Ollama first in the completion chain when registered, and skip composer template short-circuits.
     # When no provider is available, intent uses ``classify_intent_fallback`` only; composer returns a minimal offline notice.
     nexa_pure_local_llm_mode: bool = False
+    # When True: after credentials + allowlisted tools/NL, normal chat skips deterministic intent branches
+    # (greeting/config/brain-dump/general canned answers, goal NL) and uses the LLM composer with intent
+    # ``general_chat`` — OpenClaw-style "trust the model" routing. Keep ``false`` for legacy behavior/tests.
+    nexa_llm_first_gateway: bool = False
     nexa_ollama_base_url: str | None = None
     # Phase 39 — local Ollama when NEXA_LOCAL_FIRST routes tools away from remote APIs
     nexa_ollama_enabled: bool = False

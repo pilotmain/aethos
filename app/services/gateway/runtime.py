@@ -683,6 +683,278 @@ class NexaGateway:
         with session_queue.acquire(gateway_lane_id(gctx)):
             return _body()
 
+    def _route_gateway_llm_first(
+        self,
+        db_inner: Session,
+        gctx: GatewayContext,
+        raw_gate: str,
+        text: str,
+    ) -> dict[str, Any]:
+        """Host + deploy + agents + executor, then :meth:`handle_full_chat` (LLM-first interior)."""
+        from app.services.conversation_context_service import build_context_snapshot, get_or_create_context
+        from app.services.execution_loop import try_execute_or_explain
+        from app.services.gateway.deploy_nl import try_gateway_deploy_turn
+        from app.services.gateway.deployment_status_nl import try_gateway_deployment_status_turn
+        from app.services.gateway.early_nl_host_actions import try_early_nl_host_actions
+        from app.services.gateway.start_built_app_nl import try_start_built_app_gateway_turn
+        from app.services.inter_agent_coordinator import try_inter_agent_gateway_turn
+        from app.services.operator_execution_loop import try_operator_execution
+        from app.services.sub_agent_router import try_sub_agent_gateway_turn
+
+        uid_gate = (gctx.user_id or "").strip()
+
+        host_out = self._try_host_executor_turn(gctx, raw_gate, db_inner)
+        if host_out is not None:
+            return host_out
+
+        early_nl = try_early_nl_host_actions(gctx, raw_gate, db_inner)
+        if early_nl is not None:
+            return early_nl
+
+        deploy_status = try_gateway_deployment_status_turn(gctx, raw_gate, db_inner)
+        if deploy_status is not None:
+            return deploy_status
+
+        deploy_nl = try_gateway_deploy_turn(gctx, raw_gate, db_inner)
+        if deploy_nl is not None:
+            return deploy_nl
+
+        start_app_nl = try_start_built_app_gateway_turn(gctx, raw_gate, db_inner)
+        if start_app_nl is not None:
+            return start_app_nl
+
+        inter_ag = try_inter_agent_gateway_turn(gctx, raw_gate, db_inner)
+        if inter_ag is not None:
+            return inter_ag
+
+        orch = try_sub_agent_gateway_turn(gctx, raw_gate, db_inner)
+        if orch is not None:
+            return orch
+
+        _cctx_loop = get_or_create_context(db_inner, uid_gate)
+        _snap_loop = build_context_snapshot(_cctx_loop, db_inner)
+
+        if not gctx.extras.get("operator_execution_attempted"):
+            op_result = try_operator_execution(
+                user_text=raw_gate,
+                gctx=gctx,
+                db=db_inner,
+                snapshot=_snap_loop,
+            )
+            gctx.extras["operator_execution_attempted"] = True
+            if op_result.handled:
+                return {
+                    "mode": "chat",
+                    "text": gateway_finalize_operator_or_execution_reply(
+                        op_result.text,
+                        user_text=raw_gate,
+                        layer="operator_execution",
+                    ),
+                    "operator_execution": True,
+                    "operator_provider": op_result.provider,
+                    "ran": op_result.ran,
+                    "verified": op_result.verified,
+                    "blocker": op_result.blocker,
+                    "operator_evidence": op_result.evidence,
+                    "intent": "operator_execution",
+                }
+
+        if not gctx.extras.get("execution_loop_attempted"):
+            loop_result = try_execute_or_explain(
+                user_text=raw_gate,
+                gctx=gctx,
+                db=db_inner,
+                snapshot=_snap_loop,
+            )
+            gctx.extras["execution_loop_attempted"] = True
+            if loop_result.handled:
+                return {
+                    "mode": "chat",
+                    "text": gateway_finalize_operator_or_execution_reply(
+                        loop_result.text,
+                        user_text=raw_gate,
+                        layer="execution_loop",
+                    ),
+                    "execution_loop": True,
+                    "ran": loop_result.ran,
+                    "blocker": loop_result.blocker,
+                    "verified": loop_result.verified,
+                    "intent": loop_result.intent or "execution_loop",
+                }
+
+        structured = self._try_structured_route(gctx, text, db_inner)
+        if structured is not None:
+            return structured
+        approval = self._try_approval_route(gctx, text, db_inner)
+        if approval is not None:
+            return approval
+        gctx.extras["gateway_structured_ran"] = True
+        return self.handle_full_chat(gctx, text, db=db_inner)
+
+    def _handle_full_chat_llm_first_tail(
+        self,
+        gctx: GatewayContext,
+        text: str,
+        *,
+        db: Session,
+    ) -> dict[str, Any]:
+        """After credentials: snapshot + memory + ``general_chat`` LLM reply only (no planner/greeting NL)."""
+        from app.services.legacy_behavior_utils import build_context
+        from app.services.conversation_context_service import (
+            build_context_snapshot,
+            get_or_create_context,
+        )
+        from app.services.execution_loop import try_execute_or_explain
+        from app.services.memory.context_injection import build_memory_context_for_turn
+        from app.services.memory.memory_index import MemoryIndex
+        from app.services.memory_service import MemoryService
+        from app.services.operator_execution_loop import try_operator_execution
+        from app.services.orchestrator_service import OrchestratorService
+        from app.services.sub_agent_natural_creation import (
+            prefers_registry_sub_agent,
+            try_spawn_natural_sub_agents,
+        )
+        from app.services.sub_agent_router import orchestration_chat_key
+
+        uid = gctx.user_id
+        channel = gctx.channel
+        raw = (text or "").strip()
+        _ws_full = str(gctx.extras.get("web_session_id") or "default").strip()[:64] or "default"
+        cctx = get_or_create_context(db, uid, web_session_id=_ws_full)
+        snap = build_context_snapshot(cctx, db)
+        from app.services.memory_manager import enrich_conversation_snapshot_for_llm
+
+        snap = enrich_conversation_snapshot_for_llm(snap, cctx, raw)
+        if isinstance(snap, dict):
+            snap.setdefault("web_session_id", _ws_full)
+
+        if not gctx.extras.get("operator_execution_attempted"):
+            op_fb = try_operator_execution(
+                user_text=raw,
+                gctx=gctx,
+                db=db,
+                snapshot=snap,
+            )
+            gctx.extras["operator_execution_attempted"] = True
+            if op_fb.handled:
+                return {
+                    "mode": "chat",
+                    "text": gateway_finalize_operator_or_execution_reply(
+                        op_fb.text,
+                        user_text=raw,
+                        layer="operator_execution",
+                    ),
+                    "operator_execution": True,
+                    "operator_provider": op_fb.provider,
+                    "ran": op_fb.ran,
+                    "verified": op_fb.verified,
+                    "blocker": op_fb.blocker,
+                    "operator_evidence": op_fb.evidence,
+                    "intent": "operator_execution",
+                }
+
+        if not gctx.extras.get("execution_loop_attempted"):
+            loop_fb = try_execute_or_explain(
+                user_text=raw,
+                gctx=gctx,
+                db=db,
+                snapshot=snap,
+            )
+            gctx.extras["execution_loop_attempted"] = True
+            if loop_fb.handled:
+                return {
+                    "mode": "chat",
+                    "text": gateway_finalize_operator_or_execution_reply(
+                        loop_fb.text,
+                        user_text=raw,
+                        layer="execution_loop",
+                    ),
+                    "execution_loop": True,
+                    "ran": loop_fb.ran,
+                    "blocker": loop_fb.blocker,
+                    "verified": loop_fb.verified,
+                    "intent": loop_fb.intent or "execution_loop",
+                }
+
+        if not (isinstance(gctx.memory, dict) and gctx.memory.get("used")):
+            turn_mem = build_memory_context_for_turn(uid, raw, purpose="chat")
+            if turn_mem.get("used"):
+                if gctx.memory is None:
+                    gctx.memory = {}
+                gctx.memory.update(turn_mem)
+                if turn_mem.get("active_memory_used"):
+                    _log.info(
+                        "gateway.active_memory hits=%s",
+                        turn_mem.get("active_memory_hits"),
+                        extra={"nexa_event": "gateway_active_memory"},
+                    )
+
+        orchestrator = OrchestratorService()
+        memory_service = MemoryService()
+
+        def _attach_memory_brain(beh_ctx_inner: Any) -> None:
+            if isinstance(beh_ctx_inner.memory, dict):
+                turn_mc = None
+                if isinstance(gctx.memory, dict):
+                    turn_mc = gctx.memory.get("memory_context")
+                if isinstance(turn_mc, str) and turn_mc.strip():
+                    beh_ctx_inner.memory["memory_context"] = turn_mc.strip()[:5000]
+                else:
+                    beh_ctx_inner.memory["memory_context"] = MemoryIndex().recent_for_prompt(
+                        uid, max_chars=3500
+                    )
+                if isinstance(gctx.memory, dict):
+                    for _k, _v in gctx.memory.items():
+                        if _k in ("via_gateway", "memory_context"):
+                            continue
+                        beh_ctx_inner.memory.setdefault(_k, _v)
+
+        routing_agent_key = str(gctx.extras.get("routing_agent_key") or "aethos")
+
+        uid_stripped = (uid or "").strip()
+        if uid_stripped and prefers_registry_sub_agent(raw):
+            orch_key = orchestration_chat_key(gctx)
+            sub_txt = try_spawn_natural_sub_agents(db, uid, raw, parent_chat_id=orch_key)
+            if sub_txt:
+                return {
+                    "mode": "chat",
+                    "text": gateway_finalize_chat_reply(
+                        sub_txt, source="natural_sub_agent_create", user_text=raw
+                    ),
+                    "intent": "create_sub_agent",
+                }
+
+        orchestrator.users.get_or_create(db, uid)
+        beh_ctx = build_context(db, uid, memory_service, orchestrator)
+        _attach_memory_brain(beh_ctx)
+
+        intent = "general_chat"
+        _log.info(
+            "gateway.full_chat_llm_first channel=%s",
+            channel,
+        )
+
+        from app.services.external_execution_session import (
+            scrub_generic_login_refusal_when_local_auth_claimed,
+        )
+
+        reply = self.compose_llm_reply(
+            raw,
+            intent,
+            beh_ctx,
+            plan_result=None,
+            db=db,
+            app_user_id=uid,
+            conversation_snapshot=snap,
+            routing_agent_key=routing_agent_key,
+        )
+        reply = scrub_generic_login_refusal_when_local_auth_claimed(reply, raw)
+        return {
+            "mode": "chat",
+            "text": gateway_finalize_chat_reply(reply, source="full_chat_llm_first", user_text=raw),
+            "intent": intent,
+        }
+
     def handle_full_chat(self, gctx: GatewayContext, text: str, *, db: Session) -> dict[str, Any]:
         """
         LLM / behavior chat path (formerly Telegram-only ``behavior_engine`` fall-through).
@@ -729,6 +1001,9 @@ class NexaGateway:
                 raw_user_text=raw,
                 payload=cred_full,
             )
+
+        if bool(getattr(get_settings(), "nexa_llm_first_gateway", False)):
+            return self._handle_full_chat_llm_first_tail(gctx, text, db=db)
 
         _ws_full = str(gctx.extras.get("web_session_id") or "default").strip()[:64] or "default"
         cctx = get_or_create_context(db, uid, web_session_id=_ws_full)
@@ -1086,6 +1361,9 @@ class NexaGateway:
                     raw_user_text=raw_gate,
                     payload=cred_gate,
                 )
+
+            if bool(getattr(get_settings(), "nexa_llm_first_gateway", False)):
+                return self._route_gateway_llm_first(db_inner, gctx, raw_gate, text)
 
             from app.services.config_query import handle_config_query
             from app.services.intent_classifier import is_config_query
