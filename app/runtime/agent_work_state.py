@@ -167,6 +167,12 @@ def create_agent_task(
     from app.runtime.runtime_agents import assign_runtime_agent
 
     assign_runtime_agent(runtime_agent_id, task_id=task_id)
+    try:
+        from app.runtime.worker_operational_memory import update_worker_memory
+
+        update_worker_memory(worker_id=runtime_agent_id, task_id=task_id)
+    except Exception:
+        pass
     return task_id
 
 
@@ -236,6 +242,38 @@ def record_agent_output(
         from app.runtime.runtime_agents import release_runtime_agent
 
         release_runtime_agent(runtime_agent_id)
+    try:
+        from app.runtime.worker_operational_memory import (
+            build_workspace_awareness_snippet,
+            infer_deliverable_type,
+            persist_deliverable,
+            update_worker_memory,
+        )
+
+        agents = load_runtime_state().get("runtime_agents") or {}
+        row = agents.get(runtime_agent_id) if isinstance(agents, dict) else {}
+        domain = str((row or {}).get("role") or "general")
+        task_row = (load_runtime_state().get("task_registry") or {}).get(task_id) or {}
+        prompt = str(task_row.get("prompt") or "")
+        dtype = infer_deliverable_type(prompt=prompt, domain=domain, success=success)
+        persist_deliverable(
+            worker_id=runtime_agent_id,
+            task_id=task_id,
+            deliverable_type=dtype,
+            summary=summary,
+            content=content,
+            artifacts=artifacts,
+            output_id=output_id,
+        )
+        update_worker_memory(
+            worker_id=runtime_agent_id,
+            task_id=task_id,
+            output_id=output_id,
+            failure=None if success else summary[:300],
+            workspace_snippet=build_workspace_awareness_snippet(),
+        )
+    except Exception:
+        pass
     return output_id
 
 

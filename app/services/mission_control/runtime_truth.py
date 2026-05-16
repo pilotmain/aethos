@@ -170,6 +170,14 @@ def build_runtime_truth(*, user_id: str | None = None) -> dict[str, Any]:
     from app.services.agent_runtime_truth import build_agent_visibility_for_truth
 
     truth["agent_visibility"] = build_agent_visibility_for_truth()
+    from app.services.worker_intelligence import build_worker_intelligence_truth
+
+    wi = build_worker_intelligence_truth()
+    truth["worker_memory"] = wi.get("worker_memory")
+    truth["worker_deliverables"] = wi.get("worker_deliverables")
+    truth["worker_continuations"] = wi.get("worker_continuations")
+    truth["worker_effectiveness"] = wi.get("worker_effectiveness")
+    truth["worker_summaries"] = wi.get("worker_summaries")
     return truth
 
 

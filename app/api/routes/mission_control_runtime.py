@@ -164,6 +164,28 @@ def mc_runtime_confidence(app_user_id: str = Depends(get_valid_web_user_id)) -> 
     return _truth_slice(app_user_id).get("runtime_confidence") or {}
 
 
+@router.get("/worker-deliverables")
+def mc_worker_deliverables(
+    q: str | None = Query(None),
+    worker_id: str | None = Query(None),
+    handle: str | None = Query(None),
+    deliverable_type: str | None = Query(None, alias="type"),
+    limit: int = Query(16, ge=1, le=48),
+    _: str = Depends(get_valid_web_user_id),
+) -> dict:
+    from app.runtime.worker_operational_memory import search_deliverables
+
+    return {
+        "deliverables": search_deliverables(
+            query=q,
+            worker_id=worker_id,
+            deliverable_type=deliverable_type,
+            handle=handle,
+            limit=limit,
+        )
+    }
+
+
 @router.get("/automation-packs")
 def mc_automation_packs(_: str = Depends(get_valid_web_user_id)) -> dict:
     from app.plugins.automation_packs import list_automation_packs_with_health

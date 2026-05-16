@@ -52,6 +52,16 @@ def build_operational_intelligence(ort: dict[str, Any] | None = None) -> dict[st
             }
         )
 
+    worker_signals = _worker_reliability_signals(st)
+    if worker_signals.get("low_reliability_workers"):
+        insights.append(
+            {
+                "kind": "worker_reliability",
+                "severity": "warning",
+                "message": worker_signals.get("summary") or "Worker reliability mixed",
+            }
+        )
+
     return {
         "insights": insights[:12],
         "event_warnings": len(events),
@@ -60,6 +70,21 @@ def build_operational_intelligence(ort: dict[str, Any] | None = None) -> dict[st
         "repair_success_rate": repair_success_rate,
         "workspace_confidence_drift": _workspace_confidence_drift(st),
         "repeated_failure_patterns": _repeated_failures(events),
+        "worker_reliability": worker_signals,
+    }
+
+
+def _worker_reliability_signals(st: dict[str, Any]) -> dict[str, Any]:
+    wm = st.get("worker_memory") or {}
+    low: list[str] = []
+    if isinstance(wm, dict):
+        for wid, mem in wm.items():
+            if isinstance(mem, dict) and len(mem.get("recent_failures") or []) >= 2:
+                low.append(str(wid))
+    return {
+        "low_reliability_workers": low[:8],
+        "worker_count": len(wm) if isinstance(wm, dict) else 0,
+        "summary": f"{len(low)} worker(s) with repeated failures" if low else "Workers stable",
     }
 
 

@@ -40,6 +40,7 @@ def build_runtime_workers_view(user_id: str | None = None) -> dict[str, Any]:
                 "provider": chain.get("provider"),
             },
             "summary": _worker_summary(row, chain),
+            "memory_summary": _memory_summary_for(aid),
         }
         if aid == ORCHESTRATOR_ID or row.get("system"):
             orchestrator = enriched
@@ -50,6 +51,15 @@ def build_runtime_workers_view(user_id: str | None = None) -> dict[str, Any]:
         "workers": workers,
         "active_count": len([w for w in workers if w.get("status") not in ("expired", "suspended", "failed")]),
     }
+
+
+def _memory_summary_for(agent_id: str) -> str:
+    try:
+        from app.runtime.worker_operational_memory import build_worker_memory
+
+        return str(build_worker_memory(agent_id).get("memory_summary") or "")
+    except Exception:
+        return ""
 
 
 def _worker_summary(row: dict[str, Any], chain: dict[str, Any]) -> str:

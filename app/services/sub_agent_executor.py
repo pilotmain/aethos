@@ -197,7 +197,9 @@ class AgentExecutor:
             if task_id and runtime_id:
                 try:
                     from app.runtime.agent_work_state import record_agent_output
+                    from app.runtime.worker_operational_memory import set_session_active_worker
 
+                    set_session_active_worker(chat_id, runtime_id)
                     record_agent_output(
                         runtime_agent_id=runtime_id,
                         task_id=task_id,

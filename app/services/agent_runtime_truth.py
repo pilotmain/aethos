@@ -171,6 +171,11 @@ def try_route_agent_status_query(
     """Sub-agent router hook — status/result queries without execution."""
     _ = db
     t = (user_input or "").strip()
+    from app.services.worker_intelligence import resolve_worker_followup
+
+    follow = resolve_worker_followup(t, chat_key=chat_id)
+    if follow:
+        return {"handled": True, "response": follow}
     if _RE_LIST_AGENTS.match(t):
         registry = AgentRegistry()
         agents = (

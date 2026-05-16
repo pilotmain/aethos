@@ -54,6 +54,14 @@ Events are aggregated for display (`aggregate_events_for_display`) to collapse r
 
 Events use categorized shape: `event_type`, `category`, `severity`, `correlation_id` (see [RUNTIME_EVENTS.md](RUNTIME_EVENTS.md)).
 
+## Phase 3 Step 7 — worker intelligence
+
+- **Operational memory** per worker (`worker_memory`) — bounded tasks, outputs, failures, workspace context.
+- **Deliverables** persist after worker expiration (`worker_deliverables`, searchable API).
+- **Follow-ups** — `what did you find?`, `show deployment reports`, session-linked workers.
+- **Continuations** — recover interrupted tasks after runtime restart.
+- See [RUNTIME_WORKER_MEMORY.md](RUNTIME_WORKER_MEMORY.md).
+
 ## Phase 3 Step 6 — orchestrator agent visibility
 
 - Registry spawns link to **runtime workers** (`runtime_agent_handles`, `agent_outputs`, `task_registry`).

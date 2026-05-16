@@ -140,6 +140,12 @@ def recover_runtime_agents_after_restart() -> int:
             pass
     if n:
         save_runtime_state(st)
+    try:
+        from app.runtime.worker_operational_memory import recover_worker_continuity
+
+        recover_worker_continuity()
+    except Exception:
+        pass
     return n
 
 
