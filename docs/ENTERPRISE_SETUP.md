@@ -49,3 +49,15 @@ aethos setup first-impression
 **APIs:** `GET /api/v1/setup/{continuity,operator-profile,experience,first-impression}`
 
 Docs: [SETUP_CONTINUITY.md](SETUP_CONTINUITY.md), [FIRST_IMPRESSION_CERTIFICATION.md](FIRST_IMPRESSION_CERTIFICATION.md), [OPERATOR_FIRST_RUN_EXPERIENCE.md](OPERATOR_FIRST_RUN_EXPERIENCE.md)
+
+## Phase 4 Step 16 — setup finalization
+
+```bash
+aethos doctor
+aethos runtime startup
+aethos runtime bootstrap
+```
+
+**APIs:** `GET /api/v1/setup/doctor`, `/runtime/startup`, `/runtime/bootstrap`, `/runtime/branding-audit`
+
+Docs: [ENTERPRISE_FIRST_IMPRESSION.md](ENTERPRISE_FIRST_IMPRESSION.md), [SETUP_EXPERIENCE_FINAL.md](SETUP_EXPERIENCE_FINAL.md)

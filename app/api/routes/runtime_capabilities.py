@@ -353,3 +353,57 @@ def runtime_enterprise_grade(app_user_id: str = Depends(get_valid_web_user_id)) 
     except Exception:
         t = {}
     return build_runtime_enterprise_grade(t)
+
+
+@router.get("/startup")
+def runtime_startup(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_startup_experience import build_runtime_startup_experience
+
+    try:
+        t = _truth_slice(app_user_id)
+    except Exception:
+        t = {}
+    return build_runtime_startup_experience(t)
+
+
+@router.get("/readiness")
+def runtime_readiness(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_startup_experience import build_runtime_readiness
+
+    try:
+        t = _truth_slice(app_user_id)
+    except Exception:
+        t = {}
+    return build_runtime_readiness(t)
+
+
+@router.get("/hydration/stages")
+def runtime_hydration_stages(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_startup_experience import build_runtime_hydration_stages
+
+    try:
+        t = _truth_slice(app_user_id)
+    except Exception:
+        t = {}
+    return build_runtime_hydration_stages(t)
+
+
+@router.get("/compatibility")
+def runtime_compatibility(_: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_evolution_step16 import build_runtime_compatibility
+
+    return build_runtime_compatibility()
+
+
+@router.get("/bootstrap")
+def runtime_bootstrap(_: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_bootstrap import build_runtime_bootstrap
+
+    return build_runtime_bootstrap()
+
+
+@router.get("/branding-audit")
+def runtime_branding_audit(_: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_branding_audit import build_runtime_branding_audit
+
+    return build_runtime_branding_audit()

@@ -42,8 +42,62 @@ def print_runtime_strategy_guidance() -> None:
     )
 
 
+SETUP_GLOBAL_COMMANDS = (
+    "help",
+    "why",
+    "skip",
+    "back",
+    "resume",
+    "status",
+    "recommended",
+    "current",
+    "repair",
+    "quit",
+)
+
+
 def print_global_setup_commands() -> None:
-    print_info("During setup you can type: help · back · skip · status · resume · retry · exit")
+    print_info("Commands: " + " · ".join(SETUP_GLOBAL_COMMANDS))
+
+
+def print_setup_help() -> None:
+    print_box(
+        "Setup help",
+        [
+            "why — explain this step",
+            "skip — defer (configure later)",
+            "back — previous step when available",
+            "status — show saved progress",
+            "recommended — accept recommended defaults",
+            "current — show current configuration",
+            "repair — run setup repair",
+            "quit — exit safely (progress saved)",
+        ],
+    )
+
+
+def handle_setup_global_command(cmd: str) -> bool:
+    """Return True if handled (caller should re-prompt)."""
+    c = (cmd or "").strip().lower()
+    if c == "help":
+        print_setup_help()
+        return True
+    if c == "why":
+        print_info("Each step configures how AethOS orchestrates workers, providers, and Mission Control.")
+        return True
+    if c in ("status", "current"):
+        from app.services.setup.setup_continuity import build_setup_continuity
+
+        cont = build_setup_continuity()
+        print_info(cont["setup_continuity"].get("welcome_back_message", "No saved state"))
+        return True
+    if c == "recommended":
+        print_info("Recommended: hybrid routing, seed Mission Control, calm operational defaults.")
+        return True
+    if c == "repair":
+        print_info("Run: aethos setup repair (after this wizard if needed)")
+        return True
+    return False
 
 
 def calm_provider_validation_failed(provider: str) -> str:

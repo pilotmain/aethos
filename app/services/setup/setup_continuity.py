@@ -53,7 +53,7 @@ def build_setup_continuity(*, repo_root: Path | None = None) -> dict[str, Any]:
                 "onboarding_profile": (Path.home() / ".aethos" / "onboarding_profile.json").is_file(),
                 "env_configured": bool(data.get("updates")) if isinstance(data, dict) else False,
             },
-            "phase": "phase4_step15",
+            "phase": "phase4_step16",
             "bounded": True,
         }
     }

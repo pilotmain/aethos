@@ -7,6 +7,7 @@ import {
   operationalBanner,
   type OperationalStatus,
 } from "@/lib/runtimeResilience";
+import { startupBanner, type RuntimeStartupPayload } from "@/lib/runtimeStartup";
 
 type OfficeAgent = {
   agent_id: string;
@@ -81,12 +82,18 @@ export default function OfficePage() {
   const [status, setStatus] = useState<OperationalStatus>("healthy");
   const [stale, setStale] = useState(false);
 
+  const [startup, setStartup] = useState<RuntimeStartupPayload>({});
+
   const refresh = useCallback(async () => {
-    const result = await fetchPanelResilient<OfficePayload>("/mission-control/office", {});
-    setOffice(result.data);
-    setStatus(result.status);
-    setStale(Boolean(result.stale));
-    setError(result.error ?? null);
+    const [officeResult, startupResult] = await Promise.all([
+      fetchPanelResilient<OfficePayload>("/mission-control/office", {}),
+      fetchPanelResilient<RuntimeStartupPayload>("/runtime/startup", {}),
+    ]);
+    setOffice(officeResult.data);
+    setStatus(officeResult.status);
+    setStale(Boolean(officeResult.stale));
+    setError(officeResult.error ?? null);
+    setStartup(startupResult.data);
   }, []);
 
   useEffect(() => {
@@ -127,6 +134,12 @@ export default function OfficePage() {
           ) : null}
         </div>
       </header>
+
+      {startupBanner(startup) ? (
+        <section className="rounded-lg border border-violet-500/25 bg-violet-500/5 px-4 py-3 text-sm">
+          <p className="text-foreground">{startupBanner(startup)}</p>
+        </section>
+      ) : null}
 
       {office.runtime_readiness_summary ? (
         <section className="rounded-lg border border-sky-500/25 bg-sky-500/5 px-4 py-3 text-sm">

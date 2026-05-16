@@ -34,5 +34,5 @@ def build_production_cut_readiness() -> dict[str, Any]:
         "known_slow_paths": KNOWN_SLOW,
         "acceptable_degradation": ["stale truth cache during hydration", "partial Office stream"],
         "recommended_posture": "orchestrator-first, advisory-first, bounded persistence",
-        "phase": "phase4_step15",
+        "phase": "phase4_step16",
     }

@@ -64,6 +64,13 @@ def setup_experience() -> dict:
     return build_setup_experience()
 
 
+@router.get("/doctor")
+def setup_doctor() -> dict:
+    from app.services.setup.enterprise_setup_doctor import build_enterprise_setup_doctor
+
+    return build_enterprise_setup_doctor(repo_root=Path.cwd())
+
+
 @router.get("/first-impression")
 def setup_first_impression() -> dict:
     from app.services.setup.first_impression_certification import build_first_impression_certification

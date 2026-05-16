@@ -44,6 +44,10 @@ One-curl install is certified through `install.sh` → `scripts/setup.sh` → en
 
 Conversational setup with resume continuity and Mission Control first-impression lock. APIs: `/api/v1/setup/continuity`, `/first-impression`. See [docs/FIRST_IMPRESSION_CERTIFICATION.md](docs/FIRST_IMPRESSION_CERTIFICATION.md).
 
+## Setup finalization (Phase 4 Step 16)
+
+Unified `aethos doctor`, seamless MC bootstrap, progressive runtime startup UI, branding/language lock. See [docs/ENTERPRISE_FIRST_IMPRESSION.md](docs/ENTERPRISE_FIRST_IMPRESSION.md).
+
 ---
 
 ## 2. Non-negotiable product rule

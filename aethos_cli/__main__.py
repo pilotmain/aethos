@@ -434,6 +434,10 @@ def main() -> int:
     rt_sub.add_parser("release-candidate", help="GET /api/v1/runtime/release-candidate")
     rt_sub.add_parser("enterprise-grade", help="GET /api/v1/runtime/enterprise-grade")
     rt_sub.add_parser("readiness-progress", help="GET /api/v1/runtime/readiness-progress")
+    rt_sub.add_parser("startup", help="GET /api/v1/runtime/startup progressive stages")
+    rt_sub.add_parser("bootstrap", help="GET /api/v1/runtime/bootstrap MC payload")
+    rt_sub.add_parser("compatibility", help="GET /api/v1/runtime/compatibility")
+    rt_sub.add_parser("branding-audit", help="GET /api/v1/runtime/branding-audit")
     sp_ecosystem = sub.add_parser("ecosystem", help="Operational intelligence ecosystem (Phase 4 Step 3)")
     eco_sub = sp_ecosystem.add_subparsers(dest="ecosystem_cmd", required=True)
     eco_sub.add_parser("health", help="GET /api/v1/mission-control/ecosystem/health")
@@ -1282,6 +1286,22 @@ def main() -> int:
             code, body = _req("GET", "/api/v1/runtime/readiness-progress", uid=uid)
             print(body[:24000])
             return 0 if code == 200 else 1
+        if args.runtime_cmd == "startup":
+            code, body = _req("GET", "/api/v1/runtime/startup", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.runtime_cmd == "bootstrap":
+            code, body = _req("GET", "/api/v1/runtime/bootstrap", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.runtime_cmd == "compatibility":
+            code, body = _req("GET", "/api/v1/runtime/compatibility", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.runtime_cmd == "branding-audit":
+            code, body = _req("GET", "/api/v1/runtime/branding-audit", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
         if args.runtime_cmd == "recovery":
             code, body = _req("GET", "/api/v1/mission-control/runtime/recovery", uid=uid)
             print(body[:24000])
@@ -1687,8 +1707,13 @@ def main() -> int:
         return cmd_logs(lines=int(getattr(args, "log_lines", 80)), category=getattr(args, "log_category", None))
 
     if args.cmd == "doctor":
+        import json
+        from app.services.setup.enterprise_setup_doctor import build_enterprise_setup_doctor
+
         from aethos_cli.parity_cli import cmd_doctor
 
+        ent = build_enterprise_setup_doctor()
+        print(json.dumps(ent, indent=2, default=str)[:12000])
         return cmd_doctor(api_base=_base_url())
 
     if args.cmd == "state":

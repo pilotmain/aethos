@@ -33,6 +33,12 @@ SETUP_COVERED_KEYS: frozenset[str] = frozenset(
         "NEXA_WEB_SEARCH_PROVIDER",
         "NEXA_WEB_SEARCH_API_KEY",
         "NEXA_WORKSPACE_ROOT",
+        "AETHOS_API_URL",
+        "AETHOS_API_BEARER",
+        "AETHOS_USER_ID",
+        "AETHOS_MC_COMPATIBILITY_VERSION",
+        "HOST_EXECUTOR_WORK_ROOT",
+        "USE_REAL_LLM",
     }
 )
 

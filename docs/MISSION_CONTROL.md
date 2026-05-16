@@ -170,7 +170,13 @@ Certifies one-curl → enterprise setup, env completeness, MC ready state, and f
 - Marketplace plugin vs pack vs skill clarity
 - Production-cut readiness — [PRODUCTION_CUT_READINESS.md](PRODUCTION_CUT_READINESS.md)
 
-`enterprise_overview.phase` is `phase4_step15` (`first_impression_locked` when Step 15 evolution applied).
+`enterprise_overview.phase` is `phase4_step16` (`enterprise_setup_finalized` when Step 16 evolution applied).
+
+### Phase 4 Step 16 — setup finalization
+
+- `GET /api/v1/setup/doctor` · `/runtime/{startup,readiness,bootstrap,compatibility,branding-audit}`
+- Progressive startup stages on Office; MC browser bootstrap discipline
+- Docs: [ENTERPRISE_FIRST_IMPRESSION.md](ENTERPRISE_FIRST_IMPRESSION.md), [RUNTIME_STARTUP_EXPERIENCE.md](RUNTIME_STARTUP_EXPERIENCE.md)
 
 ### Phase 4 Step 15 — installer & onboarding
 

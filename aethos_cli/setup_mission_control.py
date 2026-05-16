@@ -70,5 +70,13 @@ def seed_mission_control_connection(
     except Exception:
         pass
 
+    try:
+        from app.services.mission_control.runtime_bootstrap import write_browser_bootstrap
+
+        write_browser_bootstrap(api_base=ab, user_id=uid, bearer_hint=token)
+    except Exception:
+        pass
+
+    updates["AETHOS_MC_COMPATIBILITY_VERSION"] = "phase4_step16"
     print_info(safe_token_confirm_display(token))
     return updates
