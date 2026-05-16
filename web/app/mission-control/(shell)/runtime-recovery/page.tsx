@@ -14,6 +14,11 @@ type RecoveryPayload = {
   recovery_recommendations?: { title?: string; detail?: string }[];
   truth_integrity_score?: number;
   hydration_duration_ms?: number;
+  hydration_queue?: { tiers?: string[] };
+  pending_slices?: Record<string, number>;
+  throttling_state?: { active?: boolean; pressure_level?: string };
+  cache_utilization?: { hit_rate?: number };
+  slice_persistence_health?: { healthy?: boolean; persisted_count?: number };
 };
 
 export default function RuntimeRecoveryPage() {
@@ -60,6 +65,19 @@ export default function RuntimeRecoveryPage() {
           </p>
         </div>
       </section>
+      {recovery.cache_utilization?.hit_rate != null ? (
+        <p className="text-sm text-muted-foreground">
+          Cache hit rate: {(recovery.cache_utilization.hit_rate * 100).toFixed(0)}%
+          {recovery.slice_persistence_health?.persisted_count != null
+            ? ` · Persisted slices: ${recovery.slice_persistence_health.persisted_count}`
+            : ""}
+        </p>
+      ) : null}
+      {recovery.throttling_state?.active ? (
+        <p className="text-sm text-amber-700 dark:text-amber-300">
+          Operational throttling active (pressure: {recovery.throttling_state.pressure_level ?? "high"})
+        </p>
+      ) : null}
       {(recovery.failed_slices?.length ?? 0) > 0 ? (
         <p className="text-sm text-muted-foreground">Slow slices: {recovery.failed_slices?.join(", ")}</p>
       ) : null}

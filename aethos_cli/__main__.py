@@ -414,6 +414,10 @@ def main() -> int:
     rt_sub.add_parser("advisories", help="GET /api/v1/mission-control/runtime/advisories")
     rt_sub.add_parser("focus", help="GET /api/v1/mission-control/runtime/focus")
     rt_sub.add_parser("ping", help="GET /api/v1/health + runtime capabilities")
+    rt_sub.add_parser("hydration", help="GET /api/v1/runtime/hydration queue/status")
+    rt_sub.add_parser("responsiveness", help="GET /api/v1/runtime/responsiveness")
+    rt_sub.add_parser("throttling", help="GET /api/v1/runtime/throttling")
+    rt_sub.add_parser("payloads", help="GET /api/v1/runtime/payloads profile metrics")
     sp_ecosystem = sub.add_parser("ecosystem", help="Operational intelligence ecosystem (Phase 4 Step 3)")
     eco_sub = sp_ecosystem.add_subparsers(dest="ecosystem_cmd", required=True)
     eco_sub.add_parser("health", help="GET /api/v1/mission-control/ecosystem/health")
@@ -499,6 +503,7 @@ def main() -> int:
     wk_sub.add_parser("ecosystem", help="GET /api/v1/mission-control/workers/ecosystem")
     wk_sub.add_parser("coordination", help="GET /api/v1/mission-control/workers/coordination")
     wk_sub.add_parser("intelligence", help="GET /api/v1/mission-control/workers/intelligence (Phase 4 Step 5)")
+    wk_sub.add_parser("archive", help="GET /api/v1/mission-control/workers/archive")
     sp_wk_del.add_argument("worker_id")
     sp_wk_cont = wk_sub.add_parser("continuity", help="GET …/operator-continuity + worker context")
     sp_wk_cont.add_argument("worker_id")
@@ -1092,17 +1097,27 @@ def main() -> int:
             print(body[:24000])
             return 0 if code == 200 else 1
         if args.runtime_cmd == "performance":
-            code, body = _req("GET", "/api/v1/mission-control/runtime/performance", uid=uid)
+            code, body = _req("GET", "/api/v1/runtime/performance", uid=uid)
+            if code != 200:
+                code, body = _req("GET", "/api/v1/mission-control/runtime/performance", uid=uid)
             print(body[:24000])
             return 0 if code == 200 else 1
         if args.runtime_cmd == "payloads":
-            from app.services.mission_control.operational_payload_discipline import build_payload_discipline_block
-            from app.services.mission_control.runtime_truth import build_runtime_truth
-
-            truth = build_runtime_truth(user_id=uid)
-            out = build_payload_discipline_block(truth)
-            print(json.dumps(out, indent=2, default=str)[:24000])
-            return 0
+            code, body = _req("GET", "/api/v1/runtime/payloads", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.runtime_cmd == "hydration":
+            code, body = _req("GET", "/api/v1/runtime/hydration", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.runtime_cmd == "responsiveness":
+            code, body = _req("GET", "/api/v1/runtime/responsiveness", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.runtime_cmd == "throttling":
+            code, body = _req("GET", "/api/v1/runtime/throttling", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
         if args.runtime_cmd == "pressure":
             code, body = _req("GET", "/api/v1/mission-control/runtime/scalability", uid=uid)
             print(body[:24000])
@@ -1433,6 +1448,10 @@ def main() -> int:
             return 0 if code == 200 else 1
         if args.workers_cmd == "intelligence":
             code, body = _req("GET", "/api/v1/mission-control/workers/intelligence", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.workers_cmd == "archive":
+            code, body = _req("GET", "/api/v1/mission-control/workers/archive", uid=uid)
             print(body[:24000])
             return 0 if code == 200 else 1
         if args.workers_cmd == "accountability":

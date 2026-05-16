@@ -46,17 +46,36 @@ def _lightweight_slice(slice_name: str, app_user_id: str) -> dict:
 
 @router.get("/office")
 def mc_office(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.office_operational_stream import build_office_operational_stream
+    from app.services.mission_control.runtime_async_hydration import hydrate_progressive_truth
+    from app.services.mission_control.runtime_payload_profiles import apply_payload_profile
     from app.services.mission_control.runtime_resilience import fetch_slice_resilient
 
-    data, status = fetch_slice_resilient("workers", app_user_id)
-    office = data.get("office") if isinstance(data, dict) else {}
-    if not office:
-        office = _lightweight_slice("workers", app_user_id).get("office") or {}
+    try:
+        truth = hydrate_progressive_truth(user_id=app_user_id, max_tier="operational")
+        payload = apply_payload_profile(truth, "office")
+        status = "healthy"
+    except Exception:
+        data, status = fetch_slice_resilient("workers", app_user_id)
+        office = data.get("office") if isinstance(data, dict) else {}
+        if not office:
+            office = _lightweight_slice("workers", app_user_id).get("office") or {}
+        payload = {**(office if isinstance(office, dict) else {})}
+    stream = build_office_operational_stream(payload if isinstance(payload, dict) else {})
     return {
-        **(office if isinstance(office, dict) else {}),
+        **(payload if isinstance(payload, dict) else {}),
         "operational_status": status,
         "runtime_resilience": {"status": status, "panel": "office"},
+        "office_operational_stream": stream,
+        "hydration_progress": payload.get("hydration_progress") if isinstance(payload, dict) else {},
     }
+
+
+@router.get("/workers/archive")
+def mc_workers_archive(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.worker_memory_archive import build_worker_archive_visibility
+
+    return build_worker_archive_visibility()
 
 
 @router.get("/agents")
@@ -566,13 +585,21 @@ def mc_enterprise_posture(app_user_id: str = Depends(get_valid_web_user_id)) -> 
 
 @router.get("/runtime-recovery")
 def mc_runtime_recovery_center(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_async_hydration import build_hydration_status
     from app.services.mission_control.runtime_recovery_center import build_runtime_recovery_center
+    from app.services.mission_control.runtime_slice_persistence import slice_persistence_health
 
     try:
         t = _truth_slice(app_user_id)
     except Exception:
         t = {}
-    return build_runtime_recovery_center(t, user_id=app_user_id)
+    center = build_runtime_recovery_center(t, user_id=app_user_id)
+    center["hydration_queue"] = build_hydration_status(t).get("queue")
+    center["pending_slices"] = (t.get("hydration_progress") or {}).get("tier_build_ms")
+    center["throttling_state"] = t.get("runtime_operational_throttling") or {}
+    center["cache_utilization"] = (t.get("runtime_performance_intelligence") or {}).get("cache_efficiency")
+    center["slice_persistence_health"] = slice_persistence_health(app_user_id)
+    return center
 
 
 @router.get("/runtime/integrity")

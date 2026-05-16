@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import Any
 
-MC_COMPATIBILITY_VERSION = "phase4_step6"
+MC_COMPATIBILITY_VERSION = "phase4_step7"
 
 _AVAILABLE_ROUTES: list[dict[str, str]] = [
     {"method": "GET", "path": "/api/v1/mission-control/state"},
@@ -24,6 +24,13 @@ _AVAILABLE_ROUTES: list[dict[str, str]] = [
     {"method": "GET", "path": "/api/v1/mission-control/runtime/lazy/{view}"},
     {"method": "GET", "path": "/api/v1/providers/usage"},
     {"method": "GET", "path": "/api/v1/runtime/capabilities"},
+    {"method": "GET", "path": "/api/v1/runtime/performance"},
+    {"method": "GET", "path": "/api/v1/runtime/hydration"},
+    {"method": "GET", "path": "/api/v1/runtime/payloads"},
+    {"method": "GET", "path": "/api/v1/runtime/throttling"},
+    {"method": "GET", "path": "/api/v1/runtime/responsiveness"},
+    {"method": "GET", "path": "/api/v1/runtime/profile/{profile}"},
+    {"method": "GET", "path": "/api/v1/mission-control/workers/archive"},
     {"method": "GET", "path": "/api/v1/health"},
 ]
 
@@ -47,6 +54,9 @@ def build_runtime_capabilities() -> dict[str, Any]:
             "recovery_center": True,
             "degraded_mode": True,
             "phase4_step6": True,
+            "phase4_step7": True,
+            "progressive_hydration": True,
+            "payload_profiles": True,
         },
         "lazy_views": [
             "routing",

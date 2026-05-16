@@ -45,6 +45,8 @@ type OfficePayload = {
     plugin_failures_24h?: number;
   };
   confidence_summary?: string;
+  office_operational_stream?: { office_interval_ms?: number; calmness_preserved?: boolean };
+  hydration_progress?: { partial?: boolean; max_tier?: string };
 };
 
 const STATE_DOT: Record<string, string> = {
@@ -87,9 +89,10 @@ export default function OfficePage() {
 
   useEffect(() => {
     void refresh();
-    const t = setInterval(() => void refresh(), 12000);
+    const intervalMs = office.office_operational_stream?.office_interval_ms ?? 12000;
+    const t = setInterval(() => void refresh(), intervalMs);
     return () => clearInterval(t);
-  }, [refresh]);
+  }, [refresh, office.office_operational_stream?.office_interval_ms]);
 
   const healthKey = office.orchestrator?.health ?? "healthy";
   const healthDot = HEALTH_DOT[healthKey] ?? HEALTH_DOT.healthy;
