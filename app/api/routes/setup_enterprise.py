@@ -41,3 +41,35 @@ def setup_env_audit() -> dict:
 @router.get("/one-curl")
 def setup_one_curl() -> dict:
     return certify_one_curl_path(repo_root=Path.cwd())
+
+
+@router.get("/continuity")
+def setup_continuity() -> dict:
+    from app.services.setup.setup_continuity import build_setup_continuity
+
+    return build_setup_continuity(repo_root=Path.cwd())
+
+
+@router.get("/operator-profile")
+def setup_operator_profile() -> dict:
+    from app.services.setup.setup_operator_profile_api import build_setup_operator_profile
+
+    return build_setup_operator_profile()
+
+
+@router.get("/experience")
+def setup_experience() -> dict:
+    from app.services.setup.setup_experience import build_setup_experience
+
+    return build_setup_experience()
+
+
+@router.get("/first-impression")
+def setup_first_impression() -> dict:
+    from app.services.setup.first_impression_certification import build_first_impression_certification
+    from app.services.setup.setup_first_impression import build_setup_first_impression
+
+    return {
+        **build_setup_first_impression(repo_root=Path.cwd()),
+        **build_first_impression_certification(repo_root=Path.cwd()),
+    }

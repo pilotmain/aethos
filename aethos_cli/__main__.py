@@ -712,6 +712,9 @@ def main() -> int:
     setup_sub.add_parser("validate", help="Validate setup completeness (.env, auth, onboarding)")
     setup_sub.add_parser("onboarding", help="Orchestrator-first onboarding conversation")
     setup_sub.add_parser("certify", help="One-curl + ready-state certification report")
+    setup_sub.add_parser("status", help="Setup completeness status")
+    setup_sub.add_parser("continuity", help="Setup resume / continuity state")
+    setup_sub.add_parser("first-impression", help="Mission Control first-impression bundle")
 
     sp_restart = sub.add_parser("restart", help="Restart API, web, or bot processes")
     restart_sub = sp_restart.add_subparsers(dest="restart_cmd")
@@ -1847,6 +1850,24 @@ def main() -> int:
             from app.services.setup.setup_ready_state_lock import build_setup_ready_state_lock
 
             print(json.dumps(build_setup_ready_state_lock(), indent=2, default=str)[:24000])
+            return 0
+        if sc == "status":
+            import json
+            from app.services.setup.setup_status import build_setup_status
+
+            print(json.dumps(build_setup_status(), indent=2, default=str)[:24000])
+            return 0
+        if sc == "continuity":
+            import json
+            from app.services.setup.setup_continuity import build_setup_continuity
+
+            print(json.dumps(build_setup_continuity(), indent=2, default=str)[:24000])
+            return 0
+        if sc == "first-impression":
+            import json
+            from app.services.setup.setup_first_impression import build_setup_first_impression
+
+            print(json.dumps(build_setup_first_impression(), indent=2, default=str)[:24000])
             return 0
         if sc == "resume":
             return run_setup_wizard()

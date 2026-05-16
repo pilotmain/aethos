@@ -40,6 +40,10 @@ One-curl install is certified through `install.sh` → `scripts/setup.sh` → en
 
 `enterprise_overview.phase` is `phase4_step14` with `release_candidate`. Certification: [docs/FINAL_RELEASE_CANDIDATE_CERTIFICATION.md](docs/FINAL_RELEASE_CANDIDATE_CERTIFICATION.md). Freeze: [docs/LAUNCH_CANDIDATE_FREEZE.md](docs/LAUNCH_CANDIDATE_FREEZE.md).
 
+## Installer & onboarding (Phase 4 Step 15)
+
+Conversational setup with resume continuity and Mission Control first-impression lock. APIs: `/api/v1/setup/continuity`, `/first-impression`. See [docs/FIRST_IMPRESSION_CERTIFICATION.md](docs/FIRST_IMPRESSION_CERTIFICATION.md).
+
 ---
 
 ## 2. Non-negotiable product rule

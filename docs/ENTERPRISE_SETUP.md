@@ -35,3 +35,17 @@ aethos setup validate
 **APIs:** `GET /api/v1/setup/ready-state`, `/setup/certify`, `/setup/one-curl`, `/setup/env-audit`
 
 Docs: [ONE_CURL_CERTIFICATION.md](ONE_CURL_CERTIFICATION.md), [MISSION_CONTROL_READY_STATE.md](MISSION_CONTROL_READY_STATE.md), [ENV_COMPLETENESS_AUDIT.md](ENV_COMPLETENESS_AUDIT.md), [BRANDING_PURGE_AUDIT.md](BRANDING_PURGE_AUDIT.md)
+
+## Phase 4 Step 15 — conversational installer
+
+Setup feels like AethOS guiding the operator (not a numbered shell wizard).
+
+```bash
+aethos setup status
+aethos setup continuity
+aethos setup first-impression
+```
+
+**APIs:** `GET /api/v1/setup/{continuity,operator-profile,experience,first-impression}`
+
+Docs: [SETUP_CONTINUITY.md](SETUP_CONTINUITY.md), [FIRST_IMPRESSION_CERTIFICATION.md](FIRST_IMPRESSION_CERTIFICATION.md), [OPERATOR_FIRST_RUN_EXPERIENCE.md](OPERATOR_FIRST_RUN_EXPERIENCE.md)

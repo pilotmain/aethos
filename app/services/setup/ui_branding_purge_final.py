@@ -49,5 +49,5 @@ def scan_ui_branding_final(*, repo_root: Path | None = None) -> dict[str, Any]:
         "clean": len(violations) == 0 and base.get("clean"),
         "nexa_ui_violations": violations[:60],
         "legacy_scan": base,
-        "phase": "phase4_step14",
+        "phase": "phase4_step15",
     }

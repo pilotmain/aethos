@@ -170,7 +170,13 @@ Certifies one-curl → enterprise setup, env completeness, MC ready state, and f
 - Marketplace plugin vs pack vs skill clarity
 - Production-cut readiness — [PRODUCTION_CUT_READINESS.md](PRODUCTION_CUT_READINESS.md)
 
-`enterprise_overview.phase` is `phase4_step14` (`launch_ready`, `release_candidate` when Step 14 evolution applied).
+`enterprise_overview.phase` is `phase4_step15` (`first_impression_locked` when Step 15 evolution applied).
+
+### Phase 4 Step 15 — installer & onboarding
+
+- `GET /api/v1/setup/{continuity,operator-profile,experience,first-impression}`
+- Conversational setup: `aethos setup status|continuity|first-impression`
+- Docs: [FIRST_IMPRESSION_CERTIFICATION.md](FIRST_IMPRESSION_CERTIFICATION.md), [SETUP_CONTINUITY.md](SETUP_CONTINUITY.md)
 
 ### Phase 4 Step 14 — release candidate
 

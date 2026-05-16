@@ -32,6 +32,8 @@ def build_setup_status(*, repo_root: Path | None = None) -> dict[str, Any]:
         "setup_modes": ["local-only", "cloud-only", "hybrid", "later"],
         "enterprise_installer": True,
         "phase4_step11": True,
+        "phase4_step15": True,
+        "conversational_installer": True,
         "bounded": True,
     }
     try:

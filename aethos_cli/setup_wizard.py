@@ -165,7 +165,9 @@ def _configure_primary_llm(
                 updates["OPENAI_API_KEY"] = key.strip()
                 print_success("OpenAI key validated.")
                 break
-            print_warn("Key did not validate against api.openai.com.")
+            from aethos_cli.setup_conversational import calm_provider_validation_failed
+
+            print_warn(calm_provider_validation_failed("OpenAI"))
             if not confirm("Retry?", default=True):
                 break
         updates["USE_REAL_LLM"] = use_real
@@ -250,13 +252,21 @@ def run_setup_wizard(*, install_kind: str | None = None) -> int:
         if raw_state and isinstance(raw_state.get("data"), dict):
             d = raw_state["data"]
             if d.get("repo_root") == str(root):
-                if confirm("Found an incomplete setup. Resume from where you left off?", default=True):
+                from aethos_cli.setup_conversational import print_welcome_back_resume
+
+                action = print_welcome_back_resume()
+                if action == "continue":
                     resume_step = int(raw_state.get("step", 0))
                     bag = dict(d)
+                elif action == "review":
+                    print_info(f"Saved step {raw_state.get('step')} — LLM: {d.get('llm', '—')}, kind: {d.get('kind', '—')}")
+                    if confirm("Continue setup now?", default=True):
+                        resume_step = int(raw_state.get("step", 0))
+                        bag = dict(d)
+                    else:
+                        return 0
                 else:
                     clear_setup_state()
-            else:
-                clear_setup_state()
 
     print_header()
     print_environment_tag(human_os_line(pinfo))

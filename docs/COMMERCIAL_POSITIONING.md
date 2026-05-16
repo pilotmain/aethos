@@ -56,6 +56,12 @@ Fortune-500-caliber Mission Control readability without monitoring-dashboard blo
 - Fortune-500-caliber Mission Control calmness under cold hydration
 - `aethos runtime certify` — full RC certification bundle
 
+## First impression (Phase 4 Step 15)
+
+- Conversational enterprise installer — AethOS guides, operator stays in control
+- Resume-safe setup; Mission Control works immediately after onboarding
+- `aethos setup first-impression` · `GET /api/v1/setup/first-impression`
+
 ## Philosophy
 
 Lighter than enterprise orchestration stacks, cleaner than fragmented AI control planes, more transparent than opaque agents.
