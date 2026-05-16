@@ -29,7 +29,7 @@ Events are aggregated for display (`aggregate_events_for_display`) to collapse r
 
 ## Step 11 — production cleanup
 
-- **Cached truth:** `runtime_truth_cache.py` (5s TTL) backs all MC runtime APIs.
+- **Cached truth:** `runtime_truth_cache.py` (default 30s TTL) + incremental slices in `runtime_hydration.py` back MC runtime APIs.
 - **Lifecycle:** `runtime_lifecycle.py` sweeps stale repair contexts and trims deployment traces.
 - **Traces:** `GET /api/v1/mission-control/runtime-traces` — ownership, repair, deployment, provider chains.
 - **Plugins:** `build_plugin_health_panel()` exposes warnings, failures, permissions.

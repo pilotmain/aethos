@@ -223,6 +223,10 @@ class Settings(BaseSettings):
     aethos_worker_memory_output_limit: int = 12
     aethos_worker_deliverable_limit: int = 200
     aethos_worker_continuation_limit: int = 48
+    # Phase 3 Step 12 — incremental truth hydration cache TTLs (``AETHOS_TRUTH_*``).
+    aethos_truth_cache_ttl_sec: float = 30.0
+    aethos_truth_slice_ttl_sec: float = 15.0
+    aethos_truth_maintenance_interval_sec: float = 60.0
     aethos_plan_checkpoint_limit: int = 500
     aethos_queue_limit: int = 5000
     aethos_step_max_retries: int = 3

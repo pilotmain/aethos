@@ -199,6 +199,11 @@ def default_runtime_state(*, workspace_root: Path | None = None) -> dict[str, An
         "workspace_governance_events": {},
         "automation_pack_runtime": {},
         "automation_pack_executions": {},
+        # Phase 3 Step 12 — incremental truth hydration caches.
+        "mc_runtime_truth_cache": {},
+        "mc_runtime_slice_cache": {},
+        "hydration_metrics": {},
+        "timeline_append_buffer": [],
     }
 
 

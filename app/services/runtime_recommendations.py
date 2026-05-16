@@ -136,6 +136,47 @@ def _recommendations_from_signals(
             rec_type="automation_pack",
         )
 
+    from app.services.mission_control.runtime_metrics_discipline import get_runtime_discipline_metrics
+
+    discipline = get_runtime_discipline_metrics()
+    payload = int(discipline.get("last_payload_approx_bytes") or 0)
+    if payload > 400_000:
+        add(
+            "runtime_payload_too_large",
+            "Runtime truth payload is large — prefer slice APIs for Mission Control.",
+            0.78,
+            reason=f"Approx payload {payload} bytes",
+            impact="medium",
+            next_step="Use /runtime/workers and slice endpoints; raise cache TTL if needed",
+            rec_type="runtime_performance",
+        )
+    misses = int(discipline.get("truth_cache_misses") or 0)
+    hits = int(discipline.get("truth_cache_hits") or 0)
+    if misses > hits + 5 and misses > 3:
+        add(
+            "repeated_truth_rebuilds",
+            "Repeated full truth rebuilds detected — enable warm slice cache.",
+            0.7,
+            reason=f"Cache misses {misses} vs hits {hits}",
+            impact="medium",
+            next_step="Increase AETHOS_TRUTH_SLICE_TTL_SEC or reduce MC full-truth polling",
+            rec_type="runtime_performance",
+        )
+    from app.services.mission_control.runtime_hydration import get_hydration_metrics
+
+    h = get_hydration_metrics()
+    last_ms = float(h.get("last_hydration_ms") or 0)
+    if last_ms > 3000:
+        add(
+            "runtime_hydration_slow",
+            "Incremental hydration exceeded 3s — review slice builders.",
+            0.72,
+            reason=f"Last hydration {last_ms:.0f}ms",
+            impact="high",
+            next_step="Inspect derived/cohesion slice cost; prune event buffer",
+            rec_type="runtime_performance",
+        )
+
     s = get_settings()
     if getattr(s, "aethos_local_first_enabled", False):
         add(

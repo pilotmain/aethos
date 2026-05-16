@@ -374,12 +374,17 @@ def main() -> int:
     sp_env_show = env_sub.add_parser("show", help="GET /api/v1/environments/{id}")
     sp_env_show.add_argument("environment_id")
 
-    sp_runtime = sub.add_parser("runtime", help="Unified runtime cohesion (Phase 3 Step 11)")
+    sp_runtime = sub.add_parser("runtime", help="Unified runtime cohesion (Phase 3 Step 11–12)")
     rt_sub = sp_runtime.add_subparsers(dest="runtime_cmd", required=True)
     rt_sub.add_parser("health", help="GET /api/v1/mission-control/runtime/health")
     rt_sub.add_parser("timeline", help="GET /api/v1/mission-control/runtime/timeline")
     rt_sub.add_parser("recommendations", help="GET /api/v1/mission-control/runtime-recommendations")
     rt_sub.add_parser("workers", help="GET /api/v1/mission-control/runtime-workers")
+    rt_sub.add_parser("performance", help="GET /api/v1/mission-control/runtime/performance")
+    rt_sub.add_parser("cache", help="Hydration cache metrics from runtime state")
+    rt_sub.add_parser("hydration", help="Incremental hydration metrics")
+    rt_sub.add_parser("latency", help="Operational responsiveness summary")
+    rt_sub.add_parser("scalability", help="Runtime scalability bounds summary")
 
     sp_opsum = sub.add_parser("operational", help="Operational summary (Phase 3 Step 11)")
     op_sub = sp_opsum.add_subparsers(dest="operational_cmd", required=True)
@@ -964,6 +969,37 @@ def main() -> int:
             code, body = _req("GET", "/api/v1/mission-control/runtime-workers", uid=uid)
             print(body[:24000])
             return 0 if code == 200 else 1
+        if args.runtime_cmd == "performance":
+            code, body = _req("GET", "/api/v1/mission-control/runtime/performance", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.runtime_cmd in ("cache", "hydration", "latency", "scalability"):
+            from app.services.mission_control.runtime_hydration import (
+                build_runtime_performance_block,
+                get_hydration_metrics,
+            )
+            from app.services.mission_control.runtime_metrics_discipline import get_runtime_discipline_metrics
+
+            h = get_hydration_metrics()
+            perf = build_runtime_performance_block(float(h.get("last_hydration_ms") or 0), int(h.get("last_payload_bytes") or 0))
+            disc = get_runtime_discipline_metrics()
+            if args.runtime_cmd == "cache":
+                out = {"hydration_metrics": h, "discipline": disc, "performance": perf}
+            elif args.runtime_cmd == "hydration":
+                out = h
+            elif args.runtime_cmd == "latency":
+                out = {
+                    "last_hydration_ms": h.get("last_hydration_ms"),
+                    "last_truth_build_ms": disc.get("last_truth_build_ms"),
+                    "target_cached_read_ms": 500,
+                }
+            else:
+                from app.services.mission_control.runtime_truth import build_runtime_truth
+
+                truth = build_runtime_truth(user_id=uid)
+                out = truth.get("runtime_scalability") or {}
+            print(json.dumps(out, indent=2, default=str)[:24000])
+            return 0
 
     if args.cmd == "operational":
         if args.operational_cmd == "summary":

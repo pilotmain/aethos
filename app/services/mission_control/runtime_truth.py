@@ -91,9 +91,25 @@ def _compute_metrics(user_id: str, ort: dict[str, Any], st: dict[str, Any]) -> d
 
 
 def build_runtime_truth(*, user_id: str | None = None) -> dict[str, Any]:
-    """
-    One authoritative runtime snapshot for agents, tasks, providers, health, plugins, repair, privacy.
-    """
+    """Authoritative runtime snapshot — incremental slice hydration (Phase 3 Step 12)."""
+    from app.services.mission_control.runtime_hydration import hydrate_runtime_truth_incremental
+
+    return hydrate_runtime_truth_incremental(user_id=user_id)
+
+
+def build_runtime_truth_full(*, user_id: str | None = None) -> dict[str, Any]:
+    """Legacy monolithic rebuild — prefer hydrate_runtime_truth_incremental."""
+    from app.services.agent_runtime_truth import build_agent_visibility_for_truth
+    from app.services.enterprise_runtime_visibility import build_enterprise_runtime_panels
+    from app.services.mission_control.runtime_cohesion import build_runtime_cohesion_bundle
+    from app.services.mission_control.runtime_summary_readability import build_readable_summaries
+    from app.services.mission_control.runtime_worker_visibility import build_runtime_workers_view
+    from app.services.operational_intelligence_engine import build_operational_intelligence_engine
+    from app.services.research_continuity import build_deliverable_relationships_view
+    from app.services.runtime_recommendations import build_runtime_recommendations
+    from app.services.worker_intelligence import build_worker_intelligence_truth
+    from app.runtime.workspace_operational_memory import list_research_chains
+
     recover_runtime_agents_after_restart()
     sweep_expired_agents()
     lifecycle_sweep = run_runtime_lifecycle_sweeps()
@@ -109,14 +125,6 @@ def build_runtime_truth(*, user_id: str | None = None) -> dict[str, Any]:
     agents_active = list_runtime_agents(include_expired=False)
     brain = build_brain_visibility()
     metrics = get_cached_metrics(uid or "_global", lambda u: _compute_metrics(u, ort, st))
-    routing_summary = build_provider_routing_summary()
-    plugins_panel = build_plugin_health_panel()
-    privacy_posture = build_privacy_operational_posture()
-    from app.services.operational_intelligence_engine import build_operational_intelligence_engine
-
-    engine = build_operational_intelligence_engine(ort)
-    operational_intel = engine
-
     truth: dict[str, Any] = {
         "runtime_health": health,
         "orchestrator": agents_active.get("aethos_orchestrator"),
@@ -136,7 +144,7 @@ def build_runtime_truth(*, user_id: str | None = None) -> dict[str, Any]:
         "operator_context": operator,
         "repair": operator.get("latest_repair_contexts") or {},
         "brain_visibility": brain,
-        "routing_summary": routing_summary,
+        "routing_summary": build_provider_routing_summary(),
         "privacy": {
             "mode": brain["brain"]["privacy_mode"],
             "local_only": brain["brain"].get("local_only"),
@@ -145,60 +153,45 @@ def build_runtime_truth(*, user_id: str | None = None) -> dict[str, Any]:
         "runtime_events": events_display,
         "runtime_events_raw_count": len(events_display),
         "runtime_metrics": metrics,
-        "plugins": plugins_panel,
+        "plugins": build_plugin_health_panel(),
         "ownership_trace": build_operator_trace_chains(uid),
         "operator_traces": build_all_operator_traces(uid),
         "lifecycle_sweep": lifecycle_sweep,
         "workflows": ort.get("workflows") or {},
         "marketplace": marketplace_summary(),
-        "operational_intelligence": operational_intel,
+        "operational_intelligence": build_operational_intelligence_engine(ort),
         "brain_routing_panel": build_brain_routing_panel(),
         "workspace_intelligence": build_workspace_intelligence(),
         "runtime_governance": build_governance_audit(),
         "automation_packs": list_automation_packs_with_health(),
-        "privacy_posture": privacy_posture,
+        "privacy_posture": build_privacy_operational_posture(),
         "provider_intelligence": build_provider_intelligence_panel(),
         "differentiators": build_differentiators_summary(ort=ort),
         "runtime_discipline": get_runtime_discipline_metrics(),
-        "readable_summaries": None,
-        "runtime_workers": None,
-        "runtime_confidence": None,
     }
     truth["runtime_confidence"] = build_runtime_confidence(truth, user_id=uid)
     truth["office"] = build_office_operational_view(truth, user_id=uid)
-    from app.services.mission_control.runtime_summary_readability import build_readable_summaries
-    from app.services.mission_control.runtime_worker_visibility import build_runtime_workers_view
-
     truth["readable_summaries"] = build_readable_summaries(truth)
     truth["runtime_workers"] = build_runtime_workers_view(uid)
-    from app.services.agent_runtime_truth import build_agent_visibility_for_truth
-
     truth["agent_visibility"] = build_agent_visibility_for_truth()
-    from app.services.worker_intelligence import build_worker_intelligence_truth
-
     wi = build_worker_intelligence_truth()
-    truth["worker_memory"] = wi.get("worker_memory")
-    truth["worker_deliverables"] = wi.get("worker_deliverables")
-    truth["worker_continuations"] = wi.get("worker_continuations")
-    truth["worker_effectiveness"] = wi.get("worker_effectiveness")
-    truth["worker_summaries"] = wi.get("worker_summaries")
-    from app.runtime.workspace_operational_memory import list_research_chains
-    from app.services.research_continuity import build_deliverable_relationships_view
-
-    truth["research_chains"] = list_research_chains(limit=16)
-    truth["deliverable_relationships"] = build_deliverable_relationships_view(limit=32)
-    truth["operational_risk"] = build_operational_risk()
-    truth["operator_continuity"] = build_operator_continuity_truth()
-    from app.services.enterprise_runtime_visibility import build_enterprise_runtime_panels
-    from app.services.runtime_recommendations import build_runtime_recommendations
-
-    truth["automation_pack_runtime"] = engine.get("automation_pack_runtime")
-    truth["runtime_insights"] = engine.get("runtime_insights")
-    truth["enterprise_operational_state"] = engine.get("enterprise_operational_state")
+    truth.update(
+        {
+            "worker_memory": wi.get("worker_memory"),
+            "worker_deliverables": wi.get("worker_deliverables"),
+            "worker_continuations": wi.get("worker_continuations"),
+            "worker_effectiveness": wi.get("worker_effectiveness"),
+            "worker_summaries": wi.get("worker_summaries"),
+            "research_chains": list_research_chains(limit=16),
+            "deliverable_relationships": build_deliverable_relationships_view(limit=32),
+            "operational_risk": build_operational_risk(),
+            "operator_continuity": build_operator_continuity_truth(),
+            "runtime_recommendations": build_runtime_recommendations(ort),
+        }
+    )
+    engine = truth.get("operational_intelligence") or build_operational_intelligence_engine(ort)
+    truth["automation_pack_runtime"] = engine.get("automation_pack_runtime") if isinstance(engine, dict) else {}
     truth["enterprise_runtime_panels"] = build_enterprise_runtime_panels(truth)
-    truth["runtime_recommendations"] = build_runtime_recommendations(ort)
-    from app.services.mission_control.runtime_cohesion import build_runtime_cohesion_bundle
-
     cohesion = build_runtime_cohesion_bundle(truth)
     truth["runtime_cohesion"] = cohesion
     truth["enterprise_operational_health"] = cohesion.get("enterprise_operational_health")

@@ -13,6 +13,12 @@ from app.runtime.runtime_state import load_runtime_state, save_runtime_state, ut
 _CACHE_TTL_SEC = 5.0
 
 
+def _full_cache_ttl() -> float:
+    from app.core.config import get_settings
+
+    return float(getattr(get_settings(), "aethos_truth_cache_ttl_sec", 30.0))
+
+
 def get_cached_runtime_truth(
     user_id: str | None,
     builder: Callable[[str | None], dict[str, Any]],
@@ -27,7 +33,7 @@ def get_cached_runtime_truth(
     entry = cache.get(key)
     if isinstance(entry, dict):
         ts = float(entry.get("_mono_ts") or 0)
-        if now - ts < _CACHE_TTL_SEC and isinstance(entry.get("truth"), dict):
+        if now - ts < _full_cache_ttl() and isinstance(entry.get("truth"), dict):
             from app.services.mission_control.runtime_metrics_discipline import (
                 approx_payload_bytes,
                 record_truth_build,

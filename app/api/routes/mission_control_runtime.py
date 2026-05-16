@@ -38,9 +38,15 @@ def mc_runtime(db: Session = Depends(get_db), app_user_id: str = Depends(get_val
     return build_mission_control_runtime(db, user_id=app_user_id)
 
 
+def _lightweight_slice(slice_name: str, app_user_id: str) -> dict:
+    from app.services.mission_control.runtime_hydration import get_lightweight_slice
+
+    return get_lightweight_slice(slice_name, app_user_id)
+
+
 @router.get("/office")
 def mc_office(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
-    return _truth_slice(app_user_id).get("office") or {}
+    return _lightweight_slice("workers", app_user_id).get("office") or {}
 
 
 @router.get("/agents")
@@ -119,9 +125,8 @@ def _truth_slice(app_user_id: str) -> dict:
 
 
 @router.get("/runtime/health")
-def mc_runtime_health(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
-    t = _truth_slice(app_user_id)
-    return t.get("enterprise_operational_health") or {}
+def mc_runtime_enterprise_health(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    return _lightweight_slice("health", app_user_id)
 
 
 @router.get("/runtime/timeline")
@@ -129,8 +134,55 @@ def mc_runtime_timeline(
     limit: int = Query(40, ge=1, le=80),
     app_user_id: str = Depends(get_valid_web_user_id),
 ) -> dict:
+    from app.services.mission_control.runtime_hydration import build_incremental_timeline
+
+    return build_incremental_timeline(limit=limit)
+
+
+@router.get("/runtime/workers")
+def mc_runtime_workers_slice(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    return _lightweight_slice("workers", app_user_id)
+
+
+@router.get("/runtime/deployments")
+def mc_runtime_deployments_slice(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    return _lightweight_slice("deployments", app_user_id)
+
+
+@router.get("/runtime/providers")
+def mc_runtime_providers_slice(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    return _lightweight_slice("providers", app_user_id)
+
+
+@router.get("/runtime/governance")
+def mc_runtime_governance_slice(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    return _lightweight_slice("governance", app_user_id)
+
+
+@router.get("/runtime/recommendations")
+def mc_runtime_recommendations_slice(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    return _lightweight_slice("recommendations", app_user_id)
+
+
+@router.get("/runtime/intelligence")
+def mc_runtime_intelligence_slice(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    return _lightweight_slice("intelligence", app_user_id)
+
+
+@router.get("/runtime/continuity")
+def mc_runtime_continuity_slice(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    return _lightweight_slice("continuity", app_user_id)
+
+
+@router.get("/runtime/performance")
+def mc_runtime_performance(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
     t = _truth_slice(app_user_id)
-    return t.get("unified_operational_timeline") or {}
+    return {
+        "runtime_performance": t.get("runtime_performance") or {},
+        "hydration_metrics": t.get("hydration_metrics") or {},
+        "operational_responsiveness": t.get("operational_responsiveness") or {},
+        "runtime_scalability": t.get("runtime_scalability") or {},
+    }
 
 
 @router.get("/operational-summary")
