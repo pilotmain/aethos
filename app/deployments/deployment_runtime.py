@@ -197,6 +197,19 @@ def sync_deployment_terminal(
         },
     )
     environment_locks.release_lock(st, env_id, did)
+    if terminal != "completed":
+        from app.deployments.deployment_diagnostics import record_deployment_failure_diagnostics
+
+        rdiag = get_deployment(st, did) or {}
+        record_deployment_failure_diagnostics(
+            st,
+            did,
+            task_id=str(task_id),
+            plan_id=pid,
+            failed_stage=str(rdiag.get("deployment_stage") or status),
+            failure_reason=f"plan_terminal:{terminal}",
+            plan=plan,
+        )
     orchestration_log.log_deployments_event(
         "deployment_completed" if terminal == "completed" else "deployment_failed",
         deployment_id=did,

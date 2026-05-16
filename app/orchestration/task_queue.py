@@ -23,7 +23,21 @@ def ensure_queue(st: dict[str, Any], name: str) -> list[Any]:
 
 
 def enqueue_task_id(st: dict[str, Any], queue_name: str, task_id: str) -> None:
+    from app.core.config import get_settings
+
+    lim = int(get_settings().aethos_queue_limit)
     q = ensure_queue(st, queue_name)
+    soft = max(1, int(lim * 0.95))
+    if len(q) >= soft:
+        m = st.setdefault("runtime_metrics", {})
+        if isinstance(m, dict):
+            m["queue_pressure_events_total"] = int(m.get("queue_pressure_events_total") or 0) + 1
+        try:
+            from app.runtime.events.runtime_events import emit_runtime_event
+
+            emit_runtime_event(st, "queue_pressure", queue=queue_name, depth=len(q), limit=lim)
+        except Exception:
+            pass
     if task_id not in q:
         q.append(task_id)
 

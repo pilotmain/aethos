@@ -211,6 +211,16 @@ class Settings(BaseSettings):
     nexa_host_command_retry_enabled: bool = False
     nexa_host_command_max_attempts: int = 3
     nexa_retry_strategy: str = "exponential"
+    # OpenClaw parity — bounded ``aethos.json`` growth + execution retry caps (``AETHOS_*``).
+    aethos_runtime_event_buffer_limit: int = 500
+    aethos_planning_record_limit: int = 500
+    aethos_planning_outcome_limit: int = 500
+    aethos_runtime_quarantine_limit: int = 80
+    aethos_runtime_backup_limit: int = 25
+    aethos_task_artifact_limit: int = 200
+    aethos_plan_checkpoint_limit: int = 500
+    aethos_queue_limit: int = 5000
+    aethos_step_max_retries: int = 3
     # Lightweight in-process traces/metrics for NL “system status” (not OpenTelemetry).
     nexa_observability_enabled: bool = False
     nexa_trace_retention_hours: int = 24

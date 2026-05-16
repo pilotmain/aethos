@@ -173,6 +173,10 @@ def validate_runtime_state(st: dict[str, Any]) -> dict[str, Any]:
         tid_ref = str(drow.get("task_id") or "").strip()
         if tid_ref and tid_ref not in tr:
             issues.append(f"deployment_orphan_task:{did}:{tid_ref}")
+        if str(drow.get("status") or "") == "failed":
+            dd = drow.get("deployment_diagnostics")
+            if not isinstance(dd, dict) or not dd.get("failure_reason"):
+                issues.append(f"deployment_failed_missing_diagnostics:{did}")
     for eid, lk in locks_map(st).items():
         if not isinstance(lk, dict):
             issues.append(f"environment_lock_invalid:{eid}")
@@ -180,5 +184,37 @@ def validate_runtime_state(st: dict[str, Any]) -> dict[str, Any]:
         ldid = str(lk.get("locked_by_deployment_id") or "")
         if ldid and ldid not in deployment_records(st):
             issues.append(f"environment_lock_orphan_deployment:{eid}:{ldid}")
+
+    from app.core.config import get_settings
+
+    cfg = get_settings()
+    sq = max(1, int(cfg.aethos_queue_limit))
+    for qn in task_queue.QUEUE_NAMES:
+        ql = task_queue.queue_len(st, qn)
+        if ql > sq:
+            issues.append(f"queue_over_cap:{qn}:{ql}>{sq}")
+
+    pr3 = st.get("planning_records")
+    if isinstance(pr3, dict) and len(pr3) > int(cfg.aethos_planning_record_limit):
+        issues.append(f"planning_records_over_cap:{len(pr3)}>{cfg.aethos_planning_record_limit}")
+
+    po2 = st.get("planning_outcomes")
+    if isinstance(po2, list) and len(po2) > int(cfg.aethos_planning_outcome_limit):
+        issues.append(f"planning_outcomes_over_cap:{len(po2)}>{cfg.aethos_planning_outcome_limit}")
+
+    buf2 = st.get("runtime_event_buffer")
+    if isinstance(buf2, list) and len(buf2) > int(cfg.aethos_runtime_event_buffer_limit):
+        issues.append(f"runtime_event_buffer_over_cap:{len(buf2)}>{cfg.aethos_runtime_event_buffer_limit}")
+
+    qc2 = st.get("runtime_corruption_quarantine")
+    if isinstance(qc2, list) and len(qc2) > int(cfg.aethos_runtime_quarantine_limit):
+        issues.append(f"runtime_quarantine_over_cap:{len(qc2)}>{cfg.aethos_runtime_quarantine_limit}")
+
+    cplim = int(cfg.aethos_plan_checkpoint_limit)
+    cps2 = ex2.get("checkpoints") or {}
+    if isinstance(cps2, dict):
+        for pid, plan_cp in cps2.items():
+            if isinstance(plan_cp, dict) and len(plan_cp) > cplim:
+                issues.append(f"checkpoints_over_cap:{pid}:{len(plan_cp)}>{cplim}")
 
     return {"ok": len(issues) == 0, "issues": issues, "issue_count": len(issues)}

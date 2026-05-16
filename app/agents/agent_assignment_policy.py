@@ -173,6 +173,24 @@ def assign_task_with_coordination_policy(
         "rationale": meta,
     }
     assign_task_to_agent(st, chosen, tid, coordination_assignment=assignment)
+    pid = str(t.get("execution_plan_id") or "")
+    if pid:
+        from app.planning import planning_history
+        from app.planning.replanning_runtime import find_planning_id_for_plan
+
+        plan_pl = find_planning_id_for_plan(st, pid)
+        if plan_pl:
+            planning_history.append_delegation_decision(
+                st,
+                plan_pl,
+                {
+                    "task_id": tid,
+                    "selected_agent_id": chosen,
+                    "candidates": meta.get("ranked_candidates") or [],
+                    "mode": meta.get("mode"),
+                    "assignment": assignment,
+                },
+            )
     m = st.setdefault("runtime_metrics", {})
     if isinstance(m, dict):
         m["coordination_policy_assignments_total"] = int(m.get("coordination_policy_assignments_total") or 0) + 1

@@ -39,6 +39,73 @@ def _sync_deployment_terminal(st: dict[str, Any], task_id: str, plan: dict[str, 
     sync_deployment_terminal(st, task_id=task_id, plan=plan, terminal=terminal)
 
 
+def _effective_step_max_retries(step: dict[str, Any]) -> int:
+    from app.core.config import get_settings
+
+    return min(int(step.get("max_retries") or 3), int(get_settings().aethos_step_max_retries))
+
+
+def _should_schedule_retry(step: dict[str, Any]) -> bool:
+    return bool(step.get("retryable", True)) and int(step.get("retry_count") or 0) < _effective_step_max_retries(step)
+
+
+def _record_retry_guardrail(st: dict[str, Any], *, plan_id: str, step_id: str, reason: str) -> None:
+    m = st.setdefault("runtime_metrics", {})
+    if isinstance(m, dict):
+        m["adaptive_retry_blocked_total"] = int(m.get("adaptive_retry_blocked_total") or 0) + 1
+    try:
+        from app.runtime.events.runtime_events import emit_runtime_event
+
+        emit_runtime_event(
+            st,
+            "retry_guardrail_triggered",
+            plan_id=str(plan_id),
+            step_id=str(step_id),
+            reason=(reason or "")[:400],
+        )
+    except Exception:
+        pass
+
+
+def _finalize_execution_failure(
+    st: dict[str, Any],
+    *,
+    task_id: str,
+    plan: dict[str, Any],
+    pid: str,
+    sid: str,
+    step: dict[str, Any],
+    reason: str,
+    source_queue: str | None,
+    exhausted: bool,
+) -> dict[str, Any]:
+    if exhausted:
+        m = st.setdefault("runtime_metrics", {})
+        if isinstance(m, dict):
+            m["retry_exhausted_total"] = int(m.get("retry_exhausted_total") or 0) + 1
+    step["status"] = "failed"
+    execution_checkpoint.save_checkpoint(
+        st,
+        str(pid),
+        sid,
+        task_id=task_id,
+        outputs=list(step.get("outputs") or []),
+        metadata={"source_queue": source_queue or "", "tool_failed": True},
+    )
+    execution_plan.update_plan_timestamp(plan)
+    _reconcile_blocked_labels(plan)
+    task_registry.update_task_state(st, task_id, "failed")
+    plan["status"] = "failed"
+    execution_log.log_execution_event(
+        "execution_failed", task_id=task_id, plan_id=str(pid), status="failed"
+    )
+    _sync_deployment_terminal(st, task_id, plan, "failed")
+    from app.planning.replanning_runtime import on_plan_terminal_failure
+
+    on_plan_terminal_failure(st, task_id=task_id, plan_id=str(pid), reason=reason)
+    return {"terminal": "failed", "plan_id": str(pid), "step_id": sid}
+
+
 def _step_runs_tools(step: dict[str, Any]) -> bool:
     tblk = step.get("tool")
     if isinstance(tblk, dict) and str(tblk.get("name") or "").strip():
@@ -170,16 +237,30 @@ def tick_planned_task(
 
     if step.get("fail_once"):
         step.pop("fail_once", None)
-        execution_retry.schedule_step_retry(plan, step, "simulated_failure", now_ts=now_ts)
-        task_registry.update_task_state(st, task_id, "retrying")
-        execution_memory.set_continuation(st, task_id, last_step=sid, phase="retry")
-        execution_plan.update_plan_timestamp(plan)
-        from app.planning.adaptive_execution import notify_retry_scheduled
+        if _should_schedule_retry(step):
+            execution_retry.schedule_step_retry(plan, step, "simulated_failure", now_ts=now_ts)
+            task_registry.update_task_state(st, task_id, "retrying")
+            execution_memory.set_continuation(st, task_id, last_step=sid, phase="retry")
+            execution_plan.update_plan_timestamp(plan)
+            from app.planning.adaptive_execution import notify_retry_scheduled
 
-        notify_retry_scheduled(
-            st, task_id=task_id, plan_id=str(pid), step_id=sid, reason="simulated_failure"
+            notify_retry_scheduled(
+                st, task_id=task_id, plan_id=str(pid), step_id=sid, reason="simulated_failure"
+            )
+            return {"terminal": "retrying", "plan_id": str(pid), "step_id": sid}
+        _record_retry_guardrail(st, plan_id=str(pid), step_id=sid, reason="simulated_failure_cap")
+        step["error"] = "retry_guardrail_blocked"
+        return _finalize_execution_failure(
+            st,
+            task_id=task_id,
+            plan=plan,
+            pid=str(pid),
+            sid=sid,
+            step=step,
+            reason="simulated_failure_retry_blocked",
+            source_queue=source_queue,
+            exhausted=False,
         )
-        return {"terminal": "retrying", "plan_id": str(pid), "step_id": sid}
 
     start_iso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     step["started_at"] = start_iso
@@ -221,8 +302,7 @@ def tick_planned_task(
         if not ok:
             reason = str(result.get("error") or result.get("stderr") or "tool_failed")[:2000]
             step["error"] = reason
-            max_r = int(step.get("max_retries") or 3)
-            if step.get("retryable", True) and int(step.get("retry_count") or 0) < max_r:
+            if _should_schedule_retry(step):
                 execution_retry.schedule_step_retry(plan, step, reason, now_ts=now_ts)
                 task_registry.update_task_state(st, task_id, "retrying")
                 execution_memory.set_continuation(st, task_id, last_step=sid, phase="retry")
@@ -231,27 +311,17 @@ def tick_planned_task(
 
                 notify_retry_scheduled(st, task_id=task_id, plan_id=str(pid), step_id=sid, reason=reason)
                 return {"terminal": "retrying", "plan_id": str(pid), "step_id": sid}
-            step["status"] = "failed"
-            execution_checkpoint.save_checkpoint(
+            return _finalize_execution_failure(
                 st,
-                str(pid),
-                sid,
                 task_id=task_id,
-                outputs=list(step.get("outputs") or []),
-                metadata={"source_queue": source_queue or "", "tool_failed": True},
+                plan=plan,
+                pid=str(pid),
+                sid=sid,
+                step=step,
+                reason=reason,
+                source_queue=source_queue,
+                exhausted=True,
             )
-            execution_plan.update_plan_timestamp(plan)
-            _reconcile_blocked_labels(plan)
-            task_registry.update_task_state(st, task_id, "failed")
-            plan["status"] = "failed"
-            execution_log.log_execution_event(
-                "execution_failed", task_id=task_id, plan_id=str(pid), status="failed"
-            )
-            _sync_deployment_terminal(st, task_id, plan, "failed")
-            from app.planning.replanning_runtime import on_plan_terminal_failure
-
-            on_plan_terminal_failure(st, task_id=task_id, plan_id=str(pid), reason=reason)
-            return {"terminal": "failed", "plan_id": str(pid), "step_id": sid}
         step["error"] = None
         step["status"] = "completed"
     else:

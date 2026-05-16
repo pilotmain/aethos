@@ -9,6 +9,7 @@ import uuid
 from typing import Any
 
 from app.planning import planning_events
+from app.planning.adaptive_planning_row import ensure_adaptive_planning_fields
 from app.runtime.runtime_state import utc_now_iso
 
 
@@ -52,6 +53,7 @@ def ensure_planning_record_for_plan(
             break
     if existing_id:
         planning_records(st)[existing_id]["updated_at"] = utc_now_iso()
+        ensure_adaptive_planning_fields(planning_records(st)[existing_id])
         return existing_id
     plnid = f"pln_{uuid.uuid4().hex[:12]}"
     ts = utc_now_iso()
@@ -73,6 +75,7 @@ def ensure_planning_record_for_plan(
     planning_events.emit_planning_event(
         st, "plan_generated", planning_id=plnid, task_id=str(task_id), plan_id=pid, user_id=str(user_id)
     )
+    ensure_adaptive_planning_fields(planning_records(st)[plnid])
     return plnid
 
 

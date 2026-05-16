@@ -40,16 +40,31 @@ def on_plan_terminal_failure(st: dict[str, Any], *, task_id: str, plan_id: str, 
     planning_events.emit_planning_event(
         st, "workflow_replanned", planning_id=plnid, task_id=str(task_id), plan_id=str(plan_id), reason=reason[:500]
     )
+    from app.planning import planning_history
+
+    planning_history.append_adaptive_change(
+        st,
+        plnid,
+        change="workflow_replanned",
+        context={"reason": reason[:1500], "task_id": str(task_id)},
+    )
+    planning_history.bump_execution_quality(st, plnid, outcome="failure")
     snap = {"ts": ts, "planning_id": plnid, "event": "workflow_replanned", "task_id": str(task_id)}
     ol = outcomes_list(st)
     ol.append(snap)
-    if len(ol) > 200:
-        ol[:] = ol[-200:]
+    from app.core.config import get_settings
+
+    lim = int(get_settings().aethos_planning_outcome_limit)
+    if len(ol) > lim:
+        ol[:] = ol[-lim:]
+
+
 def on_adaptive_retry(st: dict[str, Any], *, task_id: str, plan_id: str, step_id: str, reason: str) -> None:
     plnid = find_planning_id_for_plan(st, plan_id)
     m = st.setdefault("runtime_metrics", {})
     if isinstance(m, dict):
         m["adaptive_retry_total"] = int(m.get("adaptive_retry_total") or 0) + 1
+        m["adaptive_retry_scheduled_total"] = int(m.get("adaptive_retry_scheduled_total") or 0) + 1
     planning_events.emit_planning_event(
         st,
         "adaptive_retry_triggered",
@@ -68,3 +83,35 @@ def on_adaptive_retry(st: dict[str, Any], *, task_id: str, plan_id: str, step_id
             rp["adaptive_retries"] = retries[-80:]
             row["recovery_plan"] = rp
             planning_records(st)[plnid] = row
+            from app.core.config import get_settings
+            from app.execution import execution_plan
+            from app.planning import planning_history
+
+            ex = execution_plan.execution_root(st)
+            plan = (ex.get("plans") or {}).get(str(plan_id))
+            step: dict[str, Any] | None = None
+            if isinstance(plan, dict):
+                for s in plan.get("steps") or []:
+                    if isinstance(s, dict) and str(s.get("step_id")) == str(step_id):
+                        step = s
+                        break
+            if isinstance(step, dict):
+                eff = min(int(step.get("max_retries") or 3), int(get_settings().aethos_step_max_retries))
+                nra = step.get("next_retry_at")
+                try:
+                    next_ts = float(nra) if nra is not None else None
+                except (TypeError, ValueError):
+                    next_ts = None
+                planning_history.append_retry_strategy_record(
+                    st,
+                    plnid,
+                    strategy="exponential_backoff",
+                    reason=reason,
+                    retry_count=int(step.get("retry_count") or 0),
+                    next_retry_at=next_ts,
+                    max_retries=eff,
+                    adapted=False,
+                )
+                m2 = st.setdefault("runtime_metrics", {})
+                if isinstance(m2, dict):
+                    m2["retry_strategy_changes_total"] = int(m2.get("retry_strategy_changes_total") or 0) + 1

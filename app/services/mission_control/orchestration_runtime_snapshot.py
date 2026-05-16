@@ -108,12 +108,17 @@ def build_orchestration_runtime_snapshot(user_id: str | None) -> dict[str, Any]:
             "outcomes_tail": _planning_outcomes_tail(st, uid),
             "reasoning_tail": _planning_reasoning_tail(st, uid),
             "optimization_tail": _planning_optimization_tail(st, uid),
+            "adaptive_changes_tail": _planning_list_field_tail(st, uid, "adaptive_changes"),
+            "delegation_decisions_tail": _planning_list_field_tail(st, uid, "delegation_decisions"),
+            "retry_strategy_tail": _planning_list_field_tail(st, uid, "retry_strategy_history"),
         },
         "resilience": _resilience_slice(st),
     }
 
 
 def _resilience_slice(st: dict[str, Any]) -> dict[str, Any]:
+    from app.core.config import get_settings
+    from app.orchestration import task_queue
     from app.runtime.backups.runtime_snapshots import list_runtime_backup_files
     from app.runtime.corruption.runtime_validation import scan_queue_duplicates_and_shape
     from app.runtime.integrity.runtime_integrity import validate_runtime_state
@@ -124,6 +129,21 @@ def _resilience_slice(st: dict[str, Any]) -> dict[str, Any]:
     inv = validate_runtime_state(st)
     bk = list_runtime_backup_files(limit=200)
     sig = scan_queue_duplicates_and_shape(st)
+    cfg = get_settings()
+    cap_warnings: list[str] = []
+    sq = max(1, int(cfg.aethos_queue_limit))
+    for qn in task_queue.QUEUE_NAMES:
+        if task_queue.queue_len(st, qn) >= max(1, int(sq * 0.95)):
+            cap_warnings.append(f"queue_near_cap:{qn}")
+    buf = st.get("runtime_event_buffer")
+    blen = len(buf) if isinstance(buf, list) else 0
+    belim = max(1, int(cfg.aethos_runtime_event_buffer_limit))
+    if blen >= max(1, int(belim * 0.9)):
+        cap_warnings.append("runtime_event_buffer_pressure")
+    r_sched = int(m.get("adaptive_retry_scheduled_total") or 0)
+    r_blk = int(m.get("adaptive_retry_blocked_total") or 0)
+    if r_blk > 0 and r_sched > 0 and r_blk >= r_sched:
+        cap_warnings.append("retry_guardrails_heavy")
     return {
         "integrity_ok": bool(inv.get("ok")),
         "integrity_issue_count": int(inv.get("issue_count") or 0),
@@ -133,6 +153,14 @@ def _resilience_slice(st: dict[str, Any]) -> dict[str, Any]:
         "quarantine_records": len(qc) if isinstance(qc, list) else 0,
         "last_cleanup": rs.get("last_cleanup"),
         "last_backup": rs.get("last_backup"),
+        "cap_warnings": cap_warnings,
+        "retry_metrics": {
+            "adaptive_retry_scheduled_total": r_sched,
+            "adaptive_retry_blocked_total": r_blk,
+            "retry_exhausted_total": int(m.get("retry_exhausted_total") or 0),
+            "retry_strategy_changes_total": int(m.get("retry_strategy_changes_total") or 0),
+        },
+        "queue_pressure_events_total": int(m.get("queue_pressure_events_total") or 0),
     }
 
 
@@ -153,6 +181,8 @@ def _deployments_slice(st: dict[str, Any], uid: str) -> dict[str, Any]:
         latest = lg[-1] if isinstance(lg, list) and lg else None
         arts = r.get("artifacts")
         ac = len(arts) if isinstance(arts, list) else 0
+        dd = r.get("deployment_diagnostics")
+        has_dd = isinstance(dd, dict) and bool(dd)
         sample.append(
             {
                 "deployment_id": r.get("deployment_id"),
@@ -165,6 +195,8 @@ def _deployments_slice(st: dict[str, Any], uid: str) -> dict[str, Any]:
                 "recovery": r.get("recovery"),
                 "latest_log": latest,
                 "failure_reason": r.get("failure_reason"),
+                "has_deployment_diagnostics": has_dd,
+                "diagnostics_failed_stage": (dd or {}).get("failed_stage") if has_dd else None,
             }
         )
     return {
@@ -302,3 +334,22 @@ def _planning_optimization_tail(st: dict[str, Any], uid: str) -> list[dict[str, 
         {"planning_id": r.get("planning_id"), "optimization_state": r.get("optimization_state")}
         for r in list_planning_for_user(st, uid)[:40]
     ]
+
+
+def _planning_list_field_tail(st: dict[str, Any], uid: str, field: str) -> list[dict[str, Any]]:
+    from app.planning.planner_runtime import list_planning_for_user
+
+    if not uid:
+        return []
+    out: list[dict[str, Any]] = []
+    for row in list_planning_for_user(st, uid)[:40]:
+        seq = row.get(field)
+        if not isinstance(seq, list):
+            continue
+        plnid = row.get("planning_id")
+        for item in seq[-16:]:
+            if isinstance(item, dict):
+                x = dict(item)
+                x["planning_id"] = plnid
+                out.append(x)
+    return out[-48:]

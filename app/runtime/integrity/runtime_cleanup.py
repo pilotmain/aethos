@@ -9,13 +9,17 @@ from app.orchestration import task_queue
 from app.orchestration import task_registry
 
 
-def cleanup_runtime_state(st: dict[str, Any], *, event_buffer_cap: int = 3000) -> dict[str, Any]:
+def cleanup_runtime_state(st: dict[str, Any], *, event_buffer_cap: int | None = None) -> dict[str, Any]:
     """
     Prune orphan queue entries + orphan plans; trim oversized event buffer; drop orphan
     execution-memory buckets; remove checkpoints whose plan is gone.
 
     Does **not** delete active tasks, sessions, or non-orphan plans.
     """
+    from app.core.config import get_settings
+
+    s = get_settings()
+    cap = int(event_buffer_cap if event_buffer_cap is not None else s.aethos_runtime_event_buffer_limit)
     out: dict[str, Any] = {}
     from app.runtime.backups.runtime_backups import backup_runtime_state_dict
 
@@ -43,9 +47,9 @@ def cleanup_runtime_state(st: dict[str, Any], *, event_buffer_cap: int = 3000) -
     out["plans_pruned"] = execution_plan.prune_orphan_plans(st)
 
     buf = st.get("runtime_event_buffer")
-    if isinstance(buf, list) and len(buf) > event_buffer_cap:
-        overflow = len(buf) - event_buffer_cap
-        st["runtime_event_buffer"] = buf[-event_buffer_cap:]
+    if isinstance(buf, list) and len(buf) > cap:
+        overflow = len(buf) - cap
+        st["runtime_event_buffer"] = buf[-cap:]
         out["events_trimmed"] = overflow
     else:
         out["events_trimmed"] = 0
@@ -94,4 +98,7 @@ def cleanup_runtime_state(st: dict[str, Any], *, event_buffer_cap: int = 3000) -
     from app.orchestration import orchestration_log
 
     orchestration_log.append_json_log("cleanup", "cleanup_completed", **{k: str(v)[:500] for k, v in out.items()})
+    from app.runtime import retention
+
+    out["retention"] = retention.apply_runtime_retention(st)
     return out
