@@ -24,12 +24,20 @@ def build_setup_status(*, repo_root: Path | None = None) -> dict[str, Any]:
         "routing_mode": bool(os.environ.get("AETHOS_ROUTING_MODE") or os.environ.get("NEXA_ROUTING_MODE")),
     }
     passed = sum(1 for v in checks.values() if v)
-    return {
+    out: dict[str, Any] = {
         "complete": passed >= max(4, len(checks) - 2),
         "checks": checks,
         "passed": passed,
         "total": len(checks),
         "setup_modes": ["local-only", "cloud-only", "hybrid", "later"],
         "enterprise_installer": True,
+        "phase4_step11": True,
         "bounded": True,
     }
+    try:
+        from app.services.setup.mission_control_ready_state import build_mission_control_ready_state
+
+        out["mission_control_ready"] = build_mission_control_ready_state(repo_root=root)
+    except Exception:
+        out["mission_control_ready"] = {"ready": False}
+    return out

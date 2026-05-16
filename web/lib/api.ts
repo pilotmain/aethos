@@ -42,7 +42,7 @@ export function formatMissionControlApiError(message: string): string {
     return `${m} — Feature may be unavailable on this API build.`;
   }
   if (/Cannot reach API/i.test(m)) {
-    return `${m} Use Retry after fixing API base URL or starting the Nexa API.`;
+    return `${m} Use Retry after fixing API base URL or starting the AethOS API.`;
   }
   return m;
 }

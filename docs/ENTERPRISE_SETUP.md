@@ -23,3 +23,15 @@ aethos setup onboarding
 Sections include routing (local/cloud/hybrid), Mission Control connection, orchestrator onboarding, optional channels and web search, and health checks.
 
 **API:** `GET /api/v1/setup/status` — see [ENTERPRISE_INSTALLER.md](ENTERPRISE_INSTALLER.md) (Phase 4 Step 10).
+
+## Phase 4 Step 11 — ready-state lock
+
+```bash
+aethos setup certify
+aethos setup doctor
+aethos setup validate
+```
+
+**APIs:** `GET /api/v1/setup/ready-state`, `/setup/certify`, `/setup/one-curl`, `/setup/env-audit`
+
+Docs: [ONE_CURL_CERTIFICATION.md](ONE_CURL_CERTIFICATION.md), [MISSION_CONTROL_READY_STATE.md](MISSION_CONTROL_READY_STATE.md), [ENV_COMPLETENESS_AUDIT.md](ENV_COMPLETENESS_AUDIT.md), [BRANDING_PURGE_AUDIT.md](BRANDING_PURGE_AUDIT.md)

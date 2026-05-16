@@ -463,7 +463,7 @@ export default function MissionControlMarketplacePage() {
   return (
     <div className="space-y-6">
       <p className="rounded-lg border border-violet-500/30 bg-violet-950/20 px-4 py-3 text-sm text-zinc-300">
-        <strong className="text-zinc-100">Skills</strong> extend AI execution capability (ClawHub-style marketplace).
+        <strong className="text-zinc-100">Skills</strong> extend AI execution capability (community skill registry).
         For operational runtime extensions, see{" "}
         <Link href="/mission-control/plugins" className="underline text-violet-200">
           Runtime plugins
@@ -473,7 +473,7 @@ export default function MissionControlMarketplacePage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-zinc-50">Skill marketplace</h1>
         <p className="mt-1 text-sm text-zinc-400">
-          Discover community plugin skills from a ClawHub-compatible registry. Install / uninstall
+          Discover community plugin skills from the skill registry. Install / uninstall
           / update require the Telegram-linked owner; everything else (search, popular, installed
           list) is read-only for any signed-in user.
         </p>

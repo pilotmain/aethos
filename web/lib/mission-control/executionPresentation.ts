@@ -76,7 +76,7 @@ export function executionHint(status: string, executionState?: ExecutionState | 
     return "Diagnostic only — no deploy, push, or external repair was verified.";
   }
   if (es === "access_required") {
-    return "Access required — connect credentials before Nexa can inspect or act.";
+    return "Access required — connect credentials before AethOS can inspect or act.";
   }
   if (es === "completed_unverified") {
     return "Workflow ended, but no real-world execution was verified.";

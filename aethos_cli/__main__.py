@@ -252,14 +252,14 @@ def main() -> int:
     )
     sp_gateway.add_argument("--reload", action="store_true")
 
-    sp_message = sub.add_parser("message", help="Gateway message dispatch (OpenClaw-class)")
+    sp_message = sub.add_parser("message", help="Gateway message dispatch (AethOS runtime)")
     msg_sub = sp_message.add_subparsers(dest="message_cmd", required=True)
     sp_msg_send = msg_sub.add_parser("send", help="POST mission-control/gateway/run")
     sp_msg_send.add_argument("text", help="User message body")
     sp_msg_send.add_argument(
         "--workflow",
         action="store_true",
-        help="Enqueue persistent tool workflow (OpenClaw parity) instead of chat.",
+        help="Enqueue persistent tool workflow instead of chat.",
     )
     sp_msg_send.add_argument(
         "--wait",
@@ -274,7 +274,7 @@ def main() -> int:
         help="Print JSON only (no truncation banner).",
     )
 
-    sp_task = sub.add_parser("task", help="Runtime workflow task inspection (OpenClaw parity)")
+    sp_task = sub.add_parser("task", help="Runtime workflow task inspection")
     task_sub = sp_task.add_subparsers(dest="task_cmd", required=True)
     sp_task_show = task_sub.add_parser("show", help="GET /api/v1/runtime/tasks/{task_id}")
     sp_task_show.add_argument("task_id")
@@ -358,7 +358,7 @@ def main() -> int:
     sp_proj_lr = proj_sub.add_parser("latest-repair", help="GET /api/v1/projects/{id}/latest-repair")
     sp_proj_lr.add_argument("project_id")
 
-    sp_dep = sub.add_parser("deployments", help="Deployment runtime API (OpenClaw infra parity)")
+    sp_dep = sub.add_parser("deployments", help="Deployment runtime API")
     dep_sub = sp_dep.add_subparsers(dest="dep_cmd", required=True)
     dep_sub.add_parser("list", help="GET /api/v1/deployments")
     sp_dep_show = dep_sub.add_parser("show", help="GET /api/v1/deployments/{id}")
@@ -371,7 +371,7 @@ def main() -> int:
     sp_dep_rb.add_argument("deployment_id")
     sp_dep_rb.add_argument("--reason", default="", help="Optional rollback reason")
 
-    sp_env = sub.add_parser("environments", help="Environment runtime API (OpenClaw infra parity)")
+    sp_env = sub.add_parser("environments", help="Environment runtime API")
     env_sub = sp_env.add_subparsers(dest="env_cmd", required=True)
     env_sub.add_parser("list", help="GET /api/v1/environments")
     env_sub.add_parser("locks", help="GET /api/v1/environments/locks")
@@ -539,7 +539,7 @@ def main() -> int:
     sp_ag_tasks = ag_sub.add_parser("tasks", help="GET /api/v1/runtime/agents/{id}/tasks")
     sp_ag_tasks.add_argument("agent_id")
 
-    sp_planning = sub.add_parser("planning", help="Adaptive planning runtime API (OpenClaw parity)")
+    sp_planning = sub.add_parser("planning", help="Adaptive planning runtime API")
     plan_sub = sp_planning.add_subparsers(dest="planning_cmd", required=True)
     plan_sub.add_parser("list", help="GET /api/v1/runtime/planning")
     sp_plan_show = plan_sub.add_parser("show", help="GET /api/v1/runtime/planning/{planning_id}")
@@ -576,7 +576,7 @@ def main() -> int:
 
     sub.add_parser(
         "doctor",
-        help="Diagnostics: compileall + optional API health (OpenClaw-class)",
+        help="Diagnostics: compileall + optional API health",
     )
 
     sp_state = sub.add_parser("state", help="GET mission-control/state")
@@ -641,7 +641,7 @@ def main() -> int:
     sp_skills = sub.add_parser("skills", help="Plugin skills registry (Phase 6)")
     sk_sub = sp_skills.add_subparsers(dest="skills_cmd", required=True)
     sk_sub.add_parser("list", help="List registered plugin skills")
-    sk_ins = sk_sub.add_parser("install", help="Install skill (ClawHub / file / URL)")
+    sk_ins = sk_sub.add_parser("install", help="Install skill from file or URL")
     sk_ins.add_argument("name")
     sk_ins.add_argument(
         "source",
@@ -657,7 +657,7 @@ def main() -> int:
 
         register_clawhub_parser(sub)
     except ModuleNotFoundError:
-        # `app` not on PYTHONPATH (minimal install / wrong CWD) — skip ClawHub subcommands.
+        # `app` not on PYTHONPATH (minimal install / wrong CWD) — skip remote registry subcommands.
         pass
 
     try:
@@ -704,6 +704,7 @@ def main() -> int:
     setup_sub.add_parser("doctor", help="Enterprise setup health + integration detection")
     setup_sub.add_parser("validate", help="Validate setup completeness (.env, auth, onboarding)")
     setup_sub.add_parser("onboarding", help="Orchestrator-first onboarding conversation")
+    setup_sub.add_parser("certify", help="One-curl + ready-state certification report")
 
     sp_restart = sub.add_parser("restart", help="Restart API, web, or bot processes")
     restart_sub = sp_restart.add_subparsers(dest="restart_cmd")
@@ -1805,6 +1806,12 @@ def main() -> int:
             from aethos_cli.setup_orchestrator_onboarding import run_orchestrator_onboarding
 
             run_orchestrator_onboarding()
+            return 0
+        if sc == "certify":
+            import json
+            from app.services.setup.setup_ready_state_lock import build_setup_ready_state_lock
+
+            print(json.dumps(build_setup_ready_state_lock(), indent=2, default=str)[:24000])
             return 0
         if sc == "resume":
             return run_setup_wizard()

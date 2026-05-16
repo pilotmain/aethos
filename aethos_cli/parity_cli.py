@@ -378,7 +378,7 @@ def _runtime_doctor_messages() -> list[str]:
 def cmd_doctor(*, api_base: str) -> int:
     """Compile check + optional ``GET /api/v1/health`` + runtime parity checks."""
     root = _repo_root()
-    print("== AethOS doctor (OpenClaw-class diagnostics) ==", file=sys.stderr)
+    print("== AethOS doctor (enterprise diagnostics) ==", file=sys.stderr)
     for label, rel in (("app", "app"), ("aethos_cli", "aethos_cli")):
         r = subprocess.run(
             [sys.executable, "-m", "compileall", "-q", rel],

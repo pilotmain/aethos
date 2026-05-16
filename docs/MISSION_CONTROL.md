@@ -153,6 +153,16 @@ Docs: [ENTERPRISE_INSTALLER.md](ENTERPRISE_INSTALLER.md), [ORCHESTRATOR_ONBOARDI
 
 `enterprise_overview.phase` is `phase4_step10`.
 
+## Phase 4 Step 11 — setup verification and ready-state lock
+
+Certifies one-curl → enterprise setup, env completeness, MC ready state, and frontend/API contract.
+
+- `GET /api/v1/setup/certify` — full lock report
+- `aethos setup certify` — CLI equivalent
+- `web/lib/runtimeCapabilities.ts` — capability-aware fetches
+
+`enterprise_overview.phase` is `phase4_step11`.
+
 ## The Office
 
 Web route: `/mission-control/office` — lightweight cards for runtime agents (`active`, `busy`, `idle`, `recovering`, `failed`, `offline`). Progressive Office stream and partition-aware hydration (Step 7) remain; Step 8 adds calmness lock and enterprise summaries without analytics-wall noise.

@@ -38,11 +38,17 @@ def seed_mission_control_connection(
     updates = {
         "API_BASE_URL": ab,
         "NEXA_API_BASE": ab,
+        "AETHOS_API_URL": ab,
         "TEST_X_USER_ID": uid,
         "X_USER_ID": uid,
+        "AETHOS_USER_ID": uid,
         "NEXA_WEB_API_TOKEN": token,
+        "AETHOS_API_BEARER": token,
         "AETHOS_MISSION_CONTROL_URL": mc_url,
         "AETHOS_CONNECTION_PROFILE": "default",
+        "NEXA_WEB_ORIGINS": f"{mc_url},http://127.0.0.1:3000",
+        "AETHOS_TRUTH_CACHE_TTL_SEC": "30",
+        "AETHOS_TRUTH_SLICE_TTL_SEC": "15",
     }
 
     web_env = repo_root / "web" / ".env.local"
@@ -50,8 +56,8 @@ def seed_mission_control_connection(
         lines = [
             f"NEXT_PUBLIC_AETHOS_API_BASE={ab}",
             f"NEXT_PUBLIC_API_BASE_URL={ab}",
-            f"# User id for dev: {uid}",
-            f"# Bearer: {mask_secret(token)}",
+            f"NEXT_PUBLIC_X_USER_ID={uid}",
+            f"# Bearer stored in API .env / setup creds — {mask_secret(token)}",
         ]
         web_env.parent.mkdir(parents=True, exist_ok=True)
         web_env.write_text("\n".join(lines) + "\n", encoding="utf-8")
