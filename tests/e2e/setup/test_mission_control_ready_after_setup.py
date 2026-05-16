@@ -10,8 +10,12 @@ def test_mission_control_endpoints_no_500(api_client: tuple[TestClient, str]) ->
     hdr = {"X-User-Id": uid}
     for path in (
         "/api/v1/health",
+        "/api/v1/setup/status",
         "/api/v1/setup/ready-state",
         "/api/v1/runtime/capabilities",
+        "/api/v1/runtime/startup",
+        "/api/v1/runtime/readiness",
+        "/api/v1/runtime/bootstrap",
         "/api/v1/mission-control/onboarding",
         "/api/v1/mission-control/office",
     ):

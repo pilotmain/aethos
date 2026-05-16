@@ -77,6 +77,6 @@ def seed_mission_control_connection(
     except Exception:
         pass
 
-    updates["AETHOS_MC_COMPATIBILITY_VERSION"] = "phase4_step16"
+    updates["AETHOS_MC_COMPATIBILITY_VERSION"] = "phase4_step17"
     print_info(safe_token_confirm_display(token))
     return updates

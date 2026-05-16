@@ -1879,23 +1879,30 @@ def main() -> int:
         if sc == "status":
             import json
             from app.services.setup.setup_status import build_setup_status
+            from aethos_cli.setup_progress_state import build_progress_status
 
-            print(json.dumps(build_setup_status(), indent=2, default=str)[:24000])
+            print(json.dumps({**build_setup_status(), "setup_progress": build_progress_status()}, indent=2, default=str)[:24000])
             return 0
         if sc == "continuity":
             import json
             from app.services.setup.setup_continuity import build_setup_continuity
+            from aethos_cli.setup_progress_state import build_progress_status
 
-            print(json.dumps(build_setup_continuity(), indent=2, default=str)[:24000])
+            print(json.dumps({**build_setup_continuity(), "setup_progress": build_progress_status()}, indent=2, default=str)[:24000])
             return 0
+        if sc == "resume":
+            from aethos_cli.setup_progress_state import load_setup_progress
+
+            prog = load_setup_progress()
+            if prog.get("current_section"):
+                print(f"Resuming from section: {prog.get('current_section')}")
+            return run_setup_wizard()
         if sc == "first-impression":
             import json
             from app.services.setup.setup_first_impression import build_setup_first_impression
 
             print(json.dumps(build_setup_first_impression(), indent=2, default=str)[:24000])
             return 0
-        if sc == "resume":
-            return run_setup_wizard()
         if sc == "repair":
             os.environ["NEXA_SETUP_KIND"] = "repair"
             return run_setup_wizard(install_kind="repair")

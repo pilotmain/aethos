@@ -82,7 +82,7 @@ def build_enterprise_setup_doctor(*, repo_root: Path | None = None) -> dict[str,
                 "aethos runtime bootstrap",
             ],
             "summary": f"{ok_count}/{len(checks)} checks passed",
-            "phase": "phase4_step16",
+            "phase": "phase4_step17",
             "bounded": True,
         }
     }

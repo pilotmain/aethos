@@ -1,10 +1,11 @@
-# Mission Control ready state (Phase 4 Step 11)
+# Mission Control ready state
 
-After setup, Mission Control should be reachable without manual repair.
+Validated endpoints (no 500s expected when API is up):
 
-**API:** `GET /api/v1/setup/ready-state`  
-**Bundled in:** `GET /api/v1/setup/status` → `mission_control_ready`
+- `/api/v1/health`
+- `/api/v1/setup/status`, `/api/v1/setup/ready-state`
+- `/api/v1/runtime/capabilities`, `/startup`, `/readiness`, `/bootstrap`
+- `/api/v1/mission-control/onboarding`, `/office`
 
-Validates: API health, bearer token, user id, `web/.env.local`, and key MC endpoints (no 500s).
-
-**Repair:** `aethos connection repair`, `aethos setup validate`
+Service: `app/services/setup/mission_control_ready_state.py`  
+Tests: `tests/test_mission_control_ready_state.py`, `tests/e2e/setup/test_mission_control_ready_after_setup.py`

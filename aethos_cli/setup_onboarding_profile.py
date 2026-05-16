@@ -9,7 +9,8 @@ import json
 from pathlib import Path
 from typing import Any
 
-from aethos_cli.ui import get_input, print_info, print_success
+from aethos_cli.setup_prompt_runtime import prompt_setup as get_input, set_prompt_context
+from aethos_cli.ui import print_info, print_success
 
 
 def onboarding_profile_path() -> Path:
@@ -18,6 +19,7 @@ def onboarding_profile_path() -> Path:
 
 def run_onboarding_profile_questions() -> dict[str, Any]:
     """Collect operator preferences — bounded, optional skips."""
+    set_prompt_context(section="operator_onboarding")
     print_info("Personal onboarding (optional — Enter skips any question).")
     profile: dict[str, Any] = {
         "display_name": (get_input("What should AethOS call you?") or "").strip() or None,

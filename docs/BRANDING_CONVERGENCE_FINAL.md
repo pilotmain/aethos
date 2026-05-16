@@ -1,6 +1,8 @@
-# Branding convergence (final)
+# Branding convergence (final) — Step 17
 
-Operator-visible surfaces target **AethOS** only.
+Phase: `phase4_step17`. Scan: `scripts/scan_legacy_branding.sh`.
+
+Operator-visible surfaces target **AethOS** only. See `docs/FINAL_LEGACY_POLICY.md` and `docs/COMPATIBILITY_ALIAS_POLICY.md`.
 
 | Allowed | Where |
 |---------|--------|

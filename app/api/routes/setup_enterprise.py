@@ -20,7 +20,9 @@ router = APIRouter(prefix="/setup", tags=["setup"])
 
 @router.get("/status")
 def setup_status() -> dict:
-    return build_setup_status(repo_root=Path.cwd())
+    from aethos_cli.setup_progress_state import build_progress_status
+
+    return {**build_setup_status(repo_root=Path.cwd()), "setup_progress": build_progress_status()}
 
 
 @router.get("/ready-state")

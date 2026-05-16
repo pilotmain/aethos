@@ -8,11 +8,13 @@ from __future__ import annotations
 from typing import Any
 
 from aethos_cli.setup_onboarding_profile import save_onboarding_profile
-from aethos_cli.ui import get_input, print_box, print_info, print_success
+from aethos_cli.setup_prompt_runtime import prompt_setup as get_input, set_prompt_context
+from aethos_cli.ui import print_box, print_info, print_success
 
 
 def run_orchestrator_onboarding() -> dict[str, Any]:
     """AethOS introduces itself as orchestrator and collects personalization."""
+    set_prompt_context(section="operator_onboarding")
     print_box(
         "AethOS Orchestrator",
         [

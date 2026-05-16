@@ -1,4 +1,4 @@
-# Env completeness audit (Phase 4 Step 11)
+# Env completeness audit (Phase 4 Step 11, reaffirmed Step 17)
 
 **API:** `GET /api/v1/setup/env-audit`  
 **Module:** `app/services/setup/env_completeness.py`
@@ -22,3 +22,5 @@
 ## Manual-only
 
 Secrets such as `NEXA_SECRET_KEY` may require operator input outside the wizard.
+
+Step 17 setup covers: local/cloud routing, privacy/PII, egress, truth/slice cache TTLs, worker memory caps, runtime hydration flags, Mission Control bootstrap (`AETHOS_MC_*`), provider integrations, web search, channels, workspace paths. Verify with `GET /api/v1/setup/env-audit` after `aethos setup`.

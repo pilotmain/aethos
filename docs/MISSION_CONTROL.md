@@ -170,7 +170,7 @@ Certifies one-curl → enterprise setup, env completeness, MC ready state, and f
 - Marketplace plugin vs pack vs skill clarity
 - Production-cut readiness — [PRODUCTION_CUT_READINESS.md](PRODUCTION_CUT_READINESS.md)
 
-`enterprise_overview.phase` is `phase4_step16` (`enterprise_setup_finalized` when Step 16 evolution applied).
+`enterprise_overview.phase` is `phase4_step17` (`installer_interaction_locked` when Step 17 evolution applied).
 
 ### Phase 4 Step 16 — setup finalization
 

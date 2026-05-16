@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import Any
 
-MC_COMPATIBILITY_VERSION = "phase4_step16"
+MC_COMPATIBILITY_VERSION = "phase4_step17"
 
 _AVAILABLE_ROUTES: list[dict[str, str]] = [
     {"method": "GET", "path": "/api/v1/mission-control/state"},
@@ -124,6 +124,8 @@ def build_runtime_capabilities() -> dict[str, Any]:
             "conversational_installer": True,
             "phase4_step16": True,
             "enterprise_setup_finalized": True,
+            "phase4_step17": True,
+            "installer_interaction_locked": True,
         },
         "lazy_views": [
             "routing",

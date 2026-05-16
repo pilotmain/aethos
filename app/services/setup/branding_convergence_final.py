@@ -26,7 +26,7 @@ def build_branding_convergence_final(*, repo_root: Path | None = None) -> dict[s
             "targets": list(OPERATOR_GLOBS),
             "disallowed_operator_visible": ["Nexa", "OpenClaw", "ClawHub", "OpenHub"],
             "preserved_compatibility": ["NEXA_* env", "parity tests", "README inspiration"],
-            "phase": "phase4_step16",
+            "phase": "phase4_step17",
             "bounded": True,
         }
     }

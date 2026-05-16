@@ -29,5 +29,5 @@ def build_setup_experience_final() -> dict[str, Any]:
     exp["global_commands"] = list(GLOBAL_COMMANDS)
     exp["recommended_setup_available"] = True
     exp["show_current_config"] = True
-    exp["phase"] = "phase4_step16"
+    exp["phase"] = "phase4_step17"
     return {"setup_experience_final": exp, "setup_experience": exp}

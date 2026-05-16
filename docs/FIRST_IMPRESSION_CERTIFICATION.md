@@ -1,20 +1,17 @@
-# First impression certification
+# First impression certification (Step 17)
 
-**Phase:** `phase4_step15`  
-**API:** `GET /api/v1/setup/first-impression` (includes certification block)
+Phase marker: `phase4_step17` (`installer_interaction_locked`).
 
-## Certified areas
+Certifies:
 
-- Setup clarity and conversational flow
-- Onboarding continuity (resume)
-- Provider / routing understanding
-- Mission Control readiness (auto-seeded)
-- Operator relationship (optional profile)
-- Recovery and restart commands
-- Operational calmness
+- Global setup commands on prompts
+- Progress persistence and resume
+- Mission Control ready-state endpoints
+- Bounded cold-hydration e2e
+- Operator error copy
 
-## Tests
+Run:
 
-- `tests/test_first_impression_certification.py`
-- `tests/test_setup_continuity.py`
-- `tests/e2e/setup/` (when run locally)
+```bash
+USE_REAL_LLM=false NEXA_PYTEST=1 pytest tests/test_setup_prompt_runtime.py tests/test_setup_progress_state.py tests/test_mission_control_ready_state.py tests/test_runtime_startup_ready_state.py tests/test_operator_error_copy.py tests/test_phase4_step17_runtime_evolution.py -q
+```

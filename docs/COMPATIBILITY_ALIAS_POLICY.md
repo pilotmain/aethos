@@ -1,11 +1,7 @@
 # Compatibility alias policy
 
-Backward-compatible env names remain for operators migrating from Nexa-named tooling.
+`NEXA_*` environment variables remain supported as aliases for AethOS settings. Do not remove without a deprecation window.
 
-| Preferred | Alias |
-|-----------|--------|
-| `AETHOS_API_URL` | `NEXA_API_BASE` |
-| `AETHOS_API_BEARER` | `NEXA_WEB_API_TOKEN` |
-| `AETHOS_USER_ID` | `TEST_X_USER_ID` / `X_USER_ID` |
+Examples: `NEXA_API_BASE`, `NEXA_WEB_API_TOKEN`, `NEXA_PYTEST`, agent orchestration `NEXA_AGENT_*`.
 
-New deployments should use **AETHOS_*** names. Aliases are not shown in Mission Control UI.
+Operator-visible copy uses **AethOS** only.

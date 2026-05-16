@@ -8,5 +8,5 @@ from app.services.setup.enterprise_setup_doctor import build_enterprise_setup_do
 def test_enterprise_setup_doctor() -> None:
     out = build_enterprise_setup_doctor()
     doc = out["enterprise_setup_doctor"]
-    assert doc["phase"] == "phase4_step16"
+    assert doc["phase"] == "phase4_step17"
     assert doc["checks"]

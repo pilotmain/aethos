@@ -20,10 +20,11 @@ from aethos_cli.platform import (
     human_os_line,
     ollama_install_hint,
 )
+from aethos_cli.setup_prompt_runtime import prompt_setup as get_input
+from aethos_cli.setup_prompt_runtime import set_prompt_context
 from aethos_cli.ui import (
     confirm,
     disk_space_line,
-    get_input,
     interactive_feature_toggle,
     print_box,
     print_environment_tag,
@@ -270,6 +271,10 @@ def run_setup_wizard(*, install_kind: str | None = None) -> int:
 
     print_header()
     print_environment_tag(human_os_line(pinfo))
+    from aethos_cli.setup_conversational import print_global_setup_commands
+
+    print_global_setup_commands()
+    set_prompt_context(section="welcome")
 
     kind: str = install_kind or str(bag.get("kind") or "fresh")
 

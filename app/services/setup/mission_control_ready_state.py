@@ -16,8 +16,13 @@ from app.core.setup_creds_file import read_setup_creds_dict
 MC_ENDPOINTS = (
     "/api/v1/health",
     "/api/v1/setup/status",
+    "/api/v1/setup/ready-state",
     "/api/v1/runtime/capabilities",
+    "/api/v1/runtime/startup",
+    "/api/v1/runtime/readiness",
+    "/api/v1/runtime/bootstrap",
     "/api/v1/mission-control/onboarding",
+    "/api/v1/mission-control/office",
 )
 
 

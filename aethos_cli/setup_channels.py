@@ -8,7 +8,8 @@ from __future__ import annotations
 from typing import Any
 
 from aethos_cli.setup_secrets import safe_token_confirm_display
-from aethos_cli.ui import get_input, print_info, print_warn
+from aethos_cli.setup_prompt_runtime import prompt_setup as get_input, set_prompt_context
+from aethos_cli.ui import print_info, print_warn
 
 
 CHANNELS = (

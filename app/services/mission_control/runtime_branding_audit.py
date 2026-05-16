@@ -27,7 +27,7 @@ def build_runtime_branding_audit(*, repo_root: Path | None = None) -> dict[str, 
             "operator_surfaces_targeted": True,
             "allowed_openclaw": ["README", "parity docs/tests"],
             "allowed_nexa": ["NEXA_* env aliases", "migration internals"],
-            "convergence_phase": "phase4_step16",
+            "convergence_phase": "phase4_step17",
             "setup_branding": setup.get("setup_branding_convergence"),
             "bounded": True,
         }

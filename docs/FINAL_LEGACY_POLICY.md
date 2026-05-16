@@ -1,22 +1,20 @@
-# Final legacy policy
+# Final legacy naming policy
 
-## User-facing brand
+## Operator-facing (must say AethOS)
 
-**AethOS** everywhere operators read product copy.
+CLI help, Mission Control UI, setup/install scripts, Telegram copy, API error messages.
 
-## Nexa — allowed only
+## Allowed legacy
 
-- `NEXA_*` environment aliases (see [COMPATIBILITY_ALIAS_POLICY.md](COMPATIBILITY_ALIAS_POLICY.md))
-- Migration and compatibility layers
-- Internal compatibility tests and docs
+| Term | Where |
+|------|--------|
+| OpenClaw | README inspiration, `docs/OPENCLAW_*`, `tests/test_openclaw_*` |
+| Nexa | `NEXA_*` env aliases, migration internals, compatibility wrappers |
+| ClawHub/OpenHub | Internal migration only; prefer **AethOS Marketplace** / **AethOS Skills** in UI |
 
-## OpenClaw — allowed only
+## Scan
 
-- README inspiration line
-- `docs/OPENCLAW_*` parity directive
-- `tests/test_openclaw_*` parity verification
-
-## Enforcement
-
-- `build_final_legacy_policy()` on runtime truth (Step 13)
-- `aethos setup certify` branding scans (CLI + UI)
+```bash
+scripts/scan_legacy_branding.sh --operator-facing
+scripts/scan_legacy_branding.sh --full
+```

@@ -33,15 +33,18 @@ export function formatOperationalError(message: string): string {
   if (isApiHttpError(m)) {
     const code = m.split(":")[0];
     if (code === "500" || code === "502" || code === "503") {
-      return `Runtime service error (${code}). Some panels may use cached data — not an API connection failure.`;
+      return `AethOS runtime hit an internal error while loading this panel. Other panels may still be available.`;
     }
     if (code === "404") {
-      return `Feature unavailable (${code}). This endpoint may not be enabled on this API build.`;
+      return `This feature is not available in the current AethOS runtime configuration.`;
     }
     return m;
   }
   if (/Cannot reach API/i.test(m)) {
-    return "Runtime connection unavailable. AethOS is attempting recovery.";
+    return "AethOS runtime connection is not available yet. The API may still be starting, or connection settings may need repair.";
+  }
+  if (/unknown provider/i.test(m)) {
+    return "This provider is not available in the current AethOS runtime configuration.";
   }
   return m;
 }

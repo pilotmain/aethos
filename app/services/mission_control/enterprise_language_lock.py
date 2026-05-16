@@ -32,7 +32,7 @@ def build_enterprise_language_lock() -> dict[str, Any]:
             "language_system": lang.get("mission_control_language_system"),
             "mixed_terminology_disallowed": ["nexa product name in UI", "openclaw in operator copy"],
             "narration_consistency": True,
-            "phase": "phase4_step16",
+            "phase": "phase4_step17",
             "bounded": True,
         }
     }
