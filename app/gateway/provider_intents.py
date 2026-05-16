@@ -23,14 +23,34 @@ _PROVIDER_PROJECT_INTENTS = frozenset(
         "provider_status",
         "provider_logs",
         "provider_inspect",
+        "fix_and_redeploy",
     }
+)
+
+_FIX_AND_REDEPLOY = re.compile(
+    r"(?is)^(?:please\s+)?fix\s+and\s+redeploy\s+(?:the\s+)?(?:project\s+)?(?P<project>.+?)(?:\s+on\s+vercel)?\s*\.?\s*$"
+)
+_FIX_AND_DEPLOY = re.compile(
+    r"(?is)^(?:please\s+)?fix\s+(?P<project>.+?)\s+and\s+deploy(?:\s+it)?\s*\.?\s*$"
+)
+_LOGS_AND_FIX = re.compile(
+    r"(?is)^(?:check|show)\s+logs\s+and\s+fix\s+(?P<project>.+?)\s*\.?\s*$"
+)
+_DEBUG_DEPLOY = re.compile(
+    r"(?is)^debug\s+(?P<project>.+?)\s+deployment\s*\.?\s*$"
+)
+_REPAIR_PROD = re.compile(
+    r"(?is)^repair\s+(?P<project>.+?)\s+production\s*\.?\s*$"
+)
+_FIX_BUILD = re.compile(
+    r"(?is)^fix\s+failing\s+build\s+for\s+(?P<project>.+?)\s*\.?\s*$"
 )
 
 _RESTART = re.compile(
     r"(?is)^(?:please\s+)?restart\s+(?:the\s+)?(?:project\s+)?(?P<project>.+?)(?:\s+on\s+vercel)?\s*\.?\s*$"
 )
 _REDEPLOY = re.compile(
-    r"(?is)^(?:please\s+)?(?:fix\s+and\s+)?redeploy\s+(?:the\s+)?(?:project\s+)?(?P<project>.+?)(?:\s+on\s+vercel)?\s*\.?\s*$"
+    r"(?is)^(?:please\s+)?redeploy\s+(?:the\s+)?(?:project\s+)?(?P<project>.+?)(?:\s+on\s+vercel)?\s*\.?\s*$"
 )
 _DEPLOY_PROJECT = re.compile(
     r"(?is)^(?:please\s+)?deploy\s+(?:the\s+)?(?:project\s+)?(?P<project>[\w][\w\s.-]{1,80}?)(?:\s+to\s+vercel)?\s*\.?\s*$"
@@ -98,6 +118,12 @@ def parse_provider_operation_intent(text: str) -> dict[str, Any] | None:
         project_phrase = _clean_project_phrase(m_logs.group("project") or m_logs.group("project2") or "")
     else:
         for pattern, name in (
+            (_FIX_AND_REDEPLOY, "fix_and_redeploy"),
+            (_FIX_AND_DEPLOY, "fix_and_redeploy"),
+            (_LOGS_AND_FIX, "fix_and_redeploy"),
+            (_DEBUG_DEPLOY, "fix_and_redeploy"),
+            (_REPAIR_PROD, "fix_and_redeploy"),
+            (_FIX_BUILD, "fix_and_redeploy"),
             (_RESTART, "provider_restart"),
             (_REDEPLOY, "provider_redeploy"),
             (_DEPLOY_PROJECT, "provider_deploy"),
@@ -135,6 +161,15 @@ def parse_provider_operation_intent(text: str) -> dict[str, Any] | None:
         "project_id": project_id,
         "candidates": candidates,
     }
+    if intent_name == "fix_and_redeploy":
+        out.update(
+            {
+                "project_slug": project_id or project_phrase,
+                "requires_workspace": True,
+                "requires_provider": True,
+                "requires_verification": True,
+            }
+        )
     return out
 
 

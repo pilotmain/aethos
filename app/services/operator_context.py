@@ -33,6 +33,17 @@ def build_operator_context_panel() -> dict[str, Any]:
     if not isinstance(actions, list):
         actions = []
     nl_actions = [a for a in actions if isinstance(a, dict) and a.get("source") == "gateway_nl"]
+    repair_store = st.get("repair_contexts") or {}
+    latest_repairs: dict[str, Any] = {}
+    if isinstance(repair_store, dict):
+        lbp = repair_store.get("latest_by_project") or {}
+        if isinstance(lbp, dict):
+            for pid, rid in list(lbp.items())[:24]:
+                bucket = repair_store.get(pid)
+                if isinstance(bucket, dict) and isinstance(rid, str):
+                    row = bucket.get(rid)
+                    if isinstance(row, dict):
+                        latest_repairs[pid] = row
     last = actions[-1] if actions else {}
     last_nl = nl_actions[-1] if nl_actions else {}
     suggested: list[str] = []
@@ -53,6 +64,7 @@ def build_operator_context_panel() -> dict[str, Any]:
         "recent_provider_actions": actions[-24:],
         "recent_nl_provider_actions": nl_actions[-24:],
         "last_nl_provider_action": last_nl or None,
+        "latest_repair_contexts": latest_repairs,
         "suggested_fixes": suggested,
         "summary": {
             "providers_installed": installed_ct,

@@ -207,6 +207,41 @@ def execute_provider_nl_intent(parsed: dict[str, Any]) -> dict[str, Any]:
         )
 
     pid = str(project_id)
+
+    if intent == "fix_and_redeploy":
+        from app.providers.repair.fix_and_redeploy import run_fix_and_redeploy
+
+        try:
+            outcome = run_fix_and_redeploy(
+                pid,
+                environment=environment,
+                source="gateway_nl",
+                raw_text=raw,
+            )
+        except OperatorDeployError as exc:
+            _record_nl_action(
+                intent=intent,
+                project_id=pid,
+                provider=provider,
+                success=False,
+                summary=exc.__class__.__name__,
+            )
+            return _gateway_reply(
+                render_operator_deploy_error(exc),
+                raw=raw,
+                intent="fix_and_redeploy_failed",
+                success=False,
+            )
+        ok = bool(outcome.get("success"))
+        _append_resolution_history(pid, intent, None, provider, ok)
+        return _gateway_reply(
+            str(outcome.get("summary") or ""),
+            raw=raw,
+            intent="fix_and_redeploy" if ok else "fix_and_redeploy_failed",
+            success=ok,
+            extra={"repair_outcome": outcome},
+        )
+
     try:
         if intent in ("provider_restart",):
             result = execute_vercel_restart(pid, environment=environment)

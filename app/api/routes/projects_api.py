@@ -35,6 +35,23 @@ class ResolveBody(BaseModel):
     environment: str = Field(default="production", max_length=32)
 
 
+class RepairBody(BaseModel):
+    provider: str = Field(default="vercel", max_length=32)
+    environment: str = Field(default="production", max_length=32)
+
+
+_RESERVED = frozenset(
+    {"resolve", "confidence", "scan", "link", "repair", "fix-and-redeploy", "repair-contexts", "latest-repair"}
+)
+
+
+def _guard_project_id(project_id: str) -> str:
+    pid = (project_id or "").strip().lower()
+    if pid in _RESERVED:
+        raise HTTPException(status_code=404, detail="Not found")
+    return pid
+
+
 @router.get("/")
 def list_projects(_: str = Depends(get_valid_web_user_id)) -> dict[str, Any]:
     st = load_runtime_state()
@@ -83,9 +100,7 @@ def resolve_project_deploy_context(
 def project_confidence(project_id: str, _: str = Depends(get_valid_web_user_id)) -> dict[str, Any]:
     st = load_runtime_state()
     ensure_operator_context_schema(st)
-    pid = (project_id or "").strip().lower()
-    if pid in ("resolve", "confidence", "scan", "link"):
-        raise HTTPException(status_code=404, detail="Not found")
+    pid = _guard_project_id(project_id)
     projects = ((st.get("project_registry") or {}).get("projects") or {})
     row = projects.get(pid)
     if not isinstance(row, dict):
@@ -114,6 +129,65 @@ def project_confidence(project_id: str, _: str = Depends(get_valid_web_user_id))
             "note": "Linked repo_path is not reachable.",
         }
     return {"project_id": pid, **conf, "provider_resolution_cache": cache}
+
+
+@router.post("/{project_id}/repair")
+def start_project_repair(
+    project_id: str,
+    body: RepairBody,
+    _: str = Depends(get_valid_web_user_id),
+) -> dict[str, Any]:
+    pid = _guard_project_id(project_id)
+    from app.providers.repair.fix_and_redeploy import run_fix_and_redeploy
+
+    try:
+        return run_fix_and_redeploy(
+            pid,
+            environment=body.environment,
+            source="api",
+            raw_text=f"repair {pid}",
+        )
+    except OperatorDeployError as exc:
+        raise HTTPException(status_code=400, detail=exc.to_payload()) from exc
+
+
+@router.post("/{project_id}/fix-and-redeploy")
+def fix_and_redeploy_project(
+    project_id: str,
+    body: RepairBody,
+    _: str = Depends(get_valid_web_user_id),
+) -> dict[str, Any]:
+    pid = _guard_project_id(project_id)
+    from app.providers.repair.fix_and_redeploy import run_fix_and_redeploy
+
+    try:
+        return run_fix_and_redeploy(
+            pid,
+            environment=body.environment,
+            source="api",
+            raw_text=f"fix and redeploy {pid}",
+        )
+    except OperatorDeployError as exc:
+        raise HTTPException(status_code=400, detail=exc.to_payload()) from exc
+
+
+@router.get("/{project_id}/repair-contexts")
+def list_project_repair_contexts(project_id: str, _: str = Depends(get_valid_web_user_id)) -> dict[str, Any]:
+    pid = _guard_project_id(project_id)
+    from app.providers.repair.repair_context import list_repair_contexts
+
+    return {"project_id": pid, "contexts": list_repair_contexts(pid)}
+
+
+@router.get("/{project_id}/latest-repair")
+def latest_project_repair(project_id: str, _: str = Depends(get_valid_web_user_id)) -> dict[str, Any]:
+    pid = _guard_project_id(project_id)
+    from app.providers.repair.repair_context import get_latest_repair_context
+
+    row = get_latest_repair_context(pid)
+    if not row:
+        raise HTTPException(status_code=404, detail="No repair context")
+    return row
 
 
 @router.post("/{project_id}/link")

@@ -16,7 +16,7 @@ def test_parse_restart_invoicepilot() -> None:
 def test_parse_redeploy_with_fix() -> None:
     p = parse_provider_operation_intent("fix and redeploy invoicepilot")
     assert p is not None
-    assert p["intent"] == "provider_redeploy"
+    assert p["intent"] == "fix_and_redeploy"
 
 
 def test_parse_check_production() -> None:

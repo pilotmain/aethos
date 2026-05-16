@@ -166,6 +166,8 @@ def default_runtime_state(*, workspace_root: Path | None = None) -> dict[str, An
         "deployment_identities": {},
         "provider_resolution_cache": {},
         "operator_provider_actions": [],
+        # Phase 2 Step 6 — fix-and-redeploy repair workflows.
+        "repair_contexts": {"latest_by_project": {}},
     }
 
 
@@ -331,6 +333,7 @@ def ensure_operator_context_schema(st: dict[str, Any]) -> dict[str, Any]:
         "deployment_identities",
         "provider_resolution_cache",
         "operator_provider_actions",
+        "repair_contexts",
     ):
         if key not in st:
             st[key] = base[key]  # type: ignore[index]
@@ -357,6 +360,10 @@ def ensure_operator_context_schema(st: dict[str, Any]) -> dict[str, Any]:
     opa = st.setdefault("operator_provider_actions", [])
     if not isinstance(opa, list):
         st["operator_provider_actions"] = []
+    rc = st.setdefault("repair_contexts", {})
+    if not isinstance(rc, dict):
+        st["repair_contexts"] = dict(base.get("repair_contexts") or {"latest_by_project": {}})
+    rc.setdefault("latest_by_project", {})
     return st
 
 

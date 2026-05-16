@@ -344,6 +344,15 @@ def main() -> int:
     sp_dl.add_argument("project_id")
     sp_dl.add_argument("--env", default="production", dest="environment", help="production | preview")
     sp_dl.add_argument("--limit", type=int, default=80, help="Log line limit (10–300)")
+    sp_dfx = dep_op.add_parser("fix-and-redeploy", help="POST /api/v1/projects/{id}/fix-and-redeploy")
+    sp_dfx.add_argument("project_id")
+    sp_dfx.add_argument("--env", default="production", dest="environment", help="production | preview")
+
+    sp_proj_repair = proj_sub.add_parser("repair", help="POST /api/v1/projects/{id}/repair")
+    sp_proj_repair.add_argument("project_id")
+    sp_proj_repair.add_argument("--env", default="production", dest="environment", help="production | preview")
+    sp_proj_lr = proj_sub.add_parser("latest-repair", help="GET /api/v1/projects/{id}/latest-repair")
+    sp_proj_lr.add_argument("project_id")
 
     sp_dep = sub.add_parser("deployments", help="Deployment runtime API (OpenClaw infra parity)")
     dep_sub = sp_dep.add_subparsers(dest="dep_cmd", required=True)
@@ -791,6 +800,18 @@ def main() -> int:
             code, body = _req("GET", f"/api/v1/projects/{pid}/confidence", uid=uid)
             print(body[:24000])
             return 0 if code == 200 else 1
+        if args.projects_cmd == "repair":
+            pid = urllib.parse.quote(str(args.project_id), safe="")
+            env = (getattr(args, "environment", None) or "production").strip()
+            payload = json.dumps({"provider": "vercel", "environment": env}).encode()
+            code, body = _req("POST", f"/api/v1/projects/{pid}/repair", uid=uid, body=payload)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.projects_cmd == "latest-repair":
+            pid = urllib.parse.quote(str(args.project_id), safe="")
+            code, body = _req("GET", f"/api/v1/projects/{pid}/latest-repair", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
 
     if args.cmd == "deploy":
         env = (getattr(args, "environment", None) or "production").strip()
@@ -815,6 +836,12 @@ def main() -> int:
             lim = int(getattr(args, "limit", 80) or 80)
             qs = f"?project_id={pj}&environment={qenv}&limit={lim}"
             code, body = _req("GET", f"/api/v1/providers/vercel/logs{qs}", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.deploy_cmd == "fix-and-redeploy":
+            pid = urllib.parse.quote(str(args.project_id), safe="")
+            payload = json.dumps({"provider": "vercel", "environment": env}).encode()
+            code, body = _req("POST", f"/api/v1/projects/{pid}/fix-and-redeploy", uid=uid, body=payload)
             print(body[:24000])
             return 0 if code == 200 else 1
 
