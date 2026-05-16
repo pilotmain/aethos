@@ -9,7 +9,8 @@ from pathlib import Path
 from typing import Any
 
 from app.deploy_context.context_validation import workspace_confidence
-from app.providers.repair.repair_verification import _run_shell, run_verification_suite
+from app.providers.repair.repair_safe_edits import apply_safe_edit
+from app.providers.repair.repair_verification import _run_shell, build_verification_result, run_verification_suite
 
 
 def _assert_repo_bound(repo: Path, deploy_ctx: dict[str, Any]) -> None:
@@ -50,9 +51,24 @@ def execute_repair_plan(
             continue
         stype = str(step.get("type") or "")
         if stype == "inspect":
-            target = str(step.get("target") or "package.json")
+            target = str(step.get("target") or step.get("path") or "package.json")
             p = repo / target
             actions.append({"type": "inspect", "target": target, "exists": p.is_file()})
+            continue
+        if stype == "edit":
+            row = apply_safe_edit(repo, step)
+            actions.append({"type": "edit", **row})
+            if row.get("ok"):
+                mutations.append(f"edit:{row.get('path')}")
+            else:
+                return {
+                    "ok": False,
+                    "preflight": pre,
+                    "actions": actions,
+                    "mutations": mutations,
+                    "blocked_reason": "edit_step_failed",
+                    "failed_edit": row.get("path"),
+                }
             continue
         if stype == "shell":
             cmd = str(step.get("command") or "")
@@ -88,6 +104,7 @@ def execute_repair_plan(
             continue
 
     verify = run_verification_suite(repo)
+    verification_result = build_verification_result(verify, blocked_redeploy=not verify.get("ok"))
     if not verify.get("ok"):
         return {
             "ok": False,
@@ -96,6 +113,7 @@ def execute_repair_plan(
             "mutations": mutations,
             "blocked_reason": "verification_suite_failed",
             "verification": verify,
+            "verification_result": verification_result,
         }
     return {
         "ok": True,
@@ -103,4 +121,5 @@ def execute_repair_plan(
         "actions": actions,
         "mutations": mutations,
         "verification": verify,
+        "verification_result": verification_result,
     }

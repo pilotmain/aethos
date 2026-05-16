@@ -39,6 +39,8 @@ Every change must satisfy at least one of these:
 
 Do not introduce architectural divergence unless required to reproduce OpenClaw behavior.
 
+**Phase 2 Step 7 (brain-routed repair):** See [docs/BRAIN_ROUTING.md](docs/BRAIN_ROUTING.md). Repair flows collect privacy-safe evidence, select a brain (`app/brain/`), validate structured plans, run safe in-repo edits, verify locally, then redeploy via provider actions. Mission Control exposes `brain_summary` on `latest_repair_contexts`.
+
 Deferred until after verified parity:
 
 - privacy-first redesigns

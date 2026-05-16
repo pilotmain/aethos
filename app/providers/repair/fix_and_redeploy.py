@@ -16,8 +16,20 @@ from app.deploy_context.errors import OperatorDeployError
 from app.providers.repair.failure_classification import diagnose_failure
 from app.providers.repair.repair_context import create_repair_context, update_repair_context
 from app.providers.repair.repair_execution import execute_repair_plan
+from app.providers.repair.repair_evidence import collect_repair_evidence
 from app.providers.repair.repair_planner import build_repair_plan
 from app.rendering.repair_summary import render_fix_and_redeploy_blocked, render_fix_and_redeploy_success
+
+
+def _evidence_summary(evidence: dict[str, Any]) -> dict[str, Any]:
+    priv = evidence.get("privacy") if isinstance(evidence.get("privacy"), dict) else {}
+    return {
+        "failure_category": evidence.get("failure_category"),
+        "workspace_file_count": len(evidence.get("workspace_files") or []),
+        "package_script_keys": list((evidence.get("package_scripts") or {}).keys())[:12],
+        "privacy": priv,
+        "logs_preview": str(evidence.get("logs_summary") or "")[:400],
+    }
 
 
 def _privacy_allows(text: str) -> tuple[bool, str | None]:
@@ -108,7 +120,29 @@ def run_fix_and_redeploy(
             "repair_context": repair_ctx,
         }
 
-    plan = build_repair_plan(repair_context=repair_ctx, deploy_ctx=deploy_ctx)
+    evidence = collect_repair_evidence(
+        project_id=project_id,
+        deploy_ctx=deploy_ctx,
+        repair_context=repair_ctx,
+        logs_summary=logs_preview,
+    )
+    update_repair_context(
+        project_id,
+        str(repair_ctx["repair_context_id"]),
+        {"evidence_summary": _evidence_summary(evidence)},
+    )
+    repair_ctx["evidence_summary"] = _evidence_summary(evidence)
+
+    plan = build_repair_plan(repair_context=repair_ctx, deploy_ctx=deploy_ctx, evidence=evidence)
+    brain_decision = plan.get("brain_decision") if isinstance(plan.get("brain_decision"), dict) else None
+    if brain_decision:
+        update_repair_context(
+            project_id,
+            str(repair_ctx["repair_context_id"]),
+            {"brain_decision": brain_decision},
+        )
+        repair_ctx["brain_decision"] = brain_decision
+
     execution = execute_repair_plan(plan, deploy_ctx=deploy_ctx)
 
     actions_taken = []
@@ -156,10 +190,15 @@ def run_fix_and_redeploy(
                 reason=reason,
                 diagnosis=diagnosis,
                 verification=execution.get("verification"),
+                brain_decision=brain_decision,
+                verification_result=execution.get("verification_result"),
             ),
             "repair_context": repair_ctx,
             "plan": plan,
             "execution": execution,
+            "brain_decision": brain_decision,
+            "evidence_summary": repair_ctx.get("evidence_summary"),
+            "verification_result": execution.get("verification_result"),
         }
 
     deploy_result = execute_vercel_redeploy(project_id, environment=environment)
@@ -173,6 +212,7 @@ def run_fix_and_redeploy(
             "plan_id": plan.get("plan_id"),
             "execution": execution,
             "deploy_result": deploy_result,
+            "verification_result": execution.get("verification_result"),
         },
     )
 
@@ -200,6 +240,8 @@ def run_fix_and_redeploy(
             diagnosis=diagnosis,
             actions_taken=actions_taken,
             deploy_result=deploy_result,
+            brain_decision=brain_decision,
+            verification_result=execution.get("verification_result"),
         )
     else:
         summary = render_fix_and_redeploy_blocked(
@@ -217,4 +259,20 @@ def run_fix_and_redeploy(
         "plan": plan,
         "execution": execution,
         "deploy_result": deploy_result,
+        "brain_decision": brain_decision,
+        "evidence_summary": repair_ctx.get("evidence_summary"),
+        "verification_result": execution.get("verification_result"),
+        "operator_summary": {
+            "diagnosis": diagnosis.get("diagnosis"),
+            "brain": _brain_operator_line(brain_decision),
+            "verification": execution.get("verification_result"),
+            "redeploy_blocked": not execution.get("ok"),
+            "provider_result": deploy_result if ok else None,
+        },
     }
+
+
+def _brain_operator_line(brain_decision: dict[str, Any] | None) -> str | None:
+    if not isinstance(brain_decision, dict):
+        return None
+    return f"{brain_decision.get('selected_provider')}/{brain_decision.get('selected_model')}"

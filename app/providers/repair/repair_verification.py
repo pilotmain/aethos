@@ -72,3 +72,27 @@ def run_verification_suite(repo_path: str | Path) -> dict[str, Any]:
     if not results:
         return {"ok": True, "results": [], "note": "no_verification_commands"}
     return {"ok": True, "results": results}
+
+
+def build_verification_result(suite: dict[str, Any], *, blocked_redeploy: bool = False) -> dict[str, Any]:
+    """Operator-facing verification summary (Phase 2 Step 7)."""
+    commands: list[dict[str, Any]] = []
+    for row in suite.get("results") or []:
+        if not isinstance(row, dict):
+            continue
+        cli = row.get("cli") if isinstance(row.get("cli"), dict) else {}
+        commands.append(
+            {
+                "command": row.get("command"),
+                "returncode": row.get("returncode"),
+                "stdout_preview": (cli.get("stdout_preview") or cli.get("preview") or "")[:500],
+                "stderr_preview": (cli.get("stderr_preview") or "")[:500],
+            }
+        )
+    verified = bool(suite.get("ok"))
+    return {
+        "verified": verified,
+        "commands": commands,
+        "blocked_redeploy": blocked_redeploy or not verified,
+        "failed_command": suite.get("failed_command"),
+    }

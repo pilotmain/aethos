@@ -11,6 +11,29 @@ from app.providers.provider_registry import PROVIDER_IDS
 from app.runtime.runtime_state import ensure_operator_context_schema, load_runtime_state
 
 
+def _repair_mc_projection(row: dict[str, Any]) -> dict[str, Any]:
+    bd = row.get("brain_decision") if isinstance(row.get("brain_decision"), dict) else {}
+    ev = row.get("evidence_summary") if isinstance(row.get("evidence_summary"), dict) else {}
+    return {
+        **row,
+        "brain_summary": {
+            "provider": bd.get("selected_provider"),
+            "model": bd.get("selected_model"),
+            "reason": bd.get("reason"),
+            "fallback_used": bd.get("fallback_used"),
+        }
+        if bd
+        else None,
+        "evidence_summary": ev or None,
+        "verification_result": row.get("verification_result"),
+        "blocked_redeploy_reason": row.get("blocked_reason"),
+        "file_mutations": (
+            (row.get("execution") or {}).get("mutations") if isinstance(row.get("execution"), dict) else None
+        ),
+        "privacy_findings": (ev.get("privacy") or {}).get("findings") if isinstance(ev.get("privacy"), dict) else None,
+    }
+
+
 def build_operator_context_panel() -> dict[str, Any]:
     st = load_runtime_state()
     ensure_operator_context_schema(st)
@@ -43,7 +66,7 @@ def build_operator_context_panel() -> dict[str, Any]:
                 if isinstance(bucket, dict) and isinstance(rid, str):
                     row = bucket.get(rid)
                     if isinstance(row, dict):
-                        latest_repairs[pid] = row
+                        latest_repairs[pid] = _repair_mc_projection(row)
     last = actions[-1] if actions else {}
     last_nl = nl_actions[-1] if nl_actions else {}
     suggested: list[str] = []

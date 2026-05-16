@@ -80,4 +80,18 @@ def call_local_stub(payload: dict[str, Any]) -> dict[str, Any]:
     if payload.get("tool") == "artifact_write":
         return {"type": "artifact_write", "path": "(stub)", "bytes": 0}
 
+    if payload.get("tool") == "repair_plan" or str(payload.get("task") or "").lower() == "repair_plan":
+        return {
+            "type": "repair_plan",
+            "repair_plan": {
+                "diagnosis": "Stub brain repair plan",
+                "confidence": 0.7,
+                "steps": [
+                    {"type": "inspect", "path": "package.json"},
+                    {"type": "verify", "command": "npm run build"},
+                ],
+                "redeploy_after_verify": True,
+            },
+        }
+
     return {"type": "generic", "inputs_seen": inputs}

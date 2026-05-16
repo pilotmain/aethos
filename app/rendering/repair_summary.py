@@ -15,6 +15,8 @@ def render_fix_and_redeploy_success(
     diagnosis: dict[str, Any],
     actions_taken: list[str],
     deploy_result: dict[str, Any],
+    brain_decision: dict[str, Any] | None = None,
+    verification_result: dict[str, Any] | None = None,
 ) -> str:
     name = project_id.replace("-", " ").title()
     lines = [
@@ -25,9 +27,21 @@ def render_fix_and_redeploy_success(
         "",
         "**Diagnosis:**",
         str(diagnosis.get("diagnosis") or diagnosis.get("failure_category") or "unknown"),
-        "",
-        "**Actions:**",
     ]
+    if brain_decision:
+        lines.extend(
+            [
+                "",
+                "**Brain:**",
+                f"`{brain_decision.get('selected_provider')}/{brain_decision.get('selected_model')}`",
+            ]
+        )
+    if verification_result and verification_result.get("commands"):
+        lines.extend(["", "**Verification:**"])
+        for cmd in (verification_result.get("commands") or [])[:4]:
+            if isinstance(cmd, dict) and cmd.get("command"):
+                lines.append(f"- `{cmd['command']}` → exit {cmd.get('returncode')}")
+    lines.extend(["", "**Actions:**"])
     for a in actions_taken[:12]:
         lines.append(f"- {a}")
     url = deploy_result.get("url")
@@ -45,6 +59,8 @@ def render_fix_and_redeploy_blocked(
     reason: str,
     diagnosis: dict[str, Any] | None = None,
     verification: dict[str, Any] | None = None,
+    brain_decision: dict[str, Any] | None = None,
+    verification_result: dict[str, Any] | None = None,
     next_hint: str | None = None,
 ) -> str:
     name = project_id.replace("-", " ").title()
@@ -58,6 +74,17 @@ def render_fix_and_redeploy_blocked(
         lines.extend(["", "**Project:**", f"`{repo_path}`"])
     if diagnosis:
         lines.extend(["", "**Diagnosis:**", str(diagnosis.get("diagnosis") or "")])
+    if brain_decision:
+        lines.extend(
+            [
+                "",
+                "**Brain:**",
+                f"`{brain_decision.get('selected_provider')}/{brain_decision.get('selected_model')}`",
+            ]
+        )
+    vr = verification_result or {}
+    if vr.get("blocked_redeploy"):
+        lines.extend(["", "**Redeploy:**", "blocked until verification passes"])
     if verification and verification.get("failed_command"):
         lines.extend(["", "**Failed command:**", f"`{verification['failed_command']}`"])
     hint = next_hint or f"Fix the issue locally, then ask:\nredeploy {project_id}"
