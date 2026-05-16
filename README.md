@@ -68,6 +68,8 @@ pytest tests/test_openclaw_runtime_*.py
 pytest tests/test_openclaw_task_*.py tests/test_openclaw_scheduler.py tests/test_openclaw_queue_*.py tests/test_openclaw_agent_runtime.py tests/test_openclaw_orchestration_recovery.py tests/test_openclaw_deployment_recovery.py tests/test_openclaw_runtime_dispatcher.py
 pytest tests/test_openclaw_execution_*.py tests/test_openclaw_autonomous_execution.py
 pytest tests/test_openclaw_doctrine_docs.py
+pytest tests/test_openclaw_reliability_consistency.py tests/test_openclaw_continuity_consistency.py tests/test_openclaw_warning_consistency.py
+pytest tests/production_like/ tests/edge_cases/ tests/soak/ tests/openclaw_behavioral_validation/
 ```
 
 Each PR should state which OpenClaw behavior it reproduces and which parity checkpoint it advances.

@@ -12,8 +12,9 @@ This document closes **Phase 1**: operational equivalence, bounded runtime growt
 - Automated coverage:
   - `tests/edge_cases/` — repeated repair, recovery, rollback, lock repair, cleanup+recovery, retry exhaustion (marker: `edge_cases`).
   - `tests/soak/` — compact long-window loops (`soak`; `AETHOS_SOAK_LONG=1` for heavier).
-  - `tests/production_like/` — continuity, rollback, churn (`production_like`; `AETHOS_CHURN_LARGE=1` for larger loops).
+  - `tests/production_like/` — continuity, rollback, churn, **100+ save/load cycles**, repeated deployment artifact / rollback / lock integrity, large restart–reassignment–recovery–queue-repair–warning churn (`production_like`; `AETHOS_CHURN_LARGE=1` for larger loops).
   - `tests/openclaw_behavioral_validation/` — including repeated workflow, visibility, and reassignment consistency.
+  - **Deterministic summary locks:** `tests/test_openclaw_reliability_consistency.py`, `tests/test_openclaw_continuity_consistency.py`, `tests/test_openclaw_warning_consistency.py` (repeated reads of `summarize_runtime_*` / snapshot resilience without drift).
   - `tests/e2e/openclaw_runtime_stress/`, `tests/e2e/openclaw_operator_outcomes/`, `tests/test_openclaw_*.py`, parity workflows.
 
 ## Runtime stability metrics (`runtime_stability`)
@@ -41,7 +42,7 @@ Snapshot and CLI expose **derived rates**: `restart_recovery_success_rate`, `dep
 - **Boundedness** — planning outcomes/records trimming under `AETHOS_*` limits; checkpoint keys per plan under configured cap.
 - **Large churn** (opt-in `AETHOS_CHURN_LARGE=1`) — higher iteration counts for dispatch, boot, queue, retry, deployment, and agent assignment loops.
 
-Latest automated spot-check in this repo slice: **`tests/test_openclaw_*.py`** — **136 passed** with `USE_REAL_LLM=false NEXA_PYTEST=1`; edge + expanded production_like batches — **30 passed** in a combined run (see CI for authoritative counts).
+**Latest automated spot-check (local, representative):** `USE_REAL_LLM=false NEXA_PYTEST=1 pytest tests/test_openclaw_*.py` — **139 passed**; `pytest tests/production_like/ tests/edge_cases/` — **33 passed**; collect-only package sizes: `tests/edge_cases` **8**, `tests/soak` **6**, `tests/production_like` **25**, `tests/openclaw_behavioral_validation` **9** (CI remains authoritative for full `pytest` on PRs).
 
 ## Known remaining gaps (non-blocking for freeze)
 
@@ -72,5 +73,7 @@ AETHOS_CHURN_LARGE=1 pytest tests/production_like/ -m production_like
 ## Phase 1 parity freeze — status
 
 **Frozen for Phase 1:** No orchestration, Mission Control UI, or runtime **schema redesign** beyond additive forward-compatible fields, bugfixes, reliability/performance fixes, and parity test additions aligned with this audit.
+
+**Phase 1 operational confidence lock (final stabilization):** Only bug/stability/boundedness/visibility/parity-validation fixes per the Phase 1 completion directive. Confidence package adds repeated-cycle and churn tests (production_like + edge_cases + behavioral + soak), deterministic **reliability / continuity / warning** read consistency tests, and repeated deployment artifact + rollback + environment-lock integrity checks. Churn knobs: `AETHOS_CHURN_LARGE=1`, `AETHOS_SOAK_LONG=1`.
 
 **Phase 2 boundary:** Privacy-first redesigns, PII systems, and novelty architecture wait until production soak and product sign-off.

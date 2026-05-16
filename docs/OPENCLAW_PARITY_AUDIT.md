@@ -159,6 +159,12 @@ Only after Phase 1 is verified:
 
 ---
 
+## Phase 1 operational confidence lock
+
+Phase 1 architecture/runtime parity is treated as **complete**; remaining work is **confidence, stability, boundedness, and consistency** (see [OPENCLAW_FINAL_PARITY_AUDIT.md](OPENCLAW_FINAL_PARITY_AUDIT.md)). Additive tests only: `tests/production_like/` (churn, save/load cycles, deployment/rollback/lock integrity), `tests/edge_cases/`, `tests/soak/`, `tests/openclaw_behavioral_validation/`, and `tests/test_openclaw_{reliability,continuity,warning}_consistency.py` for deterministic summary reads.
+
+---
+
 ## Required PR note
 
 Every parity PR must include:
