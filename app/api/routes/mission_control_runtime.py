@@ -165,13 +165,28 @@ def mc_runtime_recommendations_slice(app_user_id: str = Depends(get_valid_web_us
 
 
 @router.get("/runtime/intelligence")
-def mc_runtime_intelligence_slice(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
-    return _lightweight_slice("intelligence", app_user_id)
+def mc_runtime_intelligence_unified(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    t = _truth_slice(app_user_id)
+    return {
+        "runtime_awareness": t.get("runtime_awareness") or {},
+        "operational_memory_intelligence": t.get("operational_memory_intelligence") or {},
+        "intelligent_routing": t.get("intelligent_routing") or {},
+        "operational_recovery_state": t.get("operational_recovery_state") or {},
+        "operational_intelligence_ecosystem": t.get("operational_intelligence_ecosystem") or {},
+        "intelligent_runtime_evolution": t.get("intelligent_runtime_evolution") or {},
+        "phase4_step5": t.get("phase4_step5"),
+    }
 
 
 @router.get("/runtime/continuity")
-def mc_runtime_continuity_slice(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
-    return _lightweight_slice("continuity", app_user_id)
+def mc_runtime_continuity(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    t = _truth_slice(app_user_id)
+    return {
+        "operational_continuity_engine": t.get("operational_continuity_engine") or {},
+        "operator_continuity": t.get("operator_continuity") or {},
+        "continuity_memory": t.get("continuity_memory") or {},
+        "runtime_resume_state": t.get("runtime_resume_state") or {},
+    }
 
 
 @router.get("/runtime/performance")
@@ -273,6 +288,7 @@ def mc_runtime_strategy(app_user_id: str = Depends(get_valid_web_user_id)) -> di
         "strategic_runtime_alerts": t.get("strategic_runtime_alerts") or [],
         "operational_trajectory_summary": t.get("operational_trajectory_summary") or {},
         "runtime_maturity_summary": t.get("runtime_maturity_summary") or {},
+        "strategic_runtime_planning": t.get("strategic_runtime_planning") or {},
     }
 
 
@@ -473,7 +489,69 @@ def mc_workers_coordination(app_user_id: str = Depends(get_valid_web_user_id)) -
 @router.get("/governance/intelligence")
 def mc_governance_intelligence(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
     t = _truth_slice(app_user_id)
-    return t.get("governance_operational_intelligence") or {}
+    return {
+        "governance_operational_intelligence": t.get("governance_operational_intelligence") or {},
+        "governance_intelligence": t.get("governance_intelligence") or {},
+    }
+
+
+@router.get("/runtime/posture")
+def mc_runtime_posture(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    t = _truth_slice(app_user_id)
+    return {
+        "runtime_awareness": t.get("runtime_awareness") or {},
+        "enterprise_operational_posture": t.get("enterprise_operational_posture") or {},
+        "operational_stability_matrix": t.get("operational_stability_matrix") or {},
+    }
+
+
+@router.get("/runtime/recovery")
+def mc_runtime_recovery(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    t = _truth_slice(app_user_id)
+    return t.get("operational_recovery_state") or {}
+
+
+@router.get("/runtime/routing")
+def mc_runtime_routing(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    t = _truth_slice(app_user_id)
+    return t.get("intelligent_routing") or {}
+
+
+@router.get("/runtime/advisories")
+def mc_runtime_advisories(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    t = _truth_slice(app_user_id)
+    return {
+        "strategic_recommendations": t.get("strategic_recommendations") or [],
+        "enterprise_runtime_advisories": t.get("enterprise_runtime_advisories") or [],
+        "recommendation_quality": t.get("recommendation_quality") or {},
+        "runtime_advisory_engine": t.get("runtime_advisory_engine") or {},
+    }
+
+
+@router.get("/runtime/focus")
+def mc_runtime_focus(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    t = _truth_slice(app_user_id)
+    return {
+        "runtime_focus_mode": t.get("runtime_focus_mode") or {},
+        "operational_experience": t.get("operational_experience") or {},
+        "operational_calmness_engine": t.get("operational_calmness_engine") or {},
+    }
+
+
+@router.get("/workers/intelligence")
+def mc_workers_intelligence(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    t = _truth_slice(app_user_id)
+    return t.get("intelligent_worker_ecosystem") or {}
+
+
+@router.get("/enterprise/posture")
+def mc_enterprise_posture(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    t = _truth_slice(app_user_id)
+    return {
+        "enterprise_operational_posture": t.get("enterprise_operational_posture") or {},
+        "runtime_awareness": t.get("runtime_awareness") or {},
+        "governance_posture": t.get("governance_posture") or {},
+    }
 
 
 @router.get("/enterprise/intelligence")

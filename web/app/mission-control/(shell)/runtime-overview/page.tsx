@@ -182,6 +182,9 @@ export default function RuntimeOverviewPage() {
         <Link href="/mission-control/operational-insights" className="text-primary hover:underline">
           Insights
         </Link>
+        <Link href="/mission-control/runtime-intelligence" className="text-primary hover:underline">
+          Runtime intelligence
+        </Link>
       </nav>
     </div>
   );
