@@ -43,3 +43,9 @@ def bump_runtime_boot(st: dict[str, Any]) -> None:
     m = metrics_root(st)
     m["runtime_boot_count"] = int(m.get("runtime_boot_count") or 0) + 1
     m["last_boot_at"] = utc_now_iso()
+    try:
+        from app.runtime import runtime_reliability
+
+        runtime_reliability.bump_restart_cycle(st)
+    except Exception:
+        pass

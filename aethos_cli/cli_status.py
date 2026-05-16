@@ -173,6 +173,28 @@ def cmd_status() -> int:
                             f"reasoning={int(rmx.get('reasoning_cycles_total') or 0)}"
                         )
                         try:
+                            from app.runtime import runtime_reliability
+
+                            rel = runtime_reliability.summarize_runtime_reliability(doc)
+                            stab = rel.get("stability_counters") or {}
+                            print("— Runtime reliability (parity lock) —")
+                            print(
+                                f"severity: {rel.get('severity')}  integrity_ok={rel.get('integrity_ok')} "
+                                f"issues={rel.get('integrity_issue_count')}"
+                            )
+                            if rel.get("reasons"):
+                                print(f"reasons: {', '.join(str(x) for x in (rel.get('reasons') or [])[:6])}")
+                            print(
+                                f"stability: restarts={int(stab.get('restart_cycles') or 0)} "
+                                f"recoveries_ok={int(stab.get('successful_recoveries') or 0)} "
+                                f"queue_pressure={int(stab.get('queue_pressure_events') or 0)} "
+                                f"retry_pressure={int(stab.get('retry_pressure_events') or 0)} "
+                                f"deploy_pressure={int(stab.get('deployment_pressure_events') or 0)} "
+                                f"degraded_events={int(stab.get('runtime_degradation_events') or 0)}"
+                            )
+                        except Exception as exc:
+                            print(f"runtime reliability: skip ({exc})")
+                        try:
                             from app.runtime.backups.runtime_snapshots import list_runtime_backup_files
                             from app.runtime.corruption.runtime_validation import scan_queue_duplicates_and_shape
 

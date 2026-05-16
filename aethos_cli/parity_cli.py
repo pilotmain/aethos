@@ -302,6 +302,24 @@ def _runtime_doctor_messages() -> list[str]:
                 out.append(f"runtime_integrity: FAIL ({inv.get('issue_count', 0)} issue(s))")
                 for i in (inv.get("issues") or [])[:15]:
                     out.append(f"  - {i}")
+            try:
+                from app.runtime import runtime_reliability
+
+                rel = runtime_reliability.summarize_runtime_reliability(st)
+                out.append(
+                    f"runtime_reliability: {rel.get('severity')} "
+                    f"(integrity_ok={rel.get('integrity_ok')} issues={rel.get('integrity_issue_count')})"
+                )
+                rs = rel.get("stability_counters") or {}
+                out.append(
+                    f"  stability: restarts={int(rs.get('restart_cycles') or 0)} "
+                    f"recoveries={int(rs.get('successful_recoveries') or 0)} "
+                    f"q_press={int(rs.get('queue_pressure_events') or 0)} "
+                    f"r_press={int(rs.get('retry_pressure_events') or 0)} "
+                    f"d_press={int(rs.get('deployment_pressure_events') or 0)}"
+                )
+            except Exception as exc:
+                out.append(f"runtime_reliability: skip ({exc})")
             from app.runtime.backups.runtime_snapshots import list_runtime_backup_files
             from app.runtime.corruption.runtime_validation import scan_queue_duplicates_and_shape
 

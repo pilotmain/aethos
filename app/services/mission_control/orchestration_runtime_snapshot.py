@@ -13,6 +13,12 @@ from app.runtime.runtime_state import load_runtime_state
 from app.runtime.sessions.session_registry import list_sessions_for_user
 
 
+def _reliability_summary(st: dict[str, Any]) -> dict[str, Any]:
+    from app.runtime import runtime_reliability
+
+    return runtime_reliability.summarize_runtime_reliability(st)
+
+
 def build_orchestration_runtime_snapshot(user_id: str | None) -> dict[str, Any]:
     """Read-only view for Mission Control ``/state`` (no UI redesign — data only)."""
     uid = (user_id or "").strip()
@@ -113,6 +119,7 @@ def build_orchestration_runtime_snapshot(user_id: str | None) -> dict[str, Any]:
             "retry_strategy_tail": _planning_list_field_tail(st, uid, "retry_strategy_history"),
         },
         "resilience": _resilience_slice(st),
+        "reliability": _reliability_summary(st),
     }
 
 

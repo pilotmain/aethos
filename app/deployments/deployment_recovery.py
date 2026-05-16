@@ -82,6 +82,12 @@ def recover_deployments_on_boot(st: dict[str, Any]) -> dict[str, Any]:
     m = st.setdefault("runtime_metrics", {})
     if isinstance(m, dict):
         m["deployment_recovery_boot_total"] = int(m.get("deployment_recovery_boot_total") or 0) + n
+    try:
+        from app.runtime import runtime_reliability
+
+        runtime_reliability.bump_successful_recoveries(st, int(n) + int(rb_n))
+    except Exception:
+        pass
     return {
         "deployments_marked_recovering": n,
         "rollback_recoveries": rb_n,

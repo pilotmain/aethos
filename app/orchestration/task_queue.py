@@ -33,6 +33,12 @@ def enqueue_task_id(st: dict[str, Any], queue_name: str, task_id: str) -> None:
         if isinstance(m, dict):
             m["queue_pressure_events_total"] = int(m.get("queue_pressure_events_total") or 0) + 1
         try:
+            from app.runtime import runtime_reliability
+
+            runtime_reliability.bump_queue_pressure_stability(st, 1)
+        except Exception:
+            pass
+        try:
             from app.runtime.events.runtime_events import emit_runtime_event
 
             emit_runtime_event(st, "queue_pressure", queue=queue_name, depth=len(q), limit=lim)

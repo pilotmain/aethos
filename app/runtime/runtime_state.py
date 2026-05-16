@@ -131,6 +131,16 @@ def default_runtime_state(*, workspace_root: Path | None = None) -> dict[str, An
         "planning_outcomes": [],
         "runtime_resilience": {},
         "runtime_corruption_quarantine": [],
+        "runtime_stability": {
+            "restart_cycles": 0,
+            "successful_recoveries": 0,
+            "failed_recoveries": 0,
+            "retry_pressure_events": 0,
+            "queue_pressure_events": 0,
+            "deployment_pressure_events": 0,
+            "runtime_degradation_events": 0,
+            "updated_at": None,
+        },
     }
 
 
@@ -342,7 +352,13 @@ def load_runtime_state() -> dict[str, Any]:
             m = data.setdefault("runtime_metrics", {})
             if isinstance(m, dict):
                 m["runtime_corruption_repairs_total"] = int(m.get("runtime_corruption_repairs_total") or 0) + 1
+            from app.runtime import runtime_reliability
+
+            runtime_reliability.bump_runtime_degradation(data, 1)
         ensure_resilience_schema(data)
+        from app.runtime import runtime_reliability
+
+        runtime_reliability.ensure_runtime_stability_schema(data)
         return data
     except Exception as exc:
         _LOG.warning("runtime_state.load_failed %s — resetting", exc)

@@ -11,3 +11,5 @@ def test_snapshot_contains_deployment_fields(tmp_path, monkeypatch) -> None:
     snap = build_orchestration_runtime_snapshot("user_z")
     assert "deployments" in snap and "environments" in snap
     assert "operational_workflows_tail" in snap and "deployment_scheduler" in snap
+    assert "reliability" in snap
+    assert snap["reliability"].get("severity") in ("healthy", "warning", "degraded", "critical")

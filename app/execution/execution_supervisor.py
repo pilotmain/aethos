@@ -54,6 +54,12 @@ def _record_retry_guardrail(st: dict[str, Any], *, plan_id: str, step_id: str, r
     if isinstance(m, dict):
         m["adaptive_retry_blocked_total"] = int(m.get("adaptive_retry_blocked_total") or 0) + 1
     try:
+        from app.runtime import runtime_reliability
+
+        runtime_reliability.bump_retry_pressure(st, 1)
+    except Exception:
+        pass
+    try:
         from app.runtime.events.runtime_events import emit_runtime_event
 
         emit_runtime_event(
@@ -83,6 +89,12 @@ def _finalize_execution_failure(
         m = st.setdefault("runtime_metrics", {})
         if isinstance(m, dict):
             m["retry_exhausted_total"] = int(m.get("retry_exhausted_total") or 0) + 1
+        try:
+            from app.runtime import runtime_reliability
+
+            runtime_reliability.bump_retry_pressure(st, 1)
+        except Exception:
+            pass
     step["status"] = "failed"
     execution_checkpoint.save_checkpoint(
         st,

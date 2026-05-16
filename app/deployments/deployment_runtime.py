@@ -238,6 +238,12 @@ def sync_deployment_terminal(
         _bump(st, "deployment_completed_total")
     else:
         _bump(st, "deployment_failed_total")
+        try:
+            from app.runtime import runtime_reliability
+
+            runtime_reliability.bump_deployment_pressure(st, 1)
+        except Exception:
+            pass
     from app.environments import environment_health
 
     environment_health.note_deployment_outcome(st, env_id, success=terminal == "completed")
