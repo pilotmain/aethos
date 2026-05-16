@@ -87,6 +87,12 @@ export const missionControlSecondaryNav: MissionControlNavItem[] = [
     description: "Worker outputs — search, filter, export",
   },
   {
+    name: "Workspace",
+    href: "/mission-control/workspace-intelligence",
+    icon: FolderKanban,
+    description: "Workspace intelligence, risk, research continuity",
+  },
+  {
     name: "Runtime plugins",
     href: "/mission-control/plugins",
     icon: Plug,

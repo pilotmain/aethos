@@ -35,7 +35,8 @@ from app.marketplace.runtime_marketplace import marketplace_summary
 from app.services.brain_routing_visibility import build_brain_routing_panel
 from app.services.operational_intelligence import build_operational_intelligence
 from app.services.runtime_governance import build_governance_audit
-from app.services.workspace_runtime_intelligence import build_workspace_intelligence
+from app.services.operator_continuity import build_operator_continuity_truth
+from app.services.workspace_runtime_intelligence import build_operational_risk, build_workspace_intelligence
 from app.services.mission_control.office_operational import build_office_operational_view
 from app.services.mission_control.runtime_metrics_discipline import get_runtime_discipline_metrics
 from app.services.mission_control.runtime_confidence import build_runtime_confidence
@@ -178,6 +179,13 @@ def build_runtime_truth(*, user_id: str | None = None) -> dict[str, Any]:
     truth["worker_continuations"] = wi.get("worker_continuations")
     truth["worker_effectiveness"] = wi.get("worker_effectiveness")
     truth["worker_summaries"] = wi.get("worker_summaries")
+    from app.runtime.workspace_operational_memory import list_research_chains
+    from app.services.research_continuity import build_deliverable_relationships_view
+
+    truth["research_chains"] = list_research_chains(limit=16)
+    truth["deliverable_relationships"] = build_deliverable_relationships_view(limit=32)
+    truth["operational_risk"] = build_operational_risk()
+    truth["operator_continuity"] = build_operator_continuity_truth()
     return truth
 
 

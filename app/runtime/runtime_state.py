@@ -193,6 +193,10 @@ def default_runtime_state(*, workspace_root: Path | None = None) -> dict[str, An
         "worker_deliverables": {},
         "worker_continuations": {},
         "worker_session_context": {},
+        "research_chains": {},
+        "deliverable_relationships": {},
+        "operator_continuity": {},
+        "workspace_governance_events": {},
     }
 
 
@@ -372,6 +376,10 @@ def ensure_operator_context_schema(st: dict[str, Any]) -> dict[str, Any]:
         "worker_deliverables",
         "worker_continuations",
         "worker_session_context",
+        "research_chains",
+        "deliverable_relationships",
+        "operator_continuity",
+        "workspace_governance_events",
     ):
         if key not in st:
             st[key] = base[key]  # type: ignore[index]

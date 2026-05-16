@@ -8,3 +8,4 @@ def test_workspace_intelligence_shape() -> None:
     out = build_workspace_intelligence()
     assert "projects" in out
     assert "project_count" in out
+    assert "risk_signals" in out

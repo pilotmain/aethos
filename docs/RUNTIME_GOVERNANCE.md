@@ -9,3 +9,5 @@ Foundations for audit visibility via `build_governance_audit()`:
 - aggregated permission scopes from installed plugins
 
 Stored in runtime state (`plugin_governance_audit`, `operator_provider_actions`).
+
+Step 9 timeline (`build_governance_timeline`) also includes deliverables, worker continuations, and `workspace_governance_events` (e.g. `research_continued`, `deliverable_compared`).

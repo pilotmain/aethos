@@ -152,6 +152,65 @@ def mc_governance(_: str = Depends(get_valid_web_user_id)) -> dict:
     return build_governance_timeline()
 
 
+@router.get("/workspace-intelligence")
+def mc_workspace_intelligence(_: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.workspace_runtime_intelligence import build_workspace_intelligence
+
+    return build_workspace_intelligence()
+
+
+@router.get("/workspace-risks")
+def mc_workspace_risks(_: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.workspace_runtime_intelligence import build_operational_risk
+
+    return build_operational_risk()
+
+
+@router.get("/research-chains")
+def mc_research_chains(
+    project_id: str | None = Query(None),
+    limit: int = Query(12, ge=1, le=32),
+    _: str = Depends(get_valid_web_user_id),
+) -> dict:
+    from app.runtime.workspace_operational_memory import list_research_chains
+
+    return {"chains": list_research_chains(project_id=project_id, limit=limit)}
+
+
+@router.get("/research-chains/{chain_id}")
+def mc_research_chain_detail(
+    chain_id: str,
+    _: str = Depends(get_valid_web_user_id),
+) -> dict:
+    from app.services.research_continuity import build_research_chain_view
+
+    return build_research_chain_view(chain_id)
+
+
+@router.get("/operator-continuity")
+def mc_operator_continuity(_: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.operator_continuity import build_operator_continuity_truth
+
+    return build_operator_continuity_truth()
+
+
+@router.get("/worker-collaboration")
+def mc_worker_collaboration(_: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.worker_collaboration_visibility import build_worker_collaboration_chains
+
+    return {"chains": build_worker_collaboration_chains()}
+
+
+@router.get("/deliverables/{deliverable_id}/relationships")
+def mc_deliverable_relationships(
+    deliverable_id: str,
+    _: str = Depends(get_valid_web_user_id),
+) -> dict:
+    from app.runtime.workspace_operational_memory import relationships_for_deliverable
+
+    return {"deliverable_id": deliverable_id, "relationships": relationships_for_deliverable(deliverable_id)}
+
+
 @router.get("/runtime-workers")
 def mc_runtime_workers(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
     from app.services.mission_control.runtime_worker_visibility import build_runtime_workers_view

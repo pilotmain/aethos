@@ -92,6 +92,37 @@ def build_governance_timeline(*, limit: int = 32) -> dict[str, Any]:
                     "privacy_mode": (row.get("payload") or {}).get("privacy_mode") if isinstance(row.get("payload"), dict) else None,
                 }
             )
+    from app.runtime.worker_operational_memory import search_deliverables
+    from app.runtime.workspace_operational_memory import list_workspace_governance_events
+
+    for d in search_deliverables(limit=6):
+        entries.append(
+            {
+                "at": d.get("created_at"),
+                "kind": "deliverable",
+                "who": d.get("worker_id") or "worker",
+                "what": f"{d.get('type')}: {str(d.get('summary') or '')[:80]}",
+            }
+        )
+    for c in (load_runtime_state().get("worker_continuations") or {}).values():
+        if isinstance(c, dict):
+            entries.append(
+                {
+                    "at": c.get("created_at"),
+                    "kind": "continuation",
+                    "who": c.get("worker_id") or "worker",
+                    "what": c.get("continuation_prompt") or c.get("reason") or "continuation",
+                }
+            )
+    for ev in list_workspace_governance_events(limit=8):
+        entries.append(
+            {
+                "at": ev.get("at"),
+                "kind": "governance",
+                "who": ev.get("who") or "runtime",
+                "what": ev.get("what") or ev.get("event_type"),
+            }
+        )
     entries.sort(key=lambda e: str(e.get("at") or ""), reverse=True)
     timeline = entries[:limit]
     try:

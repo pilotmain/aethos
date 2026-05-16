@@ -109,6 +109,12 @@ def resolve_followup_priority(
     """Returns (reply, resolution_source)."""
     from app.services.worker_intelligence import resolve_worker_followup
 
+    from app.services.operator_continuity import resolve_operator_continuity
+
+    op_cont, op_src = resolve_operator_continuity(text, chat_key=chat_key)
+    if op_cont:
+        return op_cont, op_src
+
     base = resolve_worker_followup(text, chat_key=chat_key, handle=handle)
     if base:
         return base, "worker_intelligence"

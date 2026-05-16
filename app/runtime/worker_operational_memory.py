@@ -135,6 +135,23 @@ def persist_deliverable(
         )
     except Exception:
         pass
+    if dtype == "research_summary":
+        try:
+            from app.services.research_continuity import ensure_research_deliverable_linked
+
+            prior = None
+            prev = list_deliverables_for_worker(worker_id, limit=2)
+            if len(prev) >= 2 and prev[1].get("deliverable_id") != did:
+                prior = str(prev[1].get("deliverable_id"))
+            ensure_research_deliverable_linked(
+                deliverable_id=did,
+                project_id=project_id,
+                worker_id=worker_id,
+                topic="research",
+                prior_deliverable_id=prior,
+            )
+        except Exception:
+            pass
     return did
 
 

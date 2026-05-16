@@ -374,6 +374,13 @@ def main() -> int:
     sp_env_show = env_sub.add_parser("show", help="GET /api/v1/environments/{id}")
     sp_env_show.add_argument("environment_id")
 
+    sp_workspace = sub.add_parser("workspace", help="Workspace intelligence (Phase 3 Step 9)")
+    ws_sub = sp_workspace.add_subparsers(dest="workspace_cmd", required=True)
+    ws_sub.add_parser("summary", help="GET /api/v1/mission-control/workspace-intelligence")
+    ws_sub.add_parser("risks", help="GET /api/v1/mission-control/workspace-risks")
+    sp_ws_chains = ws_sub.add_parser("research-chains", help="GET …/research-chains")
+    sp_ws_chains.add_argument("--project-id", default=None, dest="project_id")
+
     sp_workers = sub.add_parser("workers", help="Runtime worker detail (Phase 3 Step 8)")
     wk_sub = sp_workers.add_subparsers(dest="workers_cmd", required=True)
     wk_sub.add_parser("list", help="GET /api/v1/mission-control/runtime-workers")
@@ -381,6 +388,8 @@ def main() -> int:
     sp_wk_show.add_argument("worker_id")
     sp_wk_del = wk_sub.add_parser("deliverables", help="GET …/runtime-workers/{id}/deliverables")
     sp_wk_del.add_argument("worker_id")
+    sp_wk_cont = wk_sub.add_parser("continuity", help="GET …/operator-continuity + worker context")
+    sp_wk_cont.add_argument("worker_id")
 
     sp_dlv = sub.add_parser("deliverables", help="Worker deliverables (Phase 3 Step 8)")
     dlv_sub = sp_dlv.add_subparsers(dest="deliverables_cmd", required=True)
@@ -390,6 +399,9 @@ def main() -> int:
     sp_dlv_exp = dlv_sub.add_parser("export", help="GET …/deliverables/{id}/export")
     sp_dlv_exp.add_argument("deliverable_id")
     sp_dlv_exp.add_argument("--format", default="markdown", choices=("markdown", "text", "json"))
+    sp_dlv_cmp = dlv_sub.add_parser("compare", help="Compare two deliverables (runtime truth)")
+    sp_dlv_cmp.add_argument("deliverable_id_a")
+    sp_dlv_cmp.add_argument("deliverable_id_b")
 
     sp_agents = sub.add_parser("agents", help="Coordination agent API (multi-agent parity)")
     ag_sub = sp_agents.add_subparsers(dest="agents_cmd", required=True)
@@ -904,6 +916,23 @@ def main() -> int:
             print(body[:24000])
             return 0 if code == 200 else 1
 
+    if args.cmd == "workspace":
+        if args.workspace_cmd == "summary":
+            code, body = _req("GET", "/api/v1/mission-control/workspace-intelligence", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.workspace_cmd == "risks":
+            code, body = _req("GET", "/api/v1/mission-control/workspace-risks", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.workspace_cmd == "research-chains":
+            q = ""
+            if getattr(args, "project_id", None):
+                q = f"?project_id={urllib.parse.quote(str(args.project_id))}"
+            code, body = _req("GET", f"/api/v1/mission-control/research-chains{q}", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+
     if args.cmd == "workers":
         if args.workers_cmd == "list":
             code, body = _req("GET", "/api/v1/mission-control/runtime-workers", uid=uid)
@@ -922,6 +951,18 @@ def main() -> int:
                 uid=uid,
             )
             print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.workers_cmd == "continuity":
+            wid = urllib.parse.quote(str(args.worker_id), safe="")
+            code, body = _req("GET", "/api/v1/mission-control/operator-continuity", uid=uid)
+            print(body[:24000])
+            code2, body2 = _req(
+                "GET",
+                f"/api/v1/mission-control/runtime-workers/{wid}/continuations",
+                uid=uid,
+            )
+            if code2 == 200:
+                print(body2[:12000])
             return 0 if code == 200 else 1
 
     if args.cmd == "deliverables":
@@ -944,6 +985,12 @@ def main() -> int:
             )
             print(body[:24000])
             return 0 if code == 200 else 1
+        if args.deliverables_cmd == "compare":
+            from app.services.research_continuity import compare_deliverables
+
+            out = compare_deliverables(str(args.deliverable_id_a), str(args.deliverable_id_b))
+            print(json.dumps(out, indent=2, default=str)[:24000])
+            return 0 if out.get("ok") else 1
 
     if args.cmd == "agents":
         if args.agents_cmd == "list":

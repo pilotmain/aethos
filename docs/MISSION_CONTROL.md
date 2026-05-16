@@ -87,6 +87,8 @@ See [ENTERPRISE_RUNTIME_CONFIDENCE.md](ENTERPRISE_RUNTIME_CONFIDENCE.md), [OPERA
 - **`GET /mission-control/runtime-workers/{id}`** — detail (memory, deliverables, continuations sub-routes).
 - **`GET /mission-control/deliverables`** — searchable deliverables; export via `/deliverables/{id}/export`.
 - **Mission Control → Deliverables** (secondary nav) — lightweight list, filter, export.
+- **`GET /mission-control/workspace-intelligence`**, **`/workspace-risks`**, **`/research-chains`**, **`/operator-continuity`**, **`/worker-collaboration`** — Step 9 workspace intelligence.
+- **Mission Control → Workspace** (secondary nav) — projects, risk, research continuity.
 - **Readable summaries** on truth: `readable_summaries` (repairs, provider actions, health sentence).
 - **CEO** (`/mission-control/ceo`) deprecated in favor of Office.
 
