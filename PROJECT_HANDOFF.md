@@ -41,6 +41,8 @@ Do not introduce architectural divergence unless required to reproduce OpenClaw 
 
 **Phase 2 Step 7 (brain-routed repair):** See [docs/BRAIN_ROUTING.md](docs/BRAIN_ROUTING.md). Repair flows collect privacy-safe evidence, select a brain (`app/brain/`), validate structured plans, run safe in-repo edits, verify locally, then redeploy via provider actions. Mission Control exposes `brain_summary` on `latest_repair_contexts`.
 
+**Phase 2 Step 8 (Mission Control runtime intelligence):** See [docs/MISSION_CONTROL.md](docs/MISSION_CONTROL.md), [docs/PLUGINS.md](docs/PLUGINS.md), [docs/RUNTIME_EVENTS.md](docs/RUNTIME_EVENTS.md). Dynamic `runtime_agents`, slice APIs under `/mission-control/runtime*`, Office UI at `/mission-control/office`, plugin manifests in `app/plugins/`.
+
 Deferred until after verified parity:
 
 - privacy-first redesigns

@@ -120,6 +120,16 @@ def run_fix_and_redeploy(
             "repair_context": repair_ctx,
         }
 
+    from app.runtime.runtime_agents import spawn_runtime_agent
+    from app.services.mission_control.mc_runtime_events import emit_mc_runtime_event
+
+    repair_agent = spawn_runtime_agent(
+        agent_type="repair",
+        created_from_task=f"fix_and_redeploy:{project_id}",
+        provider="vercel",
+    )
+    emit_mc_runtime_event("repair_started", project_id=project_id, agent_id=repair_agent.get("agent_id"))
+
     evidence = collect_repair_evidence(
         project_id=project_id,
         deploy_ctx=deploy_ctx,
@@ -155,6 +165,10 @@ def run_fix_and_redeploy(
             actions_taken.append(f"Verified with `{row['command']}`")
         elif row.get("type") == "inspect":
             actions_taken.append(f"Inspected `{row.get('target')}`")
+
+    vr = execution.get("verification_result") if isinstance(execution.get("verification_result"), dict) else {}
+    if vr.get("verified"):
+        emit_mc_runtime_event("repair_verified", project_id=project_id)
 
     if not execution.get("ok"):
         blocked = str(execution.get("blocked_reason") or "verification_failed")
@@ -201,6 +215,7 @@ def run_fix_and_redeploy(
             "verification_result": execution.get("verification_result"),
         }
 
+    emit_mc_runtime_event("repair_redeploy_started", project_id=project_id)
     deploy_result = execute_vercel_redeploy(project_id, environment=environment)
     ok = bool(deploy_result.get("success"))
 

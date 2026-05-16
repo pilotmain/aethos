@@ -27,6 +27,12 @@ export const missionControlNavItems: MissionControlNavItem[] = [
     description: "Dashboard and key metrics",
   },
   {
+    name: "Office",
+    href: "/mission-control/office",
+    icon: Users,
+    description: "Live runtime agents and activity",
+  },
+  {
     name: "CEO",
     href: "/mission-control/ceo",
     icon: Briefcase,

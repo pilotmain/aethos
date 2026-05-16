@@ -33,3 +33,5 @@ def test_mission_control_state_includes_runtime_visibility(db_session) -> None:
     assert "deployment_identities" in oc
     assert "recent_nl_provider_actions" in oc
     assert "latest_repair_contexts" in oc
+    assert "runtime_agents" in snap
+    assert "brain_visibility" in snap

@@ -52,6 +52,18 @@ def record_brain_decision(
             "routing_decision": privacy_meta.get("routing_decision"),
         }
     _RECENT.appendleft(row)
+    try:
+        from app.services.mission_control.mc_runtime_events import emit_mc_runtime_event
+
+        emit_mc_runtime_event(
+            "brain_selected",
+            selected_provider=selected_provider,
+            selected_model=selected_model,
+            task=task,
+            project_id=project_id,
+        )
+    except Exception:
+        pass
     st = load_runtime_state()
     ensure_operator_context_schema(st)
     hist = st.setdefault("brain_decisions", [])

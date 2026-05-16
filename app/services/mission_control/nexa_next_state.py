@@ -903,6 +903,17 @@ def build_execution_snapshot(
         "phase2_privacy": build_mission_control_privacy_panel(),
         "operator_context": build_operator_context_panel(),
     }
+    from app.runtime.runtime_agents import list_runtime_agents, office_agent_states, sweep_expired_agents
+    from app.services.mission_control.runtime_intelligence import build_brain_visibility, build_runtime_health
+
+    sweep_expired_agents()
+    ort_slice = exec_payload.get("orchestration_runtime")
+    if not isinstance(ort_slice, dict):
+        ort_slice = build_orchestration_runtime_snapshot(user_id)
+    exec_payload["runtime_agents"] = list_runtime_agents()
+    exec_payload["office"] = {"agents": office_agent_states()}
+    exec_payload["runtime_health"] = build_runtime_health(user_id, ort_slice)
+    exec_payload["brain_visibility"] = build_brain_visibility()
 
     uid_early = (user_id or "").strip()
     if uid_early:
