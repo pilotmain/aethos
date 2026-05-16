@@ -473,6 +473,9 @@ def hydrate_runtime_truth_incremental(*, user_id: str | None = None) -> dict[str
     truth["runtime_accountability_summary"] = build_runtime_accountability_summary(truth)
     truth["escalation_operational_summary"] = build_escalation_operational_summary(truth)
     truth["cleanup_completion"] = build_cleanup_completion()
+    from app.services.mission_control.runtime_evolution import apply_runtime_evolution_to_truth
+
+    apply_runtime_evolution_to_truth(truth, user_id=uid)
     return truth
 
 

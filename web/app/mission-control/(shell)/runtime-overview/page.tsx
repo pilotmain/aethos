@@ -26,20 +26,49 @@ type CalmPayload = {
   operational_quality?: { quality_score?: number };
 };
 
+type EnterprisePayload = {
+  maturity?: string;
+  positioning?: string;
+  strategic_alerts?: number;
+  adaptive_signals?: number;
+  coordination_signals?: number;
+  strategic_insights?: number;
+  outlook?: string;
+  worker_ecosystem?: string;
+};
+
+type OutlookPayload = {
+  enterprise_operational_outlook?: { outlook?: string; summary?: string };
+};
+
+type StrategyPayload = {
+  operational_trajectory_summary?: { direction?: string; summary?: string };
+  runtime_maturity_summary?: { maturity_level?: string };
+};
+
 export default function RuntimeOverviewPage() {
   const [overview, setOverview] = useState<OverviewPayload>({});
   const [calm, setCalm] = useState<CalmPayload>({});
+  const [enterprise, setEnterprise] = useState<EnterprisePayload>({});
+  const [strategy, setStrategy] = useState<StrategyPayload>({});
+  const [outlook, setOutlook] = useState<OutlookPayload>({});
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     try {
-      const [o, c, r] = await Promise.all([
+      const [o, c, r, ent, strat, ol] = await Promise.all([
         apiFetch<OverviewPayload>("/mission-control/runtime/overview"),
         apiFetch<CalmPayload>("/mission-control/runtime/calmness"),
         apiFetch<ReadinessPayload>("/mission-control/runtime/readiness"),
+        apiFetch<EnterprisePayload>("/mission-control/enterprise/overview"),
+        apiFetch<StrategyPayload>("/mission-control/runtime/strategy"),
+        apiFetch<OutlookPayload>("/mission-control/runtime/outlook"),
       ]);
       setOverview({ ...o, runtime_readiness_score: r.runtime_readiness_score ?? o.runtime_readiness_score });
       setCalm(c);
+      setEnterprise(ent);
+      setStrategy(strat);
+      setOutlook(ol);
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load");
@@ -96,6 +125,34 @@ export default function RuntimeOverviewPage() {
       ) : null}
       {overview.narrative_preview ? (
         <p className="text-sm text-muted-foreground">{overview.narrative_preview}</p>
+      ) : null}
+      {(enterprise.maturity || strategy.operational_trajectory_summary?.summary) ? (
+        <section className="rounded-lg border border-border/40 bg-card/20 px-4 py-3 text-sm space-y-1">
+          <p className="text-xs uppercase text-muted-foreground">Strategic posture</p>
+          {enterprise.maturity ? (
+            <p>
+              Maturity: <span className="font-medium capitalize">{enterprise.maturity}</span>
+              {enterprise.positioning ? (
+                <span className="text-muted-foreground"> — {enterprise.positioning}</span>
+              ) : null}
+            </p>
+          ) : null}
+          {strategy.operational_trajectory_summary?.summary ? (
+            <p className="text-muted-foreground">{strategy.operational_trajectory_summary.summary}</p>
+          ) : null}
+          {(enterprise.strategic_alerts != null || enterprise.adaptive_signals != null) ? (
+            <p className="text-xs text-muted-foreground">
+              Alerts {enterprise.strategic_alerts ?? 0} · Signals {enterprise.adaptive_signals ?? 0}
+              {enterprise.coordination_signals != null ? ` · Coordination ${enterprise.coordination_signals}` : ""}
+            </p>
+          ) : null}
+          {enterprise.worker_ecosystem ? (
+            <p className="text-xs text-muted-foreground">Worker ecosystem: {enterprise.worker_ecosystem}</p>
+          ) : null}
+          {outlook.enterprise_operational_outlook?.summary ? (
+            <p className="text-xs text-muted-foreground">{outlook.enterprise_operational_outlook.summary}</p>
+          ) : null}
+        </section>
       ) : null}
       <nav className="flex flex-wrap gap-3 text-sm">
         <Link href="/mission-control/office" className="text-primary hover:underline">

@@ -1,0 +1,12 @@
+# SPDX-License-Identifier: Apache-2.0
+
+from __future__ import annotations
+
+from fastapi.testclient import TestClient
+
+
+def test_runtime_forecasting_flow(api_client: tuple[TestClient, str]) -> None:
+    client, uid = api_client
+    r = client.get("/api/v1/mission-control/runtime/forecasts", headers={"X-User-Id": uid})
+    assert r.status_code == 200
+    assert "operational_forecasting" in r.json()

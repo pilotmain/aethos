@@ -202,6 +202,11 @@ def default_runtime_state(*, workspace_root: Path | None = None) -> dict[str, An
         # Phase 3 Step 12 — incremental truth hydration caches.
         "mc_runtime_truth_cache": {},
         "mc_runtime_slice_cache": {},
+        # Phase 4 Step 1 — bounded runtime evolution history.
+        "runtime_adaptation_history": [],
+        "runtime_evolution_history": [],
+        # Phase 4 Step 2 — growth pattern tail.
+        "runtime_growth_patterns": [],
         "hydration_metrics": {},
         "timeline_append_buffer": [],
     }
