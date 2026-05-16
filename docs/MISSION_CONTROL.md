@@ -170,7 +170,13 @@ Certifies one-curl → enterprise setup, env completeness, MC ready state, and f
 - Marketplace plugin vs pack vs skill clarity
 - Production-cut readiness — [PRODUCTION_CUT_READINESS.md](PRODUCTION_CUT_READINESS.md)
 
-`enterprise_overview.phase` is `phase4_step13` (`launch_ready` on overview when Step 13 evolution applied).
+`enterprise_overview.phase` is `phase4_step14` (`launch_ready`, `release_candidate` when Step 14 evolution applied).
+
+### Phase 4 Step 14 — release candidate
+
+- `GET /api/v1/runtime/{readiness-progress,cold-start,partial-availability,release-candidate,certification,enterprise-grade}`
+- Operational freeze: [LAUNCH_CANDIDATE_FREEZE.md](LAUNCH_CANDIDATE_FREEZE.md)
+- Certification: [FINAL_RELEASE_CANDIDATE_CERTIFICATION.md](FINAL_RELEASE_CANDIDATE_CERTIFICATION.md)
 
 ### Phase 4 Step 13 — launch readiness
 

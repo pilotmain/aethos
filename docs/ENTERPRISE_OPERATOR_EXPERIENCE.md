@@ -47,3 +47,10 @@ Enterprise language system calms technical terms for operator trust. See [MISSIO
 - **Recovery** — reconnecting copy via `recovery_experience` (not “connection failed”)
 - `GET /api/v1/runtime/operator-experience`, `/operational-focus`, `/priority-work`, `/noise-reduction`, `/calmness-metrics`, `/signal-health`
 - Certification: [LAUNCH_READINESS_CERTIFICATION.md](LAUNCH_READINESS_CERTIFICATION.md)
+
+## Phase 4 Step 14 — release candidate polish
+
+- Office readiness summary during progressive hydration
+- Calm empty states while workers hydrate
+- `aethos runtime certify|release-candidate|enterprise-grade`
+- [FINAL_RELEASE_CANDIDATE_CERTIFICATION.md](FINAL_RELEASE_CANDIDATE_CERTIFICATION.md)

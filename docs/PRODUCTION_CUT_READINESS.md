@@ -1,4 +1,4 @@
-# Production-cut readiness (Phase 4 Step 12–13)
+# Production-cut readiness (Phase 4 Step 12–14)
 
 Module: `app/services/setup/production_cut_readiness.py`
 

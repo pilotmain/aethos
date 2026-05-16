@@ -287,3 +287,69 @@ def runtime_launch_certification(app_user_id: str = Depends(get_valid_web_user_i
     from app.services.mission_control.launch_readiness_certification import build_launch_readiness_certification
 
     return build_launch_readiness_certification()
+
+
+@router.get("/readiness-progress")
+def runtime_readiness_progress(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_cold_start_lock import build_runtime_readiness_progress
+
+    try:
+        t = _truth_slice(app_user_id)
+    except Exception:
+        t = {}
+    return build_runtime_readiness_progress(t)
+
+
+@router.get("/cold-start")
+def runtime_cold_start(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_cold_start_lock import build_runtime_cold_start
+
+    try:
+        t = _truth_slice(app_user_id)
+    except Exception:
+        t = {}
+    return build_runtime_cold_start(t)
+
+
+@router.get("/partial-availability")
+def runtime_partial_availability(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_cold_start_lock import build_runtime_partial_availability
+
+    try:
+        t = _truth_slice(app_user_id)
+    except Exception:
+        t = {}
+    return build_runtime_partial_availability(t)
+
+
+@router.get("/release-candidate")
+def runtime_release_candidate(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.release_candidate_certification import build_release_candidate_certification
+
+    try:
+        t = _truth_slice(app_user_id)
+    except Exception:
+        t = {}
+    return build_release_candidate_certification(t)
+
+
+@router.get("/certification")
+def runtime_certification(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.release_candidate_certification import build_runtime_certification_bundle
+
+    try:
+        t = _truth_slice(app_user_id)
+    except Exception:
+        t = {}
+    return build_runtime_certification_bundle(t)
+
+
+@router.get("/enterprise-grade")
+def runtime_enterprise_grade(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.release_candidate_certification import build_runtime_enterprise_grade
+
+    try:
+        t = _truth_slice(app_user_id)
+    except Exception:
+        t = {}
+    return build_runtime_enterprise_grade(t)

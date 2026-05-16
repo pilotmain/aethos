@@ -47,6 +47,8 @@ type OfficePayload = {
   confidence_summary?: string;
   office_operational_stream?: { office_interval_ms?: number; calmness_preserved?: boolean };
   hydration_progress?: { partial?: boolean; max_tier?: string };
+  runtime_readiness_summary?: string;
+  readiness_progress?: { partial?: boolean; percent_estimate?: number };
 };
 
 const STATE_DOT: Record<string, string> = {
@@ -126,6 +128,17 @@ export default function OfficePage() {
         </div>
       </header>
 
+      {office.runtime_readiness_summary ? (
+        <section className="rounded-lg border border-sky-500/25 bg-sky-500/5 px-4 py-3 text-sm">
+          <p className="font-medium text-foreground">{office.runtime_readiness_summary}</p>
+          {office.readiness_progress?.partial ? (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Summary-first command center — full intelligence hydrates progressively.
+            </p>
+          ) : null}
+        </section>
+      ) : null}
+
       {confidence ? (
         <section className="rounded-lg border border-border/50 bg-card/40 px-4 py-3 text-sm">
           <p className="font-medium">Runtime confidence</p>
@@ -193,7 +206,13 @@ export default function OfficePage() {
               </article>
             ))}
           </div>
-          {!workers.length && !error ? <p className="text-sm text-muted-foreground">No active workers.</p> : null}
+          {!workers.length && !error ? (
+            <p className="text-sm text-muted-foreground">
+              {stale || office.readiness_progress?.partial
+                ? "Workers will appear as hydration completes — orchestrator remains online."
+                : "No active workers."}
+            </p>
+          ) : null}
         </section>
 
         <section className="rounded-lg border border-border/50 bg-card/30 p-4">

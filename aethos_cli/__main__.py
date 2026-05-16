@@ -430,6 +430,10 @@ def main() -> int:
     rt_sub.add_parser("launch-focus", help="GET /api/v1/runtime/operational-focus (Step 13)")
     rt_sub.add_parser("priority-work", help="GET /api/v1/runtime/priority-work")
     rt_sub.add_parser("launch-cert", help="GET /api/v1/runtime/launch-certification")
+    rt_sub.add_parser("certify", help="GET /api/v1/runtime/certification (Step 14 RC bundle)")
+    rt_sub.add_parser("release-candidate", help="GET /api/v1/runtime/release-candidate")
+    rt_sub.add_parser("enterprise-grade", help="GET /api/v1/runtime/enterprise-grade")
+    rt_sub.add_parser("readiness-progress", help="GET /api/v1/runtime/readiness-progress")
     sp_ecosystem = sub.add_parser("ecosystem", help="Operational intelligence ecosystem (Phase 4 Step 3)")
     eco_sub = sp_ecosystem.add_subparsers(dest="ecosystem_cmd", required=True)
     eco_sub.add_parser("health", help="GET /api/v1/mission-control/ecosystem/health")
@@ -1257,6 +1261,22 @@ def main() -> int:
             return 0 if code == 200 else 1
         if args.runtime_cmd == "launch-cert":
             code, body = _req("GET", "/api/v1/runtime/launch-certification", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.runtime_cmd == "certify":
+            code, body = _req("GET", "/api/v1/runtime/certification", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.runtime_cmd == "release-candidate":
+            code, body = _req("GET", "/api/v1/runtime/release-candidate", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.runtime_cmd == "enterprise-grade":
+            code, body = _req("GET", "/api/v1/runtime/enterprise-grade", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.runtime_cmd == "readiness-progress":
+            code, body = _req("GET", "/api/v1/runtime/readiness-progress", uid=uid)
             print(body[:24000])
             return 0 if code == 200 else 1
         if args.runtime_cmd == "recovery":

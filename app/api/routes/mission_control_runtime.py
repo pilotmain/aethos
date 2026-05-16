@@ -47,6 +47,7 @@ def _lightweight_slice(slice_name: str, app_user_id: str) -> dict:
 @router.get("/office")
 def mc_office(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
     from app.services.mission_control.office_operational_stream import build_office_operational_stream
+    from app.services.mission_control.runtime_office_launch_quality import enrich_office_launch_payload
     from app.services.mission_control.runtime_async_hydration import hydrate_progressive_truth
     from app.services.mission_control.runtime_payload_profiles import apply_payload_profile
     from app.services.mission_control.runtime_resilience import fetch_slice_resilient
@@ -62,13 +63,14 @@ def mc_office(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
             office = _lightweight_slice("workers", app_user_id).get("office") or {}
         payload = {**(office if isinstance(office, dict) else {})}
     stream = build_office_operational_stream(payload if isinstance(payload, dict) else {})
-    return {
+    base = {
         **(payload if isinstance(payload, dict) else {}),
         "operational_status": status,
         "runtime_resilience": {"status": status, "panel": "office"},
         "office_operational_stream": stream,
         "hydration_progress": payload.get("hydration_progress") if isinstance(payload, dict) else {},
     }
+    return enrich_office_launch_payload(base)
 
 
 @router.get("/workers/archive")

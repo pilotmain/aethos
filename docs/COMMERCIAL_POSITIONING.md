@@ -50,6 +50,12 @@ Fortune-500-caliber Mission Control readability without monitoring-dashboard blo
 - Adaptive provider routing visibility and unified restart discipline
 - AethOS branding lock — user-facing coherence without breaking legacy env aliases
 
+## Release candidate (Phase 4 Step 14)
+
+- Enterprise release candidate certification and operational freeze
+- Fortune-500-caliber Mission Control calmness under cold hydration
+- `aethos runtime certify` — full RC certification bundle
+
 ## Philosophy
 
 Lighter than enterprise orchestration stacks, cleaner than fragmented AI control planes, more transparent than opaque agents.

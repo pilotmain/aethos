@@ -36,6 +36,10 @@ One-curl install is certified through `install.sh` → `scripts/setup.sh` → en
 
 `enterprise_overview.phase` is `phase4_step13` with `launch_ready` after runtime evolution. Certification: [docs/LAUNCH_READINESS_CERTIFICATION.md](docs/LAUNCH_READINESS_CERTIFICATION.md). Identity: [docs/AETHOS_LAUNCH_IDENTITY.md](docs/AETHOS_LAUNCH_IDENTITY.md).
 
+## Release candidate (Phase 4 Step 14)
+
+`enterprise_overview.phase` is `phase4_step14` with `release_candidate`. Certification: [docs/FINAL_RELEASE_CANDIDATE_CERTIFICATION.md](docs/FINAL_RELEASE_CANDIDATE_CERTIFICATION.md). Freeze: [docs/LAUNCH_CANDIDATE_FREEZE.md](docs/LAUNCH_CANDIDATE_FREEZE.md).
+
 ---
 
 ## 2. Non-negotiable product rule
