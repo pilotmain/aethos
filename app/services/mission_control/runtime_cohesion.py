@@ -36,6 +36,12 @@ def derive_operational_views_from_truth(truth: dict[str, Any]) -> dict[str, Any]
 
 def build_unified_operational_timeline(truth: dict[str, Any] | None = None, *, limit: int = 40) -> dict[str, Any]:
     """Merge governance timeline with truth-backed deliverable/recommendation highlights."""
+    if truth and truth.get("unified_operational_timeline"):
+        return truth["unified_operational_timeline"]
+    from app.services.mission_control.governance_timeline_unified import build_unified_governance_timeline
+
+    if truth:
+        return build_unified_governance_timeline(truth, limit=limit)
     truth = truth or {}
     base = build_governance_timeline(limit=limit)
     entries = list(base.get("timeline") or [])

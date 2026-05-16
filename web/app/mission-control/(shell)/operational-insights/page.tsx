@@ -45,13 +45,14 @@ export default function OperationalInsightsPage() {
 
   const refresh = useCallback(async () => {
     try {
-      const [i, r, p, h] = await Promise.all([
+      const [i, r, p, h, trust] = await Promise.all([
         apiFetch<IntelPayload>("/mission-control/operational-intelligence"),
         apiFetch<RecPayload>("/mission-control/runtime-recommendations"),
         apiFetch<{ packs?: PackRow[] }>("/mission-control/automation-packs"),
         apiFetch<HealthPayload>("/mission-control/runtime/health"),
+        apiFetch<{ operational_trust_score?: number }>("/mission-control/governance/trust"),
       ]);
-      setIntel(i);
+      setIntel({ ...i, summaries: { ...(i.summaries ?? {}), trust_score: String(trust.operational_trust_score ?? "—") } });
       setRecs(r);
       setPacks(p.packs ?? []);
       setHealth(h);

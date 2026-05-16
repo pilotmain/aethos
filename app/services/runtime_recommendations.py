@@ -60,6 +60,10 @@ def _recommendations_from_signals(
                 "suggested_next_step": next_step,
                 "advisory": True,
                 "requires_approval": True,
+                "trust_impact": impact,
+                "governance_visible": True,
+                "accountability_source": "runtime_intelligence",
+                "execution_chain_ref": worker_id or project_id or provider,
             }
         )
 
@@ -190,6 +194,21 @@ def _recommendations_from_signals(
         )
 
     return recs
+
+
+def enrich_recommendations_with_trust(truth: dict[str, Any]) -> None:
+    """Attach trust context to recommendations on truth (Phase 3 Step 14)."""
+    block = truth.get("runtime_recommendations")
+    if not isinstance(block, dict):
+        return
+    score = float(truth.get("operational_trust_score") or 0.8)
+    esc = truth.get("runtime_escalations") or {}
+    for rec in block.get("recommendations") or []:
+        if isinstance(rec, dict):
+            rec.setdefault("operational_trust_impact", rec.get("operational_impact"))
+            rec.setdefault("governance_impact", "visible")
+            rec.setdefault("escalation_context", (esc.get("types_present") or [])[:3])
+            rec.setdefault("trust_score_at_generation", score)
 
 
 def _privacy_mode_label() -> str:

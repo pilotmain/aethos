@@ -265,6 +265,89 @@ def mc_timeline_search(
     return search_timeline_entries(q, limit=limit, offset=offset, kind=kind, actor=actor)
 
 
+@router.get("/execution/visibility")
+def mc_execution_visibility(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    t = _truth_slice(app_user_id)
+    return t.get("execution_visibility") or {}
+
+
+@router.get("/runtime/accountability")
+def mc_runtime_accountability(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    t = _truth_slice(app_user_id)
+    return {
+        "runtime_accountability": t.get("runtime_accountability") or {},
+        "operational_trust_score": t.get("operational_trust_score"),
+        "governance_integrity": t.get("governance_integrity") or {},
+    }
+
+
+@router.get("/runtime/escalations")
+def mc_runtime_escalations(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    t = _truth_slice(app_user_id)
+    return {
+        "runtime_escalations": t.get("runtime_escalations") or {},
+        "escalation_visibility": t.get("escalation_visibility") or {},
+        "escalation_history": t.get("escalation_history") or [],
+    }
+
+
+@router.get("/governance/trust")
+def mc_governance_trust(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    t = _truth_slice(app_user_id)
+    return {
+        "operational_trust_score": t.get("operational_trust_score"),
+        "governance_integrity": t.get("governance_integrity") or {},
+        "enterprise_trust_panels": t.get("enterprise_trust_panels") or {},
+    }
+
+
+@router.get("/providers/governance")
+def mc_providers_governance(_: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.provider_governance_visibility import build_provider_governance
+
+    return build_provider_governance()
+
+
+@router.get("/providers/trust")
+def mc_providers_trust(_: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.provider_governance_visibility import build_provider_trust
+
+    return build_provider_trust()
+
+
+@router.get("/providers/history")
+def mc_providers_history(
+    limit: int = Query(24, ge=1, le=64),
+    _: str = Depends(get_valid_web_user_id),
+) -> dict:
+    from app.services.mission_control.provider_governance_visibility import build_provider_history
+
+    return build_provider_history(limit=limit)
+
+
+@router.get("/workers/accountability")
+def mc_workers_accountability(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.worker_accountability import (
+        build_worker_accountability,
+        build_worker_governance,
+        build_worker_operational_quality,
+    )
+
+    t = _truth_slice(app_user_id)
+    return {
+        "worker_accountability": t.get("worker_accountability") or build_worker_accountability(t, user_id=app_user_id),
+        "worker_governance": t.get("worker_governance") or build_worker_governance(t),
+        "worker_operational_quality": t.get("worker_operational_quality") or build_worker_operational_quality(t),
+    }
+
+
+@router.get("/automation/trust")
+def mc_automation_trust(_: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.automation_governance import build_automation_governance, build_automation_trust
+
+    return {"automation_trust": build_automation_trust(), "automation_governance": build_automation_governance()}
+
+
 @router.get("/timeline/window")
 def mc_timeline_window(
     limit: int = Query(24, ge=1, le=48),

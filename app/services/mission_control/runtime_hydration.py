@@ -374,6 +374,45 @@ def hydrate_runtime_truth_incremental(*, user_id: str | None = None) -> dict[str
     truth["runtime_query_efficiency"] = build_runtime_query_efficiency()
     truth["governance_scalability"] = build_governance_scalability()
     truth["enterprise_operational_views"] = build_enterprise_operational_views(truth)
+    from app.services.mission_control.execution_visibility import (
+        build_execution_chains,
+        build_execution_governance,
+        build_execution_trace_health,
+        build_execution_visibility,
+    )
+    from app.services.mission_control.enterprise_trust_views import build_enterprise_trust_panels
+    from app.services.mission_control.governance_timeline_unified import build_unified_governance_timeline
+    from app.services.mission_control.operational_explainability import build_operational_explainability
+    from app.services.mission_control.operational_trust import build_operational_trust_model
+    from app.services.mission_control.runtime_escalations import (
+        build_escalation_history,
+        build_escalation_visibility,
+        build_runtime_escalations,
+    )
+    from app.services.mission_control.worker_accountability import (
+        build_worker_accountability,
+        build_worker_governance,
+        build_worker_operational_quality,
+    )
+
+    truth["runtime_escalations"] = build_runtime_escalations(truth)
+    truth["escalation_visibility"] = build_escalation_visibility(truth)
+    truth["escalation_history"] = build_escalation_history(truth)
+    truth["execution_visibility"] = build_execution_visibility(truth, user_id=uid)
+    truth["execution_chains"] = build_execution_chains(truth, user_id=uid)
+    truth["execution_governance"] = build_execution_governance(truth)
+    truth["execution_trace_health"] = build_execution_trace_health(truth)
+    trust = build_operational_trust_model(truth)
+    truth.update(trust)
+    truth["worker_accountability"] = build_worker_accountability(truth, user_id=uid)
+    truth["worker_governance"] = build_worker_governance(truth)
+    truth["worker_operational_quality"] = build_worker_operational_quality(truth)
+    truth["operational_explainability"] = build_operational_explainability(truth)
+    truth["enterprise_trust_panels"] = build_enterprise_trust_panels(truth)
+    truth["unified_operational_timeline"] = build_unified_governance_timeline(truth, limit=40)
+    from app.services.runtime_recommendations import enrich_recommendations_with_trust
+
+    enrich_recommendations_with_trust(truth)
     return truth
 
 

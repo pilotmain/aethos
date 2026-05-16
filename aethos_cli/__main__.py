@@ -313,6 +313,9 @@ def main() -> int:
     sp_prov_show.add_argument("provider_id")
     sp_prov_proj = prov_sub.add_parser("projects", help="GET /api/v1/providers/{id}/projects")
     sp_prov_proj.add_argument("provider_id")
+    prov_sub.add_parser("trust", help="GET /api/v1/mission-control/providers/trust")
+    prov_sub.add_parser("governance", help="GET /api/v1/mission-control/providers/governance")
+    prov_sub.add_parser("history", help="GET /api/v1/mission-control/providers/history")
 
     sp_proj = sub.add_parser("projects", help="Local project registry (Phase 2 Step 3)")
     proj_sub = sp_proj.add_subparsers(dest="projects_cmd", required=True)
@@ -387,6 +390,11 @@ def main() -> int:
     rt_sub.add_parser("scalability", help="GET /api/v1/mission-control/runtime/scalability")
     rt_sub.add_parser("payloads", help="Payload discipline metrics")
     rt_sub.add_parser("pressure", help="Operational pressure overview")
+    rt_sub.add_parser("accountability", help="GET /api/v1/mission-control/runtime/accountability")
+    rt_sub.add_parser("escalations", help="GET /api/v1/mission-control/runtime/escalations")
+    sp_exec_vis = sub.add_parser("execution", help="Execution visibility (Phase 3 Step 14)")
+    exec_sub = sp_exec_vis.add_subparsers(dest="execution_cmd", required=True)
+    exec_sub.add_parser("visibility", help="GET /api/v1/mission-control/execution/visibility")
 
     sp_opsum = sub.add_parser("operational", help="Operational summary (Phase 3 Step 11)")
     op_sub = sp_opsum.add_subparsers(dest="operational_cmd", required=True)
@@ -404,6 +412,7 @@ def main() -> int:
     gov_sub.add_parser("timeline", help="GET /api/v1/mission-control/governance")
     gov_sub.add_parser("risks", help="GET /api/v1/mission-control/governance/risks")
     gov_sub.add_parser("summary", help="GET /api/v1/mission-control/governance/summary")
+    gov_sub.add_parser("trust", help="GET /api/v1/mission-control/governance/trust")
     sp_gov_search = gov_sub.add_parser("search", help="GET /api/v1/mission-control/governance/search")
     sp_gov_search.add_argument("query", nargs="?", default=None)
     sp_gov_filter = gov_sub.add_parser("filter", help="GET /api/v1/mission-control/governance/filter")
@@ -419,6 +428,7 @@ def main() -> int:
     sp_mkt = sub.add_parser("marketplace", help="Marketplace automation packs")
     mkt_sub = sp_mkt.add_subparsers(dest="marketplace_cmd", required=True)
     mkt_sub.add_parser("packs", help="GET /api/v1/mission-control/automation-packs")
+    mkt_sub.add_parser("trust", help="GET /api/v1/mission-control/automation/trust")
     sp_mkt_run = mkt_sub.add_parser("run-pack", help="POST …/automation-packs/{id}/run")
     sp_mkt_run.add_argument("pack_id")
 
@@ -436,6 +446,7 @@ def main() -> int:
     sp_wk_show = wk_sub.add_parser("show", help="GET /api/v1/mission-control/runtime-workers/{id}")
     sp_wk_show.add_argument("worker_id")
     sp_wk_del = wk_sub.add_parser("deliverables", help="GET …/runtime-workers/{id}/deliverables")
+    wk_sub.add_parser("accountability", help="GET /api/v1/mission-control/workers/accountability")
     sp_wk_del.add_argument("worker_id")
     sp_wk_cont = wk_sub.add_parser("continuity", help="GET …/operator-continuity + worker context")
     sp_wk_cont.add_argument("worker_id")
@@ -845,6 +856,18 @@ def main() -> int:
             code, body = _req("GET", f"/api/v1/providers/{pid}/projects", uid=uid)
             print(body[:24000])
             return 0 if code == 200 else 1
+        if args.providers_cmd == "trust":
+            code, body = _req("GET", "/api/v1/mission-control/providers/trust", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.providers_cmd == "governance":
+            code, body = _req("GET", "/api/v1/mission-control/providers/governance", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.providers_cmd == "history":
+            code, body = _req("GET", "/api/v1/mission-control/providers/history", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
 
     if args.cmd == "projects":
         if args.projects_cmd == "list":
@@ -998,6 +1021,14 @@ def main() -> int:
             code, body = _req("GET", "/api/v1/mission-control/runtime/scalability", uid=uid)
             print(body[:24000])
             return 0 if code == 200 else 1
+        if args.runtime_cmd == "accountability":
+            code, body = _req("GET", "/api/v1/mission-control/runtime/accountability", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.runtime_cmd == "escalations":
+            code, body = _req("GET", "/api/v1/mission-control/runtime/escalations", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
         if args.runtime_cmd == "timeline-window":
             off = int(getattr(args, "offset", 0))
             lim = int(getattr(args, "limit", 24))
@@ -1075,6 +1106,10 @@ def main() -> int:
             code, body = _req("GET", "/api/v1/mission-control/governance/summary", uid=uid)
             print(body[:24000])
             return 0 if code == 200 else 1
+        if args.governance_cmd == "trust":
+            code, body = _req("GET", "/api/v1/mission-control/governance/trust", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
         if args.governance_cmd == "search":
             q = urllib.parse.quote(str(getattr(args, "query", "") or ""))
             code, body = _req("GET", f"/api/v1/mission-control/governance/search?q={q}", uid=uid)
@@ -1101,6 +1136,16 @@ def main() -> int:
             code, body = _req("POST", f"/api/v1/mission-control/automation-packs/{pid}/run", uid=uid)
             print(body[:24000])
             return 0 if code == 200 else 1
+        if args.marketplace_cmd == "trust":
+            code, body = _req("GET", "/api/v1/mission-control/automation/trust", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+
+    if args.cmd == "execution":
+        if args.execution_cmd == "visibility":
+            code, body = _req("GET", "/api/v1/mission-control/execution/visibility", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
 
     if args.cmd == "workspace":
         if args.workspace_cmd == "summary":
@@ -1124,6 +1169,10 @@ def main() -> int:
             return 0 if code == 200 else 1
 
     if args.cmd == "workers":
+        if args.workers_cmd == "accountability":
+            code, body = _req("GET", "/api/v1/mission-control/workers/accountability", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
         if args.workers_cmd == "list":
             code, body = _req("GET", "/api/v1/mission-control/runtime-workers", uid=uid)
             print(body[:24000])
