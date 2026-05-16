@@ -28,9 +28,27 @@ def get_cached_runtime_truth(
     if isinstance(entry, dict):
         ts = float(entry.get("_mono_ts") or 0)
         if now - ts < _CACHE_TTL_SEC and isinstance(entry.get("truth"), dict):
-            return dict(entry["truth"])
+            from app.services.mission_control.runtime_metrics_discipline import (
+                approx_payload_bytes,
+                record_truth_build,
+            )
+
+            truth = dict(entry["truth"])
+            record_truth_build(
+                payload_keys=len(truth),
+                approx_bytes=approx_payload_bytes(truth),
+                cache_hit=True,
+            )
+            return truth
     truth = builder(user_id)
     cache[key] = {"truth": truth, "_mono_ts": now, "updated_at": utc_now_iso()}
+    from app.services.mission_control.runtime_metrics_discipline import approx_payload_bytes, record_truth_build
+
+    record_truth_build(
+        payload_keys=len(truth),
+        approx_bytes=approx_payload_bytes(truth),
+        cache_hit=False,
+    )
     save_runtime_state(st)
     return truth
 

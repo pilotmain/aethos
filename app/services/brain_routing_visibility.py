@@ -47,6 +47,7 @@ def build_brain_routing_panel() -> dict[str, Any]:
             "estimated_cost": latest.get("cost_estimate") or _estimate_cost(recent[0] if recent else {}),
             "provider_health": "ok" if not summary.get("privacy_block_active") else "restricted",
             "capability_score": latest.get("capability_score"),
+            "routing_confidence": latest.get("capability_score"),
             "task": latest.get("task") or summary.get("task"),
         },
         "supported_tasks": sorted(BRAIN_TASKS),

@@ -53,6 +53,8 @@ Do not introduce architectural divergence unless required to reproduce OpenClaw 
 
 **Phase 3 Step 2 (native differentiation):** Documented advantages (`docs/AETHOS_DIFFERENTIATION.md`), privacy operational posture, brain routing metadata (fallback chain, cost), differentiation APIs (`/mission-control/differentiators`, etc.), MC `/mission-control/differentiators`. See [docs/AETHOS_DIFFERENTIATION.md](docs/AETHOS_DIFFERENTIATION.md).
 
+**Phase 3 Step 3 (MC polish + runtime cleanup):** Office operational API (`GET /mission-control/office`), agent role/persistent model, event aging, runtime discipline metrics, panel cache cohesion. See [docs/RUNTIME_SIMPLIFICATION_AUDIT.md](docs/RUNTIME_SIMPLIFICATION_AUDIT.md), [docs/ARCHITECTURE_SIMPLIFICATION.md](docs/ARCHITECTURE_SIMPLIFICATION.md).
+
 Deferred until after verified parity:
 
 - privacy-first redesigns

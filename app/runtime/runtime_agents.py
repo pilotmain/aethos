@@ -92,6 +92,8 @@ def ensure_runtime_agents_schema(st: dict[str, Any]) -> dict[str, Any]:
         ra[ORCHESTRATOR_ID] = {
             "agent_id": ORCHESTRATOR_ID,
             "agent_type": ORCHESTRATOR_TYPE,
+            "role": "orchestrator",
+            "persistent": True,
             "status": "active",
             "lifecycle": "active",
             "created_from_task": None,
@@ -103,6 +105,9 @@ def ensure_runtime_agents_schema(st: dict[str, Any]) -> dict[str, Any]:
             "system": True,
             "assignment": None,
         }
+    elif isinstance(orch, dict):
+        orch.setdefault("role", "orchestrator")
+        orch.setdefault("persistent", True)
     _metrics(st)
     return ra
 
@@ -150,7 +155,14 @@ def list_runtime_agents(*, include_expired: bool = False) -> dict[str, Any]:
                 continue
             if not include_expired and row.get("status") in ("expired", "suspended"):
                 continue
-            out[str(aid)] = dict(row)
+            enriched = dict(row)
+            if enriched.get("system"):
+                enriched.setdefault("role", "orchestrator")
+                enriched.setdefault("persistent", True)
+            else:
+                enriched.setdefault("role", str(enriched.get("agent_type") or "worker"))
+                enriched.setdefault("persistent", False)
+            out[str(aid)] = enriched
     return out
 
 
@@ -213,6 +225,8 @@ def spawn_runtime_agent(
     row: dict[str, Any] = {
         "agent_id": aid,
         "agent_type": (agent_type or "general").strip().lower(),
+        "role": (agent_type or "general").strip().lower(),
+        "persistent": False,
         "status": "spawned",
         "lifecycle": "spawned",
         "created_from_task": created_from_task,

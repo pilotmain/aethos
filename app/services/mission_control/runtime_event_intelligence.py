@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from app.runtime.runtime_state import load_runtime_state, save_runtime_state, utc_now_iso
@@ -149,6 +150,45 @@ def _severity_rank(sev: str | None) -> int:
     return _SEVERITY_ORDER.get(str(sev or "info"), 0)
 
 
+def _parse_ts(ts: str | None) -> datetime | None:
+    if not ts:
+        return None
+    try:
+        return datetime.fromisoformat(ts.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def filter_events_by_age(rows: list[dict[str, Any]], *, max_age_hours: float = 48.0) -> list[dict[str, Any]]:
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=max_age_hours)
+    out: list[dict[str, Any]] = []
+    for row in rows:
+        ts = _parse_ts(str(row.get("timestamp") or ""))
+        if ts is None or ts >= cutoff:
+            out.append(row)
+    return out
+
+
+def prune_stale_event_summaries(*, max_age_hours: float = 72.0) -> int:
+    st = load_runtime_state()
+    summaries = st.get("runtime_event_summaries")
+    if not isinstance(summaries, list):
+        return 0
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=max_age_hours)
+    kept = []
+    for row in summaries:
+        if not isinstance(row, dict):
+            continue
+        ts = _parse_ts(str(row.get("timestamp") or ""))
+        if ts is None or ts >= cutoff:
+            kept.append(row)
+    removed = len(summaries) - len(kept)
+    if removed:
+        st["runtime_event_summaries"] = kept
+        save_runtime_state(st)
+    return removed
+
+
 def prioritize_events(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Higher severity first, then newest timestamp."""
     return sorted(
@@ -169,7 +209,7 @@ def aggregate_events_for_display(
     """
     Collapse repeated low-value events and return bounded summaries for Mission Control.
     """
-    rows = list_normalized_events(limit=min(500, limit * 4), category=category)
+    rows = filter_events_by_age(list_normalized_events(limit=min(500, limit * 4), category=category))
     if categories:
         allowed = {c.strip() for c in categories if c.strip()}
         rows = [r for r in rows if str(r.get("category") or "") in allowed]

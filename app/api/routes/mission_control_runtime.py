@@ -38,6 +38,11 @@ def mc_runtime(db: Session = Depends(get_db), app_user_id: str = Depends(get_val
     return build_mission_control_runtime(db, user_id=app_user_id)
 
 
+@router.get("/office")
+def mc_office(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    return _truth_slice(app_user_id).get("office") or {}
+
+
 @router.get("/agents")
 def mc_agents(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
     return build_agents_slice(app_user_id)

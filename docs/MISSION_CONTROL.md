@@ -41,6 +41,13 @@ Events are aggregated for display (`aggregate_events_for_display`) to collapse r
 - APIs: `/api/v1/marketplace/plugins`, `/install`, `/uninstall`, `/upgrade`.
 - Runtime truth includes `marketplace`, `operational_intelligence`, `workspace_intelligence`, `runtime_governance`.
 
+## Step 3 — production polish
+
+- **`GET /mission-control/office`** — orchestrator, workers, pressure, privacy, signal events (from truth).
+- Agents: `aethos_orchestrator` is `persistent: true`; workers are ephemeral (`persistent: false`).
+- Panels use cached truth; discipline metrics track payload size and cache hit rate.
+- Cohesion: `mission_control_cohesion.build_cohesion_report()`.
+
 ## Live panels (Step 9)
 
 `GET /api/v1/mission-control/runtime-panels` — runtime health, brain routing, provider operations, agents, privacy, recovery.

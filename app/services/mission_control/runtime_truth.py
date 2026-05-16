@@ -36,6 +36,8 @@ from app.services.brain_routing_visibility import build_brain_routing_panel
 from app.services.operational_intelligence import build_operational_intelligence
 from app.services.runtime_governance import build_governance_audit
 from app.services.workspace_runtime_intelligence import build_workspace_intelligence
+from app.services.mission_control.office_operational import build_office_operational_view
+from app.services.mission_control.runtime_metrics_discipline import get_runtime_discipline_metrics
 
 
 def build_provider_routing_summary() -> dict[str, Any]:
@@ -93,6 +95,9 @@ def build_runtime_truth(*, user_id: str | None = None) -> dict[str, Any]:
     recover_runtime_agents_after_restart()
     sweep_expired_agents()
     lifecycle_sweep = run_runtime_lifecycle_sweeps()
+    from app.services.mission_control.runtime_event_intelligence import prune_stale_event_summaries
+
+    prune_stale_event_summaries()
     uid = (user_id or "").strip() or None
     ort = build_orchestration_runtime_snapshot(uid)
     operator = build_operator_context_panel()
@@ -102,13 +107,16 @@ def build_runtime_truth(*, user_id: str | None = None) -> dict[str, Any]:
     agents_active = list_runtime_agents(include_expired=False)
     brain = build_brain_visibility()
     metrics = get_cached_metrics(uid or "_global", lambda u: _compute_metrics(u, ort, st))
+    routing_summary = build_provider_routing_summary()
+    plugins_panel = build_plugin_health_panel()
+    privacy_posture = build_privacy_operational_posture()
+    operational_intel = build_operational_intelligence(ort)
 
-    return {
+    truth: dict[str, Any] = {
         "runtime_health": health,
         "orchestrator": agents_active.get("aethos_orchestrator"),
         "runtime_agents": agents_active,
         "runtime_agents_history": list_runtime_agents_history(limit=24),
-        "office": office_topology(uid),
         "tasks": ort.get("tasks") or [],
         "queues": ort.get("queue_depths") or {},
         "deployments": {
@@ -123,7 +131,7 @@ def build_runtime_truth(*, user_id: str | None = None) -> dict[str, Any]:
         "operator_context": operator,
         "repair": operator.get("latest_repair_contexts") or {},
         "brain_visibility": brain,
-        "routing_summary": build_provider_routing_summary(),
+        "routing_summary": routing_summary,
         "privacy": {
             "mode": brain["brain"]["privacy_mode"],
             "local_only": brain["brain"].get("local_only"),
@@ -132,21 +140,24 @@ def build_runtime_truth(*, user_id: str | None = None) -> dict[str, Any]:
         "runtime_events": events_display,
         "runtime_events_raw_count": len(events_display),
         "runtime_metrics": metrics,
-        "plugins": build_plugin_health_panel(),
+        "plugins": plugins_panel,
         "ownership_trace": build_operator_trace_chains(uid),
         "operator_traces": build_all_operator_traces(uid),
         "lifecycle_sweep": lifecycle_sweep,
         "workflows": ort.get("workflows") or {},
         "marketplace": marketplace_summary(),
-        "operational_intelligence": build_operational_intelligence(ort),
+        "operational_intelligence": operational_intel,
         "brain_routing_panel": build_brain_routing_panel(),
         "workspace_intelligence": build_workspace_intelligence(),
         "runtime_governance": build_governance_audit(),
         "automation_packs": list_automation_packs_with_health(),
-        "privacy_posture": build_privacy_operational_posture(),
+        "privacy_posture": privacy_posture,
         "provider_intelligence": build_provider_intelligence_panel(),
         "differentiators": build_differentiators_summary(ort=ort),
+        "runtime_discipline": get_runtime_discipline_metrics(),
     }
+    truth["office"] = build_office_operational_view(truth, user_id=uid)
+    return truth
 
 
 def build_runtime_panels_from_truth(truth: dict[str, Any]) -> dict[str, Any]:
@@ -182,4 +193,6 @@ def build_runtime_panels_from_truth(truth: dict[str, Any]) -> dict[str, Any]:
         "privacy_posture": truth.get("privacy_posture"),
         "provider_intelligence": truth.get("provider_intelligence"),
         "differentiators": truth.get("differentiators"),
+        "office_operational": truth.get("office"),
+        "runtime_discipline": truth.get("runtime_discipline"),
     }
