@@ -36,9 +36,9 @@ export const missionControlPrimaryNav: MissionControlNavItem[] = [
   },
   {
     name: "Runtime",
-    href: "/mission-control/overview",
+    href: "/mission-control/runtime-overview",
     icon: Activity,
-    description: "Runtime health and operational overview",
+    description: "Unified runtime overview — trust, calmness, identity",
   },
   {
     name: "Deployments",

@@ -265,6 +265,65 @@ def mc_timeline_search(
     return search_timeline_entries(q, limit=limit, offset=offset, kind=kind, actor=actor)
 
 
+@router.get("/runtime/overview")
+def mc_runtime_overview(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    t = _truth_slice(app_user_id)
+    return t.get("runtime_overview") or t.get("enterprise_operator_experience", {}).get("runtime_overview") or {}
+
+
+@router.get("/runtime/narratives")
+def mc_runtime_narratives(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    t = _truth_slice(app_user_id)
+    return {
+        "operational_narratives": t.get("operational_narratives") or {},
+        "runtime_stories": t.get("runtime_stories") or {},
+    }
+
+
+@router.get("/runtime/calmness")
+def mc_runtime_calmness(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    t = _truth_slice(app_user_id)
+    return {
+        "runtime_calmness": t.get("runtime_calmness") or {},
+        "operational_quality": t.get("operational_quality") or {},
+    }
+
+
+@router.get("/runtime/operator-experience")
+def mc_enterprise_operator_experience(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    t = _truth_slice(app_user_id)
+    return t.get("enterprise_operator_experience") or {}
+
+
+@router.get("/governance/overview")
+def mc_governance_overview(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.governance_experience import build_governance_overview
+
+    return build_governance_overview(_truth_slice(app_user_id))
+
+
+@router.get("/workers/overview")
+def mc_workers_overview(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    t = _truth_slice(app_user_id)
+    return t.get("worker_runtime_cohesion") or t.get("unified_worker_state") or {}
+
+
+@router.get("/providers/overview")
+def mc_providers_overview(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.provider_governance_visibility import (
+        build_provider_governance,
+        build_provider_trust,
+    )
+
+    t = _truth_slice(app_user_id)
+    return {
+        "providers": t.get("providers"),
+        "governance": build_provider_governance(t),
+        "trust": build_provider_trust(t),
+        "runtime_identity_label": "Provider",
+    }
+
+
 @router.get("/execution/visibility")
 def mc_execution_visibility(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
     t = _truth_slice(app_user_id)

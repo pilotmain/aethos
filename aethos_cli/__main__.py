@@ -316,6 +316,7 @@ def main() -> int:
     prov_sub.add_parser("trust", help="GET /api/v1/mission-control/providers/trust")
     prov_sub.add_parser("governance", help="GET /api/v1/mission-control/providers/governance")
     prov_sub.add_parser("history", help="GET /api/v1/mission-control/providers/history")
+    prov_sub.add_parser("overview", help="GET /api/v1/mission-control/providers/overview")
 
     sp_proj = sub.add_parser("projects", help="Local project registry (Phase 2 Step 3)")
     proj_sub = sp_proj.add_subparsers(dest="projects_cmd", required=True)
@@ -392,6 +393,11 @@ def main() -> int:
     rt_sub.add_parser("pressure", help="Operational pressure overview")
     rt_sub.add_parser("accountability", help="GET /api/v1/mission-control/runtime/accountability")
     rt_sub.add_parser("escalations", help="GET /api/v1/mission-control/runtime/escalations")
+    rt_sub.add_parser("overview", help="GET /api/v1/mission-control/runtime/overview")
+    rt_sub.add_parser("trust", help="GET /api/v1/mission-control/governance/trust")
+    rt_sub.add_parser("continuity", help="GET /api/v1/mission-control/operator-continuity")
+    rt_sub.add_parser("calmness", help="GET /api/v1/mission-control/runtime/calmness")
+    sp_rt_narr = sub.add_parser("operational-narrative", help="Operational narratives from runtime truth")
     sp_exec_vis = sub.add_parser("execution", help="Execution visibility (Phase 3 Step 14)")
     exec_sub = sp_exec_vis.add_subparsers(dest="execution_cmd", required=True)
     exec_sub.add_parser("visibility", help="GET /api/v1/mission-control/execution/visibility")
@@ -413,6 +419,7 @@ def main() -> int:
     gov_sub.add_parser("risks", help="GET /api/v1/mission-control/governance/risks")
     gov_sub.add_parser("summary", help="GET /api/v1/mission-control/governance/summary")
     gov_sub.add_parser("trust", help="GET /api/v1/mission-control/governance/trust")
+    gov_sub.add_parser("overview", help="GET /api/v1/mission-control/governance/overview")
     sp_gov_search = gov_sub.add_parser("search", help="GET /api/v1/mission-control/governance/search")
     sp_gov_search.add_argument("query", nargs="?", default=None)
     sp_gov_filter = gov_sub.add_parser("filter", help="GET /api/v1/mission-control/governance/filter")
@@ -447,6 +454,7 @@ def main() -> int:
     sp_wk_show.add_argument("worker_id")
     sp_wk_del = wk_sub.add_parser("deliverables", help="GET …/runtime-workers/{id}/deliverables")
     wk_sub.add_parser("accountability", help="GET /api/v1/mission-control/workers/accountability")
+    wk_sub.add_parser("overview", help="GET /api/v1/mission-control/workers/overview")
     sp_wk_del.add_argument("worker_id")
     sp_wk_cont = wk_sub.add_parser("continuity", help="GET …/operator-continuity + worker context")
     sp_wk_cont.add_argument("worker_id")
@@ -868,6 +876,15 @@ def main() -> int:
             code, body = _req("GET", "/api/v1/mission-control/providers/history", uid=uid)
             print(body[:24000])
             return 0 if code == 200 else 1
+        if args.providers_cmd == "overview":
+            code, body = _req("GET", "/api/v1/mission-control/providers/overview", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+
+    if args.cmd == "operational-narrative":
+        code, body = _req("GET", "/api/v1/mission-control/runtime/narratives", uid=uid)
+        print(body[:24000])
+        return 0 if code == 200 else 1
 
     if args.cmd == "projects":
         if args.projects_cmd == "list":
@@ -1029,6 +1046,22 @@ def main() -> int:
             code, body = _req("GET", "/api/v1/mission-control/runtime/escalations", uid=uid)
             print(body[:24000])
             return 0 if code == 200 else 1
+        if args.runtime_cmd == "overview":
+            code, body = _req("GET", "/api/v1/mission-control/runtime/overview", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.runtime_cmd == "trust":
+            code, body = _req("GET", "/api/v1/mission-control/governance/trust", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.runtime_cmd == "continuity":
+            code, body = _req("GET", "/api/v1/mission-control/operator-continuity", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.runtime_cmd == "calmness":
+            code, body = _req("GET", "/api/v1/mission-control/runtime/calmness", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
         if args.runtime_cmd == "timeline-window":
             off = int(getattr(args, "offset", 0))
             lim = int(getattr(args, "limit", 24))
@@ -1110,6 +1143,10 @@ def main() -> int:
             code, body = _req("GET", "/api/v1/mission-control/governance/trust", uid=uid)
             print(body[:24000])
             return 0 if code == 200 else 1
+        if args.governance_cmd == "overview":
+            code, body = _req("GET", "/api/v1/mission-control/governance/overview", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
         if args.governance_cmd == "search":
             q = urllib.parse.quote(str(getattr(args, "query", "") or ""))
             code, body = _req("GET", f"/api/v1/mission-control/governance/search?q={q}", uid=uid)
@@ -1171,6 +1208,10 @@ def main() -> int:
     if args.cmd == "workers":
         if args.workers_cmd == "accountability":
             code, body = _req("GET", "/api/v1/mission-control/workers/accountability", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.workers_cmd == "overview":
+            code, body = _req("GET", "/api/v1/mission-control/workers/overview", uid=uid)
             print(body[:24000])
             return 0 if code == 200 else 1
         if args.workers_cmd == "list":

@@ -413,6 +413,34 @@ def hydrate_runtime_truth_incremental(*, user_id: str | None = None) -> dict[str
     from app.services.runtime_recommendations import enrich_recommendations_with_trust
 
     enrich_recommendations_with_trust(truth)
+    from app.services.mission_control.enterprise_operator_experience import (
+        build_enterprise_operator_experience,
+        build_enterprise_runtime_views,
+        build_runtime_overview,
+    )
+    from app.services.mission_control.governance_experience import build_governance_experience
+    from app.services.mission_control.operational_calmness import build_operational_quality, build_runtime_calmness
+    from app.services.mission_control.operational_narratives import build_operational_narratives
+    from app.services.mission_control.runtime_identity import build_runtime_identity
+    from app.services.mission_control.runtime_storytelling import build_runtime_stories
+    from app.services.mission_control.worker_runtime_cohesion import (
+        build_unified_worker_state,
+        build_worker_operational_identity,
+        build_worker_runtime_cohesion,
+    )
+
+    truth["runtime_identity"] = build_runtime_identity(truth)
+    truth["operational_narratives"] = build_operational_narratives(truth)
+    truth["runtime_stories"] = build_runtime_stories(truth)
+    truth["runtime_calmness"] = build_runtime_calmness(truth)
+    truth["operational_quality"] = build_operational_quality(truth)
+    truth["governance_experience"] = build_governance_experience(truth)
+    truth["unified_worker_state"] = build_unified_worker_state(truth, user_id=uid)
+    truth["worker_operational_identity"] = build_worker_operational_identity(truth)
+    truth["worker_runtime_cohesion"] = build_worker_runtime_cohesion(truth, user_id=uid)
+    truth["enterprise_operator_experience"] = build_enterprise_operator_experience(truth, user_id=uid)
+    truth["enterprise_runtime_views"] = build_enterprise_runtime_views(truth)
+    truth["runtime_overview"] = build_runtime_overview(truth)
     return truth
 
 

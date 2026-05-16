@@ -99,16 +99,19 @@ def build_operational_summary(truth: dict[str, Any]) -> dict[str, Any]:
 
 
 def build_runtime_cleanup_progression() -> dict[str, Any]:
-    """Measurable cleanup targets for Step 11."""
+    """Measurable cleanup targets — Steps 11–15."""
     return {
-        "duplicate_truth_builders": "consolidated — use build_runtime_truth only",
+        "duplicate_truth_builders": "consolidated — build_runtime_truth → hydrate_runtime_truth_incremental",
         "parallel_intelligence": "consolidated — operational_intelligence_engine",
-        "legacy_ui_paths": "secondary nav for deliverables/workspace/insights",
-        "disconnected_worker_state": "resolved — worker_memory in truth",
-        "progress_score": 0.85,
+        "legacy_ui_paths": "secondary nav; primary: Office + Runtime overview",
+        "disconnected_worker_state": "resolved — unified_worker_state on truth",
+        "duplicate_timelines": "resolved — build_unified_governance_timeline authoritative",
+        "fragmented_trust": "resolved — enterprise_operator_experience bundle",
+        "progress_score": 0.92,
         "notes": [
             "All MC APIs should call get_cached_runtime_truth → build_runtime_truth",
-            "Panels derive via build_runtime_panels_from_truth",
+            "Panels derive via build_runtime_panels_from_truth or enterprise_runtime_views",
+            "Prefer /runtime/overview over duplicate aggregators",
         ],
     }
 

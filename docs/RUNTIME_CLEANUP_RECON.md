@@ -12,7 +12,15 @@
 | `plugin_runtime.build_plugin_health_panel` | Done |
 | Event aggregation + severity prioritization | Done |
 
-## Remaining (post–Step 11)
+## Completed (Step 15)
+
+- Unified runtime identity (`runtime_identity`, canonical labels)
+- Enterprise operator experience bundle on truth
+- Runtime overview API and Mission Control page
+- Duplicate timeline consolidation via `build_unified_governance_timeline`
+- Cleanup progression score 0.92
+
+## Remaining (post–Step 15)
 
 | Location | Notes |
 |----------|--------|
