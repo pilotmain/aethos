@@ -32,7 +32,9 @@ def build_operator_context_panel() -> dict[str, Any]:
     actions = st.get("operator_provider_actions") or []
     if not isinstance(actions, list):
         actions = []
+    nl_actions = [a for a in actions if isinstance(a, dict) and a.get("source") == "gateway_nl"]
     last = actions[-1] if actions else {}
+    last_nl = nl_actions[-1] if nl_actions else {}
     suggested: list[str] = []
     if isinstance(last, dict) and not last.get("success"):
         cat = str(last.get("failure_category") or "").strip()
@@ -49,6 +51,8 @@ def build_operator_context_panel() -> dict[str, Any]:
         "deployment_identities": identities,
         "provider_resolution_cache": cache,
         "recent_provider_actions": actions[-24:],
+        "recent_nl_provider_actions": nl_actions[-24:],
+        "last_nl_provider_action": last_nl or None,
         "suggested_fixes": suggested,
         "summary": {
             "providers_installed": installed_ct,
