@@ -19,6 +19,12 @@ def _reliability_summary(st: dict[str, Any]) -> dict[str, Any]:
     return runtime_reliability.summarize_runtime_reliability(st)
 
 
+def _continuity_summary(st: dict[str, Any]) -> dict[str, Any]:
+    from app.runtime import runtime_continuity
+
+    return runtime_continuity.summarize_runtime_continuity(st)
+
+
 def build_orchestration_runtime_snapshot(user_id: str | None) -> dict[str, Any]:
     """Read-only view for Mission Control ``/state`` (no UI redesign — data only)."""
     uid = (user_id or "").strip()
@@ -120,6 +126,7 @@ def build_orchestration_runtime_snapshot(user_id: str | None) -> dict[str, Any]:
         },
         "resilience": _resilience_slice(st),
         "reliability": _reliability_summary(st),
+        "continuity": _continuity_summary(st),
     }
 
 

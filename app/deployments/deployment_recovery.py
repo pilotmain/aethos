@@ -83,9 +83,16 @@ def recover_deployments_on_boot(st: dict[str, Any]) -> dict[str, Any]:
     if isinstance(m, dict):
         m["deployment_recovery_boot_total"] = int(m.get("deployment_recovery_boot_total") or 0) + n
     try:
+        from app.runtime import runtime_continuity
         from app.runtime import runtime_reliability
 
         runtime_reliability.bump_successful_recoveries(st, int(n) + int(rb_n))
+        locks_n = int(lk.get("locks_repaired") or 0)
+        if locks_n:
+            runtime_continuity.bump_continuity_repairs(st, locks_n)
+        runtime_continuity.note_deployment_recovery_batch(
+            st, deployments_recovered=int(n), rollbacks_recovered=int(rb_n)
+        )
     except Exception:
         pass
     return {

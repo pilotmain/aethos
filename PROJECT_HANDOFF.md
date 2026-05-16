@@ -10,7 +10,7 @@ No contributor should optimize for novelty, differentiation, branding, or archit
 
 **Master implementation plan:** [docs/OPENCLAW_FUNCTIONAL_PARITY_DIRECTIVE.md](docs/OPENCLAW_FUNCTIONAL_PARITY_DIRECTIVE.md) — CLI + gateway command matrix (`aethos onboard`, `aethos gateway`, `aethos message send`, …), workspace layout targets (`~/.aethos/…`), required parity **test modules**, and priorities **P1–P4**.
 
-**Parity lock & validation:** [docs/OPENCLAW_FINAL_PARITY_AUDIT.md](docs/OPENCLAW_FINAL_PARITY_AUDIT.md) — runtime reliability summary (`runtime_stability` + Mission Control `reliability`), soak/behavioral/stress test locations, and known gaps before Phase 2.
+**Parity lock & validation:** [docs/OPENCLAW_FINAL_PARITY_AUDIT.md](docs/OPENCLAW_FINAL_PARITY_AUDIT.md) — runtime reliability summary (`runtime_stability` + Mission Control `reliability`), soak / **production_like** / behavioral / stress test locations, and known gaps before Phase 2.
 
 ---
 

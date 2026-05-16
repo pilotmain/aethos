@@ -320,6 +320,18 @@ def _runtime_doctor_messages() -> list[str]:
                 )
             except Exception as exc:
                 out.append(f"runtime_reliability: skip ({exc})")
+            try:
+                from app.runtime import runtime_continuity
+
+                cont = runtime_continuity.summarize_runtime_continuity(st)
+                out.append(
+                    f"runtime_continuity: failures={int(cont.get('continuity_failures') or 0)} "
+                    f"repairs={int(cont.get('continuity_repairs') or 0)} "
+                    f"restart_rate={cont.get('restart_recovery_success_rate')} "
+                    f"deploy_rate={cont.get('deployment_recovery_success_rate')}"
+                )
+            except Exception as exc:
+                out.append(f"runtime_continuity: skip ({exc})")
             from app.runtime.backups.runtime_snapshots import list_runtime_backup_files
             from app.runtime.corruption.runtime_validation import scan_queue_duplicates_and_shape
 

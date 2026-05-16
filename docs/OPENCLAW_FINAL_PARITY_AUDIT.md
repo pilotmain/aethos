@@ -1,34 +1,53 @@
-# OpenClaw final parity audit (Phase 1 lock)
+# OpenClaw final parity audit (Phase 1 operational freeze)
 
-This document closes the **parity lock / soak / validation** slice: what is treated as operationally equivalent, how it is verified, and what remains out of scope until Phase 2.
+This document closes **Phase 1**: operational equivalence, bounded runtime growth, repeated stress/edge validation, and the **final freeze** boundary before Phase 2.
 
 ## Parity-complete systems (practical)
 
 - Doctrine and workspace/runtime JSON model (`~/.aethos/aethos.json`) with orchestration queues, execution graphs, deployments, environments, locks, and recovery hooks.
-- Adaptive planning persistence (`planning_history`, planning rows), retry guardrails, delegation decision records, bounded retention, deployment failure diagnostics.
-- Mission Control orchestration snapshot: queues, metrics, planning tails, resilience, **`reliability`** (severity + stability counters + integrity hints).
-- CLI: `aethos status` / `nexa status` prints **Runtime reliability (parity lock)**; `aethos doctor` includes `runtime_reliability` lines.
-- Automated coverage: `tests/soak/` (compact default; `AETHOS_SOAK_LONG=1` for heavier), `tests/openclaw_behavioral_validation/`, `tests/e2e/openclaw_runtime_stress/`, expanded `tests/e2e/openclaw_operator_outcomes/`, plus existing `tests/test_openclaw_*.py` and parity workflows.
+- Adaptive planning persistence, retry guardrails, delegation decisions, retention caps, deployment failure diagnostics.
+- **Runtime stability** (`runtime_stability` counters) and **runtime continuity** (`runtime_continuity` counters + derived success rates).
+- Mission Control orchestration snapshot: queues, metrics, planning tails, resilience, **`reliability`** (severity + reasons), **`continuity`** (failure/repair counts + restart / deployment / rollback recovery rates).
+- CLI: `aethos status` / `nexa status` prints **Runtime reliability** and **Runtime continuity**; `aethos doctor` appends matching lines.
+- Automated coverage:
+  - `tests/edge_cases/` — repeated repair, recovery, rollback, lock repair, cleanup+recovery, retry exhaustion (marker: `edge_cases`).
+  - `tests/soak/` — compact long-window loops (`soak`; `AETHOS_SOAK_LONG=1` for heavier).
+  - `tests/production_like/` — continuity, rollback, churn (`production_like`; `AETHOS_CHURN_LARGE=1` for larger loops).
+  - `tests/openclaw_behavioral_validation/` — including repeated workflow, visibility, and reassignment consistency.
+  - `tests/e2e/openclaw_runtime_stress/`, `tests/e2e/openclaw_operator_outcomes/`, `tests/test_openclaw_*.py`, parity workflows.
 
-## Runtime stability metrics
+## Runtime stability metrics (`runtime_stability`)
 
-Persisted under `runtime_stability` in runtime JSON (merged on load):
+Persisted counters (merged on load): restart cycles, successful/failed recoveries, retry/queue/deployment pressure, degradation events. **`reliability`** summary is computed: `healthy` | `warning` | `degraded` | `critical` from integrity, caps, and stress counters.
 
-- `restart_cycles` — incremented with `bump_runtime_boot`.
-- `successful_recoveries` — boot-time deployment recovery transitions (`recover_deployments_on_boot`).
-- `failed_recoveries` — reserved for explicit failure paths (counters available).
-- `retry_pressure_events` — retry guardrail / exhaustion pressure.
-- `queue_pressure_events` — mirrors high-depth enqueue pressure.
-- `deployment_pressure_events` — deployment terminal failures.
-- `runtime_degradation_events` — JSON repair / coercion on load.
+## Runtime continuity metrics (`runtime_continuity`)
 
-Operational **`reliability`** summary (computed, not only counters): `healthy` | `warning` | `degraded` | `critical` from integrity, queue depth vs cap, retry/deployment stress, quarantine depth, event buffer pressure.
+Persisted fields:
 
-## Known remaining gaps (non-blocking for “lock”)
+| Field | Meaning |
+| --- | --- |
+| `continuity_failures` | Incremented on explicit continuity failure paths (reserved / guardrails). |
+| `continuity_repairs` | Queue coercion on load, lock repairs, cleanup+retention work. |
+| `restart_recovery_attempts` / `restart_recovery_successes` | Tied to `bump_runtime_boot` (successful process continuity). |
+| `deployment_recovery_*` / `rollback_recovery_*` | Boot recovery batch from `recover_deployments_on_boot`. |
 
-- Full **1-hour** wall-clock soak is opt-in (`AETHOS_SOAK_LONG=1`); default CI uses bounded iterations.
-- Production soak, UI polish, advanced LLM planning quality, and **Phase 2** privacy/PII/local-first are explicitly deferred.
-- WebSocket growth bounds depend on gateway deployment; not asserted in JSON-only tests.
+Snapshot and CLI expose **derived rates**: `restart_recovery_success_rate`, `deployment_recovery_success_rate`, `rollback_recovery_success_rate` (1.0 when there have been no attempts yet).
+
+## Edge-case & churn validation (representative)
+
+- **Repeated queue repair** — `repair_runtime_queues_and_metrics` many times; integrity OK.
+- **Repeated deployment / rollback recovery** — boot recovery and rollback completion loops; no integrity degradation in bounded runs.
+- **Concurrent cleanup + recovery** — interleaved `cleanup_runtime_state` and `recover_deployments_on_boot`.
+- **Boundedness** — planning outcomes/records trimming under `AETHOS_*` limits; checkpoint keys per plan under configured cap.
+- **Large churn** (opt-in `AETHOS_CHURN_LARGE=1`) — higher iteration counts for dispatch, boot, queue, retry, deployment, and agent assignment loops.
+
+Latest automated spot-check in this repo slice: **`tests/test_openclaw_*.py`** — **136 passed** with `USE_REAL_LLM=false NEXA_PYTEST=1`; edge + expanded production_like batches — **30 passed** in a combined run (see CI for authoritative counts).
+
+## Known remaining gaps (non-blocking for freeze)
+
+- Wall-clock multi-hour / multi-day soak remains **operator-driven** outside default CI (`AETHOS_SOAK_LONG=1`, `AETHOS_CHURN_LARGE=1`).
+- WebSocket / gateway event volume is environment-dependent; not fully bounded in JSON-only tests.
+- Phase 2 privacy/PII/local-first and deep LLM planning quality are **explicitly out of scope** until after freeze.
 
 ## How to verify
 
@@ -38,14 +57,20 @@ pytest
 pytest tests/test_openclaw_*.py tests/test_openclaw_runtime_reliability.py
 pytest tests/e2e/openclaw_parity_workflows/ tests/e2e/openclaw_operator_outcomes/ tests/e2e/openclaw_runtime_stress/
 pytest tests/soak/ tests/openclaw_behavioral_validation/
+pytest tests/production_like/
+pytest tests/edge_cases/
+USE_REAL_LLM=false NEXA_PYTEST=1 pytest
 ```
 
-Heavy soak:
+Heavy soak / churn:
 
 ```bash
 AETHOS_SOAK_LONG=1 pytest tests/soak/ -m soak
+AETHOS_CHURN_LARGE=1 pytest tests/production_like/ -m production_like
 ```
 
-## Phase 2 boundary
+## Phase 1 parity freeze — status
 
-No schema/orchestration/Mission Control redesign from this milestone forward except bugfixes, reliability, performance, and parity fixes aligned with the parity directive.
+**Frozen for Phase 1:** No orchestration, Mission Control UI, or runtime **schema redesign** beyond additive forward-compatible fields, bugfixes, reliability/performance fixes, and parity test additions aligned with this audit.
+
+**Phase 2 boundary:** Privacy-first redesigns, PII systems, and novelty architecture wait until production soak and product sign-off.

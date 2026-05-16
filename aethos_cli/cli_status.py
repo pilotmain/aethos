@@ -195,6 +195,20 @@ def cmd_status() -> int:
                         except Exception as exc:
                             print(f"runtime reliability: skip ({exc})")
                         try:
+                            from app.runtime import runtime_continuity
+
+                            cont = runtime_continuity.summarize_runtime_continuity(doc)
+                            print("— Runtime continuity (operational freeze) —")
+                            print(
+                                f"failures={int(cont.get('continuity_failures') or 0)} "
+                                f"repairs={int(cont.get('continuity_repairs') or 0)} "
+                                f"restart_rate={cont.get('restart_recovery_success_rate')} "
+                                f"deploy_rate={cont.get('deployment_recovery_success_rate')} "
+                                f"rollback_rate={cont.get('rollback_recovery_success_rate')}"
+                            )
+                        except Exception as exc:
+                            print(f"runtime continuity: skip ({exc})")
+                        try:
                             from app.runtime.backups.runtime_snapshots import list_runtime_backup_files
                             from app.runtime.corruption.runtime_validation import scan_queue_duplicates_and_shape
 

@@ -26,3 +26,5 @@ def test_boot_bumps_restart_cycle_in_stability(tmp_path, monkeypatch) -> None:
     st2 = load_runtime_state()
     rs2 = st2.get("runtime_stability") or {}
     assert int(rs2.get("restart_cycles") or 0) >= 1
+    rc2 = st2.get("runtime_continuity") or {}
+    assert int(rc2.get("restart_recovery_attempts") or 0) >= 1

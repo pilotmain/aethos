@@ -101,4 +101,30 @@ def cleanup_runtime_state(st: dict[str, Any], *, event_buffer_cap: int | None = 
     from app.runtime import retention
 
     out["retention"] = retention.apply_runtime_retention(st)
+    try:
+        from app.runtime import runtime_continuity
+
+        rep = out.get("repair") or {}
+        rep_n = sum(int(rep.get(k) or 0) for k in ("queues_coerced", "metrics_coerced"))
+        ret = out.get("retention") or {}
+        ret_n = sum(
+            int(ret.get(k) or 0)
+            for k in ("planning_outcomes_trimmed", "planning_records_trimmed", "quarantine_trimmed")
+            if isinstance(ret.get(k), (int, float))
+        )
+        ret_n += int((ret.get("backups") or {}).get("deleted") or 0) if isinstance(ret.get("backups"), dict) else 0
+        touched = (
+            int(out.get("queues_pruned") or 0)
+            + int(out.get("queues_deduped") or 0)
+            + int(out.get("plans_pruned") or 0)
+            + int(out.get("events_trimmed") or 0)
+            + int(out.get("memory_buckets_pruned") or 0)
+            + int(out.get("checkpoints_pruned") or 0)
+            + rep_n
+            + ret_n
+        )
+        if touched > 0:
+            runtime_continuity.bump_continuity_repairs(st, 1)
+    except Exception:
+        pass
     return out
