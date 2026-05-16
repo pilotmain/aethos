@@ -4,6 +4,8 @@ Lightweight, bounded insights in `build_operational_intelligence()` — no analy
 
 Step 9 adds **`operational_risk`** on runtime truth (`build_operational_risk()`, `GET /mission-control/workspace-risks`): high-risk projects, deployment/repair churn, retry pressure.
 
+Step 10 adds **`build_operational_intelligence_engine()`** — signals, proactive suggestions, `runtime_insights`, `enterprise_operational_state`, automation pack runtime, and **`runtime_recommendations`** (advisory, confidence-scored). APIs: `/operational-intelligence`, `/runtime-insights`, `/runtime-recommendations`, `/enterprise-runtime`. See `docs/OPERATIONAL_RECOMMENDATIONS.md`.
+
 Surfaces:
 
 - queue / retry pressure

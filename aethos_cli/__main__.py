@@ -374,6 +374,24 @@ def main() -> int:
     sp_env_show = env_sub.add_parser("show", help="GET /api/v1/environments/{id}")
     sp_env_show.add_argument("environment_id")
 
+    sp_intel = sub.add_parser("intelligence", help="Operational intelligence (Phase 3 Step 10)")
+    intel_sub = sp_intel.add_subparsers(dest="intelligence_cmd", required=True)
+    intel_sub.add_parser("summary", help="GET /api/v1/mission-control/operational-intelligence")
+    intel_sub.add_parser("risks", help="GET /api/v1/mission-control/governance/risks")
+    sp_intel_rec = intel_sub.add_parser("recommendations", help="GET …/runtime-recommendations")
+    sp_intel_rec.add_argument("--json", action="store_true", help="Raw JSON only")
+
+    sp_gov = sub.add_parser("governance", help="Runtime governance (Phase 3 Step 10)")
+    gov_sub = sp_gov.add_subparsers(dest="governance_cmd", required=True)
+    gov_sub.add_parser("timeline", help="GET /api/v1/mission-control/governance")
+    gov_sub.add_parser("risks", help="GET /api/v1/mission-control/governance/risks")
+
+    sp_mkt = sub.add_parser("marketplace", help="Marketplace automation packs")
+    mkt_sub = sp_mkt.add_subparsers(dest="marketplace_cmd", required=True)
+    mkt_sub.add_parser("packs", help="GET /api/v1/mission-control/automation-packs")
+    sp_mkt_run = mkt_sub.add_parser("run-pack", help="POST …/automation-packs/{id}/run")
+    sp_mkt_run.add_argument("pack_id")
+
     sp_workspace = sub.add_parser("workspace", help="Workspace intelligence (Phase 3 Step 9)")
     ws_sub = sp_workspace.add_subparsers(dest="workspace_cmd", required=True)
     ws_sub.add_parser("summary", help="GET /api/v1/mission-control/workspace-intelligence")
@@ -913,6 +931,41 @@ def main() -> int:
         if args.env_cmd == "show":
             eid = urllib.parse.quote(str(args.environment_id), safe="")
             code, body = _req("GET", f"/api/v1/environments/{eid}", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+
+    if args.cmd == "intelligence":
+        if args.intelligence_cmd == "summary":
+            code, body = _req("GET", "/api/v1/mission-control/operational-intelligence", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.intelligence_cmd == "risks":
+            code, body = _req("GET", "/api/v1/mission-control/governance/risks", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.intelligence_cmd == "recommendations":
+            code, body = _req("GET", "/api/v1/mission-control/runtime-recommendations", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+
+    if args.cmd == "governance":
+        if args.governance_cmd == "timeline":
+            code, body = _req("GET", "/api/v1/mission-control/governance", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.governance_cmd == "risks":
+            code, body = _req("GET", "/api/v1/mission-control/governance/risks", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+
+    if args.cmd == "marketplace":
+        if args.marketplace_cmd == "packs":
+            code, body = _req("GET", "/api/v1/mission-control/automation-packs", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.marketplace_cmd == "run-pack":
+            pid = urllib.parse.quote(str(args.pack_id), safe="")
+            code, body = _req("POST", f"/api/v1/mission-control/automation-packs/{pid}/run", uid=uid)
             print(body[:24000])
             return 0 if code == 200 else 1
 

@@ -43,6 +43,14 @@ _MC_EVENT_TYPES = frozenset(
         "worker_deliverable_persisted",
         "worker_deliverable_failed",
         "worker_continuation_queued",
+        "automation_pack_executed",
+        "automation_pack_failed",
+        "automation_pack_disabled",
+        "governance_warning",
+        "provider_fallback_triggered",
+        "operational_risk_escalated",
+        "workspace_degradation_detected",
+        "plugin_instability_detected",
     }
 )
 

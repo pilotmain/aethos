@@ -197,6 +197,8 @@ def default_runtime_state(*, workspace_root: Path | None = None) -> dict[str, An
         "deliverable_relationships": {},
         "operator_continuity": {},
         "workspace_governance_events": {},
+        "automation_pack_runtime": {},
+        "automation_pack_executions": {},
     }
 
 
@@ -380,6 +382,8 @@ def ensure_operator_context_schema(st: dict[str, Any]) -> dict[str, Any]:
         "deliverable_relationships",
         "operator_continuity",
         "workspace_governance_events",
+        "automation_pack_runtime",
+        "automation_pack_executions",
     ):
         if key not in st:
             st[key] = base[key]  # type: ignore[index]

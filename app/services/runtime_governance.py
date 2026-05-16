@@ -114,6 +114,19 @@ def build_governance_timeline(*, limit: int = 32) -> dict[str, Any]:
                     "what": c.get("continuation_prompt") or c.get("reason") or "continuation",
                 }
             )
+    st = load_runtime_state()
+    pack_execs = st.get("automation_pack_executions") or {}
+    if isinstance(pack_execs, dict):
+        for row in list(pack_execs.values())[-6:]:
+            if isinstance(row, dict):
+                entries.append(
+                    {
+                        "at": row.get("started_at"),
+                        "kind": "automation_pack",
+                        "who": row.get("operator_id") or "operator",
+                        "what": row.get("result_summary") or row.get("pack_id"),
+                    }
+                )
     for ev in list_workspace_governance_events(limit=8):
         entries.append(
             {

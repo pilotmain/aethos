@@ -93,6 +93,12 @@ export const missionControlSecondaryNav: MissionControlNavItem[] = [
     description: "Workspace intelligence, risk, research continuity",
   },
   {
+    name: "Insights",
+    href: "/mission-control/operational-insights",
+    icon: Activity,
+    description: "Operational intelligence, recommendations, automation",
+  },
+  {
     name: "Runtime plugins",
     href: "/mission-control/plugins",
     icon: Plug,

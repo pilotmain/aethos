@@ -140,9 +140,58 @@ def mc_brain_routing(_: str = Depends(get_valid_web_user_id)) -> dict:
 @router.get("/operational-intelligence")
 def mc_operational_intelligence(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
     from app.services.mission_control.orchestration_runtime_snapshot import build_orchestration_runtime_snapshot
-    from app.services.operational_intelligence import build_operational_intelligence
+    from app.services.operational_intelligence_engine import build_operational_intelligence_engine
 
-    return build_operational_intelligence(build_orchestration_runtime_snapshot(app_user_id))
+    return build_operational_intelligence_engine(build_orchestration_runtime_snapshot(app_user_id))
+
+
+@router.get("/runtime-insights")
+def mc_runtime_insights(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.orchestration_runtime_snapshot import build_orchestration_runtime_snapshot
+    from app.services.operational_intelligence_engine import build_operational_intelligence_engine
+
+    eng = build_operational_intelligence_engine(build_orchestration_runtime_snapshot(app_user_id))
+    return {
+        "runtime_insights": eng.get("runtime_insights"),
+        "enterprise_operational_state": eng.get("enterprise_operational_state"),
+        "summaries": eng.get("summaries"),
+    }
+
+
+@router.get("/runtime-recommendations")
+def mc_runtime_recommendations(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.orchestration_runtime_snapshot import build_orchestration_runtime_snapshot
+    from app.services.runtime_recommendations import build_runtime_recommendations
+
+    return build_runtime_recommendations(build_orchestration_runtime_snapshot(app_user_id))
+
+
+@router.get("/enterprise-runtime")
+def mc_enterprise_runtime(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.enterprise_runtime_visibility import build_enterprise_runtime_panels
+
+    return build_enterprise_runtime_panels(_truth_slice(app_user_id))
+
+
+@router.post("/automation-packs/{pack_id}/run")
+def mc_run_automation_pack(
+    pack_id: str,
+    _: str = Depends(get_valid_web_user_id),
+) -> dict:
+    from app.runtime.automation_pack_runtime import run_automation_pack
+
+    return run_automation_pack(pack_id)
+
+
+@router.get("/governance/risks")
+def mc_governance_risks(_: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.workspace_runtime_intelligence import build_operational_risk
+    from app.services.operational_intelligence_engine import build_intelligence_signals
+
+    return {
+        "operational_risk": build_operational_risk(),
+        "signals": build_intelligence_signals(None),
+    }
 
 
 @router.get("/governance")

@@ -46,19 +46,23 @@ def list_automation_packs_with_health() -> list[dict[str, Any]]:
         ps = states.get(pid) if isinstance(states.get(pid), dict) else {}
         rt = runtime_states.get(pid) or {}
         enabled = ps.get("enabled", True) if ps else True
-        packs.append(
-            {
-                "plugin_id": pid,
-                "pack_type": pack or "custom",
-                "name": m.get("name"),
-                "permissions": list(m.get("permissions") or []),
-                "verified": m.get("verified"),
-                "enabled": enabled,
-                "health": rt.get("state", "registered"),
-                "warning": rt.get("state") == "warning",
-                "failed": rt.get("state") == "failed",
-            }
-        )
+        base_row = {
+            "plugin_id": pid,
+            "pack_type": pack or "custom",
+            "name": m.get("name"),
+            "permissions": list(m.get("permissions") or []),
+            "verified": m.get("verified"),
+            "enabled": enabled,
+            "health": rt.get("state", "registered"),
+            "warning": rt.get("state") == "warning",
+            "failed": rt.get("state") == "failed",
+        }
+        try:
+            from app.runtime.automation_pack_runtime import enrich_pack_runtime_row
+
+            packs.append(enrich_pack_runtime_row(base_row))
+        except Exception:
+            packs.append(base_row)
     return packs
 
 

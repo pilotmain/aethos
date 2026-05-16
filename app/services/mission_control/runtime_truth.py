@@ -112,7 +112,10 @@ def build_runtime_truth(*, user_id: str | None = None) -> dict[str, Any]:
     routing_summary = build_provider_routing_summary()
     plugins_panel = build_plugin_health_panel()
     privacy_posture = build_privacy_operational_posture()
-    operational_intel = build_operational_intelligence(ort)
+    from app.services.operational_intelligence_engine import build_operational_intelligence_engine
+
+    engine = build_operational_intelligence_engine(ort)
+    operational_intel = engine
 
     truth: dict[str, Any] = {
         "runtime_health": health,
@@ -186,6 +189,14 @@ def build_runtime_truth(*, user_id: str | None = None) -> dict[str, Any]:
     truth["deliverable_relationships"] = build_deliverable_relationships_view(limit=32)
     truth["operational_risk"] = build_operational_risk()
     truth["operator_continuity"] = build_operator_continuity_truth()
+    from app.services.enterprise_runtime_visibility import build_enterprise_runtime_panels
+    from app.services.runtime_recommendations import build_runtime_recommendations
+
+    truth["automation_pack_runtime"] = engine.get("automation_pack_runtime")
+    truth["runtime_insights"] = engine.get("runtime_insights")
+    truth["enterprise_operational_state"] = engine.get("enterprise_operational_state")
+    truth["enterprise_runtime_panels"] = build_enterprise_runtime_panels(truth)
+    truth["runtime_recommendations"] = build_runtime_recommendations(ort)
     return truth
 
 
