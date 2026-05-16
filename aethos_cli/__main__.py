@@ -305,6 +305,25 @@ def main() -> int:
         help="Optional desired mode (not persisted; set AETHOS_PRIVACY_MODE and restart)",
     )
 
+    sp_prov = sub.add_parser("providers", help="Provider CLI inventory (Phase 2 Step 3)")
+    prov_sub = sp_prov.add_subparsers(dest="providers_cmd", required=True)
+    prov_sub.add_parser("list", help="GET /api/v1/providers")
+    prov_sub.add_parser("scan", help="POST /api/v1/providers/scan")
+    sp_prov_show = prov_sub.add_parser("show", help="GET /api/v1/providers/{id}")
+    sp_prov_show.add_argument("provider_id")
+    sp_prov_proj = prov_sub.add_parser("projects", help="GET /api/v1/providers/{id}/projects")
+    sp_prov_proj.add_argument("provider_id")
+
+    sp_proj = sub.add_parser("projects", help="Local project registry (Phase 2 Step 3)")
+    proj_sub = sp_proj.add_subparsers(dest="projects_cmd", required=True)
+    proj_sub.add_parser("list", help="GET /api/v1/projects")
+    proj_sub.add_parser("scan", help="POST /api/v1/projects/scan")
+    sp_proj_show = proj_sub.add_parser("show", help="GET /api/v1/projects/{id}")
+    sp_proj_show.add_argument("project_id")
+    sp_proj_link = proj_sub.add_parser("link", help="POST /api/v1/projects/{id}/link")
+    sp_proj_link.add_argument("project_id")
+    sp_proj_link.add_argument("repo_path", help="Absolute path to repo root")
+
     sp_dep = sub.add_parser("deployments", help="Deployment runtime API (OpenClaw infra parity)")
     dep_sub = sp_dep.add_subparsers(dest="dep_cmd", required=True)
     dep_sub.add_parser("list", help="GET /api/v1/deployments")
@@ -697,6 +716,47 @@ def main() -> int:
                     f"To use mode {want!r}, set AETHOS_PRIVACY_MODE={want} in the repo .env and restart the API.",
                     file=sys.stderr,
                 )
+            return 0 if code == 200 else 1
+
+    if args.cmd == "providers":
+        if args.providers_cmd == "list":
+            code, body = _req("GET", "/api/v1/providers", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.providers_cmd == "scan":
+            code, body = _req("POST", "/api/v1/providers/scan", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.providers_cmd == "show":
+            pid = urllib.parse.quote(str(args.provider_id), safe="")
+            code, body = _req("GET", f"/api/v1/providers/{pid}", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.providers_cmd == "projects":
+            pid = urllib.parse.quote(str(args.provider_id), safe="")
+            code, body = _req("GET", f"/api/v1/providers/{pid}/projects", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+
+    if args.cmd == "projects":
+        if args.projects_cmd == "list":
+            code, body = _req("GET", "/api/v1/projects", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.projects_cmd == "scan":
+            code, body = _req("POST", "/api/v1/projects/scan", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.projects_cmd == "show":
+            pid = urllib.parse.quote(str(args.project_id), safe="")
+            code, body = _req("GET", f"/api/v1/projects/{pid}", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.projects_cmd == "link":
+            pid = urllib.parse.quote(str(args.project_id), safe="")
+            payload = json.dumps({"repo_path": str(args.repo_path)}).encode()
+            code, body = _req("POST", f"/api/v1/projects/{pid}/link", uid=uid, body=payload)
+            print(body[:24000])
             return 0 if code == 200 else 1
 
     if args.cmd == "deployments":

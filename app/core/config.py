@@ -234,6 +234,9 @@ class Settings(BaseSettings):
     aethos_encryption_at_rest_enabled: bool = False
     aethos_encryption_key_source: str = "env"
     aethos_encryption_key: str = ""
+    aethos_project_search_roots: str = ""
+    aethos_project_discovery_depth: int = 3
+    aethos_provider_cli_timeout_sec: int = 20
     # Lightweight in-process traces/metrics for NL “system status” (not OpenTelemetry).
     nexa_observability_enabled: bool = False
     nexa_trace_retention_hours: int = 24
@@ -1099,6 +1102,24 @@ class Settings(BaseSettings):
         allowed = frozenset({"env", "none", "file"})
         x = (str(v) if v is not None else "env").strip().lower()
         return x if x in allowed else "env"
+
+    @field_validator("aethos_project_discovery_depth", mode="before")
+    @classmethod
+    def _clamp_aethos_project_discovery_depth(cls, v: object) -> int:
+        try:
+            n = int(v)  # type: ignore[arg-type]
+        except (TypeError, ValueError):
+            return 3
+        return max(1, min(12, n))
+
+    @field_validator("aethos_provider_cli_timeout_sec", mode="before")
+    @classmethod
+    def _clamp_aethos_provider_cli_timeout_sec(cls, v: object) -> int:
+        try:
+            n = int(v)  # type: ignore[arg-type]
+        except (TypeError, ValueError):
+            return 20
+        return max(3, min(120, n))
 
     @model_validator(mode="after")
     def _phase33_production_lock(self) -> Settings:

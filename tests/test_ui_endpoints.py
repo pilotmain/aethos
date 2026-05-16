@@ -36,6 +36,7 @@ def test_mission_control_state_shape() -> None:
         "runtime",
         "agent_performance",
         "phase2_privacy",
+        "operator_context",
     ):
         assert key in body
 

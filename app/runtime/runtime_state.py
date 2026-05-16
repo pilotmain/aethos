@@ -152,6 +152,16 @@ def default_runtime_state(*, workspace_root: Path | None = None) -> dict[str, An
             "rollback_recovery_successes": 0,
             "updated_at": None,
         },
+        # Phase 2 Step 3 — provider intelligence + project identity (additive JSON).
+        "provider_inventory": {
+            "providers": {},
+            "last_scanned_at": None,
+        },
+        "project_registry": {
+            "projects": {},
+            "last_scanned_at": None,
+        },
+        "project_resolution_history": [],
     }
 
 
@@ -307,6 +317,29 @@ def ensure_resilience_schema(st: dict[str, Any]) -> dict[str, Any]:
     return st
 
 
+def ensure_operator_context_schema(st: dict[str, Any]) -> dict[str, Any]:
+    """Merge provider intelligence + project registry keys (Phase 2 Step 3)."""
+    base = default_runtime_state()
+    for key in ("provider_inventory", "project_registry", "project_resolution_history"):
+        if key not in st:
+            st[key] = base[key]  # type: ignore[index]
+    pi = st.setdefault("provider_inventory", {})
+    if not isinstance(pi, dict):
+        st["provider_inventory"] = dict(base["provider_inventory"])
+        pi = st["provider_inventory"]
+    pi.setdefault("providers", {})
+    pi.setdefault("last_scanned_at", None)
+    pr = st.setdefault("project_registry", {})
+    if not isinstance(pr, dict):
+        st["project_registry"] = dict(base["project_registry"])
+        pr = st["project_registry"]
+    pr.setdefault("projects", {})
+    pr.setdefault("last_scanned_at", None)
+    if "project_resolution_history" not in st or not isinstance(st.get("project_resolution_history"), list):
+        st["project_resolution_history"] = []
+    return st
+
+
 def ensure_multi_session_schema(st: dict[str, Any]) -> dict[str, Any]:
     """Merge OpenClaw multi-session + runtime event buffers (forward-compatible)."""
     base = default_runtime_state()
@@ -369,6 +402,7 @@ def load_runtime_state() -> dict[str, Any]:
             runtime_continuity.bump_continuity_repairs(data, 1)
             runtime_reliability.bump_runtime_degradation(data, 1)
         ensure_resilience_schema(data)
+        ensure_operator_context_schema(data)
         from app.runtime import runtime_reliability
 
         runtime_reliability.ensure_runtime_stability_schema(data)
