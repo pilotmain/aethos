@@ -672,6 +672,24 @@ def main() -> int:
         "setup",
         help="Interactive native setup wizard (writes .env keys; see docs/NATIVE_SETUP.md)",
     )
+    setup_sub = sp_setup.add_subparsers(dest="setup_cmd")
+    setup_sub.add_parser("resume", help="Resume incomplete setup from saved state")
+    sp_setup_repair = setup_sub.add_parser("repair", help="Repair install (reinstall deps + rewrite core keys)")
+    setup_sub.add_parser("wizard", help="Run full setup wizard (default)")
+
+    sp_restart = sub.add_parser("restart", help="Restart API, web, or bot processes")
+    restart_sub = sp_restart.add_subparsers(dest="restart_cmd")
+    restart_sub.add_parser("api", help="Restart API (uvicorn)")
+    restart_sub.add_parser("web", help="Restart Mission Control (Next.js)")
+    restart_sub.add_parser("bot", help="Restart Telegram bot")
+    restart_sub.add_parser("connection", help="Repair connection + health check")
+    restart_sub.add_parser("all", help="Restart API and web (default)")
+
+    sp_connect = sub.add_parser("connect", help="Refresh Mission Control connection credentials")
+    sp_connection = sub.add_parser("connection", help="Mission Control connection profile")
+    conn_sub = sp_connection.add_subparsers(dest="connection_cmd", required=True)
+    conn_sub.add_parser("show", help="Show redacted connection profile")
+    conn_sub.add_parser("repair", help="Regenerate bearer token and repair creds")
 
     sp_cloud = sub.add_parser("cloud", help="Manage ~/.aethos/clouds.yaml deploy providers")
     cloud_sub = sp_cloud.add_subparsers(dest="cloud_cmd", required=True)
@@ -1639,7 +1657,31 @@ def main() -> int:
     if args.cmd == "setup":
         from aethos_cli.setup_wizard import run_setup_wizard
 
+        sc = getattr(args, "setup_cmd", None)
+        if sc == "resume":
+            return run_setup_wizard()
+        if sc == "repair":
+            os.environ["NEXA_SETUP_KIND"] = "repair"
+            return run_setup_wizard(install_kind="repair")
         return run_setup_wizard()
+
+    if args.cmd == "restart":
+        from aethos_cli.restart_cli import cmd_restart
+
+        target = getattr(args, "restart_cmd", None) or "all"
+        return cmd_restart(target)
+
+    if args.cmd == "connect":
+        from aethos_cli.connection_cli import cmd_connect
+
+        return cmd_connect()
+
+    if args.cmd == "connection":
+        from aethos_cli.connection_cli import cmd_connection_repair, cmd_connection_show
+
+        if args.connection_cmd == "show":
+            return cmd_connection_show()
+        return cmd_connection_repair()
 
     if args.cmd == "init-db":
         from aethos_cli.setup_wizard import run_database_setup

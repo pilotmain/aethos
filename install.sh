@@ -3,12 +3,12 @@
 # Usage: curl -fsSL https://cdn.jsdelivr.net/gh/pilotmain/aethos@main/install.sh | bash
 #        (raw.githubusercontent.com may lag; jsDelivr tracks main within minutes)
 #
-# Optional: NEXA_REPO_URL, NEXA_INSTALL_DIR
+# Optional: AETHOS_REPO_URL / NEXA_REPO_URL, AETHOS_INSTALL_DIR / NEXA_INSTALL_DIR
 
 set -e
 
-REPO_URL="${NEXA_REPO_URL:-https://github.com/pilotmain/aethos.git}"
-INSTALL_DIR="${NEXA_INSTALL_DIR:-${HOME}/.aethos}"
+REPO_URL="${AETHOS_REPO_URL:-${NEXA_REPO_URL:-https://github.com/pilotmain/aethos.git}}"
+INSTALL_DIR="${AETHOS_INSTALL_DIR:-${NEXA_INSTALL_DIR:-${HOME}/.aethos}}"
 
 _aethos_install_is_piped() {
   [[ "${BASH_SOURCE[0]:-}" == "-" ]] || [[ "${BASH_SOURCE[0]:-}" == "bash" ]]

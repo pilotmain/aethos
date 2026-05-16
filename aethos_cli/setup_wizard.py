@@ -417,6 +417,19 @@ def run_setup_wizard(*, install_kind: str | None = None) -> int:
                 pass
             print_info("Resuming — applying saved workspace, features, and API URL.")
 
+        if not bag.get("enterprise_extensions_done"):
+            from aethos_cli.setup_enterprise import run_enterprise_setup_extensions
+
+            run_enterprise_setup_extensions(
+                repo_root=root,
+                updates=updates,
+                api_base=api_base.rstrip("/"),
+                bag=bag,
+            )
+            bag["enterprise_extensions_done"] = True
+            bag["updates"] = updates
+            save_setup_state(STEP_AFTER_FEATURES, bag)
+
         # --- Save ---
         print_step("6/6", "Saving configuration")
         print_progress_bar("Writing environment", 40)
@@ -457,6 +470,10 @@ def run_setup_wizard(*, install_kind: str | None = None) -> int:
             feature_labels=feat_labels,
             api_base=api_base.rstrip("/"),
         )
+
+        from aethos_cli.setup_enterprise import print_setup_final_summary
+
+        print_setup_final_summary(repo_root=root, api_base=api_base.rstrip("/"), bag=bag)
 
         try:
             from aethos_cli.cli_status import try_post_install_health_hint
