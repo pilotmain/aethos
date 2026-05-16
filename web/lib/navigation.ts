@@ -1,13 +1,16 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  Activity,
   Briefcase,
   ClipboardList,
+  Cloud,
   CreditCard,
   FolderKanban,
   LayoutDashboard,
   Package,
   Plug,
   Settings,
+  Shield,
   ShieldCheck,
   Sparkles,
   Star,
@@ -19,50 +22,87 @@ export type MissionControlNavItem = {
   href: string;
   icon: LucideIcon;
   description: string;
+  deprecated?: boolean;
 };
 
-export const missionControlNavItems: MissionControlNavItem[] = [
-  {
-    name: "Overview",
-    href: "/mission-control/overview",
-    icon: LayoutDashboard,
-    description: "Dashboard and key metrics",
-  },
+/** Primary Mission Control navigation (Phase 3 Step 4). */
+export const missionControlPrimaryNav: MissionControlNavItem[] = [
   {
     name: "Office",
     href: "/mission-control/office",
     icon: Users,
-    description: "Live runtime agents and activity",
+    description: "AethOS Orchestrator and runtime workers",
   },
   {
-    name: "Plugins",
+    name: "Runtime",
+    href: "/mission-control/overview",
+    icon: Activity,
+    description: "Runtime health and operational overview",
+  },
+  {
+    name: "Deployments",
+    href: "/mission-control/projects",
+    icon: FolderKanban,
+    description: "Projects, deployments, and repairs",
+  },
+  {
+    name: "Providers",
+    href: "/mission-control/providers",
+    icon: Cloud,
+    description: "Provider inventory and recent actions",
+  },
+  {
+    name: "Marketplace",
+    href: "/mission-control/marketplace",
+    icon: Package,
+    description: "Skill marketplace — AI execution extensions",
+  },
+  {
+    name: "Privacy",
+    href: "/mission-control/privacy",
+    icon: Shield,
+    description: "Privacy posture and egress decisions",
+  },
+  {
+    name: "Governance",
+    href: "/mission-control/governance",
+    icon: ClipboardList,
+    description: "Operational timeline — who did what",
+  },
+  {
+    name: "Settings",
+    href: "/mission-control/advanced",
+    icon: Settings,
+    description: "Integrations and configuration",
+  },
+];
+
+/** Secondary / legacy routes — nested under More in the sidebar. */
+export const missionControlSecondaryNav: MissionControlNavItem[] = [
+  {
+    name: "Runtime plugins",
     href: "/mission-control/plugins",
     icon: Plug,
-    description: "Runtime plugin install and health",
+    description: "Operational runtime extensions (not skills)",
   },
   {
     name: "Advantages",
     href: "/mission-control/differentiators",
     icon: Star,
-    description: "AethOS-native capabilities vs OpenClaw",
+    description: "Why AethOS vs OpenClaw",
   },
   {
-    name: "CEO",
+    name: "CEO (legacy)",
     href: "/mission-control/ceo",
     icon: Briefcase,
-    description: "Agent oversight and performance",
+    description: "Deprecated — use Office for runtime agents",
+    deprecated: true,
   },
   {
     name: "Team",
     href: "/mission-control/team",
     icon: Users,
     description: "Team members and roles",
-  },
-  {
-    name: "Projects",
-    href: "/mission-control/projects",
-    icon: FolderKanban,
-    description: "Projects and tasks",
   },
   {
     name: "Budget",
@@ -74,30 +114,24 @@ export const missionControlNavItems: MissionControlNavItem[] = [
     name: "Approvals",
     href: "/mission-control/approvals",
     icon: ShieldCheck,
-    description: "High-risk actions awaiting human sign-off",
+    description: "High-risk actions awaiting sign-off",
   },
   {
     name: "Audit logs",
     href: "/mission-control/admin/audit",
     icon: ClipboardList,
-    description: "JSONL enterprise audit trail on the API host",
-  },
-  {
-    name: "Marketplace",
-    href: "/mission-control/marketplace",
-    icon: Package,
-    description: "Discover and install ClawHub community skills",
+    description: "Enterprise audit trail",
   },
   {
     name: "Improvements",
     href: "/mission-control/self-improvement",
     icon: Sparkles,
-    description: "Self-improvement proposals (owner-gated, sandboxed)",
+    description: "Self-improvement proposals",
   },
-  {
-    name: "Advanced",
-    href: "/mission-control/advanced",
-    icon: Settings,
-    description: "Settings and integrations",
-  },
+];
+
+/** @deprecated Use missionControlPrimaryNav + missionControlSecondaryNav */
+export const missionControlNavItems: MissionControlNavItem[] = [
+  ...missionControlPrimaryNav,
+  ...missionControlSecondaryNav,
 ];

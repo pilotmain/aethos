@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import json
+import time
 from typing import Any
 
 from app.runtime.runtime_state import load_runtime_state, save_runtime_state, utc_now_iso
@@ -13,7 +14,14 @@ from app.runtime.runtime_state import load_runtime_state, save_runtime_state, ut
 _MAX_SAMPLES = 32
 
 
-def record_truth_build(*, payload_keys: int, approx_bytes: int, cache_hit: bool) -> None:
+def record_truth_build(
+    *,
+    payload_keys: int,
+    approx_bytes: int,
+    cache_hit: bool,
+    duration_ms: float | None = None,
+    office_bytes: int | None = None,
+) -> None:
     st = load_runtime_state()
     m = st.setdefault("runtime_discipline_metrics", {})
     if not isinstance(m, dict):
@@ -31,11 +39,26 @@ def record_truth_build(*, payload_keys: int, approx_bytes: int, cache_hit: bool)
     total = hits + misses + (1 if cache_hit else 1)
     m["truth_cache_hit_rate"] = round((m.get("truth_cache_hits") or 0) / max(1, total), 4)
     hist = m.setdefault("payload_samples", [])
+    if duration_ms is not None:
+        m["last_truth_build_ms"] = round(duration_ms, 2)
+    if office_bytes is not None:
+        m["last_office_payload_bytes"] = office_bytes
     if isinstance(hist, list):
         hist.append({"at": utc_now_iso(), "bytes": approx_bytes, "keys": payload_keys})
         if len(hist) > _MAX_SAMPLES:
             del hist[: len(hist) - _MAX_SAMPLES]
     save_runtime_state(st)
+
+
+class truth_build_timer:
+    """Context manager to record truth build duration."""
+
+    def __enter__(self) -> "truth_build_timer":
+        self._t0 = time.monotonic()
+        return self
+
+    def __exit__(self, *args: object) -> None:
+        self.duration_ms = (time.monotonic() - self._t0) * 1000.0
 
 
 def get_runtime_discipline_metrics() -> dict[str, Any]:

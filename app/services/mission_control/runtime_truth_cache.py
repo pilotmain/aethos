@@ -40,14 +40,22 @@ def get_cached_runtime_truth(
                 cache_hit=True,
             )
             return truth
-    truth = builder(user_id)
-    cache[key] = {"truth": truth, "_mono_ts": now, "updated_at": utc_now_iso()}
-    from app.services.mission_control.runtime_metrics_discipline import approx_payload_bytes, record_truth_build
+    from app.services.mission_control.runtime_metrics_discipline import (
+        approx_payload_bytes,
+        record_truth_build,
+        truth_build_timer,
+    )
 
+    with truth_build_timer() as timer:
+        truth = builder(user_id)
+    cache[key] = {"truth": truth, "_mono_ts": now, "updated_at": utc_now_iso()}
+    office = truth.get("office") or {}
     record_truth_build(
         payload_keys=len(truth),
         approx_bytes=approx_payload_bytes(truth),
         cache_hit=False,
+        duration_ms=timer.duration_ms,
+        office_bytes=approx_payload_bytes(office) if isinstance(office, dict) else 0,
     )
     save_runtime_state(st)
     return truth

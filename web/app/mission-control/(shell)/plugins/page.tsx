@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 import { apiFetch } from "@/lib/api/client";
@@ -63,6 +64,14 @@ export default function PluginsPage() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-8 p-6">
+      <p className="rounded-lg border border-border/60 bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+        <strong className="text-foreground">Runtime plugins</strong> extend operational capability (deploy, repair, provider hooks).
+        For AI execution skills, use the{" "}
+        <Link href="/mission-control/marketplace" className="underline">
+          Skill marketplace
+        </Link>
+        .
+      </p>
       <header className="border-b border-border/60 pb-6">
         <h1 className="text-xl font-semibold tracking-tight">Runtime plugins</h1>
         <p className="mt-1 text-sm text-muted-foreground">

@@ -24,6 +24,8 @@ _REQUIRED_TRUTH_KEYS = frozenset(
         "marketplace",
         "differentiators",
         "runtime_discipline",
+        "readable_summaries",
+        "runtime_workers",
     }
 )
 

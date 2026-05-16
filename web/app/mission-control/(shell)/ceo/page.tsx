@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 import { formatMissionControlApiError, webFetch } from "@/lib/api";
@@ -318,6 +319,16 @@ export default function CEODashboardPage() {
 
   return (
     <div className="space-y-6">
+      <div
+        role="status"
+        className="rounded-lg border border-amber-500/40 bg-amber-950/30 px-4 py-3 text-sm text-amber-100"
+      >
+        <strong className="font-medium">Legacy view.</strong> Use{" "}
+        <Link href="/mission-control/office" className="underline hover:text-white">
+          Office
+        </Link>{" "}
+        for the AethOS Orchestrator and runtime workers. This CEO dashboard remains for migration only.
+      </div>
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-zinc-50">CEO Dashboard</h1>
         <p className="mt-1 text-sm text-zinc-400">

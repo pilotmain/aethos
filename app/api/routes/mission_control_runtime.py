@@ -147,9 +147,16 @@ def mc_operational_intelligence(app_user_id: str = Depends(get_valid_web_user_id
 
 @router.get("/governance")
 def mc_governance(_: str = Depends(get_valid_web_user_id)) -> dict:
-    from app.services.runtime_governance import build_governance_audit
+    from app.services.runtime_governance import build_governance_timeline
 
-    return build_governance_audit()
+    return build_governance_timeline()
+
+
+@router.get("/runtime-workers")
+def mc_runtime_workers(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_worker_visibility import build_runtime_workers_view
+
+    return build_runtime_workers_view(app_user_id)
 
 
 @router.get("/automation-packs")

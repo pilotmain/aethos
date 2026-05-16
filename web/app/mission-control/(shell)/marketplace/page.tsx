@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { SkillDetailModal } from "@/components/marketplace/SkillDetailModal";
@@ -461,6 +462,14 @@ export default function MissionControlMarketplacePage() {
 
   return (
     <div className="space-y-6">
+      <p className="rounded-lg border border-violet-500/30 bg-violet-950/20 px-4 py-3 text-sm text-zinc-300">
+        <strong className="text-zinc-100">Skills</strong> extend AI execution capability (ClawHub-style marketplace).
+        For operational runtime extensions, see{" "}
+        <Link href="/mission-control/plugins" className="underline text-violet-200">
+          Runtime plugins
+        </Link>
+        .
+      </p>
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-zinc-50">Skill marketplace</h1>
         <p className="mt-1 text-sm text-zinc-400">

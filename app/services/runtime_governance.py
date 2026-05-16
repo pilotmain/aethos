@@ -11,6 +11,74 @@ from app.runtime.runtime_state import load_runtime_state
 from app.services.mission_control.runtime_event_intelligence import list_normalized_events
 
 
+def build_governance_timeline(*, limit: int = 32) -> dict[str, Any]:
+    """Operational timeline — human-readable, newest first."""
+    audit = build_governance_audit(limit=limit)
+    entries: list[dict[str, Any]] = []
+    for row in audit.get("plugin_installs") or []:
+        if isinstance(row, dict):
+            entries.append(
+                {
+                    "at": row.get("timestamp"),
+                    "kind": "plugin",
+                    "who": "operator",
+                    "what": row.get("summary") or row.get("action"),
+                    "privacy_mode": None,
+                }
+            )
+    for row in audit.get("provider_operations") or []:
+        if isinstance(row, dict):
+            entries.append(
+                {
+                    "at": row.get("timestamp") or row.get("at"),
+                    "kind": "provider",
+                    "who": row.get("actor") or "runtime",
+                    "what": _humanize_provider_op(row),
+                    "provider": row.get("provider"),
+                }
+            )
+    for row in audit.get("brain_routing_decisions") or []:
+        if isinstance(row, dict):
+            entries.append(
+                {
+                    "at": row.get("created_at"),
+                    "kind": "brain",
+                    "who": "brain router",
+                    "what": f"Routed {row.get('task')} to {row.get('selected_provider')}/{row.get('selected_model')}",
+                    "privacy_mode": row.get("privacy_mode"),
+                }
+            )
+    for row in audit.get("repair_operations") or []:
+        if isinstance(row, dict):
+            entries.append(
+                {
+                    "at": row.get("timestamp"),
+                    "kind": "repair",
+                    "who": "repair flow",
+                    "what": str(row.get("event_type") or "repair"),
+                }
+            )
+    for row in audit.get("privacy_enforcement") or []:
+        if isinstance(row, dict):
+            entries.append(
+                {
+                    "at": row.get("timestamp"),
+                    "kind": "privacy",
+                    "who": "privacy gate",
+                    "what": str(row.get("event_type") or "privacy"),
+                    "privacy_mode": (row.get("payload") or {}).get("privacy_mode") if isinstance(row.get("payload"), dict) else None,
+                }
+            )
+    entries.sort(key=lambda e: str(e.get("at") or ""), reverse=True)
+    return {"timeline": entries[:limit], "summary": audit.get("summary")}
+
+
+def _humanize_provider_op(row: dict[str, Any]) -> str:
+    prov = row.get("provider") or row.get("provider_id") or "provider"
+    act = row.get("action") or row.get("operation") or "action"
+    return f"{prov} — {act}"
+
+
 def build_governance_audit(*, limit: int = 40) -> dict[str, Any]:
     st = load_runtime_state()
     plugin_audit = st.get("plugin_governance_audit") or []

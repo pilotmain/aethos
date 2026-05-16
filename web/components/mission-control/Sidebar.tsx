@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { missionControlNavItems } from "@/lib/navigation";
+import { missionControlPrimaryNav, missionControlSecondaryNav } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 
 import { MissionControlApiStatus } from "@/components/mission-control/MissionControlApiStatus";
@@ -11,9 +11,48 @@ import { MissionControlApiStatus } from "@/components/mission-control/MissionCon
 import pkg from "../../package.json";
 
 export type SidebarProps = {
-  /** When true, sidebar is embedded in the mobile drawer (not fixed / not lg-only). */
   variant?: "desktop" | "drawer";
 };
+
+function NavSection({
+  items,
+  pathname,
+}: {
+  items: typeof missionControlPrimaryNav;
+  pathname: string | null;
+}) {
+  return (
+    <>
+      {items.map((item) => {
+        const Icon = item.icon;
+        const isActive = (() => {
+          if (!pathname) return false;
+          if (pathname === item.href) return true;
+          if (item.href === "/mission-control/overview") return false;
+          return pathname.startsWith(`${item.href}/`);
+        })();
+
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            title={item.description}
+            className={cn(
+              "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+              item.deprecated && "opacity-60",
+              isActive
+                ? "bg-violet-600 text-white shadow-sm"
+                : "text-zinc-300 hover:bg-zinc-800/90 hover:text-white",
+            )}
+          >
+            <Icon className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
+            {item.name}
+          </Link>
+        );
+      })}
+    </>
+  );
+}
 
 export function Sidebar({ variant = "desktop" }: SidebarProps) {
   const pathname = usePathname();
@@ -27,41 +66,20 @@ export function Sidebar({ variant = "desktop" }: SidebarProps) {
     <aside className={outerClass}>
       <div className="flex h-full flex-col">
         <div className="flex h-14 shrink-0 items-center border-b border-zinc-800 px-4">
-          <Link href="/mission-control/overview" className="flex items-center gap-2 font-semibold text-zinc-100">
+          <Link href="/mission-control/office" className="flex items-center gap-2 font-semibold text-zinc-100">
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-600 text-xs font-bold text-white">
-              N
+              A
             </span>
-            <span>AethOS Mission</span>
+            <span className="text-sm">Mission Control</span>
           </Link>
         </div>
 
-        <nav className="flex-1 space-y-1 overflow-y-auto p-2">
-          {missionControlNavItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = (() => {
-              if (!pathname) return false;
-              if (pathname === item.href) return true;
-              if (item.href === "/mission-control/overview") return false;
-              return pathname.startsWith(`${item.href}/`);
-            })();
-
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                title={item.description}
-                className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                  isActive
-                    ? "bg-violet-600 text-white shadow-sm"
-                    : "text-zinc-300 hover:bg-zinc-800/90 hover:text-white",
-                )}
-              >
-                <Icon className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
-                {item.name}
-              </Link>
-            );
-          })}
+        <nav className="flex-1 space-y-4 overflow-y-auto p-2">
+          <NavSection items={missionControlPrimaryNav} pathname={pathname} />
+          <div>
+            <p className="px-3 pb-1 text-[10px] font-medium uppercase tracking-wider text-zinc-500">More</p>
+            <NavSection items={missionControlSecondaryNav} pathname={pathname} />
+          </div>
         </nav>
 
         <div className="shrink-0 border-t border-zinc-800 p-4">

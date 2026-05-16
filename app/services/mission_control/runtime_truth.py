@@ -155,8 +155,15 @@ def build_runtime_truth(*, user_id: str | None = None) -> dict[str, Any]:
         "provider_intelligence": build_provider_intelligence_panel(),
         "differentiators": build_differentiators_summary(ort=ort),
         "runtime_discipline": get_runtime_discipline_metrics(),
+        "readable_summaries": None,
+        "runtime_workers": None,
     }
     truth["office"] = build_office_operational_view(truth, user_id=uid)
+    from app.services.mission_control.runtime_summary_readability import build_readable_summaries
+    from app.services.mission_control.runtime_worker_visibility import build_runtime_workers_view
+
+    truth["readable_summaries"] = build_readable_summaries(truth)
+    truth["runtime_workers"] = build_runtime_workers_view(uid)
     return truth
 
 

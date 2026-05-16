@@ -54,6 +54,15 @@ Events are aggregated for display (`aggregate_events_for_display`) to collapse r
 
 Events use categorized shape: `event_type`, `category`, `severity`, `correlation_id` (see [RUNTIME_EVENTS.md](RUNTIME_EVENTS.md)).
 
+## Phase 3 Step 4 — product cohesion
+
+- **Navigation:** Office, Runtime, Deployments, Providers, Marketplace, Privacy, Governance, Settings (see [UI_DEPRECATION_PLAN.md](UI_DEPRECATION_PLAN.md)).
+- **Plugins vs skills:** [PLUGIN_VS_SKILL_ARCHITECTURE.md](PLUGIN_VS_SKILL_ARCHITECTURE.md).
+- **`GET /mission-control/governance`** — operational timeline (`build_governance_timeline`).
+- **`GET /mission-control/runtime-workers`** — worker role, assignment, ownership chain.
+- **Readable summaries** on truth: `readable_summaries` (repairs, provider actions, health sentence).
+- **CEO** (`/mission-control/ceo`) deprecated in favor of Office.
+
 ## The Office
 
 Web route: `/mission-control/office` — lightweight cards for runtime agents (`active`, `busy`, `idle`, `recovering`, `failed`, `offline`).
