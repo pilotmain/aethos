@@ -26,3 +26,17 @@ aethos operational summary
 aethos governance summary
 aethos workspace health
 ```
+
+## Phase 4 Step 8 — operational partitions and summaries
+
+Truth evolution adds bounded cohesion without fragmenting orchestrator authority:
+
+- `runtime_operational_partitions` — selective hydration targets (`live`, `operational`, `governance`, `intelligence`, `archive`)
+- `runtime_enterprise_summarization` — summary-first MC rendering (`operational_summary`, `worker_summary`, etc.)
+- `runtime_long_horizon` — compressed eras and governance windows
+- `governance_operational_index` — timeline buckets and index health
+- `runtime_calmness_integrity` — signal-over-noise discipline (extends `operational_calmness_lock`)
+- `worker_operational_lifecycle` — spawn → archived → historical lineage
+- `runtime_production_posture` — sustained operation and enterprise resilience scores
+
+APIs: `GET /api/v1/runtime/partitions`, `/summaries`, `/eras`, `/production-posture`, `/calmness-lock`; MC `GET /governance/index`, `GET /workers/lifecycle`.

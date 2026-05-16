@@ -82,3 +82,58 @@ def runtime_profile(
         return {"error": "unknown_profile", "available": sorted(PROFILES)}
     truth = hydrate_progressive_truth(user_id=app_user_id, max_tier=max_tier)
     return apply_payload_profile(truth, name)
+
+
+@router.get("/partitions")
+def runtime_partitions(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_operational_partitions import build_runtime_operational_partitions
+
+    try:
+        t = _truth_slice(app_user_id)
+    except Exception:
+        t = {}
+    return build_runtime_operational_partitions(t)
+
+
+@router.get("/eras")
+def runtime_eras(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_long_horizon import build_runtime_long_horizon
+
+    try:
+        t = _truth_slice(app_user_id)
+    except Exception:
+        t = {}
+    return build_runtime_long_horizon(t)
+
+
+@router.get("/production-posture")
+def runtime_production_posture(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_production_posture import build_production_runtime_posture
+
+    try:
+        t = _truth_slice(app_user_id)
+    except Exception:
+        t = {}
+    return build_production_runtime_posture(t)
+
+
+@router.get("/summaries")
+def runtime_summaries(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_enterprise_summarization import build_enterprise_runtime_summaries
+
+    try:
+        t = _truth_slice(app_user_id)
+    except Exception:
+        t = {}
+    return build_enterprise_runtime_summaries(t)
+
+
+@router.get("/calmness-lock")
+def runtime_calmness_lock(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_calmness_integrity import build_runtime_calmness_integrity
+
+    try:
+        t = _truth_slice(app_user_id)
+    except Exception:
+        t = {}
+    return build_runtime_calmness_integrity(t)

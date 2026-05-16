@@ -98,9 +98,29 @@ See [ENTERPRISE_RUNTIME_CONFIDENCE.md](ENTERPRISE_RUNTIME_CONFIDENCE.md), [OPERA
 - **Readable summaries** on truth: `readable_summaries` (repairs, provider actions, health sentence).
 - **CEO** (`/mission-control/ceo`) deprecated in favor of Office.
 
+## Phase 4 Step 8 — production runtime convergence
+
+Summary-first runtime surfaces with bounded long-horizon continuity, operational partitions, and calmness discipline. All keys attach via `apply_runtime_evolution_step8_to_truth()`; `enterprise_overview.phase` is `phase4_step8`.
+
+| Endpoint | Purpose |
+|----------|---------|
+| `GET /api/v1/runtime/summaries` | Enterprise summaries (operational, worker, governance, deployment, provider, continuity) |
+| `GET /api/v1/runtime/partitions` | Live / operational / governance / intelligence / archive partition state |
+| `GET /api/v1/runtime/eras` | Long-horizon operational eras and governance windows |
+| `GET /api/v1/runtime/production-posture` | Production readiness and sustained-operation scoring |
+| `GET /api/v1/runtime/calmness-lock` | Calmness integrity, noise score, escalation visibility |
+| `GET /api/v1/mission-control/governance/index` | Bounded governance index health and query cost |
+| `GET /api/v1/mission-control/workers/lifecycle` | Worker lifecycle maturity, trust, lineage |
+
+CLI: `aethos runtime eras|summaries|partitions|posture|calmness`, `aethos governance index`, `aethos workers lifecycle`.
+
+Docs: [RUNTIME_LONG_HORIZON.md](RUNTIME_LONG_HORIZON.md), [ENTERPRISE_RUNTIME_SUMMARIZATION.md](ENTERPRISE_RUNTIME_SUMMARIZATION.md), [OPERATIONAL_PARTITIONS.md](OPERATIONAL_PARTITIONS.md), [GOVERNANCE_INDEXING.md](GOVERNANCE_INDEXING.md), [RUNTIME_CALMNESS_LOCK.md](RUNTIME_CALMNESS_LOCK.md), [WORKER_LIFECYCLE_GOVERNANCE.md](WORKER_LIFECYCLE_GOVERNANCE.md), [PRODUCTION_RUNTIME_POSTURE.md](PRODUCTION_RUNTIME_POSTURE.md).
+
+Runtime overview (`/mission-control/runtime-overview`) loads `/runtime/summaries` first for a summary headline before detail panels.
+
 ## The Office
 
-Web route: `/mission-control/office` — lightweight cards for runtime agents (`active`, `busy`, `idle`, `recovering`, `failed`, `offline`).
+Web route: `/mission-control/office` — lightweight cards for runtime agents (`active`, `busy`, `idle`, `recovering`, `failed`, `offline`). Progressive Office stream and partition-aware hydration (Step 7) remain; Step 8 adds calmness lock and enterprise summaries without analytics-wall noise.
 
 ## Dynamic agents
 

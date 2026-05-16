@@ -524,6 +524,28 @@ def mc_governance_intelligence(app_user_id: str = Depends(get_valid_web_user_id)
     }
 
 
+@router.get("/governance/index")
+def mc_governance_index(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.governance_operational_index import build_governance_operational_index
+
+    try:
+        t = _truth_slice(app_user_id)
+    except Exception:
+        t = {}
+    return build_governance_operational_index(t)
+
+
+@router.get("/workers/lifecycle")
+def mc_workers_lifecycle(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.worker_operational_lifecycle import build_worker_operational_lifecycle
+
+    try:
+        t = _truth_slice(app_user_id)
+    except Exception:
+        t = {}
+    return build_worker_operational_lifecycle(t)
+
+
 @router.get("/runtime/posture")
 def mc_runtime_posture(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
     t = _truth_slice(app_user_id)

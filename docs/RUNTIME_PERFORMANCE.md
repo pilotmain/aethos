@@ -36,3 +36,26 @@ aethos runtime pressure
 ```
 
 Step 13 adds payload discipline and scalability health — see `docs/RUNTIME_SCALABILITY.md` and `docs/PAYLOAD_DISCIPLINE.md`.
+
+## Phase 4 Step 7–8 — enterprise responsiveness and production convergence
+
+Step 7 introduced progressive hydration (`runtime_async_hydration`), payload profiles, operational throttling, and performance intelligence. Step 8 layers:
+
+- **Operational partitions** — partition-level selective reads and invalidation (`runtime_operational_partitions.py`)
+- **Enterprise summarization** — reduced raw detail in MC via `runtime_enterprise_summarization.py`
+- **Long-horizon continuity** — bounded eras and compressed history (`runtime_long_horizon.py`)
+- **Governance index** — bounded timeline buckets (`governance_operational_index.py`)
+
+### Targets (operator-facing)
+
+| Operation | Target |
+|-----------|--------|
+| Warm Office load | &lt;300ms |
+| Cold Office load | &lt;2s |
+| Governance search | &lt;500ms |
+| Timeline render | &lt;300ms |
+| Worker ecosystem render | &lt;500ms |
+
+CLI (Step 8): `aethos runtime eras|summaries|partitions|posture|calmness`.
+
+See [OPERATIONAL_PARTITIONS.md](OPERATIONAL_PARTITIONS.md), [ENTERPRISE_RUNTIME_SUMMARIZATION.md](ENTERPRISE_RUNTIME_SUMMARIZATION.md), [RUNTIME_LONG_HORIZON.md](RUNTIME_LONG_HORIZON.md).

@@ -60,11 +60,14 @@ export default function RuntimeOverviewPage() {
   const [strategy, setStrategy] = useState<StrategyPayload>({});
   const [outlook, setOutlook] = useState<OutlookPayload>({});
   const [ecosystem, setEcosystem] = useState<EcosystemPayload>({});
+  const [summaries, setSummaries] = useState<{
+    operational_summary?: { health?: string; pressure?: string };
+  }>({});
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     try {
-      const [o, c, r, ent, strat, ol, eco] = await Promise.all([
+      const [o, c, r, ent, strat, ol, eco, sum] = await Promise.all([
         apiFetch<OverviewPayload>("/mission-control/runtime/overview"),
         apiFetch<CalmPayload>("/mission-control/runtime/calmness"),
         apiFetch<ReadinessPayload>("/mission-control/runtime/readiness"),
@@ -72,6 +75,7 @@ export default function RuntimeOverviewPage() {
         apiFetch<StrategyPayload>("/mission-control/runtime/strategy"),
         apiFetch<OutlookPayload>("/mission-control/runtime/outlook"),
         apiFetch<EcosystemPayload>("/mission-control/ecosystem/health"),
+        apiFetch<{ operational_summary?: { health?: string; pressure?: string } }>("/runtime/summaries"),
       ]);
       setOverview({ ...o, runtime_readiness_score: r.runtime_readiness_score ?? o.runtime_readiness_score });
       setCalm(c);
@@ -79,6 +83,7 @@ export default function RuntimeOverviewPage() {
       setStrategy(strat);
       setOutlook(ol);
       setEcosystem(eco);
+      setSummaries(sum);
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load");
@@ -130,6 +135,12 @@ export default function RuntimeOverviewPage() {
           <p className="text-xs text-muted-foreground">Pressure: {overview.pressure?.level ?? "low"}</p>
         </div>
       </section>
+      {summaries.operational_summary ? (
+        <p className="rounded-lg border border-border/40 bg-card/20 px-4 py-3 text-sm text-muted-foreground">
+          Summary: health {summaries.operational_summary.health ?? "—"} · pressure{" "}
+          {summaries.operational_summary.pressure ?? "low"}
+        </p>
+      ) : null}
       {overview.headline ? (
         <p className="rounded-lg border border-border/40 bg-card/30 px-4 py-3 text-sm">{overview.headline}</p>
       ) : null}

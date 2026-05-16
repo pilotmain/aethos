@@ -408,7 +408,7 @@ def main() -> int:
     rt_sub.add_parser("optimization", help="GET /api/v1/mission-control/runtime/optimization")
     rt_sub.add_parser("projections", help="GET /api/v1/mission-control/runtime/projections")
     rt_sub.add_parser("intelligence", help="GET /api/v1/mission-control/runtime/intelligence (Phase 4 Step 5)")
-    rt_sub.add_parser("posture", help="GET /api/v1/mission-control/runtime/posture")
+    rt_sub.add_parser("posture", help="GET /api/v1/runtime/production-posture (falls back to MC runtime/posture)")
     rt_sub.add_parser("recovery", help="GET /api/v1/mission-control/runtime/recovery")
     rt_sub.add_parser("routing", help="GET /api/v1/mission-control/runtime/routing")
     rt_sub.add_parser("advisories", help="GET /api/v1/mission-control/runtime/advisories")
@@ -418,6 +418,10 @@ def main() -> int:
     rt_sub.add_parser("responsiveness", help="GET /api/v1/runtime/responsiveness")
     rt_sub.add_parser("throttling", help="GET /api/v1/runtime/throttling")
     rt_sub.add_parser("payloads", help="GET /api/v1/runtime/payloads profile metrics")
+    rt_sub.add_parser("eras", help="GET /api/v1/runtime/eras long-horizon continuity")
+    rt_sub.add_parser("summaries", help="GET /api/v1/runtime/summaries enterprise summaries")
+    rt_sub.add_parser("partitions", help="GET /api/v1/runtime/partitions")
+    rt_sub.add_parser("calmness", help="GET /api/v1/runtime/calmness-lock integrity")
     sp_ecosystem = sub.add_parser("ecosystem", help="Operational intelligence ecosystem (Phase 4 Step 3)")
     eco_sub = sp_ecosystem.add_subparsers(dest="ecosystem_cmd", required=True)
     eco_sub.add_parser("health", help="GET /api/v1/mission-control/ecosystem/health")
@@ -464,6 +468,7 @@ def main() -> int:
     gov_sub.add_parser("maturity", help="GET /api/v1/mission-control/governance/maturity")
     gov_sub.add_parser("progression", help="GET /api/v1/mission-control/governance/progression")
     gov_sub.add_parser("intelligence", help="GET /api/v1/mission-control/governance/intelligence")
+    gov_sub.add_parser("index", help="GET /api/v1/mission-control/governance/index")
     sp_gov_search = gov_sub.add_parser("search", help="GET /api/v1/mission-control/governance/search")
     sp_gov_search.add_argument("query", nargs="?", default=None)
     sp_gov_filter = gov_sub.add_parser("filter", help="GET /api/v1/mission-control/governance/filter")
@@ -1187,7 +1192,25 @@ def main() -> int:
             print(body[:24000])
             return 0 if code == 200 else 1
         if args.runtime_cmd == "posture":
-            code, body = _req("GET", "/api/v1/mission-control/runtime/posture", uid=uid)
+            code, body = _req("GET", "/api/v1/runtime/production-posture", uid=uid)
+            if code != 200:
+                code, body = _req("GET", "/api/v1/mission-control/runtime/posture", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.runtime_cmd == "eras":
+            code, body = _req("GET", "/api/v1/runtime/eras", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.runtime_cmd == "summaries":
+            code, body = _req("GET", "/api/v1/runtime/summaries", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.runtime_cmd == "partitions":
+            code, body = _req("GET", "/api/v1/runtime/partitions", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.runtime_cmd == "calmness":
+            code, body = _req("GET", "/api/v1/runtime/calmness-lock", uid=uid)
             print(body[:24000])
             return 0 if code == 200 else 1
         if args.runtime_cmd == "recovery":
@@ -1375,6 +1398,10 @@ def main() -> int:
             code, body = _req("GET", "/api/v1/mission-control/governance/intelligence", uid=uid)
             print(body[:24000])
             return 0 if code == 200 else 1
+        if args.governance_cmd == "index":
+            code, body = _req("GET", "/api/v1/mission-control/governance/index", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
         if args.governance_cmd == "search":
             q = urllib.parse.quote(str(getattr(args, "query", "") or ""))
             code, body = _req("GET", f"/api/v1/mission-control/governance/search?q={q}", uid=uid)
@@ -1452,6 +1479,10 @@ def main() -> int:
             return 0 if code == 200 else 1
         if args.workers_cmd == "archive":
             code, body = _req("GET", "/api/v1/mission-control/workers/archive", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.workers_cmd == "lifecycle":
+            code, body = _req("GET", "/api/v1/mission-control/workers/lifecycle", uid=uid)
             print(body[:24000])
             return 0 if code == 200 else 1
         if args.workers_cmd == "accountability":

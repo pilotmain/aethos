@@ -16,4 +16,4 @@ def test_runtime_step7_apis(api_client: tuple[TestClient, str]) -> None:
         r = client.get(path, headers=hdr)
         assert r.status_code == 200
     caps = client.get("/api/v1/runtime/capabilities", headers=hdr)
-    assert caps.json().get("mc_compatibility_version") == "phase4_step7"
+    assert caps.json().get("mc_compatibility_version") == "phase4_step8"
