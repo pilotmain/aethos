@@ -40,3 +40,10 @@ CLI: `aethos runtime summaries|calmness|posture|eras|partitions`, `aethos govern
 - **Timeline experience** — `/mission-control/timeline-experience`
 
 Enterprise language system calms technical terms for operator trust. See [MISSION_CONTROL_LANGUAGE_SYSTEM.md](MISSION_CONTROL_LANGUAGE_SYSTEM.md).
+
+## Phase 4 Step 13 — launch-grade operator experience
+
+- **Office** — operational command center (health, readiness, orchestrator, active work)
+- **Recovery** — reconnecting copy via `recovery_experience` (not “connection failed”)
+- `GET /api/v1/runtime/operator-experience`, `/operational-focus`, `/priority-work`, `/noise-reduction`, `/calmness-metrics`, `/signal-health`
+- Certification: [LAUNCH_READINESS_CERTIFICATION.md](LAUNCH_READINESS_CERTIFICATION.md)

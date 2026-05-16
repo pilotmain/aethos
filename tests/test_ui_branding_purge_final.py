@@ -15,5 +15,5 @@ def test_active_work_panel_aethos_branded() -> None:
 
 def test_ui_branding_scan_structure() -> None:
     out = scan_ui_branding_final()
-    assert out["phase"] == "phase4_step12"
+    assert out["phase"] == "phase4_step13"
     assert "nexa_ui_violations" in out

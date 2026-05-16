@@ -32,6 +32,10 @@ Optional satellite trees such as `aethos-mobile/` and `nexa-ext-pro/` are not Ph
 
 One-curl install is certified through `install.sh` → `scripts/setup.sh` → enterprise wizard. Verify with `aethos setup certify` or `GET /api/v1/setup/certify`. User-facing branding is **AethOS**; OpenClaw remains in parity docs/tests only. See [docs/ONE_CURL_CERTIFICATION.md](docs/ONE_CURL_CERTIFICATION.md) and [docs/MISSION_CONTROL_READY_STATE.md](docs/MISSION_CONTROL_READY_STATE.md).
 
+## Launch readiness (Phase 4 Step 13)
+
+`enterprise_overview.phase` is `phase4_step13` with `launch_ready` after runtime evolution. Certification: [docs/LAUNCH_READINESS_CERTIFICATION.md](docs/LAUNCH_READINESS_CERTIFICATION.md). Identity: [docs/AETHOS_LAUNCH_IDENTITY.md](docs/AETHOS_LAUNCH_IDENTITY.md).
+
 ---
 
 ## 2. Non-negotiable product rule

@@ -427,6 +427,9 @@ def main() -> int:
     rt_sub.add_parser("routing", help="GET /api/v1/runtime/routing adaptive provider visibility")
     rt_sub.add_parser("restarts", help="GET /api/v1/runtime/restarts restart history")
     rt_sub.add_parser("identity", help="GET /api/v1/runtime/identity brand lock state")
+    rt_sub.add_parser("launch-focus", help="GET /api/v1/runtime/operational-focus (Step 13)")
+    rt_sub.add_parser("priority-work", help="GET /api/v1/runtime/priority-work")
+    rt_sub.add_parser("launch-cert", help="GET /api/v1/runtime/launch-certification")
     sp_ecosystem = sub.add_parser("ecosystem", help="Operational intelligence ecosystem (Phase 4 Step 3)")
     eco_sub = sp_ecosystem.add_subparsers(dest="ecosystem_cmd", required=True)
     eco_sub.add_parser("health", help="GET /api/v1/mission-control/ecosystem/health")
@@ -1242,6 +1245,18 @@ def main() -> int:
             return 0 if code == 200 else 1
         if args.runtime_cmd == "identity":
             code, body = _req("GET", "/api/v1/runtime/identity", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.runtime_cmd == "launch-focus":
+            code, body = _req("GET", "/api/v1/runtime/operational-focus", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.runtime_cmd == "priority-work":
+            code, body = _req("GET", "/api/v1/runtime/priority-work", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.runtime_cmd == "launch-cert":
+            code, body = _req("GET", "/api/v1/runtime/launch-certification", uid=uid)
             print(body[:24000])
             return 0 if code == 200 else 1
         if args.runtime_cmd == "recovery":

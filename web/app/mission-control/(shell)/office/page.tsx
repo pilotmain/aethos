@@ -107,7 +107,7 @@ export default function OfficePage() {
         <div>
           <h1 className="text-xl font-semibold tracking-tight">The Office</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Operational heart — orchestrator, workers, routing, and signal-only events
+            Operational command center — health, readiness, orchestrator, active work, and routing
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 text-sm">

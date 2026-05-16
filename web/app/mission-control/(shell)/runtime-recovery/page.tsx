@@ -6,6 +6,12 @@ import Link from "next/link";
 import { fetchPanelResilient, operationalBanner, type OperationalStatus } from "@/lib/runtimeResilience";
 
 type RecoveryPayload = {
+  recovery_experience?: {
+    headline?: string;
+    recovery_progress?: string;
+    operator_action?: string | null;
+    what_remains_available?: string[];
+  };
   operational_status?: string;
   failed_slices?: string[];
   hydration_retries?: number;
@@ -47,10 +53,13 @@ export default function RuntimeRecoveryPage() {
           Hydration health, stale caches, and recovery recommendations
         </p>
       </header>
-      {operationalBanner(status) ? (
+      {recovery.recovery_experience?.headline || operationalBanner(status) ? (
         <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-sm text-amber-800 dark:text-amber-200">
-          {operationalBanner(status)}
+          {recovery.recovery_experience?.headline ?? operationalBanner(status)}
         </p>
+      ) : null}
+      {recovery.recovery_experience?.recovery_progress ? (
+        <p className="text-sm text-muted-foreground">{recovery.recovery_experience.recovery_progress}</p>
       ) : null}
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
       <section className="grid gap-3 sm:grid-cols-2">

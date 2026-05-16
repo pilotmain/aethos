@@ -225,3 +225,65 @@ def runtime_operator_experience(app_user_id: str = Depends(get_valid_web_user_id
     except Exception:
         t = {}
     return build_runtime_operator_experience(t)
+
+
+@router.get("/operational-focus")
+def runtime_operational_focus(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_launch_focus import build_runtime_operational_focus_launch
+
+    try:
+        t = _truth_slice(app_user_id)
+    except Exception:
+        t = {}
+    return build_runtime_operational_focus_launch(t)
+
+
+@router.get("/priority-work")
+def runtime_priority_work(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_launch_focus import build_runtime_priority_work
+
+    try:
+        t = _truth_slice(app_user_id)
+    except Exception:
+        t = {}
+    return build_runtime_priority_work(t)
+
+
+@router.get("/noise-reduction")
+def runtime_noise_reduction(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_launch_focus import build_runtime_noise_reduction
+
+    try:
+        t = _truth_slice(app_user_id)
+    except Exception:
+        t = {}
+    return build_runtime_noise_reduction(t)
+
+
+@router.get("/calmness-metrics")
+def runtime_calmness_metrics(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.enterprise_calmness_metrics import build_runtime_calmness_metrics
+
+    try:
+        t = _truth_slice(app_user_id)
+    except Exception:
+        t = {}
+    return build_runtime_calmness_metrics(t)
+
+
+@router.get("/signal-health")
+def runtime_signal_health(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.enterprise_calmness_metrics import build_runtime_signal_health
+
+    try:
+        t = _truth_slice(app_user_id)
+    except Exception:
+        t = {}
+    return build_runtime_signal_health(t)
+
+
+@router.get("/launch-certification")
+def runtime_launch_certification(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.launch_readiness_certification import build_launch_readiness_certification
+
+    return build_launch_readiness_certification()

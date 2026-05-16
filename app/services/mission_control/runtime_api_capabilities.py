@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import Any
 
-MC_COMPATIBILITY_VERSION = "phase4_step12"
+MC_COMPATIBILITY_VERSION = "phase4_step13"
 
 _AVAILABLE_ROUTES: list[dict[str, str]] = [
     {"method": "GET", "path": "/api/v1/mission-control/state"},
@@ -57,6 +57,12 @@ _AVAILABLE_ROUTES: list[dict[str, str]] = [
     {"method": "GET", "path": "/api/v1/runtime/providers/health-matrix"},
     {"method": "GET", "path": "/api/v1/runtime/perception"},
     {"method": "GET", "path": "/api/v1/runtime/operator-experience"},
+    {"method": "GET", "path": "/api/v1/runtime/operational-focus"},
+    {"method": "GET", "path": "/api/v1/runtime/priority-work"},
+    {"method": "GET", "path": "/api/v1/runtime/noise-reduction"},
+    {"method": "GET", "path": "/api/v1/runtime/calmness-metrics"},
+    {"method": "GET", "path": "/api/v1/runtime/signal-health"},
+    {"method": "GET", "path": "/api/v1/runtime/launch-certification"},
     {"method": "GET", "path": "/api/v1/health"},
 ]
 
@@ -93,6 +99,8 @@ def build_runtime_capabilities() -> dict[str, Any]:
             "ready_state_lock": True,
             "phase4_step12": True,
             "production_cut": True,
+            "phase4_step13": True,
+            "launch_ready": True,
         },
         "lazy_views": [
             "routing",

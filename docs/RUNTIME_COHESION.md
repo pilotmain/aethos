@@ -44,3 +44,9 @@ APIs: `GET /api/v1/runtime/partitions`, `/summaries`, `/eras`, `/production-post
 ## Phase 4 Step 9 — experience convergence
 
 MC surfaces consume Step 8 truth via experience layers (governance, workers, executive overview, narratives, timeline UX, explainability center, language system). Orchestrator authority and bounded persistence unchanged — presentation-only convergence.
+
+## Phase 4 Step 13 — duplication lock and launch truth
+
+- Single authority: `build_runtime_truth()` → evolution steps 1–13 → `enterprise_overview` (`phase4_step13`, `launch_ready`)
+- Duplication map on truth: `runtime_duplication_lock` — see [RUNTIME_DUPLICATION_LOCK.md](RUNTIME_DUPLICATION_LOCK.md)
+- Architecture: [FINAL_RUNTIME_ARCHITECTURE.md](FINAL_RUNTIME_ARCHITECTURE.md)

@@ -688,7 +688,11 @@ def mc_runtime_recovery_center(app_user_id: str = Depends(get_valid_web_user_id)
         t = _truth_slice(app_user_id)
     except Exception:
         t = {}
+    from app.services.mission_control.runtime_recovery_experience import build_runtime_recovery_experience
+
+    experience = build_runtime_recovery_experience(t, user_id=app_user_id)
     center = build_runtime_recovery_center(t, user_id=app_user_id)
+    center["recovery_experience"] = experience.get("runtime_recovery_experience")
     center["hydration_queue"] = build_hydration_status(t).get("queue")
     center["pending_slices"] = (t.get("hydration_progress") or {}).get("tier_build_ms")
     center["throttling_state"] = t.get("runtime_operational_throttling") or {}

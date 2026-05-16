@@ -50,7 +50,7 @@ When the web app is running locally, open [http://localhost:3000](http://localho
 - Command execution and host tool flows
 - Browser/tool-use gates
 - Durable memory and context surfaces
-- Mission Control operator UI
+- Mission Control operator UI (launch-ready `phase4_step13` — see [docs/LAUNCH_READINESS_CERTIFICATION.md](docs/LAUNCH_READINESS_CERTIFICATION.md))
 - Deployment helpers for configured providers
 - Multi-agent, long-running, and autonomous workflow surfaces
 - Channel adapters where OpenClaw-compatible behavior is required

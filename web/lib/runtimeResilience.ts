@@ -88,10 +88,13 @@ export async function revalidateHealth(): Promise<boolean> {
 
 export function operationalBanner(status: OperationalStatus, stale?: boolean): string | null {
   if (status === "healthy" && !stale) return null;
-  if (stale || status === "stale") return "Using cached truth — hydration may be recovering.";
-  if (status === "degraded") return "Runtime recovering — some panels show partial data.";
-  if (status === "partial") return "Some operational panels unavailable.";
-  if (status === "recovering") return "Runtime recovering.";
-  if (status === "offline") return "API offline — check Connection settings.";
-  return "Operational status degraded.";
+  if (stale || status === "stale")
+    return "AethOS runtime is reconnecting. Cached operational truth remains available.";
+  if (status === "degraded")
+    return "AethOS runtime is reconnecting. Operational continuity is being restored.";
+  if (status === "partial")
+    return "Some panels are partial — summaries and recovery remain available.";
+  if (status === "recovering") return "AethOS is recovering — orchestrator summaries stay online.";
+  if (status === "offline") return "API offline — check Connection settings when convenient.";
+  return "Operational status degraded — review Runtime recovery for detail.";
 }

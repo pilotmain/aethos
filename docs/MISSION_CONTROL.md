@@ -170,7 +170,14 @@ Certifies one-curl → enterprise setup, env completeness, MC ready state, and f
 - Marketplace plugin vs pack vs skill clarity
 - Production-cut readiness — [PRODUCTION_CUT_READINESS.md](PRODUCTION_CUT_READINESS.md)
 
-`enterprise_overview.phase` is `phase4_step12`.
+`enterprise_overview.phase` is `phase4_step13` (`launch_ready` on overview when Step 13 evolution applied).
+
+### Phase 4 Step 13 — launch readiness
+
+- `GET /api/v1/runtime/{operational-focus,priority-work,noise-reduction,calmness-metrics,signal-health,launch-certification}`
+- Recovery center includes `recovery_experience` with reconnecting copy
+- Office — operational command center framing
+- Docs: [LAUNCH_READINESS_CERTIFICATION.md](LAUNCH_READINESS_CERTIFICATION.md), [AETHOS_LAUNCH_IDENTITY.md](AETHOS_LAUNCH_IDENTITY.md)
 
 ## The Office
 
