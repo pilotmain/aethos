@@ -11,6 +11,8 @@ from app.runtime.corruption.runtime_repair import repair_runtime_queues_and_metr
 from app.runtime.integrity.runtime_integrity import validate_runtime_state
 from app.runtime.runtime_state import load_runtime_state
 
+from tests.parity_freeze_gate import repeated_cycles
+
 
 @pytest.mark.edge_cases
 def test_repeated_queue_repair_idempotent(tmp_path, monkeypatch) -> None:
@@ -18,7 +20,7 @@ def test_repeated_queue_repair_idempotent(tmp_path, monkeypatch) -> None:
     st = load_runtime_state()
     tid = task_registry.put_task(st, {"id": "edge_q", "type": "noop", "user_id": "u", "state": "queued"})
     task_queue.enqueue_task_id(st, "execution_queue", str(tid))
-    for _ in range(40):
+    for _ in range(repeated_cycles(large=150)):
         repair_runtime_queues_and_metrics(st)
     inv = validate_runtime_state(st)
     assert inv.get("ok") is True

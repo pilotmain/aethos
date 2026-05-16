@@ -3,8 +3,6 @@
 
 from __future__ import annotations
 
-import os
-
 import pytest
 
 from app.deployments.deployment_registry import upsert_deployment
@@ -13,11 +11,13 @@ from app.environments import environment_registry
 from app.runtime.integrity.runtime_integrity import validate_runtime_state
 from app.runtime.runtime_state import load_runtime_state, save_runtime_state
 
+from tests.parity_freeze_gate import repeated_cycles
+
 
 @pytest.mark.production_like
 def test_many_lock_acquire_repair_cycles(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("AETHOS_HOME_DIR", str(tmp_path))
-    n = 30 if os.environ.get("AETHOS_CHURN_LARGE") == "1" else 12
+    n = repeated_cycles(large=55)
     st = load_runtime_state()
     environment_registry.ensure_environment(st, "env_elc", user_id="u1")
     upsert_deployment(

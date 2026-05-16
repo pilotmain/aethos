@@ -26,7 +26,7 @@ This document is a **point-in-time implementation status** snapshot (update when
 | Orchestration runtime tests (`tests/test_openclaw_task_*.py`, `tests/test_openclaw_scheduler.py`, `tests/test_openclaw_queue_*.py`, `tests/test_openclaw_agent_runtime.py`, `tests/test_openclaw_orchestration_recovery.py`, `tests/test_openclaw_deployment_recovery.py`, `tests/test_openclaw_runtime_dispatcher.py`) | Passing |
 | Autonomous execution tests (`tests/test_openclaw_execution_*.py`, `tests/test_openclaw_autonomous_execution.py`) | Passing |
 | Doctrine tests (`tests/test_openclaw_doctrine_docs.py`) | Passing |
-| Phase 1 confidence lock (`tests/test_openclaw_{reliability,continuity,warning}_consistency.py`, `tests/production_like/`, `tests/edge_cases/`, `tests/soak/`, `tests/openclaw_behavioral_validation/`) | Passing (markers + `AETHOS_CHURN_LARGE` / `AETHOS_SOAK_LONG` opt-in for heavier loops) |
+| Phase 1 confidence + **transition gate** (`tests/parity_freeze_gate.py`, `tests/production_like/`, `tests/edge_cases/`, snapshot + CLI freeze tests) | Passing (see [OPENCLAW_FINAL_PARITY_AUDIT.md](OPENCLAW_FINAL_PARITY_AUDIT.md)) |
 | CLI parity surface | Operational (`aethos onboard`, `gateway`, `message send`, `status`, `logs`, `doctor`) |
 
 ---

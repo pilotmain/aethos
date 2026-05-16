@@ -20,7 +20,7 @@ def test_reliability_summary_stable_across_repeated_reads(tmp_path, monkeypatch)
     runtime_reliability.bump_queue_pressure_stability(st, 2)
     baseline = copy.deepcopy(st)
     first = runtime_reliability.summarize_runtime_reliability(baseline)
-    for _ in range(48):
+    for _ in range(100):
         snap = runtime_reliability.summarize_runtime_reliability(copy.deepcopy(baseline))
         assert snap == first
         assert snap["severity"] in ("healthy", "warning", "degraded", "critical")

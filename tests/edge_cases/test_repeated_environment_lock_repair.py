@@ -11,6 +11,8 @@ from app.environments import environment_registry
 from app.runtime.integrity.runtime_integrity import validate_runtime_state
 from app.runtime.runtime_state import load_runtime_state
 
+from tests.parity_freeze_gate import repeated_cycles
+
 
 @pytest.mark.edge_cases
 def test_repeated_lock_repair_cycles(tmp_path, monkeypatch) -> None:
@@ -29,6 +31,6 @@ def test_repeated_lock_repair_cycles(tmp_path, monkeypatch) -> None:
         },
     )
     assert environment_locks.acquire_lock(st, "env_lkr", "dpl_lkr", user_id="u1")
-    for _ in range(20):
+    for _ in range(repeated_cycles(large=55)):
         environment_locks.repair_stale_locks(st)
     assert validate_runtime_state(st).get("ok") is True

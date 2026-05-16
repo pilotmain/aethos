@@ -13,7 +13,7 @@ from app.services.mission_control.orchestration_runtime_snapshot import build_or
 def test_resilience_slice_stable_under_repeated_snapshots(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("AETHOS_HOME_DIR", str(tmp_path))
     first_res = None
-    for _ in range(32):
+    for _ in range(100):
         snap = build_orchestration_runtime_snapshot("u_warn")
         res = snap.get("resilience") or {}
         assert "integrity_ok" in res

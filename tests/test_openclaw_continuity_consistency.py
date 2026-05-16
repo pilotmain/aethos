@@ -26,6 +26,6 @@ def test_continuity_summary_stable_across_repeated_reads(tmp_path, monkeypatch) 
     ):
         r = float(first[rate_key])
         assert 0.0 <= r <= 1.0
-    for _ in range(48):
+    for _ in range(100):
         snap = runtime_continuity.summarize_runtime_continuity(copy.deepcopy(baseline))
         assert snap == first

@@ -11,11 +11,13 @@ from app.environments import environment_registry
 from app.runtime.integrity.runtime_integrity import validate_runtime_state
 from app.runtime.runtime_state import load_runtime_state, save_runtime_state
 
+from tests.parity_freeze_gate import repeated_cycles
+
 
 @pytest.mark.edge_cases
 def test_repeated_deployment_recovery_cycles(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("AETHOS_HOME_DIR", str(tmp_path))
-    for _ in range(15):
+    for _ in range(repeated_cycles(large=40)):
         st = load_runtime_state()
         environment_registry.ensure_environment(st, "env_ed", user_id="u1")
         upsert_deployment(

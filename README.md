@@ -70,6 +70,7 @@ pytest tests/test_openclaw_execution_*.py tests/test_openclaw_autonomous_executi
 pytest tests/test_openclaw_doctrine_docs.py
 pytest tests/test_openclaw_reliability_consistency.py tests/test_openclaw_continuity_consistency.py tests/test_openclaw_warning_consistency.py
 pytest tests/production_like/ tests/edge_cases/ tests/soak/ tests/openclaw_behavioral_validation/
+# Phase 1 gate helpers: tests/parity_freeze_gate.py (MIN_REPEATED_CYCLES=100; widen_runtime_event_buffer for high-volume lifecycle tests)
 ```
 
 Each PR should state which OpenClaw behavior it reproduces and which parity checkpoint it advances.

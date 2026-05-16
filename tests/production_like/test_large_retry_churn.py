@@ -3,8 +3,6 @@
 
 from __future__ import annotations
 
-import os
-
 import pytest
 
 from app.core.config import get_settings
@@ -14,6 +12,8 @@ from app.orchestration import task_registry
 from app.runtime.integrity.runtime_integrity import validate_runtime_state
 from app.runtime.runtime_state import load_runtime_state
 
+from tests.parity_freeze_gate import repeated_cycles
+
 
 @pytest.mark.production_like
 def test_large_retry_churn(tmp_path, monkeypatch) -> None:
@@ -21,9 +21,9 @@ def test_large_retry_churn(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("AETHOS_STEP_MAX_RETRIES", "1")
     get_settings.cache_clear()
     try:
-        rounds = 12 if os.environ.get("AETHOS_CHURN_LARGE") == "1" else 5
+        rounds = repeated_cycles(large=140)
+        st = load_runtime_state()
         for _ in range(rounds):
-            st = load_runtime_state()
             tid = task_registry.put_task(
                 st,
                 {"type": "exec", "user_id": "u", "state": "running", "execution_plan_id": ""},

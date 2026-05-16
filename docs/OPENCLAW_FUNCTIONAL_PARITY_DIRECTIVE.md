@@ -200,6 +200,16 @@ Keep these aligned with this directive and with code:
 
 Persistent runtime parity progress (`app/runtime/`, `~/.aethos/aethos.json`, heartbeat, recovery): [OPENCLAW_FUNCTIONAL_PARITY_STATUS.md](OPENCLAW_FUNCTIONAL_PARITY_STATUS.md).
 
+## Phase 2 transition gate (post Phase 1 freeze)
+
+Phase 2 privacy, PII filtering, local-first isolation, and novelty architecture **must not** start as default product work until:
+
+- `tests/soak/`, `tests/edge_cases/`, and `tests/production_like/` pass under `NEXA_PYTEST=1` (see [OPENCLAW_FINAL_PARITY_AUDIT.md](OPENCLAW_FINAL_PARITY_AUDIT.md) for the authoritative verification matrix).
+- Repeated-cycle targets (minimum **100** per dimension in default CI via `tests/parity_freeze_gate.py`) and boundedness certification remain green.
+- Mission Control orchestration snapshots and `aethos status` / `aethos doctor` remain sufficient for operational triage without raw JSON.
+
+After certification, Phase 2 work listed in the final audit may proceed **without** changing Phase 1 default runtime semantics unless required for security.
+
 ---
 
 ## Final directive

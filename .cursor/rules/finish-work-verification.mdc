@@ -21,7 +21,7 @@ From the project root, with the project venv active:
    - Run a small one-liner or script that imports `get_intent`, `map_intent_to_behavior`, `build_response`, and `Context`, and checks a few fixed strings (capability, brain-dump list, stuck, `not done`).
    - Confirm behavior matches expectations for this codebase (e.g. `capability_question` → clarify, not planning).
    - When changing `app/execution/` or plan dispatch, also run: `pytest tests/test_openclaw_execution_*.py tests/test_openclaw_autonomous_execution.py -q`.
-   - When changing `app/runtime/`, Mission Control orchestration snapshots, or reliability/continuity summaries, also run: `pytest tests/test_openclaw_reliability_consistency.py tests/test_openclaw_continuity_consistency.py tests/test_openclaw_warning_consistency.py tests/production_like/ -m production_like -q` (or the full parity slice you touched).
+   - When changing `app/runtime/`, Mission Control orchestration snapshots, or reliability/continuity summaries, also run: `pytest tests/test_openclaw_reliability_consistency.py tests/test_openclaw_continuity_consistency.py tests/test_openclaw_warning_consistency.py tests/test_openclaw_snapshot_surface_stable_reads.py tests/production_like/ -m production_like -q` (or the full parity slice you touched). High-volume lifecycle tests may require `widen_runtime_event_buffer()` / raised `AETHOS_RUNTIME_EVENT_BUFFER_LIMIT` — see `tests/parity_freeze_gate.py`.
 
 ## 2. Both processes (restart)
 

@@ -28,6 +28,7 @@ pytest tests/test_openclaw_execution_*.py tests/test_openclaw_autonomous_executi
 pytest tests/test_openclaw_doctrine_docs.py
 pytest tests/test_openclaw_reliability_consistency.py tests/test_openclaw_continuity_consistency.py tests/test_openclaw_warning_consistency.py
 pytest tests/production_like/ tests/edge_cases/ tests/soak/ tests/openclaw_behavioral_validation/
+# Phase 1 gate: tests/parity_freeze_gate.py — MIN_REPEATED_CYCLES=100; widen_runtime_event_buffer for lifecycle-heavy churn.
 ```
 
 See [../OPENCLAW_FUNCTIONAL_PARITY_DIRECTIVE.md](../OPENCLAW_FUNCTIONAL_PARITY_DIRECTIVE.md) for the master plan (CLI matrix, priorities, test modules).

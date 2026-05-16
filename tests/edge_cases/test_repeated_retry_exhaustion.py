@@ -12,6 +12,8 @@ from app.orchestration import task_registry
 from app.runtime.integrity.runtime_integrity import validate_runtime_state
 from app.runtime.runtime_state import load_runtime_state
 
+from tests.parity_freeze_gate import repeated_cycles
+
 
 @pytest.mark.edge_cases
 def test_repeated_retry_exhaustion_cycles(tmp_path, monkeypatch) -> None:
@@ -19,8 +21,8 @@ def test_repeated_retry_exhaustion_cycles(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("AETHOS_STEP_MAX_RETRIES", "1")
     get_settings.cache_clear()
     try:
-        for _ in range(6):
-            st = load_runtime_state()
+        st = load_runtime_state()
+        for _ in range(repeated_cycles(large=120)):
             tid = task_registry.put_task(
                 st,
                 {"type": "exec", "user_id": "u", "state": "running", "execution_plan_id": ""},

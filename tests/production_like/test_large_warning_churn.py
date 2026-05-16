@@ -3,19 +3,19 @@
 
 from __future__ import annotations
 
-import os
-
 import pytest
 
 from app.runtime import runtime_reliability
 from app.runtime.integrity.runtime_integrity import validate_runtime_state
 from app.runtime.runtime_state import load_runtime_state, save_runtime_state
 
+from tests.parity_freeze_gate import repeated_cycles
+
 
 @pytest.mark.production_like
 def test_large_warning_pressure_churn_stays_integrity_ok(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("AETHOS_HOME_DIR", str(tmp_path))
-    n = 85 if os.environ.get("AETHOS_CHURN_LARGE") == "1" else 38
+    n = repeated_cycles(large=160)
     st = load_runtime_state()
     m = st.setdefault("runtime_metrics", {})
     assert isinstance(m, dict)
