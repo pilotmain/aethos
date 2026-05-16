@@ -31,4 +31,8 @@ aethos runtime cache
 aethos runtime hydration
 aethos runtime latency
 aethos runtime scalability
+aethos runtime payloads
+aethos runtime pressure
 ```
+
+Step 13 adds payload discipline and scalability health — see `docs/RUNTIME_SCALABILITY.md` and `docs/PAYLOAD_DISCIPLINE.md`.

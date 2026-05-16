@@ -122,11 +122,13 @@ def _maybe_run_maintenance() -> None:
     from app.runtime.runtime_agents import recover_runtime_agents_after_restart, sweep_expired_agents
     from app.services.mission_control.runtime_lifecycle import run_runtime_lifecycle_sweeps
     from app.services.mission_control.runtime_event_intelligence import prune_stale_event_summaries
+    from app.services.mission_control.runtime_memory_optimization import run_memory_optimization_sweep
 
     recover_runtime_agents_after_restart()
     sweep_expired_agents()
     run_runtime_lifecycle_sweeps()
     prune_stale_event_summaries()
+    run_memory_optimization_sweep()
     if isinstance(h, dict):
         h["last_maintenance_mono"] = now
         h["last_maintenance_at"] = utc_now_iso()
@@ -353,6 +355,25 @@ def hydrate_runtime_truth_incremental(*, user_id: str | None = None) -> dict[str
         "bounded_deliverables": len(truth.get("worker_deliverables") or []),
         "bounded_events": len(truth.get("runtime_events") or []),
     }
+    from app.services.mission_control.operational_payload_discipline import (
+        build_payload_discipline_block,
+        summarize_truth_payload,
+    )
+    from app.services.mission_control.runtime_scalability import (
+        build_enterprise_operational_views,
+        build_governance_scalability,
+        build_operational_pressure,
+        build_runtime_query_efficiency,
+        build_runtime_scalability_health,
+    )
+
+    truth = summarize_truth_payload(truth)
+    truth["payload_discipline"] = build_payload_discipline_block(truth)
+    truth["runtime_scalability_health"] = build_runtime_scalability_health(truth)
+    truth["operational_pressure"] = build_operational_pressure(truth)
+    truth["runtime_query_efficiency"] = build_runtime_query_efficiency()
+    truth["governance_scalability"] = build_governance_scalability()
+    truth["enterprise_operational_views"] = build_enterprise_operational_views(truth)
     return truth
 
 

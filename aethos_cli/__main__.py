@@ -384,7 +384,9 @@ def main() -> int:
     rt_sub.add_parser("cache", help="Hydration cache metrics from runtime state")
     rt_sub.add_parser("hydration", help="Incremental hydration metrics")
     rt_sub.add_parser("latency", help="Operational responsiveness summary")
-    rt_sub.add_parser("scalability", help="Runtime scalability bounds summary")
+    rt_sub.add_parser("scalability", help="GET /api/v1/mission-control/runtime/scalability")
+    rt_sub.add_parser("payloads", help="Payload discipline metrics")
+    rt_sub.add_parser("pressure", help="Operational pressure overview")
 
     sp_opsum = sub.add_parser("operational", help="Operational summary (Phase 3 Step 11)")
     op_sub = sp_opsum.add_subparsers(dest="operational_cmd", required=True)
@@ -402,6 +404,17 @@ def main() -> int:
     gov_sub.add_parser("timeline", help="GET /api/v1/mission-control/governance")
     gov_sub.add_parser("risks", help="GET /api/v1/mission-control/governance/risks")
     gov_sub.add_parser("summary", help="GET /api/v1/mission-control/governance/summary")
+    sp_gov_search = gov_sub.add_parser("search", help="GET /api/v1/mission-control/governance/search")
+    sp_gov_search.add_argument("query", nargs="?", default=None)
+    sp_gov_filter = gov_sub.add_parser("filter", help="GET /api/v1/mission-control/governance/filter")
+    sp_gov_filter.add_argument("--kind", default=None)
+    sp_gov_filter.add_argument("--actor", default=None)
+    sp_gov_filter.add_argument("--provider", default=None)
+    sp_tl_win = rt_sub.add_parser("timeline-window", help="GET /api/v1/mission-control/timeline/window")
+    sp_tl_win.add_argument("--offset", type=int, default=0)
+    sp_tl_win.add_argument("--limit", type=int, default=24)
+    sp_wk_sum = sub.add_parser("worker-summaries", help="Paginated worker summaries")
+    sp_wk_sum.add_argument("--page", type=int, default=1)
 
     sp_mkt = sub.add_parser("marketplace", help="Marketplace automation packs")
     mkt_sub = sp_mkt.add_subparsers(dest="marketplace_cmd", required=True)
@@ -973,6 +986,24 @@ def main() -> int:
             code, body = _req("GET", "/api/v1/mission-control/runtime/performance", uid=uid)
             print(body[:24000])
             return 0 if code == 200 else 1
+        if args.runtime_cmd == "payloads":
+            from app.services.mission_control.operational_payload_discipline import build_payload_discipline_block
+            from app.services.mission_control.runtime_truth import build_runtime_truth
+
+            truth = build_runtime_truth(user_id=uid)
+            out = build_payload_discipline_block(truth)
+            print(json.dumps(out, indent=2, default=str)[:24000])
+            return 0
+        if args.runtime_cmd == "pressure":
+            code, body = _req("GET", "/api/v1/mission-control/runtime/scalability", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.runtime_cmd == "timeline-window":
+            off = int(getattr(args, "offset", 0))
+            lim = int(getattr(args, "limit", 24))
+            code, body = _req("GET", f"/api/v1/mission-control/timeline/window?offset={off}&limit={lim}", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
         if args.runtime_cmd in ("cache", "hydration", "latency", "scalability"):
             from app.services.mission_control.runtime_hydration import (
                 build_runtime_performance_block,
@@ -993,6 +1024,10 @@ def main() -> int:
                     "last_truth_build_ms": disc.get("last_truth_build_ms"),
                     "target_cached_read_ms": 500,
                 }
+            elif args.runtime_cmd == "scalability":
+                code, body = _req("GET", "/api/v1/mission-control/runtime/scalability", uid=uid)
+                print(body[:24000])
+                return 0 if code == 200 else 1
             else:
                 from app.services.mission_control.runtime_truth import build_runtime_truth
 
@@ -1000,6 +1035,12 @@ def main() -> int:
                 out = truth.get("runtime_scalability") or {}
             print(json.dumps(out, indent=2, default=str)[:24000])
             return 0
+
+    if args.cmd == "worker-summaries":
+        page = int(getattr(args, "page", 1))
+        code, body = _req("GET", f"/api/v1/mission-control/runtime/workers/summaries?page={page}", uid=uid)
+        print(body[:24000])
+        return 0 if code == 200 else 1
 
     if args.cmd == "operational":
         if args.operational_cmd == "summary":
@@ -1032,6 +1073,21 @@ def main() -> int:
             return 0 if code == 200 else 1
         if args.governance_cmd == "summary":
             code, body = _req("GET", "/api/v1/mission-control/governance/summary", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.governance_cmd == "search":
+            q = urllib.parse.quote(str(getattr(args, "query", "") or ""))
+            code, body = _req("GET", f"/api/v1/mission-control/governance/search?q={q}", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.governance_cmd == "filter":
+            params = []
+            for k in ("kind", "actor", "provider"):
+                v = getattr(args, k, None)
+                if v:
+                    params.append(f"{k}={urllib.parse.quote(str(v))}")
+            qs = ("?" + "&".join(params)) if params else ""
+            code, body = _req("GET", f"/api/v1/mission-control/governance/filter{qs}", uid=uid)
             print(body[:24000])
             return 0 if code == 200 else 1
 

@@ -182,7 +182,100 @@ def mc_runtime_performance(app_user_id: str = Depends(get_valid_web_user_id)) ->
         "hydration_metrics": t.get("hydration_metrics") or {},
         "operational_responsiveness": t.get("operational_responsiveness") or {},
         "runtime_scalability": t.get("runtime_scalability") or {},
+        "runtime_scalability_health": t.get("runtime_scalability_health") or {},
+        "payload_discipline": t.get("payload_discipline") or {},
+        "operational_pressure": t.get("operational_pressure") or {},
+        "runtime_query_efficiency": t.get("runtime_query_efficiency") or {},
     }
+
+
+@router.get("/runtime/scalability")
+def mc_runtime_scalability(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    t = _truth_slice(app_user_id)
+    return {
+        "runtime_scalability_health": t.get("runtime_scalability_health") or {},
+        "governance_scalability": t.get("governance_scalability") or {},
+        "enterprise_operational_views": t.get("enterprise_operational_views") or {},
+        "payload_discipline": t.get("payload_discipline") or {},
+    }
+
+
+@router.get("/runtime/workers/summaries")
+def mc_runtime_worker_summaries(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(24, ge=1, le=48),
+    app_user_id: str = Depends(get_valid_web_user_id),
+) -> dict:
+    from app.services.mission_control.worker_scalability import list_worker_summaries
+
+    return list_worker_summaries(app_user_id, page=page, page_size=page_size)
+
+
+@router.get("/governance/search")
+def mc_governance_search(
+    q: str | None = Query(None),
+    limit: int = Query(24, ge=1, le=64),
+    offset: int = Query(0, ge=0),
+    _: str = Depends(get_valid_web_user_id),
+) -> dict:
+    from app.services.mission_control.governance_search import search_governance_entries
+
+    return search_governance_entries(q, limit=limit, offset=offset)
+
+
+@router.get("/governance/filter")
+def mc_governance_filter(
+    severity: str | None = Query(None),
+    actor: str | None = Query(None),
+    kind: str | None = Query(None),
+    provider: str | None = Query(None),
+    worker_id: str | None = Query(None),
+    deployment_id: str | None = Query(None),
+    category: str | None = Query(None),
+    limit: int = Query(24, ge=1, le=64),
+    offset: int = Query(0, ge=0),
+    _: str = Depends(get_valid_web_user_id),
+) -> dict:
+    from app.services.mission_control.governance_search import filter_governance_entries
+
+    return filter_governance_entries(
+        severity=severity,
+        actor=actor,
+        kind=kind,
+        provider=provider,
+        worker_id=worker_id,
+        deployment_id=deployment_id,
+        category=category,
+        limit=limit,
+        offset=offset,
+    )
+
+
+@router.get("/timeline/search")
+def mc_timeline_search(
+    q: str | None = Query(None),
+    kind: str | None = Query(None),
+    actor: str | None = Query(None),
+    limit: int = Query(24, ge=1, le=48),
+    offset: int = Query(0, ge=0),
+    _: str = Depends(get_valid_web_user_id),
+) -> dict:
+    from app.services.mission_control.runtime_timeline_hydration import search_timeline_entries
+
+    return search_timeline_entries(q, limit=limit, offset=offset, kind=kind, actor=actor)
+
+
+@router.get("/timeline/window")
+def mc_timeline_window(
+    limit: int = Query(24, ge=1, le=48),
+    offset: int = Query(0, ge=0),
+    group_by: str | None = Query(None),
+    severity: str | None = Query(None),
+    _: str = Depends(get_valid_web_user_id),
+) -> dict:
+    from app.services.mission_control.runtime_timeline_hydration import build_timeline_window
+
+    return build_timeline_window(limit=limit, offset=offset, group_by=group_by, severity=severity)
 
 
 @router.get("/operational-summary")

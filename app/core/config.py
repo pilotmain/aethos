@@ -227,6 +227,10 @@ class Settings(BaseSettings):
     aethos_truth_cache_ttl_sec: float = 30.0
     aethos_truth_slice_ttl_sec: float = 15.0
     aethos_truth_maintenance_interval_sec: float = 60.0
+    # Phase 3 Step 13 — payload discipline and scalability bounds (``AETHOS_*``).
+    aethos_truth_payload_max_bytes: int = 400_000
+    aethos_timeline_page_max: int = 48
+    aethos_worker_summary_page_size: int = 24
     aethos_plan_checkpoint_limit: int = 500
     aethos_queue_limit: int = 5000
     aethos_step_max_retries: int = 3
