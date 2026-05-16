@@ -12,7 +12,18 @@ type IntelPayload = {
 };
 
 type RecPayload = {
-  recommendations?: Array<{ kind?: string; message?: string; confidence?: number }>;
+  recommendations?: Array<{
+    kind?: string;
+    message?: string;
+    confidence?: number;
+    reason?: string;
+    suggested_next_step?: string;
+  }>;
+};
+
+type HealthPayload = {
+  overall?: string;
+  categories?: Record<string, string>;
 };
 
 type PackRow = {
@@ -29,18 +40,21 @@ export default function OperationalInsightsPage() {
   const [intel, setIntel] = useState<IntelPayload>({});
   const [recs, setRecs] = useState<RecPayload>({});
   const [packs, setPacks] = useState<PackRow[]>([]);
+  const [health, setHealth] = useState<HealthPayload>({});
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     try {
-      const [i, r, p] = await Promise.all([
+      const [i, r, p, h] = await Promise.all([
         apiFetch<IntelPayload>("/mission-control/operational-intelligence"),
         apiFetch<RecPayload>("/mission-control/runtime-recommendations"),
         apiFetch<{ packs?: PackRow[] }>("/mission-control/automation-packs"),
+        apiFetch<HealthPayload>("/mission-control/runtime/health"),
       ]);
       setIntel(i);
       setRecs(r);
       setPacks(p.packs ?? []);
+      setHealth(h);
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load");
@@ -70,7 +84,7 @@ export default function OperationalInsightsPage() {
       <div className="grid gap-3 sm:grid-cols-2 text-sm">
         <div className="rounded border border-border/50 p-4">
           <p className="text-xs uppercase text-muted-foreground">Enterprise health</p>
-          <p className="mt-1 font-medium">{intel.enterprise_operational_state?.health ?? "—"}</p>
+          <p className="mt-1 font-medium">{health.overall ?? intel.enterprise_operational_state?.health ?? "—"}</p>
         </div>
         <div className="rounded border border-border/50 p-4">
           <p className="text-xs uppercase text-muted-foreground">Active risks</p>

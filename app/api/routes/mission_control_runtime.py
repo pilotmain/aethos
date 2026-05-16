@@ -118,6 +118,45 @@ def _truth_slice(app_user_id: str) -> dict:
     return get_cached_runtime_truth(app_user_id, lambda uid: build_runtime_truth(user_id=uid))
 
 
+@router.get("/runtime/health")
+def mc_runtime_health(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    t = _truth_slice(app_user_id)
+    return t.get("enterprise_operational_health") or {}
+
+
+@router.get("/runtime/timeline")
+def mc_runtime_timeline(
+    limit: int = Query(40, ge=1, le=80),
+    app_user_id: str = Depends(get_valid_web_user_id),
+) -> dict:
+    t = _truth_slice(app_user_id)
+    return t.get("unified_operational_timeline") or {}
+
+
+@router.get("/operational-summary")
+def mc_operational_summary(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    t = _truth_slice(app_user_id)
+    return t.get("operational_summary") or {}
+
+
+@router.get("/runtime/cohesion")
+def mc_runtime_cohesion(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    t = _truth_slice(app_user_id)
+    return t.get("runtime_cohesion") or {}
+
+
+@router.get("/governance/summary")
+def mc_governance_summary(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.runtime_governance import build_governance_timeline
+
+    t = _truth_slice(app_user_id)
+    return {
+        "timeline": build_governance_timeline(limit=24),
+        "unified": t.get("unified_operational_timeline"),
+        "coordination": t.get("operational_coordination"),
+    }
+
+
 @router.get("/differentiators")
 def mc_differentiators(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
     return _truth_slice(app_user_id).get("differentiators") or {}

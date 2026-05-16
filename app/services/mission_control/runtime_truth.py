@@ -197,6 +197,14 @@ def build_runtime_truth(*, user_id: str | None = None) -> dict[str, Any]:
     truth["enterprise_operational_state"] = engine.get("enterprise_operational_state")
     truth["enterprise_runtime_panels"] = build_enterprise_runtime_panels(truth)
     truth["runtime_recommendations"] = build_runtime_recommendations(ort)
+    from app.services.mission_control.runtime_cohesion import build_runtime_cohesion_bundle
+
+    cohesion = build_runtime_cohesion_bundle(truth)
+    truth["runtime_cohesion"] = cohesion
+    truth["enterprise_operational_health"] = cohesion.get("enterprise_operational_health")
+    truth["unified_operational_timeline"] = cohesion.get("unified_timeline")
+    truth["operational_coordination"] = cohesion.get("coordination")
+    truth["operational_summary"] = cohesion.get("operational_summary")
     return truth
 
 
@@ -235,4 +243,8 @@ def build_runtime_panels_from_truth(truth: dict[str, Any]) -> dict[str, Any]:
         "differentiators": truth.get("differentiators"),
         "office_operational": truth.get("office"),
         "runtime_discipline": truth.get("runtime_discipline"),
+        "enterprise_operational_health": truth.get("enterprise_operational_health"),
+        "unified_timeline": truth.get("unified_operational_timeline"),
+        "operational_coordination": truth.get("operational_coordination"),
+        "runtime_cohesion": truth.get("runtime_cohesion"),
     }

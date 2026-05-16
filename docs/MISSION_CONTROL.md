@@ -91,6 +91,7 @@ See [ENTERPRISE_RUNTIME_CONFIDENCE.md](ENTERPRISE_RUNTIME_CONFIDENCE.md), [OPERA
 - **Mission Control → Workspace** (secondary nav) — projects, risk, research continuity.
 - **`GET /mission-control/runtime-recommendations`**, **`/enterprise-runtime`**, **`POST /automation-packs/{id}/run`** — Step 10 enterprise intelligence.
 - **Mission Control → Insights** — operational intelligence, recommendations, pack run (operator-triggered).
+- **Step 11 cohesion** — `GET /runtime/health`, `/runtime/timeline`, `/operational-summary`, `/runtime/cohesion`, `/governance/summary`; all views derive from cached `build_runtime_truth()`.
 - **Readable summaries** on truth: `readable_summaries` (repairs, provider actions, health sentence).
 - **CEO** (`/mission-control/ceo`) deprecated in favor of Office.
 

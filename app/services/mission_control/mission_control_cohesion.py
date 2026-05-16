@@ -27,6 +27,14 @@ _REQUIRED_TRUTH_KEYS = frozenset(
         "readable_summaries",
         "runtime_workers",
         "runtime_confidence",
+        "runtime_cohesion",
+        "enterprise_operational_health",
+        "unified_operational_timeline",
+        "operational_coordination",
+        "runtime_recommendations",
+        "workspace_intelligence",
+        "operational_risk",
+        "automation_pack_runtime",
     }
 )
 

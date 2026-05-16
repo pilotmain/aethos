@@ -374,6 +374,17 @@ def main() -> int:
     sp_env_show = env_sub.add_parser("show", help="GET /api/v1/environments/{id}")
     sp_env_show.add_argument("environment_id")
 
+    sp_runtime = sub.add_parser("runtime", help="Unified runtime cohesion (Phase 3 Step 11)")
+    rt_sub = sp_runtime.add_subparsers(dest="runtime_cmd", required=True)
+    rt_sub.add_parser("health", help="GET /api/v1/mission-control/runtime/health")
+    rt_sub.add_parser("timeline", help="GET /api/v1/mission-control/runtime/timeline")
+    rt_sub.add_parser("recommendations", help="GET /api/v1/mission-control/runtime-recommendations")
+    rt_sub.add_parser("workers", help="GET /api/v1/mission-control/runtime-workers")
+
+    sp_opsum = sub.add_parser("operational", help="Operational summary (Phase 3 Step 11)")
+    op_sub = sp_opsum.add_subparsers(dest="operational_cmd", required=True)
+    op_sub.add_parser("summary", help="GET /api/v1/mission-control/operational-summary")
+
     sp_intel = sub.add_parser("intelligence", help="Operational intelligence (Phase 3 Step 10)")
     intel_sub = sp_intel.add_subparsers(dest="intelligence_cmd", required=True)
     intel_sub.add_parser("summary", help="GET /api/v1/mission-control/operational-intelligence")
@@ -385,6 +396,7 @@ def main() -> int:
     gov_sub = sp_gov.add_subparsers(dest="governance_cmd", required=True)
     gov_sub.add_parser("timeline", help="GET /api/v1/mission-control/governance")
     gov_sub.add_parser("risks", help="GET /api/v1/mission-control/governance/risks")
+    gov_sub.add_parser("summary", help="GET /api/v1/mission-control/governance/summary")
 
     sp_mkt = sub.add_parser("marketplace", help="Marketplace automation packs")
     mkt_sub = sp_mkt.add_subparsers(dest="marketplace_cmd", required=True)
@@ -396,6 +408,7 @@ def main() -> int:
     ws_sub = sp_workspace.add_subparsers(dest="workspace_cmd", required=True)
     ws_sub.add_parser("summary", help="GET /api/v1/mission-control/workspace-intelligence")
     ws_sub.add_parser("risks", help="GET /api/v1/mission-control/workspace-risks")
+    ws_sub.add_parser("health", help="GET /api/v1/mission-control/runtime/health (enterprise categories)")
     sp_ws_chains = ws_sub.add_parser("research-chains", help="GET …/research-chains")
     sp_ws_chains.add_argument("--project-id", default=None, dest="project_id")
 
@@ -934,6 +947,30 @@ def main() -> int:
             print(body[:24000])
             return 0 if code == 200 else 1
 
+    if args.cmd == "runtime":
+        if args.runtime_cmd == "health":
+            code, body = _req("GET", "/api/v1/mission-control/runtime/health", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.runtime_cmd == "timeline":
+            code, body = _req("GET", "/api/v1/mission-control/runtime/timeline", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.runtime_cmd == "recommendations":
+            code, body = _req("GET", "/api/v1/mission-control/runtime-recommendations", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.runtime_cmd == "workers":
+            code, body = _req("GET", "/api/v1/mission-control/runtime-workers", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+
+    if args.cmd == "operational":
+        if args.operational_cmd == "summary":
+            code, body = _req("GET", "/api/v1/mission-control/operational-summary", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+
     if args.cmd == "intelligence":
         if args.intelligence_cmd == "summary":
             code, body = _req("GET", "/api/v1/mission-control/operational-intelligence", uid=uid)
@@ -957,6 +994,10 @@ def main() -> int:
             code, body = _req("GET", "/api/v1/mission-control/governance/risks", uid=uid)
             print(body[:24000])
             return 0 if code == 200 else 1
+        if args.governance_cmd == "summary":
+            code, body = _req("GET", "/api/v1/mission-control/governance/summary", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
 
     if args.cmd == "marketplace":
         if args.marketplace_cmd == "packs":
@@ -976,6 +1017,10 @@ def main() -> int:
             return 0 if code == 200 else 1
         if args.workspace_cmd == "risks":
             code, body = _req("GET", "/api/v1/mission-control/workspace-risks", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.workspace_cmd == "health":
+            code, body = _req("GET", "/api/v1/mission-control/runtime/health", uid=uid)
             print(body[:24000])
             return 0 if code == 200 else 1
         if args.workspace_cmd == "research-chains":

@@ -85,6 +85,37 @@ def record_timeline_build(*, entry_count: int, duration_ms: float) -> None:
     save_runtime_state(st)
 
 
+def record_discipline_counter(name: str, *, detail: str = "") -> None:
+    st = load_runtime_state()
+    m = st.setdefault("runtime_discipline_metrics", {})
+    if not isinstance(m, dict):
+        m = {}
+        st["runtime_discipline_metrics"] = m
+    counters = m.setdefault("counters", {})
+    if isinstance(counters, dict):
+        counters[name] = int(counters.get(name) or 0) + 1
+    if detail:
+        tail = m.setdefault("counter_details", [])
+        if isinstance(tail, list):
+            tail.append({"name": name, "detail": detail[:200], "at": utc_now_iso()})
+            if len(tail) > 24:
+                del tail[: len(tail) - 24]
+    save_runtime_state(st)
+
+
+def record_event_collapse(*, raw_count: int, collapsed_count: int) -> None:
+    st = load_runtime_state()
+    m = st.setdefault("runtime_discipline_metrics", {})
+    if not isinstance(m, dict):
+        return
+    prevented = max(0, raw_count - collapsed_count)
+    m["last_event_raw_count"] = raw_count
+    m["last_event_collapsed_count"] = collapsed_count
+    m["last_event_collapse_rate"] = round(prevented / max(1, raw_count), 4)
+    m["operational_duplication_prevented"] = int(m.get("operational_duplication_prevented") or 0) + prevented
+    save_runtime_state(st)
+
+
 def approx_payload_bytes(truth: dict[str, Any]) -> int:
     try:
         return len(json.dumps(truth, default=str))

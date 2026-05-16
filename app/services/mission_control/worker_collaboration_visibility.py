@@ -36,3 +36,23 @@ def build_worker_collaboration_chains(*, limit: int = 8) -> list[dict[str, Any]]
             }
         )
     return chains
+
+
+def build_worker_collaboration_chains_enriched(truth: dict[str, Any] | None = None, *, limit: int = 8) -> list[dict[str, Any]]:
+    """Full collaboration chain: orchestrator → worker → continuation → deliverable → governance."""
+    truth = truth or {}
+    chains = build_worker_collaboration_chains(limit=limit)
+    recs = (truth.get("runtime_recommendations") or {}).get("recommendations") or []
+    for ch in chains:
+        ch["chain"] = [
+            "aethos_orchestrator",
+            "runtime_worker",
+            "continuation",
+            "deployment_repair_research",
+            "provider_tool",
+            "deliverable",
+            "recommendation_governance",
+        ]
+        if recs:
+            ch["latest_recommendation"] = recs[0] if isinstance(recs[0], dict) else None
+    return chains

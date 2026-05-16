@@ -237,4 +237,11 @@ def aggregate_events_for_display(
             out = [r for r in out if _severity_rank(str(r.get("severity"))) >= 1 or int(r.get("count") or 1) > 2]
     out = prioritize_events(out)
     lim = max(1, min(int(limit), 120))
-    return out[:lim]
+    result = out[:lim]
+    try:
+        from app.services.mission_control.runtime_metrics_discipline import record_event_collapse
+
+        record_event_collapse(raw_count=len(rows), collapsed_count=len(result))
+    except Exception:
+        pass
+    return result
