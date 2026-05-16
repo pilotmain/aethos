@@ -220,6 +220,9 @@ async def subagent_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
                 "Orchestration agents (sub-agents)\n\n"
                 "• /subagent list — roster + success rate\n"
                 "• /subagent create <name> <domain> — spawn in this chat (Telegram scope)\n"
+                "• /subagent show <name> — runtime truth (tasks, outputs)\n"
+                "• /subagent tasks <name> — assigned tasks\n"
+                "• /subagent results <name> — latest result\n"
                 "• /subagent status <name> — details\n"
                 "• /subagent pause <name>\n"
                 "• /subagent resume <name>\n"
@@ -343,7 +346,7 @@ async def subagent_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 
         if len(args) < 2:
             await update.message.reply_text(
-                "Usage: /subagent <list|create|status|pause|resume|delete> … "
+                "Usage: /subagent <list|create|show|tasks|results|status|pause|resume|delete> … "
                 "(create needs name + domain)"
             )
             return
@@ -359,6 +362,30 @@ async def subagent_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
                 f"No orchestration agent named '{name}' for this chat/account "
                 f"(checked Telegram scope and your API/Mission Control workspace)."
             )
+            return
+
+        if sub in ("show", "results"):
+            from app.runtime.agent_work_state import find_runtime_agent_by_registry_id
+            from app.services.agent_runtime_truth import format_agent_status_reply
+
+            rt = find_runtime_agent_by_registry_id(agent.id)
+            reply = format_agent_status_reply(agent.name, sub=agent, runtime=rt)
+            await update.message.reply_text(reply[:9000])
+            return
+
+        if sub == "tasks":
+            from app.runtime.agent_work_state import find_runtime_agent_by_registry_id, list_tasks_for_agent
+
+            rt = find_runtime_agent_by_registry_id(agent.id)
+            aid = str((rt or {}).get("agent_id") or "")
+            tasks = list_tasks_for_agent(aid) if aid else []
+            if not tasks:
+                await update.message.reply_text(f"@{agent.name} has no tracked tasks yet.")
+                return
+            lines = [f"Tasks for @{agent.name}:", ""]
+            for t in tasks:
+                lines.append(f"• {t.get('task_id')} — {t.get('state')} — {(t.get('prompt') or '')[:120]}")
+            await update.message.reply_text("\n".join(lines)[:9000])
             return
 
         if sub == "status":

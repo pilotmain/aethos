@@ -54,6 +54,13 @@ Events are aggregated for display (`aggregate_events_for_display`) to collapse r
 
 Events use categorized shape: `event_type`, `category`, `severity`, `correlation_id` (see [RUNTIME_EVENTS.md](RUNTIME_EVENTS.md)).
 
+## Phase 3 Step 6 — orchestrator agent visibility
+
+- Registry spawns link to **runtime workers** (`runtime_agent_handles`, `agent_outputs`, `task_registry`).
+- Chat answers agent result questions from **runtime truth** (never "no visibility" for created agents).
+- `/subagent show|tasks|results` and gateway routing via `agent_runtime_truth.py`.
+- See [SUBAGENT_RUNTIME_UNIFICATION_AUDIT.md](SUBAGENT_RUNTIME_UNIFICATION_AUDIT.md).
+
 ## Phase 3 Step 5 — commercial readiness
 
 - **`GET /mission-control/runtime-confidence`** — uptime, restarts, 24h failures, stability, provider/repair/deployment confidence, onboarding checks, cost estimates.

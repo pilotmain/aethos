@@ -811,6 +811,12 @@ class NexaGateway:
         if inter_ag is not None:
             return inter_ag
 
+        from app.services.agent_runtime_truth import try_agent_runtime_truth_gateway_turn
+
+        agent_truth = try_agent_runtime_truth_gateway_turn(gctx, raw_gate, db_inner)
+        if agent_truth is not None:
+            return agent_truth
+
         orch = try_sub_agent_gateway_turn(gctx, raw_gate, db_inner)
         if orch is not None:
             return orch
@@ -1017,6 +1023,12 @@ class NexaGateway:
                 raw_user_text=raw,
                 payload=cred_full,
             )
+
+        from app.services.agent_runtime_truth import try_agent_runtime_truth_gateway_turn
+
+        agent_truth = try_agent_runtime_truth_gateway_turn(gctx, raw, db)
+        if agent_truth is not None:
+            return agent_truth
 
         if nexa_llm_first_gateway_active():
             # Co-pilot next-step parsing must not intercept general NL; see ``next_action_confirmation``
@@ -1514,6 +1526,12 @@ class NexaGateway:
             inter_ag = try_inter_agent_gateway_turn(gctx, raw_gate, db_inner)
             if inter_ag is not None:
                 return inter_ag
+
+            from app.services.agent_runtime_truth import try_agent_runtime_truth_gateway_turn
+
+            agent_truth = try_agent_runtime_truth_gateway_turn(gctx, raw_gate, db_inner)
+            if agent_truth is not None:
+                return agent_truth
 
             from app.services.sub_agent_router import try_sub_agent_gateway_turn
 

@@ -126,6 +126,26 @@ class AgentExecutor:
 
         t0 = time.perf_counter()
         self.registry.update_status(agent.id, AgentStatus.BUSY)
+        task_id: str | None = None
+        runtime_id: str | None = None
+        try:
+            from app.runtime.agent_work_state import (
+                create_agent_task,
+                find_runtime_agent_by_registry_id,
+                record_agent_output,
+            )
+
+            rt = find_runtime_agent_by_registry_id(agent.id)
+            if rt:
+                runtime_id = str(rt.get("agent_id"))
+                task_id = create_agent_task(
+                    runtime_agent_id=runtime_id,
+                    agent_handle=agent.name,
+                    prompt=msg,
+                    registry_agent_id=agent.id,
+                )
+        except Exception:
+            logger.debug("agent task tracking setup skipped", exc_info=True)
         try:
             out = self._dispatch(
                 agent, msg, chat_id, db=db, user_id=user_id, web_session_id=web_session_id
@@ -174,6 +194,19 @@ class AgentExecutor:
                 duration_ms=dur_ms,
                 metadata={"chat_id": chat_id, "user_id": user_id},
             )
+            if task_id and runtime_id:
+                try:
+                    from app.runtime.agent_work_state import record_agent_output
+
+                    record_agent_output(
+                        runtime_agent_id=runtime_id,
+                        task_id=task_id,
+                        summary=(out or "")[:500],
+                        content=out or "",
+                        success=True,
+                    )
+                except Exception:
+                    logger.debug("agent output record skipped", exc_info=True)
             return out
         except Exception as exc:
             dur_ms = (time.perf_counter() - t0) * 1000.0
@@ -189,6 +222,19 @@ class AgentExecutor:
                 error=str(exc)[:2000],
                 duration_ms=dur_ms,
             )
+            if task_id and runtime_id:
+                try:
+                    from app.runtime.agent_work_state import record_agent_output
+
+                    record_agent_output(
+                        runtime_agent_id=runtime_id,
+                        task_id=task_id,
+                        summary=str(exc)[:500],
+                        content="",
+                        success=False,
+                    )
+                except Exception:
+                    logger.debug("agent failure record skipped", exc_info=True)
             get_activity_tracker().log_action(
                 agent_id=agent.id,
                 agent_name=agent.name,

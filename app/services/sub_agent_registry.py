@@ -293,6 +293,17 @@ class AgentRegistry:
             get_observability().record_metric("agent.spawn", 1.0, "count", {"domain": dom})
         except Exception:
             pass
+        try:
+            from app.runtime.agent_work_state import link_registry_agent_to_runtime
+
+            link_registry_agent_to_runtime(
+                registry_agent_id=agent_id,
+                name=name,
+                domain=domain,
+                created_by="aethos_orchestrator",
+            )
+        except Exception:
+            logger.debug("runtime worker link on spawn skipped", exc_info=True)
         return agent
 
     def get_agent(self, agent_id: str) -> SubAgent | None:

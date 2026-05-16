@@ -22,12 +22,17 @@ def build_runtime_workers_view(user_id: str | None = None) -> dict[str, Any]:
         chain = chains.get(aid) or {}
         enriched = {
             "agent_id": aid,
+            "handle": row.get("handle"),
+            "display_name": row.get("display_name"),
             "role": row.get("role") or row.get("agent_type"),
             "persistent": bool(row.get("persistent")),
             "status": row.get("status") or row.get("lifecycle"),
             "provider": row.get("provider"),
             "model": row.get("model"),
             "assignment": row.get("assignment"),
+            "current_task_id": row.get("current_task_id"),
+            "latest_output_id": row.get("latest_output_id"),
+            "created_by": row.get("created_by"),
             "last_activity": row.get("last_activity"),
             "ownership_chain": {
                 "task_id": chain.get("task_id"),

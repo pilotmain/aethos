@@ -339,6 +339,14 @@ class AgentRouter:
         if not bool(getattr(get_settings(), "nexa_agent_orchestration_enabled", False)):
             return {"handled": False}
 
+        from app.services.agent_runtime_truth import try_route_agent_status_query
+
+        status_q = try_route_agent_status_query(
+            user_input, chat_id, user_id=user_id, db=db
+        )
+        if status_q and status_q.get("handled"):
+            return status_q
+
         mention = self._parse_mention(user_input)
         if mention is not None:
             agent_name, clean_message = mention

@@ -167,6 +167,9 @@ def build_runtime_truth(*, user_id: str | None = None) -> dict[str, Any]:
 
     truth["readable_summaries"] = build_readable_summaries(truth)
     truth["runtime_workers"] = build_runtime_workers_view(uid)
+    from app.services.agent_runtime_truth import build_agent_visibility_for_truth
+
+    truth["agent_visibility"] = build_agent_visibility_for_truth()
     return truth
 
 
