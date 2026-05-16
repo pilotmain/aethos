@@ -1,4 +1,4 @@
-# Runtime deprecations (Phase 3 Step 3)
+# Runtime deprecations (Phase 3 Step 3–16)
 
 ## Deprecated patterns (do not extend)
 
@@ -8,6 +8,16 @@
 | Direct `office_topology()` for MC Office API | `GET /mission-control/office` → `build_office_operational_view` |
 | `build_runtime_panels` calling `build_runtime_truth` uncached | `_truth()` cache |
 | Fake permanent agents beyond orchestrator | Dynamic workers with `persistent: false` |
+
+## Step 16 locked paths
+
+See `app/services/mission_control/runtime_cleanup_completion.py` → `DEPRECATED_RUNTIME_PATHS`.
+
+| Path | Replacement |
+|------|-------------|
+| `build_runtime_truth_full` | `hydrate_runtime_truth_incremental` |
+| Parallel governance timelines | `build_unified_governance_timeline` |
+| Uncached MC truth rebuilds | `get_cached_runtime_truth` |
 
 ## Not deprecated (parity)
 

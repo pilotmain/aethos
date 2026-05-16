@@ -99,20 +99,22 @@ def build_operational_summary(truth: dict[str, Any]) -> dict[str, Any]:
 
 
 def build_runtime_cleanup_progression() -> dict[str, Any]:
-    """Measurable cleanup targets — Steps 11–15."""
+    """Measurable cleanup targets — Steps 11–16 (final lock)."""
+    from app.services.mission_control.runtime_cleanup_completion import build_cleanup_completion
+
+    base = build_cleanup_completion()
     return {
-        "duplicate_truth_builders": "consolidated — build_runtime_truth → hydrate_runtime_truth_incremental",
-        "parallel_intelligence": "consolidated — operational_intelligence_engine",
-        "legacy_ui_paths": "secondary nav; primary: Office + Runtime overview",
-        "disconnected_worker_state": "resolved — unified_worker_state on truth",
-        "duplicate_timelines": "resolved — build_unified_governance_timeline authoritative",
-        "fragmented_trust": "resolved — enterprise_operator_experience bundle",
-        "progress_score": 0.92,
-        "notes": [
-            "All MC APIs should call get_cached_runtime_truth → build_runtime_truth",
-            "Panels derive via build_runtime_panels_from_truth or enterprise_runtime_views",
-            "Prefer /runtime/overview over duplicate aggregators",
-        ],
+        "duplicate_truth_builders": "locked — hydrate_runtime_truth_incremental only",
+        "parallel_intelligence": "locked — operational_intelligence_engine",
+        "legacy_ui_paths": "Office + runtime-overview primary; CEO deprecated",
+        "disconnected_worker_state": "locked — unified_worker_state",
+        "duplicate_timelines": "locked — build_unified_governance_timeline",
+        "fragmented_trust": "locked — enterprise_operator_experience",
+        "truth_lock": "locked — runtime_truth_lock.validate_truth_discipline",
+        "progress_score": base.get("cleanup_completion_percentage", 0.97),
+        "cleanup_locked": base.get("locked"),
+        "notes": base.get("cleanup_remaining_surface_area"),
+        "deprecated_paths": base.get("deprecated_runtime_paths"),
     }
 
 

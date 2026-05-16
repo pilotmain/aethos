@@ -441,6 +441,38 @@ def hydrate_runtime_truth_incremental(*, user_id: str | None = None) -> dict[str
     truth["enterprise_operator_experience"] = build_enterprise_operator_experience(truth, user_id=uid)
     truth["enterprise_runtime_views"] = build_enterprise_runtime_views(truth)
     truth["runtime_overview"] = build_runtime_overview(truth)
+    from app.services.mission_control.enterprise_readiness import build_enterprise_readiness
+    from app.services.mission_control.governance_completion import (
+        build_escalation_operational_summary,
+        build_governance_operational_summary,
+        build_runtime_accountability_summary,
+    )
+    from app.services.mission_control.operational_calmness_lock import build_calmness_lock
+    from app.services.mission_control.operational_performance_completion import (
+        build_operational_performance_completion,
+    )
+    from app.services.mission_control.production_hardening import verify_production_bounds
+    from app.services.mission_control.runtime_cleanup_completion import build_cleanup_completion
+    from app.services.mission_control.runtime_discipline_completion import (
+        build_operational_signal_health,
+        build_runtime_discipline_completion,
+        build_simplification_progress,
+    )
+    from app.services.mission_control.runtime_truth_lock import build_truth_lock_status
+
+    truth.update(build_enterprise_readiness(truth))
+    truth["enterprise_readiness"] = build_enterprise_readiness(truth)
+    truth["truth_lock"] = build_truth_lock_status(truth)
+    truth["production_hardening"] = verify_production_bounds(truth)
+    truth["runtime_discipline_completion"] = build_runtime_discipline_completion(truth)
+    truth["simplification_progress"] = build_simplification_progress()
+    truth["operational_signal_health"] = build_operational_signal_health(truth)
+    truth["operational_performance_completion"] = build_operational_performance_completion(truth)
+    truth["calmness_lock"] = build_calmness_lock(truth)
+    truth["governance_operational_summary"] = build_governance_operational_summary(truth)
+    truth["runtime_accountability_summary"] = build_runtime_accountability_summary(truth)
+    truth["escalation_operational_summary"] = build_escalation_operational_summary(truth)
+    truth["cleanup_completion"] = build_cleanup_completion()
     return truth
 
 

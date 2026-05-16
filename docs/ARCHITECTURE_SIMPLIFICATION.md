@@ -3,9 +3,9 @@
 ```text
 runtime state (aethos.json)
         ↓
-build_runtime_truth()  ← single authoritative builder
+build_runtime_truth() → hydrate_runtime_truth_incremental()  ← locked authority
         ↓
-runtime_truth_cache (5s)
+runtime_truth_cache (30s default) + slice cache
         ↓
 ┌───────────────────┬────────────────────┬─────────────────┐
 │ Mission Control   │ Office operational │ Differentiators │

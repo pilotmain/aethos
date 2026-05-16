@@ -5,10 +5,16 @@ import Link from "next/link";
 
 import { apiFetch } from "@/lib/api/client";
 
+type ReadinessPayload = {
+  runtime_readiness_score?: number;
+  enterprise_readiness?: { enterprise_ready?: boolean; production_grade?: boolean };
+};
+
 type OverviewPayload = {
   headline?: string;
   trust_score?: number;
   calm_score?: number;
+  runtime_readiness_score?: number;
   identity?: { orchestrator_label?: string; health_label?: string; trust_label?: string };
   pressure?: { level?: string; queue_pressure?: boolean };
   narrative_preview?: string;
@@ -27,11 +33,12 @@ export default function RuntimeOverviewPage() {
 
   const refresh = useCallback(async () => {
     try {
-      const [o, c] = await Promise.all([
+      const [o, c, r] = await Promise.all([
         apiFetch<OverviewPayload>("/mission-control/runtime/overview"),
         apiFetch<CalmPayload>("/mission-control/runtime/calmness"),
+        apiFetch<ReadinessPayload>("/mission-control/runtime/readiness"),
       ]);
-      setOverview(o);
+      setOverview({ ...o, runtime_readiness_score: r.runtime_readiness_score ?? o.runtime_readiness_score });
       setCalm(c);
       setError(null);
     } catch (e) {
@@ -56,6 +63,11 @@ export default function RuntimeOverviewPage() {
         </p>
       </header>
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
+      {overview.runtime_readiness_score != null ? (
+        <p className="text-sm text-muted-foreground">
+          Enterprise readiness score: <span className="font-medium text-foreground">{overview.runtime_readiness_score.toFixed(2)}</span>
+        </p>
+      ) : null}
       <section className="grid gap-3 sm:grid-cols-3">
         <div className="rounded-lg border border-border/50 px-4 py-3">
           <p className="text-xs uppercase text-muted-foreground">Trust</p>

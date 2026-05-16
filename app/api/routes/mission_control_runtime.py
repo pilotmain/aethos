@@ -265,6 +265,46 @@ def mc_timeline_search(
     return search_timeline_entries(q, limit=limit, offset=offset, kind=kind, actor=actor)
 
 
+@router.get("/runtime/readiness")
+def mc_runtime_readiness(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    t = _truth_slice(app_user_id)
+    return {
+        "enterprise_readiness": t.get("enterprise_readiness") or {},
+        "runtime_readiness_score": t.get("runtime_readiness_score"),
+        "operational_readiness": t.get("operational_readiness") or {},
+        "deployment_readiness": t.get("deployment_readiness") or {},
+        "governance_readiness": t.get("governance_readiness") or {},
+        "scalability_readiness": t.get("scalability_readiness") or {},
+    }
+
+
+@router.get("/runtime/truth-lock")
+def mc_runtime_truth_lock(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    t = _truth_slice(app_user_id)
+    return t.get("truth_lock") or {}
+
+
+@router.get("/operational-readiness")
+def mc_operational_readiness(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    t = _truth_slice(app_user_id)
+    return {
+        "operational_readiness": t.get("operational_readiness") or {},
+        "production_hardening": t.get("production_hardening") or {},
+        "calmness_lock": t.get("calmness_lock") or {},
+        "runtime_discipline_completion": t.get("runtime_discipline_completion") or {},
+    }
+
+
+@router.get("/governance/accountability")
+def mc_governance_accountability(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    t = _truth_slice(app_user_id)
+    return {
+        "governance_operational_summary": t.get("governance_operational_summary") or {},
+        "runtime_accountability_summary": t.get("runtime_accountability_summary") or {},
+        "escalation_operational_summary": t.get("escalation_operational_summary") or {},
+    }
+
+
 @router.get("/runtime/overview")
 def mc_runtime_overview(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
     t = _truth_slice(app_user_id)

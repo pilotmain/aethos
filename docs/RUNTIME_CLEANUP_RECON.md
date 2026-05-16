@@ -20,7 +20,17 @@
 - Duplicate timeline consolidation via `build_unified_governance_timeline`
 - Cleanup progression score 0.92
 
-## Remaining (post–Step 15)
+## Completed (Step 16 — final lock)
+
+- `runtime_truth_lock` — single authority validation
+- `enterprise_readiness` / `runtime_readiness_score` on truth
+- `production_hardening` bounds verification
+- `runtime_discipline_completion` + `calmness_lock`
+- Governance accountability summaries on truth
+- `cleanup_completion_percentage` 0.97 — **locked**
+- Deprecated paths catalog in `runtime_cleanup_completion.py`
+
+## Remaining (post–Step 16)
 
 | Location | Notes |
 |----------|--------|
