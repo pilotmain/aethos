@@ -161,7 +161,7 @@ Only after Phase 1 is verified:
 
 ## Phase 1 operational confidence lock
 
-Phase 1 architecture/runtime parity is treated as **complete**; remaining work is **confidence, stability, boundedness, and consistency** (see [OPENCLAW_FINAL_PARITY_AUDIT.md](OPENCLAW_FINAL_PARITY_AUDIT.md)). Additive tests only: `tests/production_like/` (churn, **≥100**-cycle gates, boundedness observed-maxima certification, save/load cycles, deployment/rollback/lock integrity), `tests/edge_cases/`, `tests/soak/`, `tests/openclaw_behavioral_validation/`, `tests/parity_freeze_gate.py`, and `tests/test_openclaw_{reliability,continuity,warning}_consistency.py` / snapshot / CLI visibility freeze tests for deterministic reads.
+Phase 1 architecture/runtime parity is treated as **complete**; remaining work is **certification, consistency, boundedness, and operational trustworthiness** (see [OPENCLAW_FINAL_PARITY_AUDIT.md](OPENCLAW_FINAL_PARITY_AUDIT.md), including **Phase 1 final operational certification (closure)** for suite totals and boundedness metrics). Additive tests only: `tests/production_like/` (churn, **≥100**-cycle gates, boundedness observed-maxima certification, save/load cycles, deployment/rollback/lock integrity), `tests/edge_cases/`, `tests/soak/`, `tests/openclaw_behavioral_validation/`, `tests/parity_freeze_gate.py`, and `tests/test_openclaw_{reliability,continuity,warning}_consistency.py` / snapshot / CLI visibility freeze tests for deterministic reads.
 
 ---
 

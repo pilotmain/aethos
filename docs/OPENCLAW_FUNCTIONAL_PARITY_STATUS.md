@@ -26,7 +26,7 @@ This document is a **point-in-time implementation status** snapshot (update when
 | Orchestration runtime tests (`tests/test_openclaw_task_*.py`, `tests/test_openclaw_scheduler.py`, `tests/test_openclaw_queue_*.py`, `tests/test_openclaw_agent_runtime.py`, `tests/test_openclaw_orchestration_recovery.py`, `tests/test_openclaw_deployment_recovery.py`, `tests/test_openclaw_runtime_dispatcher.py`) | Passing |
 | Autonomous execution tests (`tests/test_openclaw_execution_*.py`, `tests/test_openclaw_autonomous_execution.py`) | Passing |
 | Doctrine tests (`tests/test_openclaw_doctrine_docs.py`) | Passing |
-| Phase 1 confidence + **transition gate** (`tests/parity_freeze_gate.py`, `tests/production_like/`, `tests/edge_cases/`, snapshot + CLI freeze tests) | Passing (see [OPENCLAW_FINAL_PARITY_AUDIT.md](OPENCLAW_FINAL_PARITY_AUDIT.md)) |
+| **Phase 1 final operational certification** (closure totals + boundedness table in [OPENCLAW_FINAL_PARITY_AUDIT.md](OPENCLAW_FINAL_PARITY_AUDIT.md)) | Documented; local suites **142** (`test_openclaw_*`) + **27** (`production_like`) + **8** (`edge_cases`) + **9** (behavioral) + **6** (soak) + **13** (OpenClaw e2e slice); combined **177** passed `test_openclaw_*`+`production_like`+`edge_cases` |
 | CLI parity surface | Operational (`aethos onboard`, `gateway`, `message send`, `status`, `logs`, `doctor`) |
 
 ---

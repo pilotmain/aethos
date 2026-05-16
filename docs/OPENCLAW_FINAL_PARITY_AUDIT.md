@@ -39,11 +39,11 @@ Snapshot and CLI expose **derived rates**: `restart_recovery_success_rate`, `dep
 - **Repeated queue repair** — `repair_runtime_queues_and_metrics` **≥100×**; integrity OK (`tests/parity_freeze_gate.repeated_cycles`).
 - **Repeated deployment / rollback recovery** — boot recovery and rollback completion loops **≥100** where applicable; high-volume tests widen `AETHOS_RUNTIME_EVENT_BUFFER_LIMIT` via `widen_runtime_event_buffer()` so lifecycle events do not trip the default 500 cap.
 - **Concurrent cleanup + recovery** — interleaved `cleanup_runtime_state` and `recover_deployments_on_boot` (**≥100** outer cycles).
-- **Boundedness certification** — `tests/production_like/test_boundedness_observed_maxima_certification.py` asserts observed maxima stay under configured caps (queue depth, artifact list, checkpoint list, runtime event buffer) after churn.
+- **Boundedness certification** — `tests/production_like/test_boundedness_observed_maxima_certification.py` asserts observed maxima for queues, artifacts, checkpoints, runtime event buffer, **quarantine**, **planning_outcomes**, **retry / backup metrics**, and backup file listing caps after churn.
 - **Deployment transition gate** — `tests/production_like/test_phase1_gate_100_deployment_transitions.py` asserts **≥100** deployment stage transitions via bootstrap prefixes.
 - **Large churn** (`AETHOS_CHURN_LARGE=1`) — scales `repeated_cycles()` upper bounds for dispatch, boot, queue, retry, deployment, and agent assignment loops.
 
-**Latest automated spot-check (local, representative):** `USE_REAL_LLM=false NEXA_PYTEST=1 pytest tests/test_openclaw_*.py` — **141 passed**; `pytest tests/production_like/ tests/edge_cases/` — **35 passed**; collect-only: `tests/production_like` **27**, `tests/edge_cases` **8**, `tests/test_openclaw_*.py` **141** (CI remains authoritative for full `pytest` on PRs).
+**Latest automated spot-check (local, representative):** `USE_REAL_LLM=false NEXA_PYTEST=1 pytest tests/test_openclaw_*.py` — **142 passed**; `pytest tests/production_like/ tests/edge_cases/` — **35 passed**; `pytest tests/soak/` — **6 passed**; `pytest tests/openclaw_behavioral_validation/` — **9 passed**; OpenClaw e2e slice (`parity_workflows` + `operator_outcomes` + `runtime_stress`) — **13 passed**; collect-only: `tests/production_like` **27**, `tests/edge_cases` **8**, `tests/test_openclaw_*.py` **142** (CI remains authoritative for full `pytest` on PRs).
 
 ## Phase 1 final freeze certification (transition gate)
 
@@ -62,14 +62,7 @@ Shared helper: `tests/parity_freeze_gate.py` (`MIN_REPEATED_CYCLES`, `repeated_c
 
 ### Boundedness certification (observed maxima under caps)
 
-Certification test (`test_boundedness_observed_maxima_certification`) records **max queue depth** across named queues, **artifact list length**, **checkpoint list length**, and **runtime event buffer length** during churn, then asserts:
-
-- `max_queue_depth ≤ aethos_queue_limit` (test uses `AETHOS_QUEUE_LIMIT=200`),
-- `artifacts ≤ aethos_task_artifact_limit` (default **200**),
-- `checkpoints ≤ min(120, aethos_plan_checkpoint_limit)` (lifecycle trims checkpoint history to **120**),
-- `runtime_event_buffer ≤ aethos_runtime_event_buffer_limit` (widened to **25000** during churn tests that emit many lifecycle events).
-
-Backups / quarantine / planning retention remain covered by existing retention and resilience tests; exact on-disk backup file counts remain environment-dependent.
+See **Phase 1 final operational certification (closure)** → *Boundedness metrics* for the full observed-maxima table (queues, artifacts, checkpoints, buffer, quarantine, planning outcomes, retry/backup counters, on-disk backup listing).
 
 ### Phase 2 MUST NOT begin until
 
@@ -80,6 +73,42 @@ Backups / quarantine / planning retention remain covered by existing retention a
 
 **Allowed after gate:** privacy layers, PII filtering, local-first isolation, security-focused sandboxing, and privacy-preserving telemetry — **without** changing Phase 1 default OpenClaw-equivalent runtime semantics unless required for security.
 
+## Phase 1 final operational certification (closure)
+
+**Certification statement (local JSON runtime):** Phase 1 is treated as **operationally certified** for sustained churn when `python -m compileall -q app aethos_cli tests/parity_freeze_gate.py` succeeds and the suites in **How to verify** pass under `USE_REAL_LLM=false NEXA_PYTEST=1` (or CI equivalent). This certifies **bounded growth**, **≥100 repetition** targets via `tests/parity_freeze_gate.py`, **deterministic** reliability/continuity/snapshot reads, and **CLI / Mission Control data** sufficiency for triage without raw JSON—not multi-day wall-clock soak (still operator-driven).
+
+### Certification totals (latest representative local batch)
+
+| Suite | Collected | Passed (same run) |
+| --- | ---: | ---: |
+| `tests/test_openclaw_*.py` | 142 | **142** |
+| `tests/production_like/` | 27 | **27** |
+| `tests/edge_cases/` | 8 | **8** |
+| `tests/openclaw_behavioral_validation/` | 9 | **9** |
+| `tests/soak/` | 6 | **6** |
+| `tests/e2e/openclaw_parity_workflows/` + `openclaw_operator_outcomes/` + `openclaw_runtime_stress/` | 13 | **13** |
+| **Combined spot-check** | — | `pytest tests/test_openclaw_*.py tests/production_like/ tests/edge_cases/` → **177 passed** |
+
+### Boundedness metrics (`test_boundedness_observed_maxima_certification`)
+
+Under `AETHOS_QUEUE_LIMIT=200` and widened `AETHOS_RUNTIME_EVENT_BUFFER_LIMIT` (see `widen_runtime_event_buffer()`), the certification test **observes and asserts**:
+
+| Metric | Observed bound in test | Config / rule |
+| --- | --- | --- |
+| Max queue depth (any named queue) | `≤ 200` | `aethos_queue_limit` |
+| Deployment artifacts | `≤ 200` | `aethos_task_artifact_limit` |
+| Deployment checkpoints (trimmed list) | `≤ min(120, aethos_plan_checkpoint_limit)` | lifecycle + `aethos_plan_checkpoint_limit` |
+| Runtime event buffer length | `≤` raised buffer cap | `aethos_runtime_event_buffer_limit` |
+| `runtime_corruption_quarantine` length | `≤ 80` | `aethos_runtime_quarantine_limit` |
+| `planning_outcomes` length | `≤ 500` | `aethos_planning_outcome_limit` |
+| `adaptive_retry_scheduled_total` | equals cycle count `n` | monotonic under controlled bump |
+| `runtime_backups_total` | equals cycle count `n` | monotonic under controlled bump |
+| On-disk backup files listed | `≤ 500` | `list_runtime_backup_files(limit=500)` cap in assertion |
+
+### Reliability / continuity / visibility locks
+
+- **142** tests under `tests/test_openclaw_*.py` include **100×** repeated reads for `summarize_runtime_reliability`, `summarize_runtime_continuity`, snapshot `resilience`, and **CLI** string checks for `aethos status` / `doctor` / `__main__` (`deployments`, `planning`, `logs`).
+
 ## Known remaining gaps (non-blocking for freeze)
 
 - Wall-clock multi-hour / multi-day soak remains **operator-driven** outside default CI (`AETHOS_SOAK_LONG=1`, `AETHOS_CHURN_LARGE=1`).
@@ -89,7 +118,7 @@ Backups / quarantine / planning retention remain covered by existing retention a
 ## How to verify
 
 ```bash
-python -m compileall -q app aethos_cli
+python -m compileall -q app aethos_cli tests/parity_freeze_gate.py
 pytest
 pytest tests/test_openclaw_*.py tests/test_openclaw_runtime_reliability.py
 pytest tests/e2e/openclaw_parity_workflows/ tests/e2e/openclaw_operator_outcomes/ tests/e2e/openclaw_runtime_stress/
@@ -110,6 +139,6 @@ AETHOS_CHURN_LARGE=1 pytest tests/production_like/ -m production_like
 
 **Frozen for Phase 1:** No orchestration, Mission Control UI, or runtime **schema redesign** beyond additive forward-compatible fields, bugfixes, reliability/performance fixes, and parity test additions aligned with this audit.
 
-**Phase 1 operational confidence lock (final stabilization):** Only bug/stability/boundedness/visibility/parity-validation fixes per the Phase 1 completion directive. Confidence package adds repeated-cycle and churn tests (production_like + edge_cases + behavioral + soak), deterministic **reliability / continuity / warning** read consistency tests, **Phase 1 transition gate** (≥100 repetition matrix + boundedness certification + deployment-transition gate), and repeated deployment artifact + rollback + environment-lock integrity checks. Churn knobs: `AETHOS_CHURN_LARGE=1`, `AETHOS_SOAK_LONG=1`. High-volume tests bump `AETHOS_RUNTIME_EVENT_BUFFER_LIMIT` in-test via `widen_runtime_event_buffer()` so lifecycle telemetry does not exceed the default **500**-entry cap.
+**Phase 1 operational confidence lock (final stabilization):** Only bug/stability/boundedness/visibility/parity-validation fixes per the Phase 1 completion directive. **Final operational certification** (boundedness table, suite totals, Phase 2 readiness) is recorded in **Phase 1 final operational certification (closure)** above. Confidence package adds repeated-cycle and churn tests (production_like + edge_cases + behavioral + soak), deterministic **reliability / continuity / warning** read consistency tests, **Phase 1 transition gate** (≥100 repetition matrix + boundedness certification + deployment-transition gate), and repeated deployment artifact + rollback + environment-lock integrity checks. Churn knobs: `AETHOS_CHURN_LARGE=1`, `AETHOS_SOAK_LONG=1`. High-volume tests bump `AETHOS_RUNTIME_EVENT_BUFFER_LIMIT` in-test via `widen_runtime_event_buffer()` so lifecycle telemetry does not exceed the default **500**-entry cap.
 
-**Phase 2 boundary:** Privacy-first redesigns, PII systems, and novelty architecture wait until production soak and product sign-off.
+**Phase 2 boundary:** Privacy-first redesigns, PII systems, and novelty architecture wait until **final operational certification** and production soak / product sign-off.

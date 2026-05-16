@@ -11,6 +11,7 @@ Start here:
 - [Project handoff](../PROJECT_HANDOFF.md)
 - [OpenClaw parity audit](OPENCLAW_PARITY_AUDIT.md)
 - [OpenClaw final parity audit — Phase 1 freeze & confidence lock](OPENCLAW_FINAL_PARITY_AUDIT.md)
+- **Phase 1 final operational certification** (suite totals, boundedness metrics, Phase 2 readiness) — same document, *Phase 1 final operational certification (closure)* section.
 - [Migrating from OpenClaw](MIGRATING_FROM_OPENCLAW.md)
 - [OpenClaw functional parity directive (master plan)](OPENCLAW_FUNCTIONAL_PARITY_DIRECTIVE.md)
 - [OpenClaw functional parity implementation status](OPENCLAW_FUNCTIONAL_PARITY_STATUS.md)

@@ -210,6 +210,8 @@ Phase 2 privacy, PII filtering, local-first isolation, and novelty architecture 
 
 After certification, Phase 2 work listed in the final audit may proceed **without** changing Phase 1 default runtime semantics unless required for security.
 
+Canonical certification record (suite totals, boundedness metrics, Phase 2 readiness): [OPENCLAW_FINAL_PARITY_AUDIT.md](OPENCLAW_FINAL_PARITY_AUDIT.md) — *Phase 1 final operational certification (closure)*.
+
 ---
 
 ## Final directive

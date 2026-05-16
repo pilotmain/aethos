@@ -60,7 +60,7 @@ Do not introduce architectural divergence unless required to reproduce OpenClaw 
 Before opening a PR, run:
 
 ```bash
-python -m compileall -q app aethos_cli
+python -m compileall -q app aethos_cli tests/parity_freeze_gate.py
 pytest
 pytest tests/test_openclaw_parity.py
 pytest tests/test_openclaw_*_parity.py

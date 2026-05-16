@@ -13,7 +13,7 @@ From the project root, with the project venv active:
 
 1. **Compile every app module (blocks on syntax errors):**
    ```bash
-   python -m compileall -q app aethos_cli
+   python -m compileall -q app aethos_cli tests/parity_freeze_gate.py
    ```
    Expect: **no output and exit code 0** (quiet success).
 
