@@ -32,12 +32,12 @@ def build_restart_diagnostics() -> dict[str, Any]:
     }
 
 
-def build_restart_recovery_summary() -> dict[str, Any]:
-    hist = build_runtime_restarts().get("restart_history") or []
-    last = hist[-1] if hist else {}
+def build_restart_recovery_summary(hist: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+    entries = hist or []
+    last = entries[-1] if entries else {}
     return {
         "last_restart": last,
-        "recommendation": "Run aethos restart connection" if not last.get("ok") else "No restart required",
+        "recommendation": "Run aethos restart connection" if entries and not last.get("ok") else "No restart required",
     }
 
 
@@ -57,7 +57,7 @@ def build_runtime_restarts(truth: dict[str, Any] | None = None) -> dict[str, Any
     return {
         "restart_history": hist,
         "restart_diagnostics": build_restart_diagnostics(),
-        "restart_recovery_summary": build_restart_recovery_summary(),
+        "restart_recovery_summary": build_restart_recovery_summary(hist),
         "restart_health": {"recent_ok": sum(1 for h in hist if h.get("ok")), "bounded": True},
         "runtime_restart_recommendations": build_runtime_restart_recommendations(truth),
     }
