@@ -422,13 +422,15 @@ def main() -> int:
     rt_sub.add_parser("summaries", help="GET /api/v1/runtime/summaries enterprise summaries")
     rt_sub.add_parser("partitions", help="GET /api/v1/runtime/partitions")
     rt_sub.add_parser("calmness", help="GET /api/v1/runtime/calmness-lock integrity")
+    rt_sub.add_parser("story", help="GET /api/v1/mission-control/runtime-story")
+    rt_sub.add_parser("explainability", help="GET /api/v1/mission-control/explainability")
     sp_ecosystem = sub.add_parser("ecosystem", help="Operational intelligence ecosystem (Phase 4 Step 3)")
     eco_sub = sp_ecosystem.add_subparsers(dest="ecosystem_cmd", required=True)
     eco_sub.add_parser("health", help="GET /api/v1/mission-control/ecosystem/health")
     eco_sub.add_parser("maturity", help="GET /api/v1/mission-control/ecosystem/maturity")
     sp_enterprise = sub.add_parser("enterprise", help="Enterprise runtime evolution overview (Phase 4)")
     ent_sub = sp_enterprise.add_subparsers(dest="enterprise_cmd", required=True)
-    ent_sub.add_parser("overview", help="GET /api/v1/mission-control/enterprise/overview")
+    ent_sub.add_parser("overview", help="GET /api/v1/mission-control/executive-overview (Step 9)")
     ent_sub.add_parser("strategy", help="GET /api/v1/mission-control/enterprise/strategy")
     ent_sub.add_parser("intelligence", help="GET /api/v1/mission-control/enterprise/intelligence")
     ent_sub.add_parser("posture", help="GET /api/v1/mission-control/enterprise/posture (Phase 4 Step 5)")
@@ -469,6 +471,7 @@ def main() -> int:
     gov_sub.add_parser("progression", help="GET /api/v1/mission-control/governance/progression")
     gov_sub.add_parser("intelligence", help="GET /api/v1/mission-control/governance/intelligence")
     gov_sub.add_parser("index", help="GET /api/v1/mission-control/governance/index")
+    gov_sub.add_parser("experience", help="GET /api/v1/mission-control/governance-experience")
     sp_gov_search = gov_sub.add_parser("search", help="GET /api/v1/mission-control/governance/search")
     sp_gov_search.add_argument("query", nargs="?", default=None)
     sp_gov_filter = gov_sub.add_parser("filter", help="GET /api/v1/mission-control/governance/filter")
@@ -1213,6 +1216,14 @@ def main() -> int:
             code, body = _req("GET", "/api/v1/runtime/calmness-lock", uid=uid)
             print(body[:24000])
             return 0 if code == 200 else 1
+        if args.runtime_cmd == "story":
+            code, body = _req("GET", "/api/v1/mission-control/runtime-story", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.runtime_cmd == "explainability":
+            code, body = _req("GET", "/api/v1/mission-control/explainability", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
         if args.runtime_cmd == "recovery":
             code, body = _req("GET", "/api/v1/mission-control/runtime/recovery", uid=uid)
             print(body[:24000])
@@ -1310,7 +1321,9 @@ def main() -> int:
 
     if args.cmd == "enterprise":
         if args.enterprise_cmd == "overview":
-            code, body = _req("GET", "/api/v1/mission-control/enterprise/overview", uid=uid)
+            code, body = _req("GET", "/api/v1/mission-control/executive-overview", uid=uid)
+            if code != 200:
+                code, body = _req("GET", "/api/v1/mission-control/enterprise/overview", uid=uid)
             print(body[:24000])
             return 0 if code == 200 else 1
         if args.enterprise_cmd == "strategy":
@@ -1400,6 +1413,10 @@ def main() -> int:
             return 0 if code == 200 else 1
         if args.governance_cmd == "index":
             code, body = _req("GET", "/api/v1/mission-control/governance/index", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.governance_cmd == "experience":
+            code, body = _req("GET", "/api/v1/mission-control/governance-experience", uid=uid)
             print(body[:24000])
             return 0 if code == 200 else 1
         if args.governance_cmd == "search":

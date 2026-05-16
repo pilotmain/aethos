@@ -424,8 +424,15 @@ def mc_runtime_trajectory(app_user_id: str = Depends(get_valid_web_user_id)) -> 
 
 @router.get("/workers/ecosystem")
 def mc_workers_ecosystem(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
-    t = _truth_slice(app_user_id)
+    from app.services.mission_control.worker_ecosystem_experience import build_worker_ecosystem_experience
+
+    try:
+        t = _truth_slice(app_user_id)
+    except Exception:
+        t = {}
+    exp = build_worker_ecosystem_experience(t)
     return {
+        **exp,
         "worker_ecosystem_health": t.get("worker_ecosystem_health") or {},
         "worker_coordination_quality": t.get("worker_coordination_quality") or {},
         "worker_specialization_map": t.get("worker_specialization_map") or {},
@@ -544,6 +551,61 @@ def mc_workers_lifecycle(app_user_id: str = Depends(get_valid_web_user_id)) -> d
     except Exception:
         t = {}
     return build_worker_operational_lifecycle(t)
+
+
+@router.get("/governance-experience")
+def mc_governance_experience(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.governance_experience_layer import build_governance_experience_layer
+
+    try:
+        t = _truth_slice(app_user_id)
+    except Exception:
+        t = {}
+    return build_governance_experience_layer(t)
+
+
+@router.get("/executive-overview")
+def mc_executive_overview(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.enterprise_operational_overview import build_executive_operational_overview
+
+    try:
+        t = _truth_slice(app_user_id)
+    except Exception:
+        t = {}
+    return build_executive_operational_overview(t)
+
+
+@router.get("/runtime-story")
+def mc_runtime_story(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.operational_narrative_engine import build_operational_narratives_v2
+
+    try:
+        t = _truth_slice(app_user_id)
+    except Exception:
+        t = {}
+    return build_operational_narratives_v2(t)
+
+
+@router.get("/explainability")
+def mc_explainability(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_explainability_center import build_runtime_explainability_center
+
+    try:
+        t = _truth_slice(app_user_id)
+    except Exception:
+        t = {}
+    return build_runtime_explainability_center(t)
+
+
+@router.get("/timeline-experience")
+def mc_timeline_experience(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.governance_timeline_experience import build_governance_timeline_experience
+
+    try:
+        t = _truth_slice(app_user_id)
+    except Exception:
+        t = {}
+    return build_governance_timeline_experience(t)
 
 
 @router.get("/runtime/posture")

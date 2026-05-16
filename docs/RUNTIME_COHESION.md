@@ -40,3 +40,7 @@ Truth evolution adds bounded cohesion without fragmenting orchestrator authority
 - `runtime_production_posture` — sustained operation and enterprise resilience scores
 
 APIs: `GET /api/v1/runtime/partitions`, `/summaries`, `/eras`, `/production-posture`, `/calmness-lock`; MC `GET /governance/index`, `GET /workers/lifecycle`.
+
+## Phase 4 Step 9 — experience convergence
+
+MC surfaces consume Step 8 truth via experience layers (governance, workers, executive overview, narratives, timeline UX, explainability center, language system). Orchestrator authority and bounded persistence unchanged — presentation-only convergence.

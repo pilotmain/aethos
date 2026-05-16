@@ -29,3 +29,14 @@ Operators see enterprise summaries before raw operational detail:
 Runtime overview fetches `/runtime/summaries` alongside existing overview/calmness endpoints. Office remains lightweight (cards + progressive stream), not a monitoring wall.
 
 CLI: `aethos runtime summaries|calmness|posture|eras|partitions`, `aethos governance index`, `aethos workers lifecycle`.
+
+## Phase 4 Step 9 — operational surfaces
+
+- **Governance experience** — `/mission-control/governance-experience`
+- **Worker ecosystem** — `/mission-control/workers/ecosystem`
+- **Executive overview** — `/mission-control/executive-overview`
+- **Runtime story** — `/mission-control/runtime-story`
+- **Explainability** — `/mission-control/explainability`
+- **Timeline experience** — `/mission-control/timeline-experience`
+
+Enterprise language system calms technical terms for operator trust. See [MISSION_CONTROL_LANGUAGE_SYSTEM.md](MISSION_CONTROL_LANGUAGE_SYSTEM.md).

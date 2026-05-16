@@ -99,6 +99,24 @@ export const missionControlSecondaryNav: MissionControlNavItem[] = [
     description: "Operational intelligence, recommendations, automation",
   },
   {
+    name: "Executive overview",
+    href: "/mission-control/executive-overview",
+    icon: Briefcase,
+    description: "Enterprise operational posture — executive-readable",
+  },
+  {
+    name: "Runtime story",
+    href: "/mission-control/runtime-story",
+    icon: Sparkles,
+    description: "Operational narratives and continuity storyline",
+  },
+  {
+    name: "Explainability",
+    href: "/mission-control/explainability",
+    icon: ShieldCheck,
+    description: "Runtime decision explanations",
+  },
+  {
     name: "Runtime plugins",
     href: "/mission-control/plugins",
     icon: Plug,

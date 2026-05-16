@@ -118,6 +118,25 @@ Docs: [RUNTIME_LONG_HORIZON.md](RUNTIME_LONG_HORIZON.md), [ENTERPRISE_RUNTIME_SU
 
 Runtime overview (`/mission-control/runtime-overview`) loads `/runtime/summaries` first for a summary headline before detail panels.
 
+## Phase 4 Step 9 — enterprise operational surfaces
+
+Experience layers turn Step 8 runtime intelligence into calm, executive-readable MC surfaces:
+
+| Route | API | Purpose |
+|-------|-----|---------|
+| `/mission-control/governance-experience` | `GET /governance-experience` | Governance storytelling |
+| `/mission-control/workers/ecosystem` | `GET /workers/ecosystem` | Worker ecosystem experience |
+| `/mission-control/executive-overview` | `GET /executive-overview` | Executive posture |
+| `/mission-control/runtime-story` | `GET /runtime-story` | Operational narratives |
+| `/mission-control/explainability` | `GET /explainability` | Runtime explainability |
+| `/mission-control/timeline-experience` | `GET /timeline-experience` | Grouped timeline UX |
+
+CLI: `aethos governance experience`, `aethos runtime story|explainability`, `aethos enterprise overview`, `aethos workers ecosystem`.
+
+Docs: [GOVERNANCE_EXPERIENCE.md](GOVERNANCE_EXPERIENCE.md), [WORKER_ECOSYSTEM_EXPERIENCE.md](WORKER_ECOSYSTEM_EXPERIENCE.md), [EXECUTIVE_OPERATIONAL_OVERVIEW.md](EXECUTIVE_OPERATIONAL_OVERVIEW.md), [OPERATIONAL_NARRATIVE_ENGINE.md](OPERATIONAL_NARRATIVE_ENGINE.md), [RUNTIME_EXPLAINABILITY_CENTER.md](RUNTIME_EXPLAINABILITY_CENTER.md), [MISSION_CONTROL_LANGUAGE_SYSTEM.md](MISSION_CONTROL_LANGUAGE_SYSTEM.md).
+
+`enterprise_overview.phase` is `phase4_step9`.
+
 ## The Office
 
 Web route: `/mission-control/office` — lightweight cards for runtime agents (`active`, `busy`, `idle`, `recovering`, `failed`, `offline`). Progressive Office stream and partition-aware hydration (Step 7) remain; Step 8 adds calmness lock and enterprise summaries without analytics-wall noise.

@@ -45,6 +45,15 @@ export default function GovernancePage() {
         <p className="mt-1 text-sm text-muted-foreground">
           Searchable operational timeline — bounded windows under load
         </p>
+        <p className="mt-2 text-sm">
+          <a href="/mission-control/governance-experience" className="text-primary hover:underline">
+            Governance experience
+          </a>
+          {" · "}
+          <a href="/mission-control/timeline-experience" className="text-primary hover:underline">
+            Timeline experience
+          </a>
+        </p>
       </header>
       <div className="flex flex-wrap gap-2">
         <input

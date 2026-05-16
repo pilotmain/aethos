@@ -184,11 +184,26 @@ export default function RuntimeOverviewPage() {
         </section>
       ) : null}
       <nav className="flex flex-wrap gap-3 text-sm">
+        <Link href="/mission-control/executive-overview" className="text-primary hover:underline">
+          Executive overview
+        </Link>
         <Link href="/mission-control/office" className="text-primary hover:underline">
           Office
         </Link>
+        <Link href="/mission-control/governance-experience" className="text-primary hover:underline">
+          Governance experience
+        </Link>
         <Link href="/mission-control/governance" className="text-primary hover:underline">
           Governance
+        </Link>
+        <Link href="/mission-control/workers/ecosystem" className="text-primary hover:underline">
+          Worker ecosystem
+        </Link>
+        <Link href="/mission-control/runtime-story" className="text-primary hover:underline">
+          Runtime story
+        </Link>
+        <Link href="/mission-control/explainability" className="text-primary hover:underline">
+          Explainability
         </Link>
         <Link href="/mission-control/operational-insights" className="text-primary hover:underline">
           Insights
