@@ -33,5 +33,9 @@ def test_openapi_has_core_contract_paths() -> None:
         "/api/v1/web/memory/state",
         "/api/v1/dev/runs",
         "/api/v1/dev/workspaces",
+        "/api/v1/privacy/status",
+        "/api/v1/privacy/policy",
+        "/api/v1/privacy/audit",
+        "/api/v1/privacy/scan",
     ):
         assert rel in paths, f"missing {rel}"

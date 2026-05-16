@@ -279,6 +279,20 @@ def main() -> int:
     sp_task_show = task_sub.add_parser("show", help="GET /api/v1/runtime/tasks/{task_id}")
     sp_task_show.add_argument("task_id")
 
+    sp_priv = sub.add_parser("privacy", help="Phase 2 privacy / PII API (HTTP)")
+    priv_sub = sp_priv.add_subparsers(dest="privacy_cmd", required=True)
+    priv_sub.add_parser("status", help="GET /api/v1/privacy/status")
+    priv_sub.add_parser("audit", help="GET /api/v1/privacy/audit")
+    sp_priv_scan = priv_sub.add_parser("scan", help="POST /api/v1/privacy/scan")
+    sp_priv_scan.add_argument("--text", default="", help="Inline text (default: read stdin)")
+    sp_priv_mode = priv_sub.add_parser("mode", help="GET /api/v1/privacy/policy (+ optional env hint)")
+    sp_priv_mode.add_argument(
+        "target_mode",
+        nargs="?",
+        default="",
+        help="Optional desired mode (not persisted; set AETHOS_PRIVACY_MODE and restart)",
+    )
+
     sp_dep = sub.add_parser("deployments", help="Deployment runtime API (OpenClaw infra parity)")
     dep_sub = sp_dep.add_subparsers(dest="dep_cmd", required=True)
     dep_sub.add_parser("list", help="GET /api/v1/deployments")
@@ -619,6 +633,34 @@ def main() -> int:
             tid = urllib.parse.quote(str(args.task_id), safe="")
             code, body = _req("GET", f"/api/v1/runtime/tasks/{tid}", uid=uid)
             print(body[:24000])
+            return 0 if code == 200 else 1
+
+    if args.cmd == "privacy":
+        if args.privacy_cmd == "status":
+            code, body = _req("GET", "/api/v1/privacy/status", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.privacy_cmd == "audit":
+            code, body = _req("GET", "/api/v1/privacy/audit", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.privacy_cmd == "scan":
+            txt = (getattr(args, "text", "") or "").strip()
+            if not txt:
+                txt = sys.stdin.read()
+            payload = json.dumps({"text": txt}).encode()
+            code, body = _req("POST", "/api/v1/privacy/scan", uid=uid, body=payload)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.privacy_cmd == "mode":
+            code, body = _req("GET", "/api/v1/privacy/policy", uid=uid)
+            print(body[:24000])
+            want = (getattr(args, "target_mode", "") or "").strip()
+            if want and code == 200:
+                print(
+                    f"To use mode {want!r}, set AETHOS_PRIVACY_MODE={want} in the repo .env and restart the API.",
+                    file=sys.stderr,
+                )
             return 0 if code == 200 else 1
 
     if args.cmd == "deployments":

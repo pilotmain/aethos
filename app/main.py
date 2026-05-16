@@ -59,6 +59,7 @@ from app.api.routes import (
     orchestration,
     permissions,
     plans,
+    privacy_api,
     pr_review,
     providers_usage,
     report_watcher,
@@ -400,6 +401,7 @@ app.add_middleware(UsageMeterMiddleware)
 app.include_router(setup_creds.router)
 app.include_router(dashboard.router)
 app.include_router(health.router, prefix=settings.api_v1_prefix)
+app.include_router(privacy_api.router, prefix=settings.api_v1_prefix)
 app.include_router(system.router, prefix=settings.api_v1_prefix)
 app.include_router(admin_privacy.router, prefix=settings.api_v1_prefix)
 app.include_router(channels.router, prefix=settings.api_v1_prefix)

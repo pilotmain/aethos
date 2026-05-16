@@ -857,6 +857,7 @@ def build_execution_snapshot(
             },
         }
 
+    from app.privacy.privacy_snapshot import build_mission_control_privacy_panel
     from app.services.mission_control.orchestration_runtime_snapshot import (
         build_orchestration_runtime_snapshot,
     )
@@ -898,6 +899,7 @@ def build_execution_snapshot(
         "phase46": phase46_vnext,
         "safety_readiness": build_safety_readiness_snapshot(user_id=user_id),
         "orchestration_runtime": build_orchestration_runtime_snapshot(user_id),
+        "phase2_privacy": build_mission_control_privacy_panel(),
     }
 
     uid_early = (user_id or "").strip()

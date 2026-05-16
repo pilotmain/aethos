@@ -221,6 +221,19 @@ class Settings(BaseSettings):
     aethos_plan_checkpoint_limit: int = 500
     aethos_queue_limit: int = 5000
     aethos_step_max_retries: int = 3
+    # Phase 2 — privacy / PII / local-first (additive; default observe — detect/log, no mutation).
+    aethos_privacy_mode: str = "observe"
+    aethos_privacy_audit_enabled: bool = True
+    aethos_pii_redaction_enabled: bool = False
+    aethos_local_first_enabled: bool = False
+    aethos_external_egress_guard_enabled: bool = False
+    aethos_require_local_model: bool = False
+    aethos_local_model_provider: str = "ollama"
+    aethos_local_model_name: str = ""
+    aethos_allow_external_fallback: bool = True
+    aethos_encryption_at_rest_enabled: bool = False
+    aethos_encryption_key_source: str = "env"
+    aethos_encryption_key: str = ""
     # Lightweight in-process traces/metrics for NL “system status” (not OpenTelemetry).
     nexa_observability_enabled: bool = False
     nexa_trace_retention_hours: int = 24
@@ -1072,6 +1085,20 @@ class Settings(BaseSettings):
     def _normalize_nexa_response_format(cls, v: object) -> str:
         x = (str(v) if v is not None else "simple").strip().lower()
         return x if x in ("simple", "beautiful", "raw") else "simple"
+
+    @field_validator("aethos_privacy_mode", mode="before")
+    @classmethod
+    def _normalize_aethos_privacy_mode(cls, v: object) -> str:
+        allowed = frozenset({"off", "observe", "redact", "block", "local_only"})
+        x = (str(v) if v is not None else "observe").strip().lower()
+        return x if x in allowed else "observe"
+
+    @field_validator("aethos_encryption_key_source", mode="before")
+    @classmethod
+    def _normalize_aethos_encryption_key_source(cls, v: object) -> str:
+        allowed = frozenset({"env", "none", "file"})
+        x = (str(v) if v is not None else "env").strip().lower()
+        return x if x in allowed else "env"
 
     @model_validator(mode="after")
     def _phase33_production_lock(self) -> Settings:

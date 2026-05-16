@@ -22,3 +22,5 @@ def test_mission_control_state_includes_runtime_visibility(db_session) -> None:
     res = ort.get("resilience") or {}
     assert "integrity_ok" in res
     assert "backup_files_on_disk" in res
+    p2 = snap.get("phase2_privacy") or {}
+    assert p2.get("privacy_mode") in ("off", "observe", "redact", "block", "local_only")

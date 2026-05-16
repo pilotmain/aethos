@@ -70,6 +70,7 @@ def log_sanitized_nexa_config(component: str) -> None:
         f"NEXA_SAFETY_POLICY_STRICT={getattr(s, 'nexa_safety_policy_strict', False)}",
         f"NEXA_NETWORK_EXTERNAL_SEND_ENFORCED={getattr(s, 'nexa_network_external_send_enforced', False)}",
         f"NEXA_SECRET_EGRESS_ENFORCED={getattr(s, 'nexa_secret_egress_enforced', False)}",
+        f"AETHOS_PRIVACY_MODE={getattr(s, 'aethos_privacy_mode', 'observe')}",
     ]
     if safety_lines:
         lines.extend(safety_lines)
