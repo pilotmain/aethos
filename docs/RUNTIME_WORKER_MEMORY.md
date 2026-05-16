@@ -15,10 +15,19 @@ Runtime workers persist **bounded operational memory** separate from conversatio
 
 `research_summary`, `deployment_report`, `repair_summary`, `verification_report`, `planning_output`, `provider_diagnostic`, `automation_outcome`, `workflow_summary`, `general_output`
 
-## APIs
+## APIs (Step 7–8)
 
-- `GET /api/v1/mission-control/worker-deliverables?q=&handle=&type=&limit=`
+- `GET /api/v1/mission-control/worker-deliverables` — search (`q`, `handle`, `type`, `task_id`, `project_id`, `provider`, `status`, date range)
+- `GET /api/v1/mission-control/deliverables` — global deliverable list
+- `GET /api/v1/mission-control/deliverables/{id}` — detail
+- `GET /api/v1/mission-control/deliverables/{id}/export?format=markdown|text|json`
+- `GET /api/v1/mission-control/runtime-workers/{id}` — worker detail
+- `GET /api/v1/mission-control/runtime-workers/{id}/deliverables|memory|continuations`
 - Runtime truth keys: `worker_memory`, `worker_deliverables`, `worker_continuations`, `worker_effectiveness`
+
+## Env caps (Step 8)
+
+`AETHOS_WORKER_MEMORY_TASK_LIMIT`, `AETHOS_WORKER_MEMORY_OUTPUT_LIMIT`, `AETHOS_WORKER_DELIVERABLE_LIMIT`, `AETHOS_WORKER_CONTINUATION_LIMIT`
 
 ## Follow-up queries (no task ID)
 

@@ -19,7 +19,7 @@ from app.runtime.worker_operational_memory import (
 from app.services.agent.activity_tracker import get_activity_tracker
 
 _RE_FOLLOWUP_FIND = re.compile(
-    r"(?is)^(?:what\s+did\s+you\s+find|what\s+did\s+we\s+find|show\s+(?:me\s+)?(?:the\s+)?last\s+result|show\s+last\s+output)\s*\??\s*$"
+    r"(?is)^(?:what\s+did\s+you\s+find|what\s+did\s+we\s+find|show\s+(?:me\s+)?(?:the\s+)?last\s+result|show\s+last\s+output|show\s+(?:me\s+)?more|expand\s+(?:the\s+)?last\s+result|summarize\s+(?:the\s+)?research)\s*\??\s*$"
 )
 _RE_FOLLOWUP_CONTINUE = re.compile(
     r"(?is)^(?:continue|resume|pick\s+up)\s+(?:the\s+)?(.+?)\s*\??\s*$"

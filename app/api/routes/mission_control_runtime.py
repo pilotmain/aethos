@@ -170,6 +170,12 @@ def mc_worker_deliverables(
     worker_id: str | None = Query(None),
     handle: str | None = Query(None),
     deliverable_type: str | None = Query(None, alias="type"),
+    task_id: str | None = Query(None),
+    project_id: str | None = Query(None),
+    provider: str | None = Query(None),
+    status: str | None = Query(None),
+    date_from: str | None = Query(None),
+    date_to: str | None = Query(None),
     limit: int = Query(16, ge=1, le=48),
     _: str = Depends(get_valid_web_user_id),
 ) -> dict:
@@ -181,9 +187,108 @@ def mc_worker_deliverables(
             worker_id=worker_id,
             deliverable_type=deliverable_type,
             handle=handle,
+            task_id=task_id,
+            project_id=project_id,
+            provider=provider,
+            status=status,
+            date_from=date_from,
+            date_to=date_to,
             limit=limit,
         )
     }
+
+
+@router.get("/deliverables")
+def mc_deliverables_list(
+    q: str | None = Query(None),
+    worker_id: str | None = Query(None),
+    handle: str | None = Query(None),
+    deliverable_type: str | None = Query(None, alias="type"),
+    task_id: str | None = Query(None),
+    project_id: str | None = Query(None),
+    provider: str | None = Query(None),
+    status: str | None = Query(None),
+    limit: int = Query(24, ge=1, le=48),
+    _: str = Depends(get_valid_web_user_id),
+) -> dict:
+    from app.runtime.worker_operational_memory import search_deliverables
+
+    return {
+        "deliverables": search_deliverables(
+            query=q,
+            worker_id=worker_id,
+            deliverable_type=deliverable_type,
+            handle=handle,
+            task_id=task_id,
+            project_id=project_id,
+            provider=provider,
+            status=status,
+            limit=limit,
+        )
+    }
+
+
+@router.get("/deliverables/{deliverable_id}")
+def mc_deliverable_detail(
+    deliverable_id: str,
+    _: str = Depends(get_valid_web_user_id),
+) -> dict:
+    from app.services.mission_control.worker_deliverable_ops import build_deliverable_detail
+
+    return build_deliverable_detail(deliverable_id)
+
+
+@router.get("/deliverables/{deliverable_id}/export")
+def mc_deliverable_export(
+    deliverable_id: str,
+    format: str = Query("markdown", alias="format"),
+    _: str = Depends(get_valid_web_user_id),
+) -> dict:
+    from app.services.mission_control.worker_deliverable_ops import export_deliverable
+
+    return export_deliverable(deliverable_id, fmt=format)
+
+
+@router.get("/runtime-workers/{worker_id}")
+def mc_runtime_worker_detail(
+    worker_id: str,
+    app_user_id: str = Depends(get_valid_web_user_id),
+) -> dict:
+    from app.services.mission_control.worker_deliverable_ops import build_worker_detail
+
+    return build_worker_detail(worker_id, user_id=app_user_id)
+
+
+@router.get("/runtime-workers/{worker_id}/deliverables")
+def mc_runtime_worker_deliverables(
+    worker_id: str,
+    limit: int = Query(16, ge=1, le=48),
+    _: str = Depends(get_valid_web_user_id),
+) -> dict:
+    from app.runtime.worker_operational_memory import list_deliverables_for_worker
+
+    return {"worker_id": worker_id, "deliverables": list_deliverables_for_worker(worker_id, limit=limit)}
+
+
+@router.get("/runtime-workers/{worker_id}/memory")
+def mc_runtime_worker_memory(
+    worker_id: str,
+    _: str = Depends(get_valid_web_user_id),
+) -> dict:
+    from app.runtime.worker_operational_memory import build_worker_memory
+
+    return {"worker_id": worker_id, "memory": build_worker_memory(worker_id)}
+
+
+@router.get("/runtime-workers/{worker_id}/continuations")
+def mc_runtime_worker_continuations(
+    worker_id: str,
+    limit: int = Query(12, ge=1, le=32),
+    _: str = Depends(get_valid_web_user_id),
+) -> dict:
+    from app.runtime.worker_operational_memory import list_continuations_for_worker
+
+    return {"worker_id": worker_id, "continuations": list_continuations_for_worker(worker_id, limit=limit)}
 
 
 @router.get("/automation-packs")

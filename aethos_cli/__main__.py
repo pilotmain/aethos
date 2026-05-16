@@ -374,6 +374,23 @@ def main() -> int:
     sp_env_show = env_sub.add_parser("show", help="GET /api/v1/environments/{id}")
     sp_env_show.add_argument("environment_id")
 
+    sp_workers = sub.add_parser("workers", help="Runtime worker detail (Phase 3 Step 8)")
+    wk_sub = sp_workers.add_subparsers(dest="workers_cmd", required=True)
+    wk_sub.add_parser("list", help="GET /api/v1/mission-control/runtime-workers")
+    sp_wk_show = wk_sub.add_parser("show", help="GET /api/v1/mission-control/runtime-workers/{id}")
+    sp_wk_show.add_argument("worker_id")
+    sp_wk_del = wk_sub.add_parser("deliverables", help="GET …/runtime-workers/{id}/deliverables")
+    sp_wk_del.add_argument("worker_id")
+
+    sp_dlv = sub.add_parser("deliverables", help="Worker deliverables (Phase 3 Step 8)")
+    dlv_sub = sp_dlv.add_subparsers(dest="deliverables_cmd", required=True)
+    dlv_sub.add_parser("list", help="GET /api/v1/mission-control/deliverables")
+    sp_dlv_show = dlv_sub.add_parser("show", help="GET /api/v1/mission-control/deliverables/{id}")
+    sp_dlv_show.add_argument("deliverable_id")
+    sp_dlv_exp = dlv_sub.add_parser("export", help="GET …/deliverables/{id}/export")
+    sp_dlv_exp.add_argument("deliverable_id")
+    sp_dlv_exp.add_argument("--format", default="markdown", choices=("markdown", "text", "json"))
+
     sp_agents = sub.add_parser("agents", help="Coordination agent API (multi-agent parity)")
     ag_sub = sp_agents.add_subparsers(dest="agents_cmd", required=True)
     ag_sub.add_parser("list", help="GET /api/v1/runtime/agents/")
@@ -884,6 +901,47 @@ def main() -> int:
         if args.env_cmd == "show":
             eid = urllib.parse.quote(str(args.environment_id), safe="")
             code, body = _req("GET", f"/api/v1/environments/{eid}", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+
+    if args.cmd == "workers":
+        if args.workers_cmd == "list":
+            code, body = _req("GET", "/api/v1/mission-control/runtime-workers", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.workers_cmd == "show":
+            wid = urllib.parse.quote(str(args.worker_id), safe="")
+            code, body = _req("GET", f"/api/v1/mission-control/runtime-workers/{wid}", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.workers_cmd == "deliverables":
+            wid = urllib.parse.quote(str(args.worker_id), safe="")
+            code, body = _req(
+                "GET",
+                f"/api/v1/mission-control/runtime-workers/{wid}/deliverables",
+                uid=uid,
+            )
+            print(body[:24000])
+            return 0 if code == 200 else 1
+
+    if args.cmd == "deliverables":
+        if args.deliverables_cmd == "list":
+            code, body = _req("GET", "/api/v1/mission-control/deliverables", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.deliverables_cmd == "show":
+            did = urllib.parse.quote(str(args.deliverable_id), safe="")
+            code, body = _req("GET", f"/api/v1/mission-control/deliverables/{did}", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.deliverables_cmd == "export":
+            did = urllib.parse.quote(str(args.deliverable_id), safe="")
+            fmt = urllib.parse.quote(str(args.format), safe="")
+            code, body = _req(
+                "GET",
+                f"/api/v1/mission-control/deliverables/{did}/export?format={fmt}",
+                uid=uid,
+            )
             print(body[:24000])
             return 0 if code == 200 else 1
 

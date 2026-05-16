@@ -16,6 +16,18 @@ _MAX_DELIVERABLES_GLOBAL = 200
 _MAX_DELIVERABLES_PER_WORKER = 24
 _MAX_CONTINUATIONS = 48
 
+
+def get_worker_memory_limits() -> dict[str, int]:
+    from app.core.config import get_settings
+
+    s = get_settings()
+    return {
+        "task": int(getattr(s, "aethos_worker_memory_task_limit", _MAX_RECENT)),
+        "output": int(getattr(s, "aethos_worker_memory_output_limit", _MAX_RECENT)),
+        "deliverable": int(getattr(s, "aethos_worker_deliverable_limit", _MAX_DELIVERABLES_GLOBAL)),
+        "continuation": int(getattr(s, "aethos_worker_continuation_limit", _MAX_CONTINUATIONS)),
+    }
+
 _DELIVERABLE_TYPES = frozenset(
     {
         "research_summary",
@@ -69,6 +81,9 @@ def persist_deliverable(
     artifacts: list[str] | None = None,
     provider_context: dict[str, Any] | None = None,
     output_id: str | None = None,
+    title: str | None = None,
+    project_id: str | None = None,
+    status: str = "final",
 ) -> str:
     st = load_runtime_state()
     ensure_worker_intel_schema(st)
@@ -79,14 +94,22 @@ def persist_deliverable(
         "worker_id": worker_id,
         "task_id": task_id,
         "type": dtype,
+        "title": (title or summary or dtype)[:120],
         "summary": (summary or "")[:500],
         "content": (content or "")[:16000],
         "artifacts": list(artifacts or [])[:24],
         "provider_context": dict(list((provider_context or {}).items())[:8]),
         "output_id": output_id,
+        "project_id": project_id,
         "created_at": utc_now_iso(),
-        "status": "final",
+        "status": status,
     }
+    try:
+        from app.services.mission_control.worker_deliverable_ops import apply_deliverable_privacy
+
+        row = apply_deliverable_privacy(row)
+    except Exception:
+        pass
     dels = st.setdefault("worker_deliverables", {})
     if isinstance(dels, dict):
         dels[did] = row
@@ -99,6 +122,19 @@ def persist_deliverable(
         mem["repair_history"] = _push_bounded(mem.get("repair_history"), did, 8)
     mem["memory_summary"] = _summarize_memory(mem)
     save_runtime_state(st)
+    try:
+        from app.services.mission_control.mc_runtime_events import emit_mc_runtime_event
+
+        emit_mc_runtime_event(
+            "worker_deliverable_persisted",
+            deliverable_id=did,
+            worker_id=worker_id,
+            task_id=task_id,
+            deliverable_type=dtype,
+            status=status,
+        )
+    except Exception:
+        pass
     return did
 
 
@@ -114,10 +150,11 @@ def update_worker_memory(
     st = load_runtime_state()
     ensure_worker_intel_schema(st)
     mem = _memory_bucket(st, worker_id)
+    limits = get_worker_memory_limits()
     if task_id:
-        mem["recent_tasks"] = _push_bounded(mem.get("recent_tasks"), task_id, _MAX_RECENT)
+        mem["recent_tasks"] = _push_bounded(mem.get("recent_tasks"), task_id, limits["task"])
     if output_id:
-        mem["recent_outputs"] = _push_bounded(mem.get("recent_outputs"), output_id, _MAX_RECENT)
+        mem["recent_outputs"] = _push_bounded(mem.get("recent_outputs"), output_id, limits["output"])
     if failure:
         mem["recent_failures"] = _push_bounded(mem.get("recent_failures"), failure[:300], 8)
     if workspace_snippet:
@@ -138,6 +175,28 @@ def build_worker_memory(worker_id: str) -> dict[str, Any]:
     return mem
 
 
+def get_deliverable(deliverable_id: str) -> dict[str, Any] | None:
+    st = load_runtime_state()
+    dels = st.get("worker_deliverables") or {}
+    if isinstance(dels, dict):
+        row = dels.get(deliverable_id)
+        if isinstance(row, dict):
+            return dict(row)
+    return None
+
+
+def list_continuations_for_worker(worker_id: str, *, limit: int = 12) -> list[dict[str, Any]]:
+    st = load_runtime_state()
+    conts = st.get("worker_continuations") or {}
+    rows: list[dict[str, Any]] = []
+    if isinstance(conts, dict):
+        for row in conts.values():
+            if isinstance(row, dict) and str(row.get("worker_id")) == worker_id:
+                rows.append(row)
+    rows.sort(key=lambda r: str(r.get("created_at") or ""), reverse=True)
+    return rows[: max(1, min(int(limit), 32))]
+
+
 def list_deliverables_for_worker(worker_id: str, *, limit: int = 12) -> list[dict[str, Any]]:
     st = load_runtime_state()
     dels = st.get("worker_deliverables") or {}
@@ -156,6 +215,12 @@ def search_deliverables(
     worker_id: str | None = None,
     deliverable_type: str | None = None,
     handle: str | None = None,
+    task_id: str | None = None,
+    project_id: str | None = None,
+    provider: str | None = None,
+    status: str | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
     limit: int = 16,
 ) -> list[dict[str, Any]]:
     if handle and not worker_id:
@@ -177,8 +242,26 @@ def search_deliverables(
             continue
         if deliverable_type and str(row.get("type")) != deliverable_type:
             continue
+        if task_id and str(row.get("task_id")) != task_id:
+            continue
+        if project_id and str(row.get("project_id") or "") != project_id:
+            continue
+        if status and str(row.get("status") or "") != status:
+            continue
+        if provider:
+            pctx = row.get("provider_context") or {}
+            if not isinstance(pctx, dict) or provider.lower() not in str(pctx).lower():
+                continue
+        created = str(row.get("created_at") or "")
+        if date_from and created < date_from:
+            continue
+        if date_to and created > date_to:
+            continue
         if q:
-            blob = f"{row.get('summary')} {row.get('type')} {row.get('content', '')[:500]}".lower()
+            blob = (
+                f"{row.get('title')} {row.get('summary')} {row.get('type')} "
+                f"{row.get('content', '')[:500]}"
+            ).lower()
             if q not in blob and not any(tok in blob for tok in q.split() if len(tok) > 3):
                 continue
         rows.append(row)
@@ -192,6 +275,9 @@ def create_continuation(
     source_task_id: str,
     reason: str = "follow_up_request",
     continuation_state: dict[str, Any] | None = None,
+    source_deliverable_id: str | None = None,
+    continuation_prompt: str | None = None,
+    status: str = "queued",
 ) -> str:
     st = load_runtime_state()
     ensure_worker_intel_schema(st)
@@ -201,12 +287,16 @@ def create_continuation(
         conts[cid] = {
             "continuation_id": cid,
             "source_task_id": source_task_id,
+            "source_deliverable_id": source_deliverable_id,
             "worker_id": worker_id,
             "reason": reason,
+            "continuation_prompt": (continuation_prompt or reason)[:500],
+            "status": status,
             "continuation_state": dict(continuation_state or {}),
             "created_at": utc_now_iso(),
         }
-        if len(conts) > _MAX_CONTINUATIONS:
+        cap = get_worker_memory_limits()["continuation"]
+        if len(conts) > cap:
             oldest = sorted(conts.items(), key=lambda kv: str((kv[1] or {}).get("created_at") or ""))[:8]
             for k, _ in oldest:
                 conts.pop(k, None)
@@ -306,8 +396,9 @@ def _summarize_memory(mem: dict[str, Any]) -> str:
 
 
 def _trim_deliverables(dels: dict[str, Any]) -> None:
-    if len(dels) <= _MAX_DELIVERABLES_GLOBAL:
+    cap = get_worker_memory_limits()["deliverable"]
+    if len(dels) <= cap:
         return
     ordered = sorted(dels.items(), key=lambda kv: str((kv[1] or {}).get("created_at") or ""))
-    for k, _ in ordered[: len(dels) - _MAX_DELIVERABLES_GLOBAL]:
+    for k, _ in ordered[: len(dels) - cap]:
         dels.pop(k, None)

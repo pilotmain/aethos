@@ -40,6 +40,9 @@ _MC_EVENT_TYPES = frozenset(
         "privacy_block",
         "plugin_loaded",
         "plugin_failed",
+        "worker_deliverable_persisted",
+        "worker_deliverable_failed",
+        "worker_continuation_queued",
     }
 )
 

@@ -84,6 +84,9 @@ See [ENTERPRISE_RUNTIME_CONFIDENCE.md](ENTERPRISE_RUNTIME_CONFIDENCE.md), [OPERA
 - **Plugins vs skills:** [PLUGIN_VS_SKILL_ARCHITECTURE.md](PLUGIN_VS_SKILL_ARCHITECTURE.md).
 - **`GET /mission-control/governance`** — operational timeline (`build_governance_timeline`).
 - **`GET /mission-control/runtime-workers`** — worker role, assignment, ownership chain.
+- **`GET /mission-control/runtime-workers/{id}`** — detail (memory, deliverables, continuations sub-routes).
+- **`GET /mission-control/deliverables`** — searchable deliverables; export via `/deliverables/{id}/export`.
+- **Mission Control → Deliverables** (secondary nav) — lightweight list, filter, export.
 - **Readable summaries** on truth: `readable_summaries` (repairs, provider actions, health sentence).
 - **CEO** (`/mission-control/ceo`) deprecated in favor of Office.
 

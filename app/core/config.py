@@ -218,6 +218,11 @@ class Settings(BaseSettings):
     aethos_runtime_quarantine_limit: int = 80
     aethos_runtime_backup_limit: int = 25
     aethos_task_artifact_limit: int = 200
+    # Phase 3 Step 8 — bounded worker operational memory (``AETHOS_WORKER_*``).
+    aethos_worker_memory_task_limit: int = 12
+    aethos_worker_memory_output_limit: int = 12
+    aethos_worker_deliverable_limit: int = 200
+    aethos_worker_continuation_limit: int = 48
     aethos_plan_checkpoint_limit: int = 500
     aethos_queue_limit: int = 5000
     aethos_step_max_retries: int = 3

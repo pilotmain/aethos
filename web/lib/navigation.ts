@@ -4,6 +4,7 @@ import {
   Briefcase,
   ClipboardList,
   Cloud,
+  FileText,
   CreditCard,
   FolderKanban,
   LayoutDashboard,
@@ -79,6 +80,12 @@ export const missionControlPrimaryNav: MissionControlNavItem[] = [
 
 /** Secondary / legacy routes — nested under More in the sidebar. */
 export const missionControlSecondaryNav: MissionControlNavItem[] = [
+  {
+    name: "Deliverables",
+    href: "/mission-control/deliverables",
+    icon: FileText,
+    description: "Worker outputs — search, filter, export",
+  },
   {
     name: "Runtime plugins",
     href: "/mission-control/plugins",
