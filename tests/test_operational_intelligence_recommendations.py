@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
-from app.services.mission_control.operational_intelligence_recommendations import enrich_recommendations_strategic
+from app.services.mission_control.operational_intelligence_recommendations import (
+    enrich_recommendations_ecosystem,
+    enrich_recommendations_strategic,
+)
 
 
 def test_enrich_recommendations_strategic() -> None:
@@ -15,3 +18,13 @@ def test_enrich_recommendations_strategic() -> None:
     rec = truth["runtime_recommendations"]["recommendations"][0]
     assert rec.get("advisory_only") is True
     assert "strategic_relevance" in rec
+
+
+def test_enrich_recommendations_ecosystem() -> None:
+    truth = {
+        "runtime_recommendations": {"recommendations": [{"message": "x"}]},
+        "ecosystem_operational_health": {"status": "healthy"},
+    }
+    enrich_recommendations_ecosystem(truth)
+    rec = truth["runtime_recommendations"]["recommendations"][0]
+    assert rec.get("ecosystem_impact_analysis") == "healthy"

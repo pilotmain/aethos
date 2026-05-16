@@ -405,10 +405,17 @@ def main() -> int:
     rt_sub.add_parser("forecasts", help="GET /api/v1/mission-control/runtime/forecasts")
     rt_sub.add_parser("outlook", help="GET /api/v1/mission-control/runtime/outlook")
     rt_sub.add_parser("trajectory", help="GET /api/v1/mission-control/runtime/trajectory")
+    rt_sub.add_parser("optimization", help="GET /api/v1/mission-control/runtime/optimization")
+    rt_sub.add_parser("projections", help="GET /api/v1/mission-control/runtime/projections")
+    sp_ecosystem = sub.add_parser("ecosystem", help="Operational intelligence ecosystem (Phase 4 Step 3)")
+    eco_sub = sp_ecosystem.add_subparsers(dest="ecosystem_cmd", required=True)
+    eco_sub.add_parser("health", help="GET /api/v1/mission-control/ecosystem/health")
+    eco_sub.add_parser("maturity", help="GET /api/v1/mission-control/ecosystem/maturity")
     sp_enterprise = sub.add_parser("enterprise", help="Enterprise runtime evolution overview (Phase 4)")
     ent_sub = sp_enterprise.add_subparsers(dest="enterprise_cmd", required=True)
     ent_sub.add_parser("overview", help="GET /api/v1/mission-control/enterprise/overview")
     ent_sub.add_parser("strategy", help="GET /api/v1/mission-control/enterprise/strategy")
+    ent_sub.add_parser("intelligence", help="GET /api/v1/mission-control/enterprise/intelligence")
     sp_ent_mem = ent_sub.add_parser("memory", help="Enterprise operational memory from runtime truth")
     sp_ent_mem.add_argument("--json", action="store_true", help="Raw JSON only")
     sp_automation = sub.add_parser("automation", help="Automation effectiveness (Phase 4)")
@@ -444,6 +451,7 @@ def main() -> int:
     gov_sub.add_parser("accountability", help="GET /api/v1/mission-control/governance/accountability")
     gov_sub.add_parser("maturity", help="GET /api/v1/mission-control/governance/maturity")
     gov_sub.add_parser("progression", help="GET /api/v1/mission-control/governance/progression")
+    gov_sub.add_parser("intelligence", help="GET /api/v1/mission-control/governance/intelligence")
     sp_gov_search = gov_sub.add_parser("search", help="GET /api/v1/mission-control/governance/search")
     sp_gov_search.add_argument("query", nargs="?", default=None)
     sp_gov_filter = gov_sub.add_parser("filter", help="GET /api/v1/mission-control/governance/filter")
@@ -481,6 +489,7 @@ def main() -> int:
     wk_sub.add_parser("overview", help="GET /api/v1/mission-control/workers/overview")
     wk_sub.add_parser("effectiveness", help="GET /api/v1/mission-control/workers/effectiveness")
     wk_sub.add_parser("ecosystem", help="GET /api/v1/mission-control/workers/ecosystem")
+    wk_sub.add_parser("coordination", help="GET /api/v1/mission-control/workers/coordination")
     sp_wk_del.add_argument("worker_id")
     sp_wk_cont = wk_sub.add_parser("continuity", help="GET …/operator-continuity + worker context")
     sp_wk_cont.add_argument("worker_id")
@@ -1125,6 +1134,14 @@ def main() -> int:
             code, body = _req("GET", "/api/v1/mission-control/runtime/trajectory", uid=uid)
             print(body[:24000])
             return 0 if code == 200 else 1
+        if args.runtime_cmd == "optimization":
+            code, body = _req("GET", "/api/v1/mission-control/runtime/optimization", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.runtime_cmd == "projections":
+            code, body = _req("GET", "/api/v1/mission-control/runtime/projections", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
         if args.runtime_cmd == "timeline-window":
             off = int(getattr(args, "offset", 0))
             lim = int(getattr(args, "limit", 24))
@@ -1203,6 +1220,10 @@ def main() -> int:
             code, body = _req("GET", "/api/v1/mission-control/enterprise/strategy", uid=uid)
             print(body[:24000])
             return 0 if code == 200 else 1
+        if args.enterprise_cmd == "intelligence":
+            code, body = _req("GET", "/api/v1/mission-control/enterprise/intelligence", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
         if args.enterprise_cmd == "memory":
             from app.services.mission_control.runtime_truth import build_runtime_truth
 
@@ -1272,6 +1293,10 @@ def main() -> int:
             code, body = _req("GET", "/api/v1/mission-control/governance/progression", uid=uid)
             print(body[:24000])
             return 0 if code == 200 else 1
+        if args.governance_cmd == "intelligence":
+            code, body = _req("GET", "/api/v1/mission-control/governance/intelligence", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
         if args.governance_cmd == "search":
             q = urllib.parse.quote(str(getattr(args, "query", "") or ""))
             code, body = _req("GET", f"/api/v1/mission-control/governance/search?q={q}", uid=uid)
@@ -1337,6 +1362,10 @@ def main() -> int:
             return 0 if code == 200 else 1
         if args.workers_cmd == "ecosystem":
             code, body = _req("GET", "/api/v1/mission-control/workers/ecosystem", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.workers_cmd == "coordination":
+            code, body = _req("GET", "/api/v1/mission-control/workers/coordination", uid=uid)
             print(body[:24000])
             return 0 if code == 200 else 1
         if args.workers_cmd == "accountability":

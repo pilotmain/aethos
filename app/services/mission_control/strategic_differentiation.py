@@ -26,7 +26,7 @@ def build_strategic_differentiation_summary(truth: dict[str, Any] | None = None)
             "incremental_truth_hydration",
         ],
         "openclaw_parity": "preserved",
-        "differentiation_version": "phase4_step2",
+        "differentiation_version": "phase4_step3",
         "step2_advantages": [
             "adaptive_coordination",
             "strategic_runtime_forecasting",
@@ -34,6 +34,38 @@ def build_strategic_differentiation_summary(truth: dict[str, Any] | None = None)
             "runtime_evolution_memory",
             "strategic_governance_progression",
         ],
+        "step3_advantages": [
+            "adaptive_runtime_optimization",
+            "operational_intelligence_ecosystem",
+            "governance_operational_intelligence",
+            "ecosystem_operational_strategy",
+            "enterprise_operational_maturity_intelligence",
+        ],
+    }
+
+
+def build_enterprise_operational_intelligence_advantage(truth: dict[str, Any] | None = None) -> dict[str, Any]:
+    summary = build_strategic_differentiation_summary(truth)
+    return {
+        "advantages": summary.get("step3_advantages") or summary.get("step2_advantages"),
+        "ecosystem_coordinated": bool((truth or {}).get("operational_intelligence_ecosystem")),
+        "openclaw_parity": "preserved",
+    }
+
+
+def build_runtime_ecosystem_positioning(truth: dict[str, Any] | None = None) -> dict[str, Any]:
+    return {
+        "positioning": "coordinated enterprise operational intelligence ecosystem",
+        "optimization_advisory": True,
+        "ecosystem_aware": True,
+    }
+
+
+def build_operational_optimization_advantage(truth: dict[str, Any] | None = None) -> dict[str, Any]:
+    return {
+        "optimization_quality": (truth or {}).get("runtime_optimization_quality"),
+        "efficiency_signals": len((truth or {}).get("operational_efficiency_signals") or []),
+        "explainable": True,
     }
 
 

@@ -8,3 +8,5 @@ Forecasts are bounded, explainable, and never trigger autonomous execution.
 
 **API:** `GET /api/v1/mission-control/runtime/forecasts`, `GET …/runtime/outlook`  
 **CLI:** `aethos runtime forecasts`, `aethos runtime outlook`
+
+Step 3 adds `adaptive_operational_forecasting`, `strategic_runtime_projection`, and `runtime_prediction_confidence`.

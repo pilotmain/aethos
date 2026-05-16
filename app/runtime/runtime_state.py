@@ -207,6 +207,8 @@ def default_runtime_state(*, workspace_root: Path | None = None) -> dict[str, An
         "runtime_evolution_history": [],
         # Phase 4 Step 2 — growth pattern tail.
         "runtime_growth_patterns": [],
+        # Phase 4 Step 3 — optimization history tail.
+        "runtime_optimization_history": [],
         "hydration_metrics": {},
         "timeline_append_buffer": [],
     }

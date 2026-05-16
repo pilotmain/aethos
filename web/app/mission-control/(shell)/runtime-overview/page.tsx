@@ -32,9 +32,16 @@ type EnterprisePayload = {
   strategic_alerts?: number;
   adaptive_signals?: number;
   coordination_signals?: number;
+  efficiency_signals?: number;
   strategic_insights?: number;
   outlook?: string;
   worker_ecosystem?: string;
+  ecosystem_health?: string;
+  optimization_quality?: number;
+};
+
+type EcosystemPayload = {
+  ecosystem_operational_health?: { status?: string; composite_health?: number };
 };
 
 type OutlookPayload = {
@@ -52,23 +59,26 @@ export default function RuntimeOverviewPage() {
   const [enterprise, setEnterprise] = useState<EnterprisePayload>({});
   const [strategy, setStrategy] = useState<StrategyPayload>({});
   const [outlook, setOutlook] = useState<OutlookPayload>({});
+  const [ecosystem, setEcosystem] = useState<EcosystemPayload>({});
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     try {
-      const [o, c, r, ent, strat, ol] = await Promise.all([
+      const [o, c, r, ent, strat, ol, eco] = await Promise.all([
         apiFetch<OverviewPayload>("/mission-control/runtime/overview"),
         apiFetch<CalmPayload>("/mission-control/runtime/calmness"),
         apiFetch<ReadinessPayload>("/mission-control/runtime/readiness"),
         apiFetch<EnterprisePayload>("/mission-control/enterprise/overview"),
         apiFetch<StrategyPayload>("/mission-control/runtime/strategy"),
         apiFetch<OutlookPayload>("/mission-control/runtime/outlook"),
+        apiFetch<EcosystemPayload>("/mission-control/ecosystem/health"),
       ]);
       setOverview({ ...o, runtime_readiness_score: r.runtime_readiness_score ?? o.runtime_readiness_score });
       setCalm(c);
       setEnterprise(ent);
       setStrategy(strat);
       setOutlook(ol);
+      setEcosystem(eco);
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load");
@@ -148,6 +158,14 @@ export default function RuntimeOverviewPage() {
           ) : null}
           {enterprise.worker_ecosystem ? (
             <p className="text-xs text-muted-foreground">Worker ecosystem: {enterprise.worker_ecosystem}</p>
+          ) : null}
+          {enterprise.ecosystem_health || ecosystem.ecosystem_operational_health?.status ? (
+            <p className="text-xs text-muted-foreground">
+              Ecosystem: {enterprise.ecosystem_health ?? ecosystem.ecosystem_operational_health?.status}
+              {enterprise.optimization_quality != null
+                ? ` · Optimization ${enterprise.optimization_quality.toFixed(2)}`
+                : null}
+            </p>
           ) : null}
           {outlook.enterprise_operational_outlook?.summary ? (
             <p className="text-xs text-muted-foreground">{outlook.enterprise_operational_outlook.summary}</p>

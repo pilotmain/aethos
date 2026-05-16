@@ -25,3 +25,21 @@ def enrich_recommendations_strategic(truth: dict[str, Any]) -> None:
         rec.setdefault("governance_impact_trend", "visible")
         rec.setdefault("confidence_evolution", maturity)
         rec.setdefault("advisory_only", True)
+
+
+def enrich_recommendations_ecosystem(truth: dict[str, Any]) -> None:
+    """Attach ecosystem intelligence context — advisory only (Phase 4 Step 3)."""
+    block = truth.get("runtime_recommendations")
+    if not isinstance(block, dict):
+        return
+    eco_health = (truth.get("ecosystem_operational_health") or {}).get("status", "healthy")
+    mat_impact = (truth.get("operational_maturity_projection") or {}).get("projected_posture", "maturing")
+    for rec in block.get("recommendations") or []:
+        if not isinstance(rec, dict):
+            continue
+        rec.setdefault("ecosystem_impact_analysis", eco_health)
+        rec.setdefault("operational_maturity_impact", mat_impact)
+        rec.setdefault("worker_ecosystem_effect", "visible")
+        rec.setdefault("provider_ecosystem_effect", "visible")
+        rec.setdefault("governance_quality_impact", "visible")
+        rec.setdefault("strategic_operational_context", truth.get("runtime_strategy_positioning"))

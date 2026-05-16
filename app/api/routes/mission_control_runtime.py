@@ -418,6 +418,74 @@ def mc_runtime_evolution_memory(app_user_id: str = Depends(get_valid_web_user_id
     }
 
 
+@router.get("/runtime/optimization")
+def mc_runtime_optimization(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    t = _truth_slice(app_user_id)
+    return {
+        "adaptive_runtime_optimization": t.get("adaptive_runtime_optimization") or {},
+        "runtime_optimization_quality": t.get("runtime_optimization_quality") or {},
+        "operational_efficiency_signals": t.get("operational_efficiency_signals") or [],
+        "runtime_optimization_history": t.get("runtime_optimization_history") or [],
+    }
+
+
+@router.get("/runtime/projections")
+def mc_runtime_projections(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    t = _truth_slice(app_user_id)
+    return {
+        "strategic_runtime_projection": t.get("strategic_runtime_projection") or {},
+        "runtime_prediction_confidence": t.get("runtime_prediction_confidence") or {},
+        "strategic_ecosystem_projection": t.get("strategic_ecosystem_projection") or {},
+        "operational_maturity_projection": t.get("operational_maturity_projection") or {},
+    }
+
+
+@router.get("/ecosystem/health")
+def mc_ecosystem_health(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    t = _truth_slice(app_user_id)
+    return {
+        "ecosystem_operational_health": t.get("ecosystem_operational_health") or {},
+        "operational_ecosystem_health": t.get("operational_ecosystem_health") or {},
+        "ecosystem_coordination": t.get("ecosystem_coordination") or {},
+    }
+
+
+@router.get("/ecosystem/maturity")
+def mc_ecosystem_maturity(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    t = _truth_slice(app_user_id)
+    return {
+        "ecosystem_maturity_progression": t.get("ecosystem_maturity_progression") or {},
+        "ecosystem_operational_maturity": t.get("ecosystem_operational_maturity") or {},
+        "ecosystem_maturity": t.get("ecosystem_maturity") or {},
+    }
+
+
+@router.get("/workers/coordination")
+def mc_workers_coordination(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    t = _truth_slice(app_user_id)
+    return {
+        "worker_operational_coordination": t.get("worker_operational_coordination") or {},
+        "worker_coordination_quality": t.get("worker_coordination_quality") or {},
+        "adaptive_worker_ecosystem": t.get("adaptive_worker_ecosystem") or {},
+    }
+
+
+@router.get("/governance/intelligence")
+def mc_governance_intelligence(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    t = _truth_slice(app_user_id)
+    return t.get("governance_operational_intelligence") or {}
+
+
+@router.get("/enterprise/intelligence")
+def mc_enterprise_intelligence(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    t = _truth_slice(app_user_id)
+    return {
+        "enterprise_intelligence": t.get("enterprise_intelligence") or {},
+        "operational_intelligence_ecosystem": t.get("operational_intelligence_ecosystem") or {},
+        "ecosystem_operational_strategy": t.get("ecosystem_operational_strategy") or {},
+    }
+
+
 @router.get("/runtime/readiness")
 def mc_runtime_readiness(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
     t = _truth_slice(app_user_id)

@@ -90,22 +90,30 @@ def apply_runtime_evolution_to_truth(truth: dict[str, Any], *, user_id: str | No
     from app.services.mission_control.runtime_evolution_step2 import apply_runtime_evolution_step2_to_truth
 
     apply_runtime_evolution_step2_to_truth(truth, user_id=user_id)
+    from app.services.mission_control.runtime_evolution_step3 import apply_runtime_evolution_step3_to_truth
+
+    apply_runtime_evolution_step3_to_truth(truth, user_id=user_id)
     truth["enterprise_overview"] = build_enterprise_overview(truth)
     return truth
 
 
 def build_enterprise_overview(truth: dict[str, Any]) -> dict[str, Any]:
     outlook = truth.get("enterprise_operational_outlook") or {}
+    eco_out = truth.get("enterprise_ecosystem_outlook") or {}
     return {
         "readiness_score": truth.get("runtime_readiness_score"),
         "maturity": (truth.get("enterprise_operational_posture") or {}).get("overall_posture"),
-        "positioning": (truth.get("runtime_strategy_positioning") or {}).get("positioning")
+        "positioning": (truth.get("runtime_ecosystem_positioning") or {}).get("positioning")
+        or (truth.get("runtime_strategy_positioning") or {}).get("positioning")
         or (truth.get("operational_positioning") or {}).get("positioning"),
         "strategic_alerts": len((truth.get("strategic_runtime_alerts") or [])),
         "adaptive_signals": len((truth.get("operational_optimization_signals") or [])),
         "coordination_signals": len((truth.get("adaptive_execution_signals") or [])),
+        "efficiency_signals": len((truth.get("operational_efficiency_signals") or [])),
         "strategic_insights": len((truth.get("strategic_runtime_insights") or [])),
-        "outlook": outlook.get("outlook"),
+        "outlook": eco_out.get("outlook") or outlook.get("outlook"),
         "worker_ecosystem": (truth.get("worker_ecosystem_health") or {}).get("status"),
-        "phase": "phase4_step2",
+        "ecosystem_health": (truth.get("ecosystem_operational_health") or {}).get("status"),
+        "optimization_quality": (truth.get("runtime_optimization_quality") or {}).get("score"),
+        "phase": "phase4_step3",
     }
