@@ -26,6 +26,8 @@ from app.services.mission_control.runtime_intelligence import (
     build_runtime_metrics_slice,
     build_tasks_slice,
 )
+from app.services.mission_control.runtime_panels import build_runtime_panels
+from app.services.mission_control.runtime_event_intelligence import events_for_ws_replay
 from app.services.mission_control.orchestration_runtime_snapshot import build_orchestration_runtime_snapshot
 
 router = APIRouter(prefix="/mission-control", tags=["mission-control-runtime"])
@@ -80,6 +82,11 @@ def mc_plugins(_: str = Depends(get_valid_web_user_id)) -> dict:
     return {"plugins": list_plugin_manifests(), "loaded": load_all_plugins()}
 
 
+@router.get("/runtime-panels")
+def mc_runtime_panels(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    return build_runtime_panels(app_user_id)
+
+
 @router.websocket("/runtime/ws")
 async def mc_runtime_ws(ws: WebSocket) -> None:
     """Live Mission Control runtime events (bounded bus replay + subscribe)."""
@@ -103,7 +110,15 @@ async def mc_runtime_ws(ws: WebSocket) -> None:
         except RuntimeError:
             pass
 
-    for ev in list_events()[-40:]:
+    for row in events_for_ws_replay(limit=40):
+        push(
+            {
+                "type": f"mission_control.{row.get('event_type')}",
+                "timestamp": row.get("timestamp"),
+                "payload": row,
+            }
+        )
+    for ev in list_events()[-20:]:
         if isinstance(ev, dict):
             push(ev)
     subscribe(push)

@@ -1,14 +1,18 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2025 AethOS AI
 
-"""Mission Control runtime event helpers (Phase 2 Step 8)."""
+"""Mission Control runtime event helpers (Phase 2 Step 8–9)."""
 
 from __future__ import annotations
 
 from typing import Any
 
-from app.runtime.events.runtime_events import emit_runtime_event
-from app.runtime.runtime_state import load_runtime_state, save_runtime_state
+from app.services.mission_control.runtime_event_intelligence import (
+    infer_category_severity,
+    list_normalized_events,
+    normalize_runtime_event,
+    persist_runtime_event,
+)
 
 _MC_EVENT_TYPES = frozenset(
     {
@@ -33,27 +37,43 @@ _MC_EVENT_TYPES = frozenset(
         "queue_pressure",
         "retry_pressure",
         "privacy_redaction",
+        "privacy_block",
+        "plugin_loaded",
+        "plugin_failed",
     }
 )
 
 
-def emit_mc_runtime_event(event_type: str, **fields: Any) -> dict[str, Any]:
-    """Persist + bus-publish a Mission Control runtime event."""
+def emit_mc_runtime_event(
+    event_type: str,
+    *,
+    correlation_id: str | None = None,
+    category: str | None = None,
+    severity: str | None = None,
+    **fields: Any,
+) -> dict[str, Any]:
     et = (event_type or "").strip()
     if et not in _MC_EVENT_TYPES:
         et = et or "runtime_event"
-    st = load_runtime_state()
-    row = emit_runtime_event(st, et, mc_event_type=et, **fields)
-    save_runtime_state(st)
+    cat, sev = infer_category_severity(et)
+    row = normalize_runtime_event(
+        et,
+        payload=fields,
+        correlation_id=correlation_id,
+        category=category or cat,
+        severity=severity or sev,
+    )
+    persist_runtime_event(row)
     try:
         from app.services.events.bus import publish
 
         publish(
             {
                 "type": f"mission_control.{et}",
+                "timestamp": row.get("timestamp"),
+                "mission_id": fields.get("mission_id"),
+                "agent": fields.get("agent_id"),
                 "payload": row,
-                "user_id": fields.get("user_id"),
-                "project_id": fields.get("project_id"),
             }
         )
     except Exception:
@@ -61,10 +81,5 @@ def emit_mc_runtime_event(event_type: str, **fields: Any) -> dict[str, Any]:
     return row
 
 
-def recent_mc_runtime_events(*, limit: int = 80) -> list[dict[str, Any]]:
-    st = load_runtime_state()
-    buf = st.get("runtime_event_buffer") or []
-    if not isinstance(buf, list):
-        return []
-    lim = max(1, min(int(limit), 500))
-    return list(buf[-lim:])
+def recent_mc_runtime_events(*, limit: int = 80, category: str | None = None) -> list[dict[str, Any]]:
+    return list_normalized_events(limit=limit, category=category)

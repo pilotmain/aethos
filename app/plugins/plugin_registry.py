@@ -80,7 +80,19 @@ def register_manifest(manifest: PluginManifest | dict[str, Any]) -> PluginManife
 
 def list_plugin_manifests() -> list[dict[str, Any]]:
     _seed_builtin()
-    return [m.to_dict() for m in _MANIFESTS.values()]
+    try:
+        from app.plugins.plugin_runtime import list_plugin_runtime_states
+
+        states = list_plugin_runtime_states()
+    except Exception:
+        states = {}
+    out: list[dict[str, Any]] = []
+    for m in _MANIFESTS.values():
+        d = m.to_dict()
+        st = states.get(m.plugin_id) or {}
+        d["runtime_state"] = st.get("state", "registered")
+        out.append(d)
+    return out
 
 
 def get_plugin_manifest(plugin_id: str) -> dict[str, Any] | None:

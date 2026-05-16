@@ -43,6 +43,8 @@ Do not introduce architectural divergence unless required to reproduce OpenClaw 
 
 **Phase 2 Step 8 (Mission Control runtime intelligence):** See [docs/MISSION_CONTROL.md](docs/MISSION_CONTROL.md), [docs/PLUGINS.md](docs/PLUGINS.md), [docs/RUNTIME_EVENTS.md](docs/RUNTIME_EVENTS.md). Dynamic `runtime_agents`, slice APIs under `/mission-control/runtime*`, Office UI at `/mission-control/office`, plugin manifests in `app/plugins/`.
 
+**Phase 2 Step 9 (real-time MC + marketplace foundation):** Categorized runtime events, agent lifecycle (busy/idle/suspend/expire), live panels API, metrics cache, plugin load/disable APIs (`/api/v1/plugins/*`), Office topology. See [docs/RUNTIME_AGENTS.md](docs/RUNTIME_AGENTS.md), [docs/PLUGIN_MARKETPLACE.md](docs/PLUGIN_MARKETPLACE.md).
+
 Deferred until after verified parity:
 
 - privacy-first redesigns

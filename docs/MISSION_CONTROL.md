@@ -16,7 +16,13 @@ Mission Control is the operational surface for AethOS runtime state — not a si
 | `GET /api/v1/mission-control/runtime-metrics` | Lightweight metrics |
 | `WS /api/v1/mission-control/runtime/ws` | Live runtime events |
 
-Legacy unified payload: `GET /api/v1/mission-control/state` (includes `runtime_agents`, `office`, `brain_visibility`).
+Legacy unified payload: `GET /api/v1/mission-control/state` (includes `runtime_agents`, `office`, `brain_visibility`, `panels`).
+
+## Live panels (Step 9)
+
+`GET /api/v1/mission-control/runtime-panels` — runtime health, brain routing, provider operations, agents, privacy, recovery.
+
+Events use categorized shape: `event_type`, `category`, `severity`, `correlation_id` (see [RUNTIME_EVENTS.md](RUNTIME_EVENTS.md)).
 
 ## The Office
 

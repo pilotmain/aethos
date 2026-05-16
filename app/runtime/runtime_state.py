@@ -170,6 +170,17 @@ def default_runtime_state(*, workspace_root: Path | None = None) -> dict[str, An
         "repair_contexts": {"latest_by_project": {}},
         "brain_decisions": [],
         "runtime_agents": {},
+        "runtime_agent_metrics": {
+            "active_agents": 0,
+            "busy_agents": 0,
+            "expired_agents": 0,
+            "recovered_agents": 0,
+            "agent_reassignment_count": 0,
+            "agent_runtime_failures": 0,
+        },
+        "runtime_event_summaries": [],
+        "mc_metrics_cache": {},
+        "mc_metrics_history": [],
     }
 
 
@@ -338,6 +349,10 @@ def ensure_operator_context_schema(st: dict[str, Any]) -> dict[str, Any]:
         "repair_contexts",
         "brain_decisions",
         "runtime_agents",
+        "runtime_agent_metrics",
+        "runtime_event_summaries",
+        "mc_metrics_cache",
+        "mc_metrics_history",
     ):
         if key not in st:
             st[key] = base[key]  # type: ignore[index]

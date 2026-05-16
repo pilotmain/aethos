@@ -120,7 +120,7 @@ def run_fix_and_redeploy(
             "repair_context": repair_ctx,
         }
 
-    from app.runtime.runtime_agents import spawn_runtime_agent
+    from app.runtime.runtime_agents import assign_runtime_agent, release_runtime_agent, spawn_runtime_agent
     from app.services.mission_control.mc_runtime_events import emit_mc_runtime_event
 
     repair_agent = spawn_runtime_agent(
@@ -128,7 +128,15 @@ def run_fix_and_redeploy(
         created_from_task=f"fix_and_redeploy:{project_id}",
         provider="vercel",
     )
-    emit_mc_runtime_event("repair_started", project_id=project_id, agent_id=repair_agent.get("agent_id"))
+    repair_agent_id = str(repair_agent.get("agent_id") or "") or None
+    if repair_agent_id:
+        assign_runtime_agent(repair_agent_id, task_id=f"fix_and_redeploy:{project_id}")
+    emit_mc_runtime_event(
+        "repair_started",
+        project_id=project_id,
+        agent_id=repair_agent_id,
+        correlation_id=repair_agent_id or project_id,
+    )
 
     evidence = collect_repair_evidence(
         project_id=project_id,
@@ -196,6 +204,8 @@ def run_fix_and_redeploy(
         reason = "Local verification failed."
         if fail_cmd:
             reason += f" Command `{fail_cmd}` exited non-zero."
+        if repair_agent_id:
+            release_runtime_agent(repair_agent_id)
         return {
             "success": False,
             "summary": render_fix_and_redeploy_blocked(
@@ -267,6 +277,8 @@ def run_fix_and_redeploy(
             next_hint=f"Check provider logs, then:\nredeploy {project_id}",
         )
 
+    if repair_agent_id:
+        release_runtime_agent(repair_agent_id)
     return {
         "success": ok,
         "summary": summary,

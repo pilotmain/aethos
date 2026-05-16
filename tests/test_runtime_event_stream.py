@@ -20,6 +20,11 @@ def test_emit_mc_event_persisted(tmp_path: Path, monkeypatch: pytest.MonkeyPatch
         save_runtime_state(st)
         emit_mc_runtime_event("repair_started", project_id="acme")
         events = recent_mc_runtime_events(limit=10)
-        assert any(e.get("event") == "repair_started" or e.get("mc_event_type") == "repair_started" for e in events)
+        assert any(
+            e.get("event_type") == "repair_started"
+            or e.get("event") == "repair_started"
+            or e.get("mc_event_type") == "repair_started"
+            for e in events
+        )
     finally:
         get_settings.cache_clear()

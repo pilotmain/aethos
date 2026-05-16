@@ -12,9 +12,17 @@ from sqlalchemy.orm import Session
 from app.brain.brain_events import recent_brain_decisions
 from app.core.config import get_settings
 from app.privacy.privacy_policy import current_privacy_mode
-from app.runtime.runtime_agents import list_runtime_agents, office_agent_states, sweep_expired_agents
+from app.runtime.runtime_agents import (
+    agent_runtime_metrics,
+    list_runtime_agents,
+    office_agent_states,
+    office_topology,
+    recover_runtime_agents_after_restart,
+    sweep_expired_agents,
+)
 from app.runtime.runtime_state import load_runtime_state
 from app.services.mission_control.mc_runtime_events import recent_mc_runtime_events
+from app.services.mission_control.runtime_metrics_cache import get_cached_metrics
 from app.services.mission_control.orchestration_runtime_snapshot import build_orchestration_runtime_snapshot
 from app.services.operator_context import build_operator_context_panel
 from app.services.plugins.registry import plugin_manifest
@@ -87,19 +95,34 @@ def build_runtime_health(user_id: str | None, ort: dict[str, Any]) -> dict[str, 
     }
 
 
+def _build_runtime_panels(user_id: str) -> dict[str, Any]:
+    from app.services.mission_control.runtime_panels import build_runtime_panels
+
+    return build_runtime_panels(user_id)
+
+
+def _build_metrics(user_id: str) -> dict[str, Any]:
+    st = load_runtime_state()
+    ort = build_orchestration_runtime_snapshot(user_id)
+    return {**_runtime_metrics(st, ort), "agent_metrics": agent_runtime_metrics()}
+
+
 def build_mission_control_runtime(db: Session, *, user_id: str) -> dict[str, Any]:
     """Unified runtime payload for Mission Control operational surface."""
+    recover_runtime_agents_after_restart()
     sweep_expired_agents()
     st = load_runtime_state()
     ort = build_orchestration_runtime_snapshot(user_id)
     operator = build_operator_context_panel()
     brain = build_brain_visibility()
     agents = list_runtime_agents()
+    metrics = get_cached_metrics(user_id, lambda uid: _build_metrics(uid))
     return {
         "runtime_health": build_runtime_health(user_id, ort),
         "orchestrator": agents.get("aethos_orchestrator"),
         "runtime_agents": agents,
-        "office": {"agents": office_agent_states()},
+        "office": office_topology(user_id),
+        "panels": _build_runtime_panels(user_id),
         "tasks": ort.get("tasks") or [],
         "queues": ort.get("queue_depths") or {},
         "deployments": {
@@ -119,7 +142,7 @@ def build_mission_control_runtime(db: Session, *, user_id: str) -> dict[str, Any
             "events_tail": (ort.get("runtime_events_tail") or [])[-20:],
         },
         "runtime_events": recent_mc_runtime_events(limit=60),
-        "runtime_metrics": _runtime_metrics(st, ort),
+        "runtime_metrics": metrics,
         "plugins": plugin_manifest(),
         "workflows": ort.get("workflows") or {},
     }
