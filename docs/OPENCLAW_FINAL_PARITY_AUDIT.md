@@ -137,6 +137,8 @@ AETHOS_CHURN_LARGE=1 pytest tests/production_like/ -m production_like
 
 ## Phase 1 parity freeze — status
 
+**Normative freeze + Phase 2 boundary (declarations, allowed/forbidden changes):** [docs/PHASE1_CERTIFICATION_CLOSURE_PHASE2_BOUNDARY.md](PHASE1_CERTIFICATION_CLOSURE_PHASE2_BOUNDARY.md).
+
 **Frozen for Phase 1:** No orchestration, Mission Control UI, or runtime **schema redesign** beyond additive forward-compatible fields, bugfixes, reliability/performance fixes, and parity test additions aligned with this audit.
 
 **Phase 1 operational confidence lock (final stabilization):** Only bug/stability/boundedness/visibility/parity-validation fixes per the Phase 1 completion directive. **Final operational certification** (boundedness table, suite totals, Phase 2 readiness) is recorded in **Phase 1 final operational certification (closure)** above. Confidence package adds repeated-cycle and churn tests (production_like + edge_cases + behavioral + soak), deterministic **reliability / continuity / warning** read consistency tests, **Phase 1 transition gate** (≥100 repetition matrix + boundedness certification + deployment-transition gate), and repeated deployment artifact + rollback + environment-lock integrity checks. Churn knobs: `AETHOS_CHURN_LARGE=1`, `AETHOS_SOAK_LONG=1`. High-volume tests bump `AETHOS_RUNTIME_EVENT_BUFFER_LIMIT` in-test via `widen_runtime_event_buffer()` so lifecycle telemetry does not exceed the default **500**-entry cap.

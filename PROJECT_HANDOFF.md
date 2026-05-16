@@ -10,7 +10,7 @@ No contributor should optimize for novelty, differentiation, branding, or archit
 
 **Master implementation plan:** [docs/OPENCLAW_FUNCTIONAL_PARITY_DIRECTIVE.md](docs/OPENCLAW_FUNCTIONAL_PARITY_DIRECTIVE.md) — CLI + gateway command matrix (`aethos onboard`, `aethos gateway`, `aethos message send`, …), workspace layout targets (`~/.aethos/…`), required parity **test modules**, and priorities **P1–P4**.
 
-**Parity lock, transition gate, and final operational certification:** [docs/OPENCLAW_FINAL_PARITY_AUDIT.md](docs/OPENCLAW_FINAL_PARITY_AUDIT.md) — suite totals, boundedness metrics table, **Phase 1 final operational certification (closure)**, Phase 2 readiness, soak / **production_like** / behavioral / e2e stress paths, and known gaps.
+**Parity lock, transition gate, final operational certification, and Phase 2 boundary:** [docs/OPENCLAW_FINAL_PARITY_AUDIT.md](docs/OPENCLAW_FINAL_PARITY_AUDIT.md) (suite totals, boundedness table, closure) and **[docs/PHASE1_CERTIFICATION_CLOSURE_PHASE2_BOUNDARY.md](docs/PHASE1_CERTIFICATION_CLOSURE_PHASE2_BOUNDARY.md)** (freeze declaration, allowed/forbidden changes, Phase 2 activation rules).
 
 ---
 

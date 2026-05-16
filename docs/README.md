@@ -12,6 +12,7 @@ Start here:
 - [OpenClaw parity audit](OPENCLAW_PARITY_AUDIT.md)
 - [OpenClaw final parity audit — Phase 1 freeze & confidence lock](OPENCLAW_FINAL_PARITY_AUDIT.md)
 - **Phase 1 final operational certification** (suite totals, boundedness metrics, Phase 2 readiness) — same document, *Phase 1 final operational certification (closure)* section.
+- [**Phase 1 freeze declaration & Phase 2 activation boundary**](PHASE1_CERTIFICATION_CLOSURE_PHASE2_BOUNDARY.md) — normative frozen surfaces, allowed/forbidden changes, Phase 2 gate.
 - [Migrating from OpenClaw](MIGRATING_FROM_OPENCLAW.md)
 - [OpenClaw functional parity directive (master plan)](OPENCLAW_FUNCTIONAL_PARITY_DIRECTIVE.md)
 - [OpenClaw functional parity implementation status](OPENCLAW_FUNCTIONAL_PARITY_STATUS.md)
