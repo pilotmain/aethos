@@ -462,14 +462,25 @@ export default function MissionControlMarketplacePage() {
 
   return (
     <div className="space-y-6">
-      <p className="rounded-lg border border-violet-500/30 bg-violet-950/20 px-4 py-3 text-sm text-zinc-300">
-        <strong className="text-zinc-100">Skills</strong> extend AI execution capability (community skill registry).
-        For operational runtime extensions, see{" "}
-        <Link href="/mission-control/plugins" className="underline text-violet-200">
-          Runtime plugins
-        </Link>
-        .
-      </p>
+      <div className="space-y-2 rounded-lg border border-violet-500/30 bg-violet-950/20 px-4 py-3 text-sm text-zinc-300">
+        <p>
+          <strong className="text-zinc-100">Runtime plugin</strong> — extends runtime/provider capabilities (
+          <Link href="/mission-control/plugins" className="underline text-violet-200">
+            Runtime plugins
+          </Link>
+          ).
+        </p>
+        <p>
+          <strong className="text-zinc-100">Automation pack</strong> — operator-triggered operational workflow (
+          <Link href="/mission-control/operational-insights" className="underline text-violet-200">
+            Insights
+          </Link>
+          ).
+        </p>
+        <p>
+          <strong className="text-zinc-100">Marketplace skill</strong> — installable AI execution package (this page).
+        </p>
+      </div>
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-zinc-50">Skill marketplace</h1>
         <p className="mt-1 text-sm text-zinc-400">
@@ -617,7 +628,7 @@ export default function MissionControlMarketplacePage() {
       <section className="space-y-3">
         <div className="flex items-end justify-between gap-3">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">
-            Popular on ClawHub
+            Popular in skill registry
           </h2>
           <Button
             size="sm"
@@ -642,7 +653,7 @@ export default function MissionControlMarketplacePage() {
         ) : popular.length === 0 ? (
           <Card>
             <CardContent className="py-8 text-center text-sm text-zinc-400">
-              The configured ClawHub registry returned no popular results (or the registry is
+              The configured skill registry returned no popular results (or the registry is
               unreachable).
             </CardContent>
           </Card>

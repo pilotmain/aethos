@@ -359,10 +359,10 @@ export function TrustActivityPage() {
         <div className="mb-6 rounded-lg border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
           <p className="font-medium">Set your user id first</p>
           <p className="mt-1 text-amber-200/80">
-            Open Nexa from the main app, use the side panel <strong>Keys</strong> or login flow, then return here.
+            Open AethOS from the main app, use the side panel <strong>Keys</strong> or login flow, then return here.
           </p>
           <Link href="/" className="mt-2 inline-block text-sm font-medium text-cyan-400 hover:underline">
-            ← Back to Nexa
+            ← Back to AethOS
           </Link>
         </div>
       )}
@@ -399,7 +399,7 @@ export function TrustActivityPage() {
             <div className="rounded-lg border border-white/10 bg-white/[0.02] px-4 py-10 text-center">
               <p className="text-sm font-medium text-zinc-300">No recent activity</p>
               <p className="mt-2 text-sm text-zinc-500">
-                Nexa hasn&apos;t recorded any trust events for your account in this window yet.
+                AethOS hasn&apos;t recorded any trust events for your account in this window yet.
               </p>
               <p className="mt-4 text-xs text-zinc-500">
                 Run a chat, workflow, or permitted action — then refresh — to see activity here.
@@ -428,7 +428,7 @@ function TrustPageHeader({ onRefresh, loading }: { onRefresh: () => void; loadin
         href="/"
         className="mb-4 inline-flex items-center gap-1 text-sm text-zinc-400 transition hover:text-zinc-200"
       >
-        ← Back to Nexa
+        ← Back to AethOS
       </Link>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-start gap-3">
@@ -438,7 +438,7 @@ function TrustPageHeader({ onRefresh, loading }: { onRefresh: () => void; loadin
           <div>
             <h1 className="text-2xl font-semibold tracking-tight text-zinc-50">Trust & activity</h1>
             <p className="mt-1 max-w-xl text-sm leading-relaxed text-zinc-400">
-              What Nexa did, why it happened, and whether it was allowed — not a raw log dump.
+              What AethOS did, why it happened, and whether it was allowed — not a raw log dump.
             </p>
           </div>
         </div>

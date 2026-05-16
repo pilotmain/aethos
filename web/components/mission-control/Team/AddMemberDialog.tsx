@@ -57,7 +57,7 @@ export function AddMemberDialog({ onInvite, disabled, disabledReason }: AddMembe
           <DialogTitle>Add organization member</DialogTitle>
           <DialogDescription>
             Calls <span className="font-mono text-zinc-400">POST /api/v1/governance/organizations/&#123;org&#125;/members</span>{" "}
-            with a Nexa <strong>user id</strong> (same identifier you use in Login → Connection).
+            with an AethOS <strong>user id</strong> (same identifier you use in Login → Connection).
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">

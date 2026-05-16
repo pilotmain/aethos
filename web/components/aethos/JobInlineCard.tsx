@@ -136,7 +136,7 @@ export function JobInlineCard({ job, onUpdated, onNotify, compact }: Props) {
         <details className="mt-2 text-[10px] text-zinc-500">
           <summary className="cursor-pointer text-zinc-500">Why development?</summary>
           <p className="mt-1 leading-relaxed text-zinc-500">
-            This looks like a file or code change, so Nexa started a development task.
+            This looks like a file or code change, so AethOS started a development task.
             {job.approval_required
               ? " Approval is required because the job may modify files in your repo when it runs."
               : ""}
@@ -147,7 +147,7 @@ export function JobInlineCard({ job, onUpdated, onNotify, compact }: Props) {
         <details className="mt-2 text-[10px] text-zinc-500">
           <summary className="cursor-pointer text-zinc-500">Why local?</summary>
           <p className="mt-1 leading-relaxed text-zinc-500">
-            Chat never runs shell directly. Nexa scheduled a host-executor task; after you approve, the worker runs only
+            Chat never runs shell directly. AethOS scheduled a host-executor task; after you approve, the worker runs only
             allowlisted tools on your machine.
           </p>
         </details>

@@ -1,12 +1,15 @@
 # SPDX-License-Identifier: Apache-2.0
-# Copyright (c) 2025 AethOS AI
 
-from app.services.mission_control.runtime_truth import build_provider_routing_summary
+from __future__ import annotations
+
+from app.services.mission_control.runtime_routing_visibility import (
+    build_provider_health_matrix,
+    build_routing_explanations,
+    build_routing_history,
+)
 
 
-def test_routing_summary_keys() -> None:
-    s = build_provider_routing_summary()
-    assert "provider" in s
-    assert "local_first" in s
-    assert "privacy_mode" in s
-    assert "reason" in s
+def test_routing_visibility() -> None:
+    assert build_routing_history({})["bounded"] is True
+    assert "current" in build_routing_explanations({})
+    assert build_provider_health_matrix({})["bounded"] is True

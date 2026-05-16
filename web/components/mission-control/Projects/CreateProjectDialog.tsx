@@ -67,7 +67,7 @@ export function CreateProjectDialog({ onCreated }: CreateProjectDialogProps) {
           <DialogTitle>New workspace project</DialogTitle>
         </DialogHeader>
         <p className="text-xs text-zinc-500">
-          Creates a Nexa workspace folder mapping via POST /api/v1/web/workspace/nexa-projects (path + name required).
+          Creates an AethOS workspace folder mapping via POST /api/v1/web/workspace/nexa-projects (path + name required).
         </p>
         <div className="space-y-4">
           {error ? <p className="text-sm text-red-400">{error}</p> : null}

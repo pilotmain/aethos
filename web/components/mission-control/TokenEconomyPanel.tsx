@@ -30,7 +30,7 @@ export function TokenEconomyPanel({
         {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin text-zinc-500" /> : null}
       </div>
       <p className="mb-3 text-xs text-zinc-500">
-        Estimated outbound tokens and cost for this session — every provider call is budget-checked before leaving Nexa.
+        Estimated outbound tokens and cost for this session — every provider call is budget-checked before leaving AethOS.
       </p>
 
       <div className="grid gap-3 sm:grid-cols-2">

@@ -45,7 +45,7 @@ export function DangerZone({ onReset, onDeleteWorkspace }: DangerZoneProps) {
       await onDeleteWorkspace();
       setDeleteText("");
       setShowDeleteConfirm(false);
-      setMsg("Acknowledged. Coordinate workspace teardown with your Nexa operator / host.");
+      setMsg("Acknowledged. Coordinate workspace teardown with your AethOS operator / host.");
     } catch (e) {
       setMsg(e instanceof Error ? e.message : String(e));
     } finally {
@@ -59,7 +59,7 @@ export function DangerZone({ onReset, onDeleteWorkspace }: DangerZoneProps) {
         <CardHeader>
           <CardTitle className="text-red-300">Danger zone</CardTitle>
           <CardDescription className="text-red-200/70">
-            Destructive or irreversible actions. There is no single API to wipe an entire Nexa workspace from this UI — server
+            Destructive or irreversible actions. There is no single API to wipe an entire AethOS workspace from this UI — server
             operators must remove database volumes or tenant data on the host.
           </CardDescription>
         </CardHeader>

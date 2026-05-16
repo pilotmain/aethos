@@ -52,7 +52,7 @@ export function MissionBuilderPanel() {
         <h2 className="text-sm font-medium text-zinc-200">Mission builder</h2>
       </div>
       <p className="mb-3 text-xs text-zinc-500">
-        Sends structured text through the Nexa gateway (same path as channels). Use loose lines like{" "}
+        Sends structured text through the AethOS gateway (same path as channels). Use loose lines like{" "}
         <span className="font-mono text-zinc-400">Researcher: …</span> / <span className="font-mono text-zinc-400">Analyst: …</span>.
       </p>
 

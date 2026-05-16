@@ -25,7 +25,7 @@ function isActiveStatus(s: string | undefined): boolean {
   return t === "running" || t === "queued" || t === "pending" || t === "in_progress";
 }
 
-/** Phase 55 — human-readable “what Nexa is doing” from Mission Control snapshot. */
+/** Human-readable “what AethOS is doing” from Mission Control snapshot. */
 export function ActiveWorkPanel(props: {
   shellLight: boolean;
   devRuns?: DevRun[] | null;
@@ -91,7 +91,7 @@ export function ActiveWorkPanel(props: {
     >
       <div className="mb-2 flex items-center gap-2">
         <Wrench className={`h-4 w-4 ${shellLight ? "text-zinc-600" : "text-zinc-400"}`} aria-hidden />
-        <h2 className={`text-sm font-semibold ${cardTitle}`}>What Nexa is doing now</h2>
+        <h2 className={`text-sm font-semibold ${cardTitle}`}>What AethOS is doing now</h2>
         {loading ? (
           <Loader2
             className={`h-3.5 w-3.5 animate-spin ${shellLight ? "text-zinc-500" : "text-zinc-500"}`}
@@ -104,7 +104,7 @@ export function ActiveWorkPanel(props: {
       </p>
       {lines.length === 0 ? (
         <p className={`text-xs ${muted}`}>
-          No active work in the queue. When you ask Nexa to fix tests or run a dev mission, progress appears
+          No active work in the queue. When you ask AethOS to fix tests or run a dev mission, progress appears
           here.
         </p>
       ) : (

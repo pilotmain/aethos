@@ -27,7 +27,7 @@ export function ProviderTransparencyPanel({
         {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin text-zinc-500" /> : null}
       </div>
       <p className="mb-3 text-xs text-zinc-500">
-        Live signals from the provider gateway and privacy firewall — Nexa = OpenClaw-class control + guaranteed PII protection.
+        Live signals from the provider gateway and privacy firewall — AethOS orchestrator control with PII protection.
       </p>
 
       <div className="grid gap-3 sm:grid-cols-2">

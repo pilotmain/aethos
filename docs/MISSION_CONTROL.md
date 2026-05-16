@@ -163,6 +163,15 @@ Certifies one-curl → enterprise setup, env completeness, MC ready state, and f
 
 `enterprise_overview.phase` is `phase4_step11`.
 
+## Phase 4 Step 12 — production-cut convergence
+
+- `GET /api/v1/runtime/{routing/history,routing/explanations,providers/health-matrix,perception,operator-experience}`
+- UI branding purge final — AethOS operator copy
+- Marketplace plugin vs pack vs skill clarity
+- Production-cut readiness — [PRODUCTION_CUT_READINESS.md](PRODUCTION_CUT_READINESS.md)
+
+`enterprise_overview.phase` is `phase4_step12`.
+
 ## The Office
 
 Web route: `/mission-control/office` — lightweight cards for runtime agents (`active`, `busy`, `idle`, `recovering`, `failed`, `offline`). Progressive Office stream and partition-aware hydration (Step 7) remain; Step 8 adds calmness lock and enterprise summaries without analytics-wall noise.

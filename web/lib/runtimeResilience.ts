@@ -41,7 +41,7 @@ export function formatOperationalError(message: string): string {
     return m;
   }
   if (/Cannot reach API/i.test(m)) {
-    return m;
+    return "Runtime connection unavailable. AethOS is attempting recovery.";
   }
   return m;
 }

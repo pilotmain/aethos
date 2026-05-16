@@ -52,7 +52,7 @@ export async function fetchWebSystemStatus(): Promise<WebSystemStatusPayload> {
 export async function fetchSystemLogs(): Promise<{ lines: string[]; note: string }> {
   return {
     lines: [],
-    note: "GET /api/v1/system/logs is not available in this Nexa build. Use host/container logs or your process manager.",
+    note: "GET /api/v1/system/logs is not available in this AethOS build. Use host/container logs or your process manager.",
   };
 }
 

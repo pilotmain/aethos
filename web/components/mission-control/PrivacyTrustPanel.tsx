@@ -36,7 +36,7 @@ export function PrivacyTrustPanel({
         {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin text-zinc-500" /> : null}
       </div>
       <p className="mb-3 text-xs text-zinc-500">
-        Session snapshot: how aggressively Nexa filters outbound content and what mode you chose (
+        Session snapshot: how aggressively AethOS filters outbound content and what mode you chose (
         <span className="font-mono text-zinc-400">{mode}</span>
         ).
       </p>

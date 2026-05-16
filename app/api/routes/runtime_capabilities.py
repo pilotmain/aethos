@@ -163,10 +163,65 @@ def runtime_restarts(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
 
 @router.get("/identity")
 def runtime_identity_state(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
-    from app.services.mission_control.runtime_identity_lock import build_runtime_identity_lock
+    from app.services.mission_control.runtime_identity_final import build_aethos_runtime_identity_final
 
     try:
         t = _truth_slice(app_user_id)
     except Exception:
         t = {}
-    return build_runtime_identity_lock(t)
+    return build_aethos_runtime_identity_final(t)
+
+
+@router.get("/routing/history")
+def runtime_routing_history(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_routing_visibility import build_routing_history
+
+    try:
+        t = _truth_slice(app_user_id)
+    except Exception:
+        t = {}
+    return build_routing_history(t)
+
+
+@router.get("/routing/explanations")
+def runtime_routing_explanations(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_routing_visibility import build_routing_explanations
+
+    try:
+        t = _truth_slice(app_user_id)
+    except Exception:
+        t = {}
+    return build_routing_explanations(t)
+
+
+@router.get("/providers/health-matrix")
+def runtime_providers_health_matrix(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_routing_visibility import build_provider_health_matrix
+
+    try:
+        t = _truth_slice(app_user_id)
+    except Exception:
+        t = {}
+    return build_provider_health_matrix(t)
+
+
+@router.get("/perception")
+def runtime_perception(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_perception_responsiveness import build_runtime_perception_responsiveness
+
+    try:
+        t = _truth_slice(app_user_id)
+    except Exception:
+        t = {}
+    return build_runtime_perception_responsiveness(t)
+
+
+@router.get("/operator-experience")
+def runtime_operator_experience(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_operator_experience import build_runtime_operator_experience
+
+    try:
+        t = _truth_slice(app_user_id)
+    except Exception:
+        t = {}
+    return build_runtime_operator_experience(t)
