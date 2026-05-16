@@ -60,8 +60,7 @@ def mc_providers(_: str = Depends(get_valid_web_user_id)) -> dict:
 
 @router.get("/runtime-health")
 def mc_runtime_health(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
-    ort = build_orchestration_runtime_snapshot(app_user_id)
-    return build_runtime_health(app_user_id, ort)
+    return build_runtime_health(app_user_id, None)
 
 
 @router.get("/runtime-events")
@@ -89,10 +88,22 @@ def mc_runtime_panels(app_user_id: str = Depends(get_valid_web_user_id)) -> dict
 
 @router.get("/runtime-trace")
 def mc_runtime_trace(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_truth_cache import get_cached_runtime_truth
     from app.services.mission_control.runtime_truth import build_runtime_truth
 
-    truth = build_runtime_truth(user_id=app_user_id)
-    return {"ownership_trace": truth.get("ownership_trace") or [], "routing_summary": truth.get("routing_summary")}
+    truth = get_cached_runtime_truth(app_user_id, lambda uid: build_runtime_truth(user_id=uid))
+    return {
+        "ownership_trace": truth.get("ownership_trace") or [],
+        "operator_traces": truth.get("operator_traces") or {},
+        "routing_summary": truth.get("routing_summary"),
+    }
+
+
+@router.get("/runtime-traces")
+def mc_runtime_traces(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_ownership import build_all_operator_traces
+
+    return build_all_operator_traces(app_user_id)
 
 
 @router.websocket("/runtime/ws")

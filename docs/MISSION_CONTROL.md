@@ -25,7 +25,15 @@ Legacy unified payload: `GET /api/v1/mission-control/state` (includes `runtime_a
 
 Runtime health uses `healthy | warning | degraded | critical` with pressure flags (`queue_pressure`, `retry_pressure`, `deployment_pressure`, `recovery_active`). See `runtime_health_model.py`.
 
-Events are aggregated for display (`aggregate_events_for_display`) to collapse repeated low-signal events.
+Events are aggregated for display (`aggregate_events_for_display`) to collapse repeated low-signal events, with severity prioritization.
+
+## Step 11 — production cleanup
+
+- **Cached truth:** `runtime_truth_cache.py` (5s TTL) backs all MC runtime APIs.
+- **Lifecycle:** `runtime_lifecycle.py` sweeps stale repair contexts and trims deployment traces.
+- **Traces:** `GET /api/v1/mission-control/runtime-traces` — ownership, repair, deployment, provider chains.
+- **Plugins:** `build_plugin_health_panel()` exposes warnings, failures, permissions.
+- **`/state` parity:** `build_execution_snapshot` embeds truth-derived `runtime_health`, `panels`, `operator_traces`.
 
 ## Live panels (Step 9)
 

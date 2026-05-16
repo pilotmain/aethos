@@ -77,6 +77,44 @@ def reload_plugin(plugin_id: str) -> dict[str, Any]:
     return safe_load_plugin(plugin_id)
 
 
+_TRUST_TIERS = frozenset({"official", "verified", "trusted", "community", "experimental", "deprecated", "disabled"})
+
+
+def build_plugin_health_panel() -> dict[str, Any]:
+    """Mission Control plugin health — states, warnings, permission scopes."""
+    manifests = list_plugin_manifests()
+    states = list_plugin_runtime_states()
+    warnings: list[dict[str, Any]] = []
+    failures: list[dict[str, Any]] = []
+    for m in manifests:
+        pid = str(m.get("plugin_id") or "")
+        st = states.get(pid) or {}
+        tier = str(m.get("trust_tier") or "community")
+        if tier not in _TRUST_TIERS:
+            tier = "community"
+        row = {
+            "plugin_id": pid,
+            "name": m.get("name"),
+            "state": st.get("state", "registered"),
+            "trust_tier": tier,
+            "verified": bool(m.get("verified")),
+            "permissions": list(m.get("permissions") or []),
+            "capabilities": list(m.get("capabilities") or []),
+        }
+        if st.get("state") == "failed":
+            failures.append({**row, "error": st.get("error")})
+        elif st.get("state") == "warning" or tier == "experimental":
+            warnings.append({**row, "note": st.get("note") or "experimental_tier"})
+    return {
+        "plugins": list(manifests),
+        "states": states,
+        "warnings": warnings,
+        "failures": failures,
+        "healthy_count": sum(1 for s in states.values() if s.get("state") == "active"),
+        "failed_count": len(failures),
+    }
+
+
 class PluginRuntime:
     def __init__(self) -> None:
         self._started = False

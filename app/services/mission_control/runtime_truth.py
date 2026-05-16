@@ -22,10 +22,11 @@ from app.runtime.runtime_state import load_runtime_state
 from app.services.mission_control.runtime_event_intelligence import aggregate_events_for_display
 from app.services.mission_control.runtime_health_model import build_consolidated_runtime_health
 from app.services.mission_control.runtime_metrics_cache import get_cached_metrics
-from app.services.mission_control.runtime_ownership import build_operator_trace_chains
+from app.services.mission_control.runtime_lifecycle import run_runtime_lifecycle_sweeps
+from app.services.mission_control.runtime_ownership import build_all_operator_traces, build_operator_trace_chains
 from app.services.mission_control.orchestration_runtime_snapshot import build_orchestration_runtime_snapshot
 from app.services.operator_context import build_operator_context_panel
-from app.plugins.plugin_registry import list_plugin_manifests
+from app.plugins.plugin_runtime import build_plugin_health_panel
 
 
 def build_provider_routing_summary() -> dict[str, Any]:
@@ -82,6 +83,7 @@ def build_runtime_truth(*, user_id: str | None = None) -> dict[str, Any]:
     """
     recover_runtime_agents_after_restart()
     sweep_expired_agents()
+    lifecycle_sweep = run_runtime_lifecycle_sweeps()
     uid = (user_id or "").strip() or None
     ort = build_orchestration_runtime_snapshot(uid)
     operator = build_operator_context_panel()
@@ -121,8 +123,10 @@ def build_runtime_truth(*, user_id: str | None = None) -> dict[str, Any]:
         "runtime_events": events_display,
         "runtime_events_raw_count": len(events_display),
         "runtime_metrics": metrics,
-        "plugins": list_plugin_manifests(),
+        "plugins": build_plugin_health_panel(),
         "ownership_trace": build_operator_trace_chains(uid),
+        "operator_traces": build_all_operator_traces(uid),
+        "lifecycle_sweep": lifecycle_sweep,
         "workflows": ort.get("workflows") or {},
     }
 

@@ -47,6 +47,8 @@ Do not introduce architectural divergence unless required to reproduce OpenClaw 
 
 **Phase 2 Step 10 (simplification + polish):** Authoritative `runtime_truth` path, consolidated runtime health (`healthy|warning|degraded|critical`), event aggregation, plugin failure isolation, `trust_tier` on plugins, operator trace API. See [docs/RUNTIME_CLEANUP_RECON.md](docs/RUNTIME_CLEANUP_RECON.md).
 
+**Phase 2 Step 11 (cleanup + production polish):** Cached runtime truth, lifecycle sweeps, `build_execution_snapshot` unified with truth, plugin health panel, operator trace bundles (`GET /runtime-traces`), severity-prioritized events, Office UX polish.
+
 Deferred until after verified parity:
 
 - privacy-first redesigns

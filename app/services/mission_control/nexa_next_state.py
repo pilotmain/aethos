@@ -903,17 +903,18 @@ def build_execution_snapshot(
         "phase2_privacy": build_mission_control_privacy_panel(),
         "operator_context": build_operator_context_panel(),
     }
-    from app.runtime.runtime_agents import list_runtime_agents, office_agent_states, sweep_expired_agents
-    from app.services.mission_control.runtime_intelligence import build_brain_visibility, build_runtime_health
+    from app.services.mission_control.runtime_truth import build_runtime_panels_from_truth, build_runtime_truth
 
-    sweep_expired_agents()
-    ort_slice = exec_payload.get("orchestration_runtime")
-    if not isinstance(ort_slice, dict):
-        ort_slice = build_orchestration_runtime_snapshot(user_id)
-    exec_payload["runtime_agents"] = list_runtime_agents()
-    exec_payload["office"] = {"agents": office_agent_states()}
-    exec_payload["runtime_health"] = build_runtime_health(user_id, ort_slice)
-    exec_payload["brain_visibility"] = build_brain_visibility()
+    truth = build_runtime_truth(user_id=user_id)
+    exec_payload["runtime_agents"] = truth.get("runtime_agents")
+    exec_payload["office"] = truth.get("office")
+    exec_payload["runtime_health"] = truth.get("runtime_health")
+    exec_payload["brain_visibility"] = truth.get("brain_visibility")
+    exec_payload["routing_summary"] = truth.get("routing_summary")
+    exec_payload["ownership_trace"] = truth.get("ownership_trace")
+    exec_payload["operator_traces"] = truth.get("operator_traces")
+    exec_payload["panels"] = build_runtime_panels_from_truth(truth)
+    exec_payload["plugins"] = truth.get("plugins")
 
     uid_early = (user_id or "").strip()
     if uid_early:

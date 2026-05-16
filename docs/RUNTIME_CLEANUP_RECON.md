@@ -1,14 +1,23 @@
-# Runtime cleanup reconnaissance (Phase 2 Step 10)
+# Runtime cleanup reconnaissance (Phase 2 Step 10–11)
 
-Preparation for a future full cleanup phase. **Do not delete** without parity verification.
+## Completed (Step 11)
 
-## Duplicate payload builders (consolidate → `runtime_truth.py`)
+| Item | Status |
+|------|--------|
+| `runtime_truth.py` authoritative path | Done |
+| `runtime_intelligence.py` cached truth (5s TTL) | Done |
+| `nexa_next_state.build_execution_snapshot` MC fields from truth | Done |
+| `runtime_lifecycle.py` bounded repair/deploy sweeps | Done |
+| `runtime_ownership` trace bundles (repair/deployment/provider) | Done |
+| `plugin_runtime.build_plugin_health_panel` | Done |
+| Event aggregation + severity prioritization | Done |
+
+## Remaining (post–Step 11)
 
 | Location | Notes |
 |----------|--------|
-| `runtime_intelligence.py` | Now delegates to `runtime_truth` |
-| `runtime_panels.py` | Now delegates to `runtime_truth` |
-| `nexa_next_state.py` | Still builds `orchestration_runtime` + inline `runtime_health` — keep for `/state` parity |
+| `nexa_next_state.py` | DB mission payload still separate from orchestration truth (parity) |
+| Duplicate plugin registries | `app/plugins/*` vs `app/services/plugins/registry.py` |
 
 ## Legacy naming (safe renames later)
 

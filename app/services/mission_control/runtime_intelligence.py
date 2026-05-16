@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2025 AethOS AI
 
-"""Mission Control runtime intelligence — delegates to runtime_truth (Phase 2 Step 10)."""
+"""Mission Control runtime intelligence — cached runtime truth (Phase 2 Step 11)."""
 
 from __future__ import annotations
 
@@ -15,17 +15,22 @@ from app.services.mission_control.runtime_truth import (
     build_runtime_panels_from_truth,
     build_runtime_truth,
 )
+from app.services.mission_control.runtime_truth_cache import get_cached_runtime_truth
 from app.services.mission_control.runtime_event_intelligence import aggregate_events_for_display
-from app.services.mission_control.runtime_metrics_cache import get_cached_metrics
+
+
+def _truth(user_id: str | None = None) -> dict[str, Any]:
+    return get_cached_runtime_truth(user_id, lambda uid: build_runtime_truth(user_id=uid))
 
 
 def build_runtime_health(user_id: str | None, ort: dict[str, Any] | None = None) -> dict[str, Any]:
-    truth = build_runtime_truth(user_id=user_id)
-    return truth.get("runtime_health") or {}
+    _ = ort
+    return _truth(user_id).get("runtime_health") or {}
 
 
 def build_mission_control_runtime(db: Session, *, user_id: str) -> dict[str, Any]:
-    truth = build_runtime_truth(user_id=user_id)
+    _ = db
+    truth = _truth(user_id)
     return {
         **truth,
         "panels": build_runtime_panels_from_truth(truth),
@@ -33,7 +38,7 @@ def build_mission_control_runtime(db: Session, *, user_id: str) -> dict[str, Any
 
 
 def build_agents_slice(user_id: str | None = None) -> dict[str, Any]:
-    truth = build_runtime_truth(user_id=user_id)
+    truth = _truth(user_id)
     return {
         "runtime_agents": truth.get("runtime_agents"),
         "runtime_agents_history": truth.get("runtime_agents_history"),
@@ -43,7 +48,7 @@ def build_agents_slice(user_id: str | None = None) -> dict[str, Any]:
 
 
 def build_tasks_slice(user_id: str | None = None) -> dict[str, Any]:
-    truth = build_runtime_truth(user_id=user_id)
+    truth = _truth(user_id)
     return {
         "tasks": truth.get("tasks") or [],
         "queues": truth.get("queues") or {},
@@ -52,7 +57,7 @@ def build_tasks_slice(user_id: str | None = None) -> dict[str, Any]:
 
 
 def build_deployments_slice() -> dict[str, Any]:
-    truth = build_runtime_truth(user_id=None)
+    truth = _truth(None)
     return {
         "deployment_identities": (truth.get("deployments") or {}).get("identities") or {},
         "project_registry": (truth.get("operator_context") or {}).get("project_registry") or {},
@@ -61,13 +66,14 @@ def build_deployments_slice() -> dict[str, Any]:
 
 
 def build_providers_slice() -> dict[str, Any]:
-    truth = build_runtime_truth(user_id=None)
+    truth = _truth(None)
     p = truth.get("providers") or {}
     return {
         "provider_inventory": p.get("inventory"),
         "provider_ids": (truth.get("operator_context") or {}).get("provider_ids"),
         "recent_provider_actions": p.get("recent_actions"),
         "suggested_fixes": (truth.get("operator_context") or {}).get("suggested_fixes"),
+        "routing_summary": truth.get("routing_summary"),
     }
 
 
@@ -76,5 +82,4 @@ def build_runtime_events_slice(*, limit: int = 80) -> dict[str, Any]:
 
 
 def build_runtime_metrics_slice(user_id: str | None = None) -> dict[str, Any]:
-    truth = build_runtime_truth(user_id=user_id)
-    return {"metrics": truth.get("runtime_metrics") or {}}
+    return {"metrics": _truth(user_id).get("runtime_metrics") or {}}

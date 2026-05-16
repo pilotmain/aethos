@@ -86,3 +86,55 @@ def build_operator_trace_chains(user_id: str | None = None) -> list[dict[str, An
                 }
             )
     return traces[:32]
+
+
+def build_repair_traces(user_id: str | None = None) -> list[dict[str, Any]]:
+    return [t for t in build_operator_trace_chains(user_id) if str(t.get("task_id") or "").startswith("repair:")]
+
+
+def build_deployment_traces(user_id: str | None = None) -> list[dict[str, Any]]:
+    st = load_runtime_state()
+    traces: list[dict[str, Any]] = []
+    raw = st.get("deployment_traces")
+    if isinstance(raw, list):
+        for row in raw[-24:]:
+            if isinstance(row, dict):
+                traces.append(row)
+    for t in build_operator_trace_chains(user_id):
+        dep = t.get("deployment")
+        if dep:
+            traces.append({"task_id": t.get("task_id"), "deployment": dep, "trace": t.get("trace")})
+    return traces[:24]
+
+
+def build_provider_traces(user_id: str | None = None) -> list[dict[str, Any]]:
+    from app.services.operator_context import build_operator_context_panel
+
+    op = build_operator_context_panel()
+    traces: list[dict[str, Any]] = []
+    for act in (op.get("recent_provider_actions") or [])[-16:]:
+        if not isinstance(act, dict):
+            continue
+        traces.append(
+            {
+                "provider": act.get("provider") or act.get("provider_id"),
+                "action": act.get("action") or act.get("operation"),
+                "status": act.get("status"),
+                "project_id": act.get("project_id"),
+                "trace": [
+                    {"step": "provider", "id": act.get("provider")},
+                    {"step": "action", "id": act.get("action")},
+                    {"step": "result", "status": act.get("status")},
+                ],
+            }
+        )
+    return traces
+
+
+def build_all_operator_traces(user_id: str | None = None) -> dict[str, Any]:
+    return {
+        "ownership": build_operator_trace_chains(user_id),
+        "repair": build_repair_traces(user_id),
+        "deployment": build_deployment_traces(user_id),
+        "provider": build_provider_traces(user_id),
+    }

@@ -142,20 +142,40 @@ def events_for_ws_replay(*, limit: int = 40) -> list[dict[str, Any]]:
     return aggregate_events_for_display(limit=limit)
 
 
+_SEVERITY_ORDER = {"info": 0, "warning": 1, "error": 2, "critical": 3}
+
+
+def _severity_rank(sev: str | None) -> int:
+    return _SEVERITY_ORDER.get(str(sev or "info"), 0)
+
+
+def prioritize_events(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Higher severity first, then newest timestamp."""
+    return sorted(
+        rows,
+        key=lambda r: (_severity_rank(str(r.get("severity") or "")), str(r.get("timestamp") or "")),
+        reverse=True,
+    )
+
+
 def aggregate_events_for_display(
     *,
     limit: int = 48,
     min_severity: str | None = None,
     category: str | None = None,
+    categories: list[str] | None = None,
+    suppress_info_when_noisy: bool = True,
 ) -> list[dict[str, Any]]:
     """
     Collapse repeated low-value events and return bounded summaries for Mission Control.
     """
     rows = list_normalized_events(limit=min(500, limit * 4), category=category)
+    if categories:
+        allowed = {c.strip() for c in categories if c.strip()}
+        rows = [r for r in rows if str(r.get("category") or "") in allowed]
     if min_severity:
-        order = {"info": 0, "warning": 1, "error": 2, "critical": 3}
-        floor = order.get(min_severity, 0)
-        rows = [r for r in rows if order.get(str(r.get("severity") or "info"), 0) >= floor]
+        floor = _severity_rank(min_severity)
+        rows = [r for r in rows if _severity_rank(str(r.get("severity") or "info")) >= floor]
 
     collapsed: dict[str, dict[str, Any]] = {}
     for row in rows:
@@ -167,7 +187,14 @@ def aggregate_events_for_display(
         else:
             collapsed[key]["count"] = int(collapsed[key].get("count") or 1) + 1
             collapsed[key]["timestamp"] = row.get("timestamp")
+            if _severity_rank(str(row.get("severity"))) > _severity_rank(str(collapsed[key].get("severity"))):
+                collapsed[key]["severity"] = row.get("severity")
+
     out = list(collapsed.values())
-    out.sort(key=lambda r: str(r.get("timestamp") or ""))
+    if suppress_info_when_noisy:
+        warn_plus = sum(1 for r in out if _severity_rank(str(r.get("severity"))) >= 1)
+        if warn_plus >= 4:
+            out = [r for r in out if _severity_rank(str(r.get("severity"))) >= 1 or int(r.get("count") or 1) > 2]
+    out = prioritize_events(out)
     lim = max(1, min(int(limit), 120))
-    return out[-lim:]
+    return out[:lim]
