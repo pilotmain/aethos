@@ -47,5 +47,12 @@ def test_openapi_has_core_contract_paths() -> None:
         "/api/v1/projects/scan",
         "/api/v1/projects/{project_id}",
         "/api/v1/projects/{project_id}/link",
+        "/api/v1/projects/{project_id}/resolve",
+        "/api/v1/projects/{project_id}/confidence",
+        "/api/v1/providers/{provider_id}/redeploy",
+        "/api/v1/providers/{provider_id}/restart",
+        "/api/v1/providers/{provider_id}/deployments",
+        "/api/v1/providers/{provider_id}/logs",
+        "/api/v1/providers/{provider_id}/status",
     ):
         assert rel in paths, f"missing {rel}"

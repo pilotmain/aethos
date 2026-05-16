@@ -80,3 +80,52 @@ def test_projects_link_and_show(api_client, tmp_path, monkeypatch: pytest.Monkey
         assert gr.json().get("repo_path") == str(repo)
     finally:
         get_settings.cache_clear()
+
+
+def test_projects_confidence_endpoint(api_client, tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
+    home = tmp_path / "ahome"
+    home.mkdir()
+    monkeypatch.setenv("AETHOS_HOME_DIR", str(home))
+    get_settings.cache_clear()
+    try:
+        st = default_runtime_state(workspace_root=tmp_path / "ws")
+        save_runtime_state(st)
+        client, _ = api_client
+        repo = tmp_path / "rp"
+        repo.mkdir()
+        (repo / "package.json").write_text("{}", encoding="utf-8")
+        client.post("/api/v1/projects/acme2/link", json={"repo_path": str(repo)})
+        r = client.get("/api/v1/projects/acme2/confidence")
+        assert r.status_code == 200
+        body = r.json()
+        assert body.get("workspace_confidence") in ("low", "medium", "high")
+        assert "signals" in body
+    finally:
+        get_settings.cache_clear()
+
+
+def test_projects_resolve_400_without_vercel_link(api_client, tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
+    home = tmp_path / "ahome"
+    home.mkdir()
+    monkeypatch.setenv("AETHOS_HOME_DIR", str(home))
+    get_settings.cache_clear()
+    try:
+        st = default_runtime_state(workspace_root=tmp_path / "ws")
+        save_runtime_state(st)
+        client, _ = api_client
+        repo = tmp_path / "norail"
+        repo.mkdir()
+        (repo / "package.json").write_text("{}", encoding="utf-8")
+        client.post("/api/v1/projects/noverc/link", json={"repo_path": str(repo)})
+        monkeypatch.setattr(
+            "app.deploy_context.context_resolution.probe_provider_session",
+            lambda *_a, **_k: {"authenticated": True, "cli_installed": True},
+        )
+        monkeypatch.setattr("app.deploy_context.context_resolution.detect_cli_path", lambda _pid: "/v/vercel")
+        r = client.post("/api/v1/projects/noverc/resolve", json={"provider": "vercel", "environment": "production"})
+        assert r.status_code == 400
+        detail = r.json().get("detail")
+        assert isinstance(detail, dict)
+        assert detail.get("error_class")
+    finally:
+        get_settings.cache_clear()

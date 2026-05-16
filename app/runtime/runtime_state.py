@@ -162,6 +162,10 @@ def default_runtime_state(*, workspace_root: Path | None = None) -> dict[str, An
             "last_scanned_at": None,
         },
         "project_resolution_history": [],
+        # Phase 2 Step 4 — deployment identity + operator action tail.
+        "deployment_identities": {},
+        "provider_resolution_cache": {},
+        "operator_provider_actions": [],
     }
 
 
@@ -320,7 +324,14 @@ def ensure_resilience_schema(st: dict[str, Any]) -> dict[str, Any]:
 def ensure_operator_context_schema(st: dict[str, Any]) -> dict[str, Any]:
     """Merge provider intelligence + project registry keys (Phase 2 Step 3)."""
     base = default_runtime_state()
-    for key in ("provider_inventory", "project_registry", "project_resolution_history"):
+    for key in (
+        "provider_inventory",
+        "project_registry",
+        "project_resolution_history",
+        "deployment_identities",
+        "provider_resolution_cache",
+        "operator_provider_actions",
+    ):
         if key not in st:
             st[key] = base[key]  # type: ignore[index]
     pi = st.setdefault("provider_inventory", {})
@@ -337,6 +348,15 @@ def ensure_operator_context_schema(st: dict[str, Any]) -> dict[str, Any]:
     pr.setdefault("last_scanned_at", None)
     if "project_resolution_history" not in st or not isinstance(st.get("project_resolution_history"), list):
         st["project_resolution_history"] = []
+    di = st.setdefault("deployment_identities", {})
+    if not isinstance(di, dict):
+        st["deployment_identities"] = {}
+    prc = st.setdefault("provider_resolution_cache", {})
+    if not isinstance(prc, dict):
+        st["provider_resolution_cache"] = {}
+    opa = st.setdefault("operator_provider_actions", [])
+    if not isinstance(opa, list):
+        st["operator_provider_actions"] = []
     return st
 
 

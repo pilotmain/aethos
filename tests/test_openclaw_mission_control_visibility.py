@@ -25,6 +25,9 @@ def test_mission_control_state_includes_runtime_visibility(db_session) -> None:
     p2 = snap.get("phase2_privacy") or {}
     assert p2.get("privacy_mode") in ("off", "observe", "redact", "block", "local_only")
     oc = snap.get("operator_context") or {}
-    assert oc.get("summary")
+    summ = oc.get("summary") or {}
+    assert "providers_installed" in summ
+    assert "deployment_links_tracked" in summ
     assert "provider_inventory" in oc
     assert "project_registry" in oc
+    assert "deployment_identities" in oc

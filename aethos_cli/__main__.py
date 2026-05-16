@@ -323,6 +323,27 @@ def main() -> int:
     sp_proj_link = proj_sub.add_parser("link", help="POST /api/v1/projects/{id}/link")
     sp_proj_link.add_argument("project_id")
     sp_proj_link.add_argument("repo_path", help="Absolute path to repo root")
+    sp_proj_resolve = proj_sub.add_parser("resolve", help="POST /api/v1/projects/{id}/resolve")
+    sp_proj_resolve.add_argument("project_id")
+    sp_proj_resolve.add_argument("--env", default="production", dest="environment", help="production | preview")
+    sp_proj_conf = proj_sub.add_parser("confidence", help="GET /api/v1/projects/{id}/confidence")
+    sp_proj_conf.add_argument("project_id")
+
+    sp_deploy = sub.add_parser("deploy", help="Provider-backed deploy operations (Phase 2 Step 4)")
+    dep_op = sp_deploy.add_subparsers(dest="deploy_cmd", required=True)
+    sp_dr = dep_op.add_parser("restart", help="POST /api/v1/providers/vercel/restart")
+    sp_dr.add_argument("project_id")
+    sp_dr.add_argument("--env", default="production", dest="environment", help="production | preview")
+    sp_dd = dep_op.add_parser("redeploy", help="POST /api/v1/providers/vercel/redeploy")
+    sp_dd.add_argument("project_id")
+    sp_dd.add_argument("--env", default="production", dest="environment", help="production | preview")
+    sp_ds = dep_op.add_parser("status", help="GET /api/v1/providers/vercel/status")
+    sp_ds.add_argument("project_id")
+    sp_ds.add_argument("--env", default="production", dest="environment", help="production | preview")
+    sp_dl = dep_op.add_parser("logs", help="GET /api/v1/providers/vercel/logs")
+    sp_dl.add_argument("project_id")
+    sp_dl.add_argument("--env", default="production", dest="environment", help="production | preview")
+    sp_dl.add_argument("--limit", type=int, default=80, help="Log line limit (10–300)")
 
     sp_dep = sub.add_parser("deployments", help="Deployment runtime API (OpenClaw infra parity)")
     dep_sub = sp_dep.add_subparsers(dest="dep_cmd", required=True)
@@ -756,6 +777,44 @@ def main() -> int:
             pid = urllib.parse.quote(str(args.project_id), safe="")
             payload = json.dumps({"repo_path": str(args.repo_path)}).encode()
             code, body = _req("POST", f"/api/v1/projects/{pid}/link", uid=uid, body=payload)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.projects_cmd == "resolve":
+            pid = urllib.parse.quote(str(args.project_id), safe="")
+            env = (getattr(args, "environment", None) or "production").strip()
+            payload = json.dumps({"provider": "vercel", "environment": env}).encode()
+            code, body = _req("POST", f"/api/v1/projects/{pid}/resolve", uid=uid, body=payload)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.projects_cmd == "confidence":
+            pid = urllib.parse.quote(str(args.project_id), safe="")
+            code, body = _req("GET", f"/api/v1/projects/{pid}/confidence", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+
+    if args.cmd == "deploy":
+        env = (getattr(args, "environment", None) or "production").strip()
+        qenv = urllib.parse.quote(env, safe="")
+        pj = urllib.parse.quote(str(args.project_id), safe="")
+        if args.deploy_cmd == "restart":
+            payload = json.dumps({"project_id": str(args.project_id), "environment": env}).encode()
+            code, body = _req("POST", "/api/v1/providers/vercel/restart", uid=uid, body=payload)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.deploy_cmd == "redeploy":
+            payload = json.dumps({"project_id": str(args.project_id), "environment": env}).encode()
+            code, body = _req("POST", "/api/v1/providers/vercel/redeploy", uid=uid, body=payload)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.deploy_cmd == "status":
+            qs = f"?project_id={pj}&environment={qenv}"
+            code, body = _req("GET", f"/api/v1/providers/vercel/status{qs}", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.deploy_cmd == "logs":
+            lim = int(getattr(args, "limit", 80) or 80)
+            qs = f"?project_id={pj}&environment={qenv}&limit={lim}"
+            code, body = _req("GET", f"/api/v1/providers/vercel/logs{qs}", uid=uid)
             print(body[:24000])
             return 0 if code == 200 else 1
 
