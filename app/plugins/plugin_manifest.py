@@ -22,6 +22,7 @@ class PluginManifest:
     verified: bool = False
     installed: bool = True
     trust_tier: str = "official"
+    automation_pack: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -36,6 +37,7 @@ class PluginManifest:
             "verified": self.verified,
             "installed": self.installed,
             "trust_tier": self.trust_tier,
+            "automation_pack": self.automation_pack,
         }
 
     @classmethod
@@ -52,4 +54,5 @@ class PluginManifest:
             verified=bool(data.get("verified")),
             installed=bool(data.get("installed", True)),
             trust_tier=str(data.get("trust_tier") or "community"),
+            automation_pack=data.get("automation_pack"),
         )

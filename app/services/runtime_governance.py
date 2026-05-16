@@ -23,12 +23,16 @@ def build_governance_audit(*, limit: int = 40) -> dict[str, Any]:
     privacy_events = [e for e in events if e.get("category") == "privacy"]
     repair_events = [e for e in events if e.get("category") == "repair"]
     deploy_events = [e for e in events if e.get("category") == "deployment"]
+    brain_decisions = st.get("brain_decisions") or []
+    if not isinstance(brain_decisions, list):
+        brain_decisions = []
     return {
         "plugin_installs": plugin_audit[-20:],
         "provider_operations": provider_ops[-20:],
         "privacy_enforcement": privacy_events[-12:],
         "repair_operations": repair_events[-12:],
         "deployment_operations": deploy_events[-12:],
+        "brain_routing_decisions": brain_decisions[-16:],
         "permissions_tracked": _collect_permissions(st),
     }
 

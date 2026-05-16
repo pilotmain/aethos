@@ -8,7 +8,12 @@ from __future__ import annotations
 import os
 from typing import Any
 
-from app.brain.brain_capabilities import REPAIR_PLAN_TASK, brain_is_local
+from app.brain.brain_capabilities import (
+    REPAIR_PLAN_TASK,
+    brain_is_local,
+    fallback_chain_for_task,
+    score_brain_for_task,
+)
 from app.brain.brain_registry import list_repair_brain_candidates
 from app.core.config import Settings, get_settings
 from app.privacy.privacy_modes import PrivacyMode
@@ -45,62 +50,150 @@ def select_brain_for_task(
     else:
         force_det = bool(force_deterministic)
 
-    if force_det or task != REPAIR_PLAN_TASK:
-        return {
-            "selected_provider": "deterministic",
-            "selected_model": "deterministic-repair-v1",
-            "local_first": local_first,
-            "reason": "tests_or_use_real_llm_disabled",
-            "fallback_used": False,
-        }
-
     candidates = list_repair_brain_candidates(s)
+    chain = fallback_chain_for_task(task, candidates)
+
+    if force_det or task != REPAIR_PLAN_TASK:
+        return _enrich_selection(
+            {
+                "selected_provider": "deterministic",
+                "selected_model": "deterministic-repair-v1",
+                "local_first": local_first,
+                "reason": "tests_or_use_real_llm_disabled",
+                "fallback_used": False,
+            },
+            task=task,
+            chain=chain,
+            local_first=local_first,
+            mode=mode,
+        )
     if mode == PrivacyMode.LOCAL_ONLY:
         for row in candidates:
             if row.get("local") and row.get("available"):
-                return {
-                    "selected_provider": row["provider"],
-                    "selected_model": str(row.get("model") or ""),
-                    "local_first": True,
-                    "reason": "privacy_local_only",
-                    "fallback_used": False,
-                }
-        return {
-            "selected_provider": "deterministic",
-            "selected_model": "deterministic-repair-v1",
-            "local_first": True,
-            "reason": "local_only_no_external_brain",
-            "fallback_used": True,
-        }
+                sel = row["provider"]
+                return _enrich_selection(
+                    {
+                        "selected_provider": sel,
+                        "selected_model": str(row.get("model") or ""),
+                        "local_first": True,
+                        "reason": "privacy_local_only",
+                        "fallback_used": False,
+                    },
+                    task=task,
+                    chain=chain,
+                    local_first=True,
+                    mode=mode,
+                )
+        return _enrich_selection(
+            {
+                "selected_provider": "deterministic",
+                "selected_model": "deterministic-repair-v1",
+                "local_first": True,
+                "reason": "local_only_no_external_brain",
+                "fallback_used": True,
+            },
+            task=task,
+            chain=chain,
+            local_first=True,
+            mode=mode,
+        )
 
     if local_first:
         for row in candidates:
             if row.get("local") and row.get("available"):
-                return {
-                    "selected_provider": row["provider"],
-                    "selected_model": str(row.get("model") or ""),
-                    "local_first": True,
-                    "reason": "local_first_preference",
-                    "fallback_used": False,
-                }
+                return _enrich_selection(
+                    {
+                        "selected_provider": row["provider"],
+                        "selected_model": str(row.get("model") or ""),
+                        "local_first": True,
+                        "reason": "local_first_preference",
+                        "fallback_used": False,
+                    },
+                    task=task,
+                    chain=chain,
+                    local_first=True,
+                    mode=mode,
+                )
 
     for row in candidates:
         if row.get("available") and row.get("provider") != "deterministic":
-            return {
-                "selected_provider": row["provider"],
-                "selected_model": str(row.get("model") or ""),
-                "local_first": local_first,
-                "reason": "primary_or_fallback_provider",
-                "fallback_used": False,
-            }
+            return _enrich_selection(
+                {
+                    "selected_provider": row["provider"],
+                    "selected_model": str(row.get("model") or ""),
+                    "local_first": local_first,
+                    "reason": "primary_or_fallback_provider",
+                    "fallback_used": False,
+                },
+                task=task,
+                chain=chain,
+                local_first=local_first,
+                mode=mode,
+            )
 
-    return {
-        "selected_provider": "deterministic",
-        "selected_model": "deterministic-repair-v1",
-        "local_first": local_first,
-        "reason": "no_external_brain_available",
-        "fallback_used": True,
+    return _enrich_selection(
+        {
+            "selected_provider": "deterministic",
+            "selected_model": "deterministic-repair-v1",
+            "local_first": local_first,
+            "reason": "no_external_brain_available",
+            "fallback_used": True,
+        },
+        task=task,
+        chain=chain,
+        local_first=local_first,
+        mode=mode,
+    )
+
+
+def _enrich_selection(
+    base: dict[str, Any],
+    *,
+    task: str,
+    chain: list[str],
+    local_first: bool,
+    mode: PrivacyMode,
+) -> dict[str, Any]:
+    provider = str(base.get("selected_provider") or "")
+    base["task"] = task
+    base["fallback_chain"] = chain
+    base["privacy_mode"] = mode.value
+    base["capability_score"] = score_brain_for_task(provider, task, local_first=local_first)
+    base["cost_estimate"] = _estimate_cost(provider, task)
+    return base
+
+
+def _estimate_cost(provider: str, task: str) -> float:
+    if brain_is_local(provider):
+        return 0.0
+    weights = {
+        "repair_planning": 0.04,
+        "deployment_diagnosis": 0.03,
+        "workflow_planning": 0.02,
+        "summarization": 0.01,
+        "code_editing": 0.03,
+        "research": 0.02,
+        "debugging": 0.03,
+        "analysis": 0.02,
+        REPAIR_PLAN_TASK: 0.04,
     }
+    return round(weights.get(task, 0.02), 4)
+
+
+def select_brain_for_task_with_metadata(
+    task: str,
+    *,
+    evidence_text: str = "",
+    settings: Settings | None = None,
+    force_deterministic: bool | None = None,
+) -> dict[str, Any]:
+    """Alias returning full brain_decision metadata for persistence."""
+    return select_brain_for_task(
+        task,
+        evidence_text=evidence_text,
+        settings=settings,
+        force_deterministic=force_deterministic,
+    )
 
 
 def brain_allows_external_call(selection: dict[str, Any], *, settings: Settings | None = None) -> bool:

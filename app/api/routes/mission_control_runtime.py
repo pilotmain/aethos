@@ -106,6 +106,54 @@ def mc_runtime_traces(app_user_id: str = Depends(get_valid_web_user_id)) -> dict
     return build_all_operator_traces(app_user_id)
 
 
+def _truth_slice(app_user_id: str) -> dict:
+    from app.services.mission_control.runtime_truth import build_runtime_truth
+    from app.services.mission_control.runtime_truth_cache import get_cached_runtime_truth
+
+    return get_cached_runtime_truth(app_user_id, lambda uid: build_runtime_truth(user_id=uid))
+
+
+@router.get("/differentiators")
+def mc_differentiators(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    return _truth_slice(app_user_id).get("differentiators") or {}
+
+
+@router.get("/privacy-posture")
+def mc_privacy_posture(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.privacy_operational_posture import build_privacy_operational_posture
+
+    return build_privacy_operational_posture()
+
+
+@router.get("/brain-routing")
+def mc_brain_routing(_: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.brain_routing_visibility import build_brain_routing_panel
+
+    return build_brain_routing_panel()
+
+
+@router.get("/operational-intelligence")
+def mc_operational_intelligence(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.orchestration_runtime_snapshot import build_orchestration_runtime_snapshot
+    from app.services.operational_intelligence import build_operational_intelligence
+
+    return build_operational_intelligence(build_orchestration_runtime_snapshot(app_user_id))
+
+
+@router.get("/governance")
+def mc_governance(_: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.runtime_governance import build_governance_audit
+
+    return build_governance_audit()
+
+
+@router.get("/automation-packs")
+def mc_automation_packs(_: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.plugins.automation_packs import list_automation_packs_with_health
+
+    return {"packs": list_automation_packs_with_health()}
+
+
 @router.websocket("/runtime/ws")
 async def mc_runtime_ws(ws: WebSocket) -> None:
     """Live Mission Control runtime events (bounded bus replay + subscribe)."""

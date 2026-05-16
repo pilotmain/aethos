@@ -51,6 +51,8 @@ Do not introduce architectural divergence unless required to reproduce OpenClaw 
 
 **Phase 3 Step 1 (ecosystem + marketplace):** Plugin install lifecycle (`~/.aethos/plugins/`), marketplace APIs (`/marketplace/plugins`, install/uninstall/upgrade), operational intelligence, brain routing panel, workspace intelligence, governance audit, automation packs, MC `/mission-control/plugins` UI. See [docs/MARKETPLACE.md](docs/MARKETPLACE.md).
 
+**Phase 3 Step 2 (native differentiation):** Documented advantages (`docs/AETHOS_DIFFERENTIATION.md`), privacy operational posture, brain routing metadata (fallback chain, cost), differentiation APIs (`/mission-control/differentiators`, etc.), MC `/mission-control/differentiators`. See [docs/AETHOS_DIFFERENTIATION.md](docs/AETHOS_DIFFERENTIATION.md).
+
 Deferred until after verified parity:
 
 - privacy-first redesigns

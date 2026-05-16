@@ -22,6 +22,12 @@ AethOS orchestrates repair workflows; **brains** (local Ollama, configured LLM p
 - `aethos deploy fix-and-redeploy <project>`
 - `aethos projects latest-repair <project>`
 
+## Phase 3 — routing metadata
+
+Selections include `fallback_chain`, `privacy_mode`, `capability_score`, and `cost_estimate`. Mission Control: `GET /api/v1/mission-control/brain-routing`.
+
+Supported task labels include `repair_planning`, `deployment_diagnosis`, `workflow_planning`, `summarization`, `code_editing`, `research`, `debugging`, `analysis`.
+
 ## Modules
 
 - `app/brain/` — selection, registry, events, `repair_brain.py`

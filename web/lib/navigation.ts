@@ -10,6 +10,7 @@ import {
   Settings,
   ShieldCheck,
   Sparkles,
+  Star,
   Users,
 } from "lucide-react";
 
@@ -38,6 +39,12 @@ export const missionControlNavItems: MissionControlNavItem[] = [
     href: "/mission-control/plugins",
     icon: Plug,
     description: "Runtime plugin install and health",
+  },
+  {
+    name: "Advantages",
+    href: "/mission-control/differentiators",
+    icon: Star,
+    description: "AethOS-native capabilities vs OpenClaw",
   },
   {
     name: "CEO",

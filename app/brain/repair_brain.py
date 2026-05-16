@@ -169,6 +169,8 @@ def request_repair_plan_from_brain(
         privacy_meta={"egress_allowed": egress.get("allowed"), "redactions_applied": 0},
         repair_context_id=repair_context_id,
         project_id=project_id,
+        fallback_chain=selection.get("fallback_chain"),
+        cost_estimate=selection.get("cost_estimate"),
     )
 
     plan: dict[str, Any] | None = None

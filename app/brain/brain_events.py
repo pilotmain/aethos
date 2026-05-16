@@ -26,6 +26,8 @@ def record_brain_decision(
     privacy_meta: dict[str, Any] | None = None,
     repair_context_id: str | None = None,
     project_id: str | None = None,
+    fallback_chain: list[str] | None = None,
+    cost_estimate: float | None = None,
 ) -> dict[str, Any]:
     from app.core.config import get_settings
 
@@ -44,6 +46,15 @@ def record_brain_decision(
         "repair_context_id": repair_context_id,
         "project_id": project_id,
     }
+    if fallback_chain:
+        row["fallback_chain"] = list(fallback_chain)
+    if cost_estimate is not None:
+        row["cost_estimate"] = cost_estimate
+    if isinstance(privacy_meta, dict):
+        if privacy_meta.get("fallback_chain") and not row.get("fallback_chain"):
+            row["fallback_chain"] = privacy_meta["fallback_chain"]
+        if privacy_meta.get("cost_estimate") is not None and row.get("cost_estimate") is None:
+            row["cost_estimate"] = privacy_meta["cost_estimate"]
     if privacy_meta:
         row["privacy"] = {
             "scanned": True,

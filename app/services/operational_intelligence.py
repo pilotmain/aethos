@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2025 AethOS AI
 
-"""Bounded operational intelligence for Mission Control (Phase 3 Step 1)."""
+"""Bounded operational intelligence for Mission Control (Phase 3 Step 1–2)."""
 
 from __future__ import annotations
 
@@ -35,10 +35,70 @@ def build_operational_intelligence(ort: dict[str, Any] | None = None) -> dict[st
     )
     if failed_plugins:
         insights.append({"kind": "plugin_instability", "severity": "warning", "message": "Plugin runtime warnings present"})
+    privacy_risk = sum(1 for e in events if e.get("category") == "privacy")
+    if privacy_risk:
+        insights.append({"kind": "privacy_risk_events", "severity": "warning", "message": f"{privacy_risk} privacy events in tail"})
+    verify_fail = sum(1 for e in events if "verif" in str(e.get("event_type") or "") and "fail" in str(e.get("event_type") or ""))
+    if verify_fail:
+        insights.append({"kind": "verification_failures", "severity": "error", "message": "Verification failures detected"})
+
+    repair_success_rate = _repair_success_rate(st)
+    if repair_success_rate is not None and repair_success_rate < 0.5:
+        insights.append(
+            {
+                "kind": "repair_success_low",
+                "severity": "warning",
+                "message": f"Repair success rate {repair_success_rate:.0%}",
+            }
+        )
 
     return {
         "insights": insights[:12],
         "event_warnings": len(events),
         "installed_plugin_count": len(plugins) if isinstance(plugins, list) else 0,
         "repair_tracked": len(repairs) if isinstance(repairs, dict) else 0,
+        "repair_success_rate": repair_success_rate,
+        "workspace_confidence_drift": _workspace_confidence_drift(st),
+        "repeated_failure_patterns": _repeated_failures(events),
     }
+
+
+def _repair_success_rate(st: dict[str, Any]) -> float | None:
+    repairs = st.get("repair_contexts") or {}
+    if not isinstance(repairs, dict):
+        return None
+    ok = fail = 0
+    for pid, bucket in repairs.items():
+        if pid == "latest_by_project" or not isinstance(bucket, dict):
+            continue
+        for row in bucket.values():
+            if not isinstance(row, dict):
+                continue
+            vr = row.get("verification_result") or {}
+            if isinstance(vr, dict) and vr.get("verified") is True:
+                ok += 1
+            elif row.get("status") == "failed":
+                fail += 1
+    total = ok + fail
+    return round(ok / total, 4) if total else None
+
+
+def _workspace_confidence_drift(st: dict[str, Any]) -> dict[str, Any] | None:
+    reg = st.get("project_registry") or {}
+    projects = reg.get("projects") if isinstance(reg, dict) else {}
+    if not isinstance(projects, dict) or not projects:
+        return None
+    scores = [float(p.get("confidence") or 0) for p in projects.values() if isinstance(p, dict) and p.get("confidence")]
+    if not scores:
+        return None
+    avg = sum(scores) / len(scores)
+    return {"average_confidence": round(avg, 3), "project_count": len(scores)}
+
+
+def _repeated_failures(events: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    counts: dict[str, int] = {}
+    for e in events:
+        et = str(e.get("event_type") or "")
+        if "fail" in et or e.get("severity") in ("error", "critical"):
+            counts[et] = counts.get(et, 0) + int(e.get("count") or 1)
+    return [{"event_type": k, "count": v} for k, v in sorted(counts.items(), key=lambda x: -x[1])[:6]]
