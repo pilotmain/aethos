@@ -1,10 +1,12 @@
-# AethOS — OpenClaw parity-first agentic operating system
+# AethOS — enterprise orchestration operating system
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE) [![Commercial License](https://img.shields.io/badge/License-Commercial-red.svg)](LICENSE.commercial) [![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
 
+*Inspired by OpenClaw.*
+
 ## Primary objective
 
-AethOS is currently in a **strict OpenClaw parity phase**.
+AethOS delivers an **enterprise-grade orchestrator** with Mission Control, provider-routed intelligence, and operational governance. Internally the project maintains a **strict OpenClaw parity phase** for behavioral equivalence.
 
 The objective is to reproduce OpenClaw exactly as it works today before prioritizing privacy, PII filtering, local-first differentiation, cost transparency, or custom AethOS-specific architecture.
 

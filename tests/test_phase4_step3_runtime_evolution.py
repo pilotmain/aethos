@@ -19,4 +19,4 @@ def test_phase4_step3_truth_keys() -> None:
         "enterprise_operational_intelligence_advantage",
     ):
         assert key in truth, key
-    assert truth.get("enterprise_overview", {}).get("phase") == "phase4_step9"
+    assert truth.get("enterprise_overview", {}).get("phase") == "phase4_step10"

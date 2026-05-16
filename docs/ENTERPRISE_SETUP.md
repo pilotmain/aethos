@@ -15,6 +15,11 @@ AETHOS_INSTALL_DIR=~/.aethos curl -fsSL ... | bash
 aethos setup
 aethos setup resume
 aethos setup repair
+aethos setup doctor
+aethos setup validate
+aethos setup onboarding
 ```
 
-Sections include routing (local/cloud/hybrid), Mission Control connection, optional channels and web search, onboarding profile, and health checks.
+Sections include routing (local/cloud/hybrid), Mission Control connection, orchestrator onboarding, optional channels and web search, and health checks.
+
+**API:** `GET /api/v1/setup/status` — see [ENTERPRISE_INSTALLER.md](ENTERPRISE_INSTALLER.md) (Phase 4 Step 10).

@@ -44,6 +44,12 @@ Fortune-500-caliber Mission Control readability without monitoring-dashboard blo
 - Worker ecosystem experience and unified explainability center
 - Enterprise language system for calm, premium operator tone
 
+## Enterprise identity and onboarding (Phase 4 Step 10)
+
+- One-curl enterprise installer with doctor, validate, and orchestrator onboarding
+- Adaptive provider routing visibility and unified restart discipline
+- AethOS branding lock — user-facing coherence without breaking legacy env aliases
+
 ## Philosophy
 
 Lighter than enterprise orchestration stacks, cleaner than fragmented AI control planes, more transparent than opaque agents.

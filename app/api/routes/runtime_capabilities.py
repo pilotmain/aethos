@@ -137,3 +137,36 @@ def runtime_calmness_lock(app_user_id: str = Depends(get_valid_web_user_id)) -> 
     except Exception:
         t = {}
     return build_runtime_calmness_integrity(t)
+
+
+@router.get("/routing")
+def runtime_routing_visibility(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_provider_routing import build_runtime_provider_routing
+
+    try:
+        t = _truth_slice(app_user_id)
+    except Exception:
+        t = {}
+    return build_runtime_provider_routing(t)
+
+
+@router.get("/restarts")
+def runtime_restarts(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_restart_manager import build_runtime_restarts
+
+    try:
+        t = _truth_slice(app_user_id)
+    except Exception:
+        t = {}
+    return build_runtime_restarts(t)
+
+
+@router.get("/identity")
+def runtime_identity_state(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_identity_lock import build_runtime_identity_lock
+
+    try:
+        t = _truth_slice(app_user_id)
+    except Exception:
+        t = {}
+    return build_runtime_identity_lock(t)

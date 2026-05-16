@@ -26,10 +26,14 @@ def detect_integrations() -> dict[str, Any]:
         "gh": shutil.which("gh"),
         "vercel": shutil.which("vercel"),
         "railway": shutil.which("railway"),
+        "fly": shutil.which("fly"),
         "netlify": shutil.which("netlify"),
         "wrangler": shutil.which("wrangler"),
         "docker": shutil.which("docker"),
         "ollama": shutil.which("ollama"),
+        "node": shutil.which("node"),
+        "python": shutil.which("python3") or shutil.which("python"),
+        "npm": shutil.which("npm"),
     }
     versions: dict[str, str | None] = {}
     if tools["git"]:

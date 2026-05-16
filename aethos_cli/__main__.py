@@ -235,7 +235,7 @@ def main() -> int:
 
     sub.add_parser(
         "onboard",
-        help="First-time operator onboarding (OpenClaw-class; same as: aethos setup)",
+        help="First-time operator onboarding (same as: aethos setup)",
     )
 
     sp_gateway = sub.add_parser(
@@ -424,6 +424,9 @@ def main() -> int:
     rt_sub.add_parser("calmness", help="GET /api/v1/runtime/calmness-lock integrity")
     rt_sub.add_parser("story", help="GET /api/v1/mission-control/runtime-story")
     rt_sub.add_parser("explainability", help="GET /api/v1/mission-control/explainability")
+    rt_sub.add_parser("routing", help="GET /api/v1/runtime/routing adaptive provider visibility")
+    rt_sub.add_parser("restarts", help="GET /api/v1/runtime/restarts restart history")
+    rt_sub.add_parser("identity", help="GET /api/v1/runtime/identity brand lock state")
     sp_ecosystem = sub.add_parser("ecosystem", help="Operational intelligence ecosystem (Phase 4 Step 3)")
     eco_sub = sp_ecosystem.add_subparsers(dest="ecosystem_cmd", required=True)
     eco_sub.add_parser("health", help="GET /api/v1/mission-control/ecosystem/health")
@@ -698,6 +701,9 @@ def main() -> int:
     setup_sub.add_parser("resume", help="Resume incomplete setup from saved state")
     sp_setup_repair = setup_sub.add_parser("repair", help="Repair install (reinstall deps + rewrite core keys)")
     setup_sub.add_parser("wizard", help="Run full setup wizard (default)")
+    setup_sub.add_parser("doctor", help="Enterprise setup health + integration detection")
+    setup_sub.add_parser("validate", help="Validate setup completeness (.env, auth, onboarding)")
+    setup_sub.add_parser("onboarding", help="Orchestrator-first onboarding conversation")
 
     sp_restart = sub.add_parser("restart", help="Restart API, web, or bot processes")
     restart_sub = sp_restart.add_subparsers(dest="restart_cmd")
@@ -705,6 +711,7 @@ def main() -> int:
     restart_sub.add_parser("web", help="Restart Mission Control (Next.js)")
     restart_sub.add_parser("bot", help="Restart Telegram bot")
     restart_sub.add_parser("connection", help="Repair connection + health check")
+    restart_sub.add_parser("runtime", help="Restart API, web, and refresh runtime connection")
     restart_sub.add_parser("all", help="Restart API and web (default)")
 
     sp_connect = sub.add_parser("connect", help="Refresh Mission Control connection credentials")
@@ -1222,6 +1229,18 @@ def main() -> int:
             return 0 if code == 200 else 1
         if args.runtime_cmd == "explainability":
             code, body = _req("GET", "/api/v1/mission-control/explainability", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.runtime_cmd == "routing":
+            code, body = _req("GET", "/api/v1/runtime/routing", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.runtime_cmd == "restarts":
+            code, body = _req("GET", "/api/v1/runtime/restarts", uid=uid)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.runtime_cmd == "identity":
+            code, body = _req("GET", "/api/v1/runtime/identity", uid=uid)
             print(body[:24000])
             return 0 if code == 200 else 1
         if args.runtime_cmd == "recovery":
@@ -1774,6 +1793,19 @@ def main() -> int:
         from aethos_cli.setup_wizard import run_setup_wizard
 
         sc = getattr(args, "setup_cmd", None)
+        if sc == "doctor":
+            from aethos_cli.setup_doctor import cmd_setup_doctor
+
+            return cmd_setup_doctor()
+        if sc == "validate":
+            from aethos_cli.setup_doctor import cmd_setup_validate
+
+            return cmd_setup_validate()
+        if sc == "onboarding":
+            from aethos_cli.setup_orchestrator_onboarding import run_orchestrator_onboarding
+
+            run_orchestrator_onboarding()
+            return 0
         if sc == "resume":
             return run_setup_wizard()
         if sc == "repair":

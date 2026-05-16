@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# AethOS — one-curl installer (rev 2026-05-15b)
+# AethOS — enterprise one-curl installer (rev 2026-05-16)
+# Authoritative path: install.sh → scripts/setup.sh → aethos setup (doctor | validate | onboarding)
 # Usage: curl -fsSL https://cdn.jsdelivr.net/gh/pilotmain/aethos@main/install.sh | bash
 #        (raw.githubusercontent.com may lag; jsDelivr tracks main within minutes)
 #

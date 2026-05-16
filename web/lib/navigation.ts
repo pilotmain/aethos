@@ -99,6 +99,12 @@ export const missionControlSecondaryNav: MissionControlNavItem[] = [
     description: "Operational intelligence, recommendations, automation",
   },
   {
+    name: "Welcome",
+    href: "/mission-control/onboarding",
+    icon: Sparkles,
+    description: "First-run Mission Control walkthrough",
+  },
+  {
     name: "Executive overview",
     href: "/mission-control/executive-overview",
     icon: Briefcase,

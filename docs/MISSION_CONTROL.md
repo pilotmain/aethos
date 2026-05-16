@@ -137,6 +137,22 @@ Docs: [GOVERNANCE_EXPERIENCE.md](GOVERNANCE_EXPERIENCE.md), [WORKER_ECOSYSTEM_EX
 
 `enterprise_overview.phase` is `phase4_step9`.
 
+## Phase 4 Step 10 — enterprise setup and identity
+
+| Route / API | Purpose |
+|-------------|---------|
+| `/mission-control/onboarding` | `GET /mission-control/onboarding` first-run walkthrough |
+| `GET /api/v1/setup/status` | Setup completeness |
+| `GET /api/v1/runtime/routing` | Adaptive provider routing visibility |
+| `GET /api/v1/runtime/restarts` | Restart history and recommendations |
+| `GET /api/v1/runtime/identity` | AethOS identity lock |
+
+CLI: `aethos setup doctor|validate|onboarding`, `aethos runtime routing|restarts|identity`, `aethos restart runtime`.
+
+Docs: [ENTERPRISE_INSTALLER.md](ENTERPRISE_INSTALLER.md), [ORCHESTRATOR_ONBOARDING.md](ORCHESTRATOR_ONBOARDING.md), [MISSION_CONTROL_FIRST_RUN.md](MISSION_CONTROL_FIRST_RUN.md).
+
+`enterprise_overview.phase` is `phase4_step10`.
+
 ## The Office
 
 Web route: `/mission-control/office` — lightweight cards for runtime agents (`active`, `busy`, `idle`, `recovering`, `failed`, `offline`). Progressive Office stream and partition-aware hydration (Step 7) remain; Step 8 adds calmness lock and enterprise summaries without analytics-wall noise.

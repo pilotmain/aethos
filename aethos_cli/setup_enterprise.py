@@ -70,8 +70,14 @@ def run_enterprise_setup_extensions(
     print_box("Detected CLIs", lines)
     bag["integrations"] = integrations
 
-    if confirm("Personal onboarding (name, goals, tone)?", default=True):
-        print_step("5g", "First-run onboarding")
+    if confirm("Orchestrator onboarding (recommended)?", default=True):
+        print_step("5g", "Orchestrator onboarding")
+        from aethos_cli.setup_orchestrator_onboarding import run_orchestrator_onboarding
+
+        profile = run_orchestrator_onboarding()
+        bag["onboarding_profile"] = profile
+    elif confirm("Quick profile only (name, goals, tone)?", default=False):
+        print_step("5g", "First-run profile")
         profile = run_onboarding_profile_questions()
         if profile:
             save_onboarding_profile(profile)
@@ -106,6 +112,7 @@ def print_setup_final_summary(
             f"Routing: {bag.get('routing_summary', 'configured')}",
             "Restart: aethos restart",
             "Repair: aethos setup repair",
-            "Doctor: aethos doctor",
+            "Doctor: aethos setup doctor",
+            "Validate: aethos setup validate",
         ],
     )

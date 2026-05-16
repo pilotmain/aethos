@@ -608,6 +608,17 @@ def mc_timeline_experience(app_user_id: str = Depends(get_valid_web_user_id)) ->
     return build_governance_timeline_experience(t)
 
 
+@router.get("/onboarding")
+def mc_first_run_onboarding(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.mission_control_first_run import build_mission_control_first_run
+
+    try:
+        t = _truth_slice(app_user_id)
+    except Exception:
+        t = {}
+    return build_mission_control_first_run(t)
+
+
 @router.get("/runtime/posture")
 def mc_runtime_posture(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
     t = _truth_slice(app_user_id)
