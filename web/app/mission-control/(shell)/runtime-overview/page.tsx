@@ -185,6 +185,9 @@ export default function RuntimeOverviewPage() {
         <Link href="/mission-control/runtime-intelligence" className="text-primary hover:underline">
           Runtime intelligence
         </Link>
+        <Link href="/mission-control/runtime-recovery" className="text-primary hover:underline">
+          Runtime recovery
+        </Link>
       </nav>
     </div>
   );

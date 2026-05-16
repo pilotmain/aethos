@@ -46,7 +46,17 @@ def _lightweight_slice(slice_name: str, app_user_id: str) -> dict:
 
 @router.get("/office")
 def mc_office(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
-    return _lightweight_slice("workers", app_user_id).get("office") or {}
+    from app.services.mission_control.runtime_resilience import fetch_slice_resilient
+
+    data, status = fetch_slice_resilient("workers", app_user_id)
+    office = data.get("office") if isinstance(data, dict) else {}
+    if not office:
+        office = _lightweight_slice("workers", app_user_id).get("office") or {}
+    return {
+        **(office if isinstance(office, dict) else {}),
+        "operational_status": status,
+        "runtime_resilience": {"status": status, "panel": "office"},
+    }
 
 
 @router.get("/agents")
@@ -552,6 +562,35 @@ def mc_enterprise_posture(app_user_id: str = Depends(get_valid_web_user_id)) -> 
         "runtime_awareness": t.get("runtime_awareness") or {},
         "governance_posture": t.get("governance_posture") or {},
     }
+
+
+@router.get("/runtime-recovery")
+def mc_runtime_recovery_center(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_recovery_center import build_runtime_recovery_center
+
+    try:
+        t = _truth_slice(app_user_id)
+    except Exception:
+        t = {}
+    return build_runtime_recovery_center(t, user_id=app_user_id)
+
+
+@router.get("/runtime/integrity")
+def mc_runtime_integrity(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_truth_integrity import validate_truth_integrity
+
+    try:
+        t = _truth_slice(app_user_id)
+    except Exception:
+        t = {}
+    return validate_truth_integrity(t)
+
+
+@router.get("/runtime/lazy/{view_name}")
+def mc_runtime_lazy_view(view_name: str, app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_lazy_views import build_lazy_view
+
+    return build_lazy_view(view_name, app_user_id)
 
 
 @router.get("/enterprise/intelligence")

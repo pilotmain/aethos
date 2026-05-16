@@ -51,6 +51,69 @@ def cmd_connect() -> int:
     return 0
 
 
+def cmd_connection_diagnose() -> int:
+    """Diagnose Mission Control connection and runtime health."""
+    import json
+    import urllib.error
+    import urllib.request
+
+    base = _api_base()
+    print(f"API base: {base}")
+    health_url = f"{base}/api/v1/health"
+    try:
+        with urllib.request.urlopen(health_url, timeout=8) as r:
+            body = r.read().decode("utf-8", errors="replace")
+            print(f"Health: {r.status} {body[:200]}")
+    except urllib.error.HTTPError as e:
+        print(f"Health HTTP error: {e.code}")
+    except Exception as e:
+        print(f"Health unreachable: {e}")
+    try:
+        from app.runtime.runtime_state import load_runtime_state
+
+        st = load_runtime_state()
+        print("Runtime state keys:", ", ".join(sorted(st.keys())[:12]), "…")
+        print(f"  connection_repair_attempts: {st.get('connection_repair_attempts', 0)}")
+        print(f"  last_runtime_version: {st.get('last_runtime_version', '(unset)')}")
+    except Exception as e:
+        print(f"Runtime state read failed: {e}")
+    caps_url = f"{base}/api/v1/runtime/capabilities"
+    try:
+        uid = os.environ.get("TEST_X_USER_ID", "")
+        req = urllib.request.Request(caps_url, headers={"X-User-Id": uid} if uid else {})
+        with urllib.request.urlopen(req, timeout=8) as r:
+            caps = json.loads(r.read().decode())
+            print(f"MC version: {caps.get('mc_compatibility_version')}")
+    except Exception as e:
+        print(f"Capabilities check: {e}")
+    return 0
+
+
+def cmd_connection_reset() -> int:
+    """Reset local connection profile and repair credentials."""
+    repo = _repo_root()
+    env_path = repo / ".env"
+    if env_path.is_file():
+        upsert_env_file(
+            env_path,
+            {
+                "AETHOS_CONNECTION_RESET_AT": __import__(
+                    "app.runtime.runtime_state", fromlist=["utc_now_iso"]
+                ).utc_now_iso(),
+            },
+        )
+    try:
+        from app.runtime.runtime_state import load_runtime_state, save_runtime_state
+
+        st = load_runtime_state()
+        st["connection_repair_attempts"] = int(st.get("connection_repair_attempts") or 0) + 1
+        st["last_runtime_version"] = "phase4_step6"
+        save_runtime_state(st)
+    except Exception:
+        pass
+    return cmd_connection_repair()
+
+
 def cmd_connection_repair() -> int:
     """Repair Mission Control connection mismatch."""
     repo = _repo_root()

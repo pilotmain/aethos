@@ -413,6 +413,7 @@ def main() -> int:
     rt_sub.add_parser("routing", help="GET /api/v1/mission-control/runtime/routing")
     rt_sub.add_parser("advisories", help="GET /api/v1/mission-control/runtime/advisories")
     rt_sub.add_parser("focus", help="GET /api/v1/mission-control/runtime/focus")
+    rt_sub.add_parser("ping", help="GET /api/v1/health + runtime capabilities")
     sp_ecosystem = sub.add_parser("ecosystem", help="Operational intelligence ecosystem (Phase 4 Step 3)")
     eco_sub = sp_ecosystem.add_subparsers(dest="ecosystem_cmd", required=True)
     eco_sub.add_parser("health", help="GET /api/v1/mission-control/ecosystem/health")
@@ -698,6 +699,8 @@ def main() -> int:
     conn_sub = sp_connection.add_subparsers(dest="connection_cmd", required=True)
     conn_sub.add_parser("show", help="Show redacted connection profile")
     conn_sub.add_parser("repair", help="Regenerate bearer token and repair creds")
+    conn_sub.add_parser("diagnose", help="Diagnose API health and runtime capabilities")
+    conn_sub.add_parser("reset", help="Reset connection profile and repair credentials")
 
     sp_cloud = sub.add_parser("cloud", help="Manage ~/.aethos/clouds.yaml deploy providers")
     cloud_sub = sp_cloud.add_subparsers(dest="cloud_cmd", required=True)
@@ -1192,6 +1195,12 @@ def main() -> int:
             code, body = _req("GET", "/api/v1/mission-control/runtime/focus", uid=uid)
             print(body[:24000])
             return 0 if code == 200 else 1
+        if args.runtime_cmd == "ping":
+            code, body = _req("GET", "/api/v1/health", uid=uid)
+            print(body[:4000])
+            code2, body2 = _req("GET", "/api/v1/runtime/capabilities", uid=uid)
+            print(body2[:4000])
+            return 0 if code == 200 and code2 == 200 else 1
         if args.runtime_cmd == "timeline-window":
             off = int(getattr(args, "offset", 0))
             lim = int(getattr(args, "limit", 24))
@@ -1717,10 +1726,19 @@ def main() -> int:
         return cmd_connect()
 
     if args.cmd == "connection":
-        from aethos_cli.connection_cli import cmd_connection_repair, cmd_connection_show
+        from aethos_cli.connection_cli import (
+            cmd_connection_diagnose,
+            cmd_connection_repair,
+            cmd_connection_reset,
+            cmd_connection_show,
+        )
 
         if args.connection_cmd == "show":
             return cmd_connection_show()
+        if args.connection_cmd == "diagnose":
+            return cmd_connection_diagnose()
+        if args.connection_cmd == "reset":
+            return cmd_connection_reset()
         return cmd_connection_repair()
 
     if args.cmd == "init-db":

@@ -186,7 +186,14 @@ def mission_control_state(
     hours: int = Query(24, ge=1, le=168, description="Trust/dashboard look-back window (hours)"),
 ) -> dict:
     """Unified Mission Control state — execution snapshot plus orchestration/trust dashboard."""
-    return build_execution_snapshot(db, user_id=app_user_id, hours=hours)
+    from app.services.mission_control.runtime_resilience import build_execution_snapshot_resilient
+
+    return build_execution_snapshot_resilient(
+        db,
+        user_id=app_user_id,
+        hours=hours,
+        builder=build_execution_snapshot,
+    )
 
 
 @router.post("/autonomy/tasks/{task_id}/interrupt")

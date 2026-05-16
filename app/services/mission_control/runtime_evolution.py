@@ -96,6 +96,9 @@ def apply_runtime_evolution_to_truth(truth: dict[str, Any], *, user_id: str | No
     from app.services.mission_control.runtime_evolution_step5 import apply_runtime_evolution_step5_to_truth
 
     apply_runtime_evolution_step5_to_truth(truth)
+    from app.services.mission_control.runtime_evolution_step6 import apply_runtime_evolution_step6_to_truth
+
+    apply_runtime_evolution_step6_to_truth(truth)
     truth["enterprise_overview"] = build_enterprise_overview(truth)
     return truth
 
@@ -118,8 +121,10 @@ def build_enterprise_overview(truth: dict[str, Any]) -> dict[str, Any]:
         "worker_ecosystem": (truth.get("worker_ecosystem_health") or {}).get("status"),
         "ecosystem_health": (truth.get("ecosystem_operational_health") or {}).get("status"),
         "optimization_quality": (truth.get("runtime_optimization_quality") or {}).get("score"),
-        "phase": "phase4_step5",
+        "phase": "phase4_step6",
         "intelligent_routing": bool(truth.get("intelligent_routing")),
         "operational_recovery": bool(truth.get("operational_recovery_state")),
         "advisory_count": len(truth.get("strategic_recommendations") or []),
+        "runtime_resilience": (truth.get("runtime_resilience") or {}).get("status"),
+        "truth_integrity_score": truth.get("truth_integrity_score"),
     }

@@ -35,6 +35,12 @@ export function formatMissionControlApiError(message: string): string {
   if (/^401\b/.test(m) || /^403\b/.test(m) || m.includes("Unauthorized")) {
     return `${m} — Open Login / Connection and set X-User-Id (and bearer token if your API requires NEXA_WEB_API_TOKEN).`;
   }
+  if (/^5\d{2}\b/.test(m)) {
+    return `${m} — Runtime service error (not a connection failure). Retry or open Runtime recovery.`;
+  }
+  if (/^404\b/.test(m)) {
+    return `${m} — Feature may be unavailable on this API build.`;
+  }
   if (/Cannot reach API/i.test(m)) {
     return `${m} Use Retry after fixing API base URL or starting the Nexa API.`;
   }

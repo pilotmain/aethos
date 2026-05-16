@@ -904,8 +904,9 @@ def build_execution_snapshot(
         "operator_context": build_operator_context_panel(),
     }
     from app.services.mission_control.runtime_truth import build_runtime_panels_from_truth, build_runtime_truth
+    from app.services.mission_control.runtime_truth_cache import get_cached_runtime_truth
 
-    truth = build_runtime_truth(user_id=user_id)
+    truth = get_cached_runtime_truth(user_id, lambda uid: build_runtime_truth(user_id=uid))
     exec_payload["runtime_agents"] = truth.get("runtime_agents")
     exec_payload["office"] = truth.get("office")
     exec_payload["runtime_health"] = truth.get("runtime_health")

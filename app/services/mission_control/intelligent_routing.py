@@ -13,6 +13,10 @@ _MAX_ROUTING_HISTORY = 24
 
 
 def _append_routing_history(entry: dict[str, Any]) -> None:
+    from app.services.mission_control.runtime_hydration_scheduler import should_defer_state_write
+
+    if should_defer_state_write():
+        return
     st = load_runtime_state()
     hist = st.setdefault("routing_failover_history", [])
     if isinstance(hist, list):

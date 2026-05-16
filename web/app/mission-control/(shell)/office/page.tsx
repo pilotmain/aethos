@@ -2,7 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-import { apiFetch } from "@/lib/api/client";
+import {
+  fetchPanelResilient,
+  operationalBanner,
+  type OperationalStatus,
+} from "@/lib/runtimeResilience";
 
 type OfficeAgent = {
   agent_id: string;
@@ -70,15 +74,15 @@ const SEVERITY_CLASS: Record<string, string> = {
 export default function OfficePage() {
   const [office, setOffice] = useState<OfficePayload>({});
   const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState<OperationalStatus>("healthy");
+  const [stale, setStale] = useState(false);
 
   const refresh = useCallback(async () => {
-    try {
-      const data = await apiFetch<OfficePayload>("/mission-control/office");
-      setOffice(data);
-      setError(null);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load office");
-    }
+    const result = await fetchPanelResilient<OfficePayload>("/mission-control/office", {});
+    setOffice(result.data);
+    setStatus(result.status);
+    setStale(Boolean(result.stale));
+    setError(result.error ?? null);
   }, []);
 
   useEffect(() => {
@@ -163,6 +167,11 @@ export default function OfficePage() {
         </section>
       ) : null}
 
+      {operationalBanner(status, stale) ? (
+        <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-sm text-amber-800 dark:text-amber-200">
+          {operationalBanner(status, stale)}
+        </p>
+      ) : null}
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
       <div className="grid gap-6 lg:grid-cols-3">

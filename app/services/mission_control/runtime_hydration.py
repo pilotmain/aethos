@@ -33,6 +33,11 @@ def get_hydration_metrics() -> dict[str, Any]:
 
 
 def record_hydration_metric(**fields: Any) -> None:
+    from app.services.mission_control.runtime_hydration_scheduler import defer_metric, should_defer_state_write
+
+    if should_defer_state_write():
+        defer_metric(**fields)
+        return
     st = load_runtime_state()
     h = st.setdefault("hydration_metrics", {})
     if isinstance(h, dict):
@@ -308,7 +313,10 @@ def _build_derived_slice(user_id: str | None, truth: dict[str, Any]) -> dict[str
 
 def hydrate_runtime_truth_incremental(*, user_id: str | None = None) -> dict[str, Any]:
     """Assemble truth from cached slices — avoids full monolithic rebuild when slices are warm."""
+    from app.services.mission_control.runtime_hydration_scheduler import begin_hydration_cycle, end_hydration_cycle
+
     t0 = time.monotonic()
+    begin_hydration_cycle()
     _maybe_run_maintenance()
     uid = user_id
 
@@ -476,6 +484,8 @@ def hydrate_runtime_truth_incremental(*, user_id: str | None = None) -> dict[str
     from app.services.mission_control.runtime_evolution import apply_runtime_evolution_to_truth
 
     apply_runtime_evolution_to_truth(truth, user_id=uid)
+    end_hydration_cycle(duration_ms=(time.monotonic() - t0) * 1000.0)
+    truth["hydration_metrics"] = get_hydration_metrics()
     return truth
 
 
