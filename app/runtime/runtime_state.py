@@ -182,6 +182,8 @@ def default_runtime_state(*, workspace_root: Path | None = None) -> dict[str, An
         "mc_metrics_cache": {},
         "mc_metrics_history": [],
         "runtime_agents_history": [],
+        "installed_plugins": [],
+        "plugin_governance_audit": [],
     }
 
 

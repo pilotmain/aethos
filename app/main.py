@@ -52,6 +52,7 @@ from app.api.routes import (
     mission_agents,
     mission_control,
     mission_control_runtime,
+    plugin_marketplace_api,
     plugins_api,
     mobile,
     multimodal,
@@ -441,6 +442,7 @@ app.include_router(mission_agents.router, prefix=settings.api_v1_prefix)
 app.include_router(jobs.router, prefix=settings.api_v1_prefix)
 app.include_router(approvals.router, prefix=settings.api_v1_prefix)
 app.include_router(marketplace.router, prefix=settings.api_v1_prefix)
+app.include_router(plugin_marketplace_api.router, prefix=settings.api_v1_prefix)
 app.include_router(agent_health.router, prefix=settings.api_v1_prefix)
 app.include_router(self_improvement.router, prefix=settings.api_v1_prefix)
 app.include_router(license.router, prefix=settings.api_v1_prefix)

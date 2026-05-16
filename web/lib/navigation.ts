@@ -6,6 +6,7 @@ import {
   FolderKanban,
   LayoutDashboard,
   Package,
+  Plug,
   Settings,
   ShieldCheck,
   Sparkles,
@@ -31,6 +32,12 @@ export const missionControlNavItems: MissionControlNavItem[] = [
     href: "/mission-control/office",
     icon: Users,
     description: "Live runtime agents and activity",
+  },
+  {
+    name: "Plugins",
+    href: "/mission-control/plugins",
+    icon: Plug,
+    description: "Runtime plugin install and health",
   },
   {
     name: "CEO",

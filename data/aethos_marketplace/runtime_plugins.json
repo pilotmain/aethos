@@ -1,0 +1,50 @@
+{
+  "plugins": [
+    {
+      "plugin_id": "vercel-provider",
+      "name": "Vercel Tools",
+      "author": "AethOS",
+      "version": "1.0.0",
+      "verified": true,
+      "official": true,
+      "trust_tier": "official",
+      "capabilities": ["deployments", "logs", "redeploy", "restart"],
+      "permissions": ["provider.vercel"],
+      "downloads": 0
+    },
+    {
+      "plugin_id": "github-provider",
+      "name": "GitHub",
+      "author": "AethOS",
+      "version": "1.0.0",
+      "verified": true,
+      "trust_tier": "verified",
+      "capabilities": ["repos", "actions"],
+      "permissions": ["provider.github"],
+      "downloads": 0
+    },
+    {
+      "plugin_id": "linear-provider",
+      "name": "Linear",
+      "author": "AethOS",
+      "version": "0.1.0",
+      "verified": false,
+      "trust_tier": "community",
+      "capabilities": ["issues", "projects"],
+      "permissions": ["provider.linear"],
+      "downloads": 0
+    },
+    {
+      "plugin_id": "deployment-automation-pack",
+      "name": "Deployment Automation",
+      "author": "AethOS",
+      "version": "1.0.0",
+      "verified": true,
+      "trust_tier": "trusted",
+      "capabilities": ["automation_pack"],
+      "permissions": ["runtime.deploy"],
+      "automation_pack": "deployment",
+      "downloads": 0
+    }
+  ]
+}

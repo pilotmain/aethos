@@ -15,6 +15,12 @@ from app.services.plugins.registry import load_plugins as load_tool_plugins
 
 def load_all_plugins() -> dict[str, Any]:
     """Idempotent plugin bootstrap for API process."""
+    try:
+        from app.plugins.plugin_installer import sync_installed_from_disk
+
+        sync_installed_from_disk()
+    except Exception:
+        pass
     manifests = list_plugin_manifests()
     runtime = PluginRuntime()
     tool_plugins = load_tool_plugins()

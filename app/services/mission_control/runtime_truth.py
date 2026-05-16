@@ -26,7 +26,13 @@ from app.services.mission_control.runtime_lifecycle import run_runtime_lifecycle
 from app.services.mission_control.runtime_ownership import build_all_operator_traces, build_operator_trace_chains
 from app.services.mission_control.orchestration_runtime_snapshot import build_orchestration_runtime_snapshot
 from app.services.operator_context import build_operator_context_panel
+from app.plugins.automation_packs import list_automation_packs
 from app.plugins.plugin_runtime import build_plugin_health_panel
+from app.marketplace.runtime_marketplace import marketplace_summary
+from app.services.brain_routing_visibility import build_brain_routing_panel
+from app.services.operational_intelligence import build_operational_intelligence
+from app.services.runtime_governance import build_governance_audit
+from app.services.workspace_runtime_intelligence import build_workspace_intelligence
 
 
 def build_provider_routing_summary() -> dict[str, Any]:
@@ -128,6 +134,12 @@ def build_runtime_truth(*, user_id: str | None = None) -> dict[str, Any]:
         "operator_traces": build_all_operator_traces(uid),
         "lifecycle_sweep": lifecycle_sweep,
         "workflows": ort.get("workflows") or {},
+        "marketplace": marketplace_summary(),
+        "operational_intelligence": build_operational_intelligence(ort),
+        "brain_routing_panel": build_brain_routing_panel(),
+        "workspace_intelligence": build_workspace_intelligence(),
+        "runtime_governance": build_governance_audit(),
+        "automation_packs": list_automation_packs(),
     }
 
 
@@ -154,4 +166,11 @@ def build_runtime_panels_from_truth(truth: dict[str, Any]) -> dict[str, Any]:
             "continuity": (truth.get("runtime_metrics") or {}).get("runtime_continuity"),
             "events": [e for e in (truth.get("runtime_events") or []) if "recover" in str(e.get("event_type") or "")],
         },
+        "marketplace": truth.get("marketplace"),
+        "operational_intelligence": truth.get("operational_intelligence"),
+        "workspace_intelligence": truth.get("workspace_intelligence"),
+        "plugin_health": truth.get("plugins"),
+        "runtime_governance": truth.get("runtime_governance"),
+        "automation_packs": truth.get("automation_packs"),
+        "brain_routing_advanced": truth.get("brain_routing_panel"),
     }

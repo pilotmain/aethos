@@ -53,6 +53,11 @@ def get_runtime_corruption_quarantine_dir() -> Path:
     return get_aethos_home_dir() / "corruption_quarantine"
 
 
+def get_plugins_dir() -> Path:
+    """Runtime-managed plugin installs (``~/.aethos/plugins``)."""
+    return get_aethos_home_dir() / "plugins"
+
+
 def get_aethos_workspace_root() -> Path:
     """Default workspace root for execution artifacts (``~/.aethos/workspace``)."""
     raw = (os.environ.get("AETHOS_WORKSPACE_HOME") or "").strip()
@@ -90,6 +95,7 @@ def get_default_sqlite_database_url() -> str:
 __all__ = [
     "get_aethos_data_dir",
     "get_aethos_home_dir",
+    "get_plugins_dir",
     "get_aethos_workspace_root",
     "get_default_database_path",
     "get_default_sqlite_database_url",

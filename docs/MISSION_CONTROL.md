@@ -35,6 +35,12 @@ Events are aggregated for display (`aggregate_events_for_display`) to collapse r
 - **Plugins:** `build_plugin_health_panel()` exposes warnings, failures, permissions.
 - **`/state` parity:** `build_execution_snapshot` embeds truth-derived `runtime_health`, `panels`, `operator_traces`.
 
+## Step 3 — plugin marketplace
+
+- Web: `/mission-control/plugins` — install, uninstall, health, permissions.
+- APIs: `/api/v1/marketplace/plugins`, `/install`, `/uninstall`, `/upgrade`.
+- Runtime truth includes `marketplace`, `operational_intelligence`, `workspace_intelligence`, `runtime_governance`.
+
 ## Live panels (Step 9)
 
 `GET /api/v1/mission-control/runtime-panels` — runtime health, brain routing, provider operations, agents, privacy, recovery.

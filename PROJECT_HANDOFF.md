@@ -49,6 +49,8 @@ Do not introduce architectural divergence unless required to reproduce OpenClaw 
 
 **Phase 2 Step 11 (cleanup + production polish):** Cached runtime truth, lifecycle sweeps, `build_execution_snapshot` unified with truth, plugin health panel, operator trace bundles (`GET /runtime-traces`), severity-prioritized events, Office UX polish.
 
+**Phase 3 Step 1 (ecosystem + marketplace):** Plugin install lifecycle (`~/.aethos/plugins/`), marketplace APIs (`/marketplace/plugins`, install/uninstall/upgrade), operational intelligence, brain routing panel, workspace intelligence, governance audit, automation packs, MC `/mission-control/plugins` UI. See [docs/MARKETPLACE.md](docs/MARKETPLACE.md).
+
 Deferred until after verified parity:
 
 - privacy-first redesigns
