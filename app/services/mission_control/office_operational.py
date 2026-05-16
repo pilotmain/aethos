@@ -48,4 +48,8 @@ def build_office_operational_view(truth: dict[str, Any], *, user_id: str | None 
         "active_tasks": health.get("active_tasks"),
         "queued_tasks": health.get("queued_tasks"),
         "repair_tracked": (truth.get("operational_intelligence") or {}).get("repair_tracked"),
+        "runtime_confidence": (truth.get("runtime_confidence") or {}).get("runtime_confidence"),
+        "confidence_summary": ((truth.get("runtime_confidence") or {}).get("operational_stability") or {}).get(
+            "summary"
+        ),
     }

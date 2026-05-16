@@ -26,17 +26,26 @@ def build_consolidated_runtime_health(
 
     severity = "info"
     status = "healthy"
-    if not rel.get("integrity_ok", True) or critical_events > 0:
+    if recovery_active and not critical_events:
+        severity = "warning"
+        status = "recovering"
+    elif not rel.get("integrity_ok", True) or critical_events > 0:
         severity = "critical"
         status = "critical"
-    elif provider_failures > 0 or retry_p or critical_events > 0:
+    elif provider_failures > 0 or retry_p:
         severity = "error"
         status = "degraded"
-    elif queue_p or deploy_p or recovery_active or warning_events > 3:
+    elif queue_p or deploy_p or warning_events > 3:
         severity = "warning"
         status = "warning"
 
-    color = {"healthy": "green", "warning": "amber", "degraded": "amber", "critical": "red"}.get(status, "green")
+    color = {
+        "healthy": "green",
+        "warning": "amber",
+        "degraded": "amber",
+        "critical": "red",
+        "recovering": "violet",
+    }.get(status, "green")
 
     return {
         "status": status,

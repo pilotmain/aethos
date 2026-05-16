@@ -54,6 +54,15 @@ Events are aggregated for display (`aggregate_events_for_display`) to collapse r
 
 Events use categorized shape: `event_type`, `category`, `severity`, `correlation_id` (see [RUNTIME_EVENTS.md](RUNTIME_EVENTS.md)).
 
+## Phase 3 Step 5 — commercial readiness
+
+- **`GET /mission-control/runtime-confidence`** — uptime, restarts, 24h failures, stability, provider/repair/deployment confidence, onboarding checks, cost estimates.
+- Office shows a **Runtime confidence** summary card.
+- Health states include **`recovering`**.
+- Governance timeline includes deployments and automation packs; timeline build tracked in discipline metrics.
+
+See [ENTERPRISE_RUNTIME_CONFIDENCE.md](ENTERPRISE_RUNTIME_CONFIDENCE.md), [OPERATIONAL_TRUST_MODEL.md](OPERATIONAL_TRUST_MODEL.md), [COMMERCIAL_POSITIONING.md](COMMERCIAL_POSITIONING.md).
+
 ## Phase 3 Step 4 — product cohesion
 
 - **Navigation:** Office, Runtime, Deployments, Providers, Marketplace, Privacy, Governance, Settings (see [UI_DEPRECATION_PLAN.md](UI_DEPRECATION_PLAN.md)).

@@ -26,6 +26,7 @@ _REQUIRED_TRUTH_KEYS = frozenset(
         "runtime_discipline",
         "readable_summaries",
         "runtime_workers",
+        "runtime_confidence",
     }
 )
 

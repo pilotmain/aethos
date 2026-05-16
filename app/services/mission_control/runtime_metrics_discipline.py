@@ -74,6 +74,17 @@ def get_runtime_discipline_metrics() -> dict[str, Any]:
     }
 
 
+def record_timeline_build(*, entry_count: int, duration_ms: float) -> None:
+    st = load_runtime_state()
+    m = st.setdefault("runtime_discipline_metrics", {})
+    if not isinstance(m, dict):
+        m = {}
+        st["runtime_discipline_metrics"] = m
+    m["last_timeline_entries"] = entry_count
+    m["last_timeline_build_ms"] = round(duration_ms, 2)
+    save_runtime_state(st)
+
+
 def approx_payload_bytes(truth: dict[str, Any]) -> int:
     try:
         return len(json.dumps(truth, default=str))

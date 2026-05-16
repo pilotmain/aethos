@@ -32,6 +32,15 @@ type OfficePayload = {
   plugin_health?: { healthy?: number; failed?: number };
   active_tasks?: number;
   queued_tasks?: number;
+  runtime_confidence?: {
+    health?: string;
+    uptime_hours?: number;
+    restart_count?: number;
+    active_recoveries?: number;
+    provider_failures_24h?: number;
+    plugin_failures_24h?: number;
+  };
+  confidence_summary?: string;
 };
 
 const STATE_DOT: Record<string, string> = {
@@ -48,6 +57,7 @@ const HEALTH_DOT: Record<string, string> = {
   warning: "bg-amber-400",
   degraded: "bg-amber-500",
   critical: "bg-red-500",
+  recovering: "bg-violet-500",
 };
 
 const SEVERITY_CLASS: Record<string, string> = {
@@ -79,6 +89,7 @@ export default function OfficePage() {
 
   const healthKey = office.orchestrator?.health ?? "healthy";
   const healthDot = HEALTH_DOT[healthKey] ?? HEALTH_DOT.healthy;
+  const confidence = office.runtime_confidence;
   const workers = (office.agents ?? []).filter((a) => !a.system && a.office_state !== "offline");
   const events = office.recent_events ?? [];
   const routing = office.routing ?? {};
@@ -107,6 +118,19 @@ export default function OfficePage() {
           ) : null}
         </div>
       </header>
+
+      {confidence ? (
+        <section className="rounded-lg border border-border/50 bg-card/40 px-4 py-3 text-sm">
+          <p className="font-medium">Runtime confidence</p>
+          <p className="mt-1 text-muted-foreground">
+            {office.confidence_summary ?? `Status: ${confidence.health ?? "healthy"}`}
+          </p>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Uptime {confidence.uptime_hours ?? 0}h · restarts {confidence.restart_count ?? 0} · provider issues 24h{" "}
+            {confidence.provider_failures_24h ?? 0} · plugin issues 24h {confidence.plugin_failures_24h ?? 0}
+          </p>
+        </section>
+      ) : null}
 
       <div className="grid gap-3 sm:grid-cols-4 text-xs text-muted-foreground">
         <div className="rounded border border-border/40 px-3 py-2">

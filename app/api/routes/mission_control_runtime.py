@@ -159,6 +159,11 @@ def mc_runtime_workers(app_user_id: str = Depends(get_valid_web_user_id)) -> dic
     return build_runtime_workers_view(app_user_id)
 
 
+@router.get("/runtime-confidence")
+def mc_runtime_confidence(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    return _truth_slice(app_user_id).get("runtime_confidence") or {}
+
+
 @router.get("/automation-packs")
 def mc_automation_packs(_: str = Depends(get_valid_web_user_id)) -> dict:
     from app.plugins.automation_packs import list_automation_packs_with_health

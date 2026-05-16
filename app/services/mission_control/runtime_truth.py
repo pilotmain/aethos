@@ -38,6 +38,7 @@ from app.services.runtime_governance import build_governance_audit
 from app.services.workspace_runtime_intelligence import build_workspace_intelligence
 from app.services.mission_control.office_operational import build_office_operational_view
 from app.services.mission_control.runtime_metrics_discipline import get_runtime_discipline_metrics
+from app.services.mission_control.runtime_confidence import build_runtime_confidence
 
 
 def build_provider_routing_summary() -> dict[str, Any]:
@@ -157,7 +158,9 @@ def build_runtime_truth(*, user_id: str | None = None) -> dict[str, Any]:
         "runtime_discipline": get_runtime_discipline_metrics(),
         "readable_summaries": None,
         "runtime_workers": None,
+        "runtime_confidence": None,
     }
+    truth["runtime_confidence"] = build_runtime_confidence(truth, user_id=uid)
     truth["office"] = build_office_operational_view(truth, user_id=uid)
     from app.services.mission_control.runtime_summary_readability import build_readable_summaries
     from app.services.mission_control.runtime_worker_visibility import build_runtime_workers_view

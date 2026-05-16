@@ -13,6 +13,9 @@ from app.services.mission_control.runtime_event_intelligence import list_normali
 
 def build_governance_timeline(*, limit: int = 32) -> dict[str, Any]:
     """Operational timeline — human-readable, newest first."""
+    import time
+
+    t0 = time.monotonic()
     audit = build_governance_audit(limit=limit)
     entries: list[dict[str, Any]] = []
     for row in audit.get("plugin_installs") or []:
@@ -48,6 +51,16 @@ def build_governance_timeline(*, limit: int = 32) -> dict[str, Any]:
                     "privacy_mode": row.get("privacy_mode"),
                 }
             )
+    for row in audit.get("deployment_operations") or []:
+        if isinstance(row, dict):
+            entries.append(
+                {
+                    "at": row.get("timestamp"),
+                    "kind": "deployment",
+                    "who": "deployment",
+                    "what": _humanize_deployment(row),
+                }
+            )
     for row in audit.get("repair_operations") or []:
         if isinstance(row, dict):
             entries.append(
@@ -55,7 +68,17 @@ def build_governance_timeline(*, limit: int = 32) -> dict[str, Any]:
                     "at": row.get("timestamp"),
                     "kind": "repair",
                     "who": "repair flow",
-                    "what": str(row.get("event_type") or "repair"),
+                    "what": _humanize_repair(row),
+                }
+            )
+    for row in audit.get("automation_pack_operations") or []:
+        if isinstance(row, dict):
+            entries.append(
+                {
+                    "at": row.get("timestamp"),
+                    "kind": "automation_pack",
+                    "who": "automation",
+                    "what": row.get("summary") or str(row.get("pack_id") or "pack"),
                 }
             )
     for row in audit.get("privacy_enforcement") or []:
@@ -70,13 +93,34 @@ def build_governance_timeline(*, limit: int = 32) -> dict[str, Any]:
                 }
             )
     entries.sort(key=lambda e: str(e.get("at") or ""), reverse=True)
-    return {"timeline": entries[:limit], "summary": audit.get("summary")}
+    timeline = entries[:limit]
+    try:
+        from app.services.mission_control.runtime_metrics_discipline import record_timeline_build
+
+        record_timeline_build(entry_count=len(timeline), duration_ms=(time.monotonic() - t0) * 1000.0)
+    except Exception:
+        pass
+    return {"timeline": timeline, "summary": audit.get("summary")}
 
 
 def _humanize_provider_op(row: dict[str, Any]) -> str:
     prov = row.get("provider") or row.get("provider_id") or "provider"
     act = row.get("action") or row.get("operation") or "action"
     return f"{prov} — {act}"
+
+
+def _humanize_deployment(row: dict[str, Any]) -> str:
+    et = str(row.get("event_type") or "deployment")
+    pl = row.get("payload") if isinstance(row.get("payload"), dict) else {}
+    pid = pl.get("project_id") or row.get("project_id") or ""
+    return f"{et}" + (f" for {pid}" if pid else "")
+
+
+def _humanize_repair(row: dict[str, Any]) -> str:
+    et = str(row.get("event_type") or "repair")
+    pl = row.get("payload") if isinstance(row.get("payload"), dict) else {}
+    pid = pl.get("project_id") or ""
+    return f"{et}" + (f" on {pid}" if pid else "")
 
 
 def build_governance_audit(*, limit: int = 40) -> dict[str, Any]:
@@ -94,6 +138,18 @@ def build_governance_audit(*, limit: int = 40) -> dict[str, Any]:
     brain_decisions = st.get("brain_decisions") or []
     if not isinstance(brain_decisions, list):
         brain_decisions = []
+    pack_states = st.get("automation_pack_states") or {}
+    pack_ops: list[dict[str, Any]] = []
+    if isinstance(pack_states, dict):
+        for pack_id, row in list(pack_states.items())[-12:]:
+            if isinstance(row, dict) and row.get("last_event"):
+                pack_ops.append(
+                    {
+                        "pack_id": pack_id,
+                        "summary": row.get("last_event"),
+                        "timestamp": row.get("updated_at"),
+                    }
+                )
     return {
         "plugin_installs": [_humanize_audit(r) for r in plugin_audit[-20:]],
         "provider_operations": [_humanize_audit(r) for r in provider_ops[-20:]],
@@ -101,6 +157,7 @@ def build_governance_audit(*, limit: int = 40) -> dict[str, Any]:
         "repair_operations": repair_events[-12:],
         "deployment_operations": deploy_events[-12:],
         "brain_routing_decisions": brain_decisions[-16:],
+        "automation_pack_operations": pack_ops,
         "permissions_tracked": _collect_permissions(st),
         "summary": {
             "plugin_actions": len(plugin_audit),

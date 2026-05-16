@@ -32,6 +32,10 @@ def build_brain_routing_panel() -> dict[str, Any]:
     latest = recent[0] if recent else {}
     fallback_chain = latest.get("fallback_chain") or chain
     fallback = fallback_chain[1] if len(fallback_chain) > 1 else None
+    fallback_count = sum(1 for r in recent if r.get("fallback_used"))
+    routing_conf = latest.get("capability_score")
+    if routing_conf is None:
+        routing_conf = 0.85 if not summary.get("fallback_used") else 0.65
     return {
         "brain_routing": {
             "selected_provider": summary.get("provider"),
@@ -47,7 +51,9 @@ def build_brain_routing_panel() -> dict[str, Any]:
             "estimated_cost": latest.get("cost_estimate") or _estimate_cost(recent[0] if recent else {}),
             "provider_health": "ok" if not summary.get("privacy_block_active") else "restricted",
             "capability_score": latest.get("capability_score"),
-            "routing_confidence": latest.get("capability_score"),
+            "routing_confidence": routing_conf,
+            "fallback_frequency": round(fallback_count / max(1, len(recent)), 3),
+            "privacy_routing_confidence": 1.0 if mode.value == "observe" else 0.9,
             "task": latest.get("task") or summary.get("task"),
         },
         "supported_tasks": sorted(BRAIN_TASKS),
