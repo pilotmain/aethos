@@ -181,6 +181,7 @@ def default_runtime_state(*, workspace_root: Path | None = None) -> dict[str, An
         "runtime_event_summaries": [],
         "mc_metrics_cache": {},
         "mc_metrics_history": [],
+        "runtime_agents_history": [],
     }
 
 
@@ -353,6 +354,7 @@ def ensure_operator_context_schema(st: dict[str, Any]) -> dict[str, Any]:
         "runtime_event_summaries",
         "mc_metrics_cache",
         "mc_metrics_history",
+        "runtime_agents_history",
     ):
         if key not in st:
             st[key] = base[key]  # type: ignore[index]

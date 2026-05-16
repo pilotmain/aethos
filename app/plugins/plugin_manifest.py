@@ -21,6 +21,7 @@ class PluginManifest:
     permissions: list[str] = field(default_factory=list)
     verified: bool = False
     installed: bool = True
+    trust_tier: str = "official"
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -34,6 +35,7 @@ class PluginManifest:
             "permissions": list(self.permissions),
             "verified": self.verified,
             "installed": self.installed,
+            "trust_tier": self.trust_tier,
         }
 
     @classmethod
@@ -49,4 +51,5 @@ class PluginManifest:
             permissions=[str(x) for x in (data.get("permissions") or [])],
             verified=bool(data.get("verified")),
             installed=bool(data.get("installed", True)),
+            trust_tier=str(data.get("trust_tier") or "community"),
         )

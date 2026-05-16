@@ -120,10 +120,10 @@ def run_fix_and_redeploy(
             "repair_context": repair_ctx,
         }
 
-    from app.runtime.runtime_agents import assign_runtime_agent, release_runtime_agent, spawn_runtime_agent
+    from app.runtime.runtime_agents import assign_runtime_agent, release_runtime_agent, spawn_or_reuse_runtime_agent
     from app.services.mission_control.mc_runtime_events import emit_mc_runtime_event
 
-    repair_agent = spawn_runtime_agent(
+    repair_agent = spawn_or_reuse_runtime_agent(
         agent_type="repair",
         created_from_task=f"fix_and_redeploy:{project_id}",
         provider="vercel",

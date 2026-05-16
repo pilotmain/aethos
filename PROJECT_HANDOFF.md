@@ -45,6 +45,8 @@ Do not introduce architectural divergence unless required to reproduce OpenClaw 
 
 **Phase 2 Step 9 (real-time MC + marketplace foundation):** Categorized runtime events, agent lifecycle (busy/idle/suspend/expire), live panels API, metrics cache, plugin load/disable APIs (`/api/v1/plugins/*`), Office topology. See [docs/RUNTIME_AGENTS.md](docs/RUNTIME_AGENTS.md), [docs/PLUGIN_MARKETPLACE.md](docs/PLUGIN_MARKETPLACE.md).
 
+**Phase 2 Step 10 (simplification + polish):** Authoritative `runtime_truth` path, consolidated runtime health (`healthy|warning|degraded|critical`), event aggregation, plugin failure isolation, `trust_tier` on plugins, operator trace API. See [docs/RUNTIME_CLEANUP_RECON.md](docs/RUNTIME_CLEANUP_RECON.md).
+
 Deferred until after verified parity:
 
 - privacy-first redesigns

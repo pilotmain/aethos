@@ -87,6 +87,14 @@ def mc_runtime_panels(app_user_id: str = Depends(get_valid_web_user_id)) -> dict
     return build_runtime_panels(app_user_id)
 
 
+@router.get("/runtime-trace")
+def mc_runtime_trace(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_truth import build_runtime_truth
+
+    truth = build_runtime_truth(user_id=app_user_id)
+    return {"ownership_trace": truth.get("ownership_trace") or [], "routing_summary": truth.get("routing_summary")}
+
+
 @router.websocket("/runtime/ws")
 async def mc_runtime_ws(ws: WebSocket) -> None:
     """Live Mission Control runtime events (bounded bus replay + subscribe)."""

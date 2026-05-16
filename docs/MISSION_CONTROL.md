@@ -1,4 +1,4 @@
-# Mission Control (Phase 2 Step 8)
+# Mission Control (Phase 2 Step 8–10)
 
 Mission Control is the operational surface for AethOS runtime state — not a simulation layer.
 
@@ -15,8 +15,17 @@ Mission Control is the operational surface for AethOS runtime state — not a si
 | `GET /api/v1/mission-control/runtime-events` | Bounded event tail |
 | `GET /api/v1/mission-control/runtime-metrics` | Lightweight metrics |
 | `WS /api/v1/mission-control/runtime/ws` | Live runtime events |
+| `GET /api/v1/mission-control/runtime-trace` | Task → agent → provider trace chains |
 
 Legacy unified payload: `GET /api/v1/mission-control/state` (includes `runtime_agents`, `office`, `brain_visibility`, `panels`).
+
+## Step 10 — consolidated runtime truth
+
+`build_runtime_truth()` in `app/services/mission_control/runtime_truth.py` is the authoritative path for agents, tasks, providers, deployments, health, plugins, privacy, and ownership. Panels and intelligence modules delegate to it.
+
+Runtime health uses `healthy | warning | degraded | critical` with pressure flags (`queue_pressure`, `retry_pressure`, `deployment_pressure`, `recovery_active`). See `runtime_health_model.py`.
+
+Events are aggregated for display (`aggregate_events_for_display`) to collapse repeated low-signal events.
 
 ## Live panels (Step 9)
 

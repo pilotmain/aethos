@@ -8,10 +8,9 @@ type OfficeAgent = {
   agent_id: string;
   agent_type?: string;
   office_state?: string;
-  lifecycle?: string;
   provider?: string;
   model?: string;
-  assignment?: { task_id?: string; workflow_id?: string };
+  assignment?: { task_id?: string };
   system?: boolean;
 };
 
@@ -19,35 +18,51 @@ type RuntimeEvent = {
   event_type?: string;
   category?: string;
   severity?: string;
-  timestamp?: string;
+  count?: number;
 };
 
-const STATE_COLOR: Record<string, string> = {
+type RuntimeHealth = {
+  status?: string;
+  severity?: string;
+  color?: string;
+  queue_pressure?: boolean;
+  retry_pressure?: boolean;
+};
+
+const STATE_DOT: Record<string, string> = {
   active: "bg-emerald-500",
   busy: "bg-sky-500",
   idle: "bg-amber-400",
   recovering: "bg-violet-500",
   failed: "bg-red-500",
-  offline: "bg-zinc-400",
-  spawned: "bg-emerald-400",
-  suspended: "bg-zinc-500",
+  offline: "bg-zinc-500",
+};
+
+const HEALTH_DOT: Record<string, string> = {
+  healthy: "bg-emerald-500",
+  warning: "bg-amber-400",
+  degraded: "bg-amber-500",
+  critical: "bg-red-500",
 };
 
 export default function OfficePage() {
   const [agents, setAgents] = useState<OfficeAgent[]>([]);
   const [events, setEvents] = useState<RuntimeEvent[]>([]);
-  const [health, setHealth] = useState<{ color?: string; status?: string }>({});
+  const [health, setHealth] = useState<RuntimeHealth>({});
+  const [routing, setRouting] = useState<{ provider?: string; model?: string; reason?: string }>({});
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     try {
       const runtime = await apiFetch<{
         office?: { agents?: OfficeAgent[]; recent_events?: RuntimeEvent[] };
-        runtime_health?: { color?: string; status?: string };
+        runtime_health?: RuntimeHealth;
+        routing_summary?: { provider?: string; model?: string; reason?: string };
       }>("/mission-control/runtime");
       setAgents(runtime.office?.agents ?? []);
       setEvents(runtime.office?.recent_events ?? []);
       setHealth(runtime.runtime_health ?? {});
+      setRouting(runtime.routing_summary ?? {});
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load runtime");
@@ -56,69 +71,88 @@ export default function OfficePage() {
 
   useEffect(() => {
     void refresh();
-    const t = setInterval(() => void refresh(), 8000);
+    const t = setInterval(() => void refresh(), 10000);
     return () => clearInterval(t);
   }, [refresh]);
 
-  const healthColor =
-    health.color === "red" ? "bg-red-500" : health.color === "amber" ? "bg-amber-400" : "bg-emerald-500";
+  const healthKey = health.status ?? "healthy";
+  const healthDot = HEALTH_DOT[healthKey] ?? HEALTH_DOT.healthy;
 
   return (
-    <div className="space-y-6 p-6">
-      <div className="flex items-center justify-between">
+    <div className="mx-auto max-w-6xl space-y-8 p-6">
+      <header className="flex flex-wrap items-end justify-between gap-4 border-b border-border/60 pb-6">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">The Office</h1>
-          <p className="text-sm text-muted-foreground">Runtime topology — agents, tasks, and live events</p>
+          <h1 className="text-xl font-semibold tracking-tight text-foreground">The Office</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Live runtime — agents, routing, and operational events</p>
         </div>
-        <div className="flex items-center gap-2 text-sm">
-          <span className={`h-2.5 w-2.5 rounded-full ${healthColor}`} />
-          Runtime {health.status ?? "unknown"}
+        <div className="flex items-center gap-3 text-sm">
+          <span className={`h-2 w-2 rounded-full ${healthDot}`} />
+          <span className="capitalize text-muted-foreground">{healthKey}</span>
+          {(health.queue_pressure || health.retry_pressure) && (
+            <span className="rounded bg-amber-500/15 px-2 py-0.5 text-xs text-amber-600 dark:text-amber-400">
+              pressure
+            </span>
+          )}
         </div>
-      </div>
+      </header>
+
+      {routing.provider ? (
+        <section className="rounded-lg border border-border/60 bg-card/50 px-4 py-3 text-sm">
+          <span className="text-muted-foreground">Brain route </span>
+          <span className="font-mono">
+            {routing.provider}/{routing.model ?? "—"}
+          </span>
+          {routing.reason ? <span className="ml-2 text-muted-foreground">· {routing.reason}</span> : null}
+        </section>
+      ) : null}
+
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+
+      <div className="grid gap-8 lg:grid-cols-3">
+        <section className="lg:col-span-2 space-y-4">
+          <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Runtime agents</h2>
+          <div className="grid gap-3 sm:grid-cols-2">
             {agents.map((a) => {
               const st = a.office_state ?? "offline";
-              const dot = STATE_COLOR[st] ?? STATE_COLOR.offline;
               return (
-                <div key={a.agent_id} className="rounded-lg border bg-card p-4 shadow-sm">
+                <article
+                  key={a.agent_id}
+                  className="rounded-lg border border-border/50 bg-card/40 p-4 transition-colors hover:bg-card/70"
+                >
                   <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <p className="font-medium">{a.agent_type ?? "agent"}</p>
-                      <p className="truncate text-xs text-muted-foreground">{a.agent_id}</p>
+                    <div className="min-w-0">
+                      <p className="font-medium capitalize">{a.agent_type ?? "agent"}</p>
+                      <p className="truncate font-mono text-[11px] text-muted-foreground">{a.agent_id}</p>
                     </div>
-                    <span className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${dot}`} title={st} />
+                    <span className={`mt-1 h-2 w-2 shrink-0 rounded-full ${STATE_DOT[st] ?? STATE_DOT.offline}`} />
                   </div>
-                  <p className="mt-3 text-xs capitalize text-muted-foreground">{st}</p>
                   {a.assignment?.task_id ? (
-                    <p className="mt-1 truncate font-mono text-xs text-muted-foreground">→ {a.assignment.task_id}</p>
+                    <p className="mt-2 truncate font-mono text-[11px] text-muted-foreground">{a.assignment.task_id}</p>
                   ) : null}
-                  {(a.provider || a.model) && (
-                    <p className="mt-1 font-mono text-xs">{[a.provider, a.model].filter(Boolean).join(" / ")}</p>
-                  )}
-                </div>
+                </article>
               );
             })}
           </div>
           {!agents.length && !error ? (
-            <p className="text-sm text-muted-foreground">No runtime agents yet.</p>
+            <p className="text-sm text-muted-foreground">No active runtime agents.</p>
           ) : null}
-        </div>
-        <div className="rounded-lg border bg-card p-4">
-          <h2 className="text-sm font-medium">Recent runtime events</h2>
-          <ul className="mt-3 max-h-80 space-y-2 overflow-y-auto text-xs">
+        </section>
+
+        <section className="rounded-lg border border-border/50 bg-card/40 p-4">
+          <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Events</h2>
+          <ul className="mt-4 max-h-96 space-y-3 overflow-y-auto text-xs">
             {events.map((ev, i) => (
-              <li key={`${ev.event_type}-${i}`} className="border-b border-border/50 pb-2">
-                <span className="font-mono">{ev.event_type}</span>
-                <span className="ml-2 text-muted-foreground">{ev.category}</span>
-                <span className="ml-1 text-muted-foreground">({ev.severity})</span>
+              <li key={`${ev.event_type}-${i}`} className="flex justify-between gap-2 border-b border-border/30 pb-2">
+                <span className="font-mono text-foreground">{ev.event_type}</span>
+                <span className="shrink-0 text-muted-foreground">
+                  {ev.severity}
+                  {(ev.count ?? 1) > 1 ? ` ×${ev.count}` : ""}
+                </span>
               </li>
             ))}
-            {!events.length ? <li className="text-muted-foreground">No events yet.</li> : null}
+            {!events.length ? <li className="text-muted-foreground">No recent events.</li> : null}
           </ul>
-        </div>
+        </section>
       </div>
     </div>
   );

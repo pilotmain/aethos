@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2025 AethOS AI
 
-"""Plugin runtime host with lifecycle states (Phase 2 Step 9)."""
+"""Plugin runtime host with lifecycle states (Phase 2 Step 9–10)."""
 
 from __future__ import annotations
 
@@ -15,11 +15,7 @@ _PLUGIN_STATES: dict[str, dict[str, Any]] = {}
 
 
 def _set_state(plugin_id: str, state: str, **extra: Any) -> dict[str, Any]:
-    row = {
-        "plugin_id": plugin_id,
-        "state": state,
-        **extra,
-    }
+    row = {"plugin_id": plugin_id, "state": state, **extra}
     _PLUGIN_STATES[plugin_id] = row
     return row
 
@@ -33,40 +29,52 @@ def list_plugin_runtime_states() -> dict[str, dict[str, Any]]:
     return out
 
 
+def _emit_plugin_mc(event: str, plugin_id: str, **kw: Any) -> None:
+    try:
+        from app.services.mission_control.mc_runtime_events import emit_mc_runtime_event
+
+        emit_mc_runtime_event(event, plugin_id=plugin_id, category="plugin", **kw)
+    except Exception:
+        pass
+
+
 def load_plugin(plugin_id: str) -> dict[str, Any]:
+    """Load plugin — failures are isolated; orchestrator runtime continues."""
+    return safe_load_plugin(plugin_id)
+
+
+def safe_load_plugin(plugin_id: str) -> dict[str, Any]:
     m = get_plugin_manifest(plugin_id)
     if not m:
-        _set_state(plugin_id, "failed", error="unknown_plugin")
+        row = _set_state(plugin_id, "failed", error="unknown_plugin")
         emit_plugin_event("plugin_failed", plugin_id=plugin_id)
-        try:
-            from app.services.mission_control.mc_runtime_events import emit_mc_runtime_event
-
-            emit_mc_runtime_event("plugin_failed", plugin_id=plugin_id)
-        except Exception:
-            pass
-        return _PLUGIN_STATES[plugin_id]
+        _emit_plugin_mc("plugin_failed", plugin_id)
+        return row
     try:
         manifest = PluginManifest.from_dict(m)
         if not manifest.plugin_id:
             raise ValueError("invalid_manifest")
-        row = _set_state(plugin_id, "loaded", version=manifest.version)
+        if manifest.trust_tier == "experimental":
+            _set_state(plugin_id, "warning", note="experimental_tier")
+        _set_state(plugin_id, "loaded", version=manifest.version, trust_tier=manifest.trust_tier)
         row = _set_state(plugin_id, "active", capabilities=manifest.capabilities)
         emit_plugin_event("plugin_loaded", plugin_id=plugin_id)
-        try:
-            from app.services.mission_control.mc_runtime_events import emit_mc_runtime_event
-
-            emit_mc_runtime_event("plugin_loaded", plugin_id=plugin_id, category="plugin")
-        except Exception:
-            pass
+        _emit_plugin_mc("plugin_loaded", plugin_id)
         return row
     except Exception as exc:
-        _set_state(plugin_id, "failed", error=str(exc)[:200])
+        row = _set_state(plugin_id, "failed", error=str(exc)[:200])
         emit_plugin_event("plugin_failed", plugin_id=plugin_id, error=str(exc)[:200])
-        return _PLUGIN_STATES[plugin_id]
+        _emit_plugin_mc("plugin_failed", plugin_id, severity="error")
+        return row
 
 
 def disable_plugin(plugin_id: str) -> dict[str, Any]:
     return _set_state(plugin_id, "disabled")
+
+
+def reload_plugin(plugin_id: str) -> dict[str, Any]:
+    disable_plugin(plugin_id)
+    return safe_load_plugin(plugin_id)
 
 
 class PluginRuntime:

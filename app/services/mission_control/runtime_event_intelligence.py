@@ -139,4 +139,35 @@ def list_normalized_events(*, limit: int = 80, category: str | None = None) -> l
 
 def events_for_ws_replay(*, limit: int = 40) -> list[dict[str, Any]]:
     """Replay-safe tail for websocket reconnect."""
-    return list_normalized_events(limit=limit)
+    return aggregate_events_for_display(limit=limit)
+
+
+def aggregate_events_for_display(
+    *,
+    limit: int = 48,
+    min_severity: str | None = None,
+    category: str | None = None,
+) -> list[dict[str, Any]]:
+    """
+    Collapse repeated low-value events and return bounded summaries for Mission Control.
+    """
+    rows = list_normalized_events(limit=min(500, limit * 4), category=category)
+    if min_severity:
+        order = {"info": 0, "warning": 1, "error": 2, "critical": 3}
+        floor = order.get(min_severity, 0)
+        rows = [r for r in rows if order.get(str(r.get("severity") or "info"), 0) >= floor]
+
+    collapsed: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        pl = row.get("payload")
+        pid = pl.get("project_id", "") if isinstance(pl, dict) else ""
+        key = f"{row.get('event_type')}|{row.get('category')}|{pid}"
+        if key not in collapsed:
+            collapsed[key] = {**row, "count": 1}
+        else:
+            collapsed[key]["count"] = int(collapsed[key].get("count") or 1) + 1
+            collapsed[key]["timestamp"] = row.get("timestamp")
+    out = list(collapsed.values())
+    out.sort(key=lambda r: str(r.get("timestamp") or ""))
+    lim = max(1, min(int(limit), 120))
+    return out[-lim:]

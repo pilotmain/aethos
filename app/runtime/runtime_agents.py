@@ -154,6 +154,51 @@ def list_runtime_agents(*, include_expired: bool = False) -> dict[str, Any]:
     return out
 
 
+def find_active_agent_by_task(agent_type: str, task_key: str) -> dict[str, Any] | None:
+    agents = list_runtime_agents(include_expired=False)
+    for row in agents.values():
+        if not isinstance(row, dict) or row.get("system"):
+            continue
+        if str(row.get("agent_type") or "") != agent_type:
+            continue
+        cft = str(row.get("created_from_task") or "")
+        assign = row.get("assignment") if isinstance(row.get("assignment"), dict) else {}
+        if cft == task_key or str(assign.get("task_id") or "") == task_key:
+            if str(row.get("status") or "") in ("active", "busy", "idle", "spawned", "recovering"):
+                return row
+    return None
+
+
+def spawn_or_reuse_runtime_agent(
+    *,
+    agent_type: str,
+    created_from_task: str | None = None,
+    provider: str | None = None,
+    model: str | None = None,
+    ttl_sec: int = _DEFAULT_TTL_SEC,
+) -> dict[str, Any]:
+    """Avoid duplicate agents for the same task key (e.g. repair per project)."""
+    key = created_from_task or ""
+    existing = find_active_agent_by_task(agent_type, key) if key else None
+    if existing:
+        touch_runtime_agent(str(existing["agent_id"]), status="busy")
+        return existing
+    return spawn_runtime_agent(
+        agent_type=agent_type,
+        created_from_task=created_from_task,
+        provider=provider,
+        model=model,
+        ttl_sec=ttl_sec,
+    )
+
+
+def list_runtime_agents_history(*, limit: int = 24) -> list[dict[str, Any]]:
+    agents = list_runtime_agents(include_expired=True)
+    rows = [dict(v, agent_id=k) for k, v in agents.items() if isinstance(v, dict)]
+    rows.sort(key=lambda r: str(r.get("last_activity") or ""), reverse=True)
+    return rows[: max(1, min(int(limit), 64))]
+
+
 def spawn_runtime_agent(
     *,
     agent_type: str,
@@ -269,7 +314,9 @@ def sweep_expired_agents(st: dict[str, Any] | None = None, *, persist: bool = Tr
         if exp and exp < now and stt not in ("expired", "suspended", "failed"):
             row["status"] = "expired"
             row["lifecycle"] = "expired"
+            row["expired_at"] = utc_now_iso()
             agents[aid] = row
+            _append_agent_history(state, row)
             m["expired_agents"] = int(m.get("expired_agents") or 0) + 1
             n += 1
             try:
@@ -336,12 +383,32 @@ def office_agent_states() -> list[dict[str, Any]]:
     return rows
 
 
+def _append_agent_history(st: dict[str, Any], row: dict[str, Any]) -> None:
+    hist = st.setdefault("runtime_agents_history", [])
+    if not isinstance(hist, list):
+        hist = []
+        st["runtime_agents_history"] = hist
+    hist.append(
+        {
+            "agent_id": row.get("agent_id"),
+            "agent_type": row.get("agent_type"),
+            "status": row.get("status"),
+            "expired_at": row.get("expired_at") or utc_now_iso(),
+            "created_from_task": row.get("created_from_task"),
+        }
+    )
+    if len(hist) > 200:
+        del hist[: len(hist) - 200]
+
+
 def office_topology(user_id: str | None = None) -> dict[str, Any]:
     from app.services.mission_control.runtime_ownership import build_ownership_chains
     from app.services.mission_control.runtime_event_intelligence import list_normalized_events
 
+    from app.services.mission_control.runtime_event_intelligence import aggregate_events_for_display
+
     return {
         "agents": office_agent_states(),
         "ownership_chains": build_ownership_chains(user_id),
-        "recent_events": list_normalized_events(limit=16),
+        "recent_events": aggregate_events_for_display(limit=12),
     }

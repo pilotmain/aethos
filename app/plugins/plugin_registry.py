@@ -17,6 +17,8 @@ _BUILTIN_PROVIDER_PLUGINS: tuple[PluginManifest, ...] = (
         name="Vercel",
         capabilities=["deployments", "logs", "redeploy", "restart"],
         permissions=["provider.vercel"],
+        verified=True,
+        trust_tier="official",
     ),
     PluginManifest(
         plugin_id="railway-provider",
