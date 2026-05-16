@@ -18,6 +18,18 @@ def test_privacy_status_no_auth_required() -> None:
     assert r.status_code == 200
     data = r.json()
     assert "privacy_mode" in data
+    assert "recent_llm_routing" in data
+    assert isinstance(data["recent_llm_routing"], list)
+
+
+def test_privacy_redact_and_evaluate(api_client) -> None:
+    client, _uid = api_client
+    rr = client.post("/api/v1/privacy/redact", json={"text": "mail user@example.com ok"})
+    assert rr.status_code == 200
+    assert "[REDACTED:email]" in rr.json().get("redacted_text", "")
+    er = client.post("/api/v1/privacy/evaluate-egress", json={"text": "plain", "boundary": "http"})
+    assert er.status_code == 200
+    assert er.json().get("allowed") is True
 
 
 def test_privacy_scan_requires_auth() -> None:

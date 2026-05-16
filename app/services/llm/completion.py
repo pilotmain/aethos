@@ -22,6 +22,10 @@ from app.services.llm.base import Message, Tool
 from app.services.llm.bootstrap import register_llm_providers_from_settings
 from app.services.llm.registry import get_llm_registry
 from app.services.network_policy.policy import assert_provider_egress_allowed
+from app.privacy.egress_guard import EgressBlocked
+from app.privacy.llm_privacy_gate import apply_llm_privacy_gate
+from app.privacy.privacy_modes import PrivacyMode
+from app.privacy.privacy_policy import current_privacy_mode
 
 logger = logging.getLogger(__name__)
 
@@ -76,11 +80,37 @@ def _build_chain() -> list[str]:
         and reg.get_provider("ollama")
     ):
         chain = ["ollama"] + [p for p in chain if p != "ollama"]
+    elif (
+        bool(getattr(s, "aethos_local_first_enabled", False))
+        and primary in ("", "auto")
+        and reg.get_provider("ollama")
+    ):
+        chain = ["ollama"] + [p for p in chain if p != "ollama"]
     return chain
 
 
 def _egress_map(provider_name: str) -> str:
     return provider_name.strip().lower()
+
+
+def _gate_llm_messages(
+    messages: list[Message],
+    *,
+    prov,
+    provider_name: str,
+    settings,
+) -> list[Message]:
+    try:
+        mid = prov.get_model_info().id
+    except Exception:  # noqa: BLE001
+        mid = None
+    gated, _meta = apply_llm_privacy_gate(
+        messages,
+        provider_name=provider_name,
+        model_id=mid,
+        settings=settings,
+    )
+    return gated
 
 
 def primary_complete_raw(
@@ -93,10 +123,18 @@ def primary_complete_raw(
     """Return assistant text for a single merged user prompt."""
     register_llm_providers_from_settings()
     reg = get_llm_registry()
+    s = get_settings()
     messages = [Message(role="user", content=user_prompt)]
     chain = _build_chain()
     if not chain:
         raise RuntimeError("No LLM providers registered (configure API keys or Ollama)")
+    if current_privacy_mode(s) == PrivacyMode.LOCAL_ONLY:
+        if not reg.get_provider("ollama"):
+            raise RuntimeError(
+                "Privacy mode is local_only but Ollama is not registered. "
+                "Enable Ollama or set AETHOS_PRIVACY_MODE to observe."
+            )
+        chain = ["ollama"]
 
     last_err: Exception | None = None
     for name in chain:
@@ -109,12 +147,15 @@ def primary_complete_raw(
             logger.warning("LLM provider %s blocked by egress policy: %s", name, block)
             continue
         try:
+            gated = _gate_llm_messages(messages, prov=prov, provider_name=name, settings=s)
             return prov.complete_chat(
-                messages,
+                gated,
                 temperature=temperature,
                 max_tokens=max_tokens,
                 response_format_json=response_format_json,
             )
+        except EgressBlocked as exc:
+            raise RuntimeError((exc.payload or {}).get("reason") or str(exc)) from exc
         except Exception as exc:  # noqa: BLE001
             last_err = exc
             logger.warning("LLM provider %s failed: %s", name, exc)
@@ -154,6 +195,13 @@ def primary_complete_messages(
     chain = _build_chain()
     if not chain:
         raise RuntimeError("No LLM providers registered (configure API keys or Ollama)")
+    if current_privacy_mode(s) == PrivacyMode.LOCAL_ONLY:
+        if not reg.get_provider("ollama"):
+            raise RuntimeError(
+                "Privacy mode is local_only but Ollama is not registered. "
+                "Enable Ollama or set AETHOS_PRIVACY_MODE to observe."
+            )
+        chain = ["ollama"]
 
     temp = temperature if temperature is not None else s.nexa_llm_temperature
     mt = max_tokens if max_tokens is not None else s.nexa_llm_max_tokens
@@ -214,8 +262,9 @@ def primary_complete_messages(
             logger.warning("LLM provider %s blocked by egress policy: %s", name, block)
             continue
         try:
+            gated = _gate_llm_messages(messages, prov=prov, provider_name=name, settings=s)
             out = prov.complete_chat(
-                messages,
+                gated,
                 temperature=temp,
                 max_tokens=mt,
                 response_format_json=response_format_json,
@@ -226,6 +275,8 @@ def primary_complete_messages(
                     budget_member_id, messages, out, member_name=budget_member_name
                 )
             return out
+        except EgressBlocked as exc:
+            raise RuntimeError((exc.payload or {}).get("reason") or str(exc)) from exc
         except Exception as exc:  # noqa: BLE001
             last_err = exc
             logger.warning("LLM provider %s failed: %s", name, exc)
@@ -252,6 +303,13 @@ async def primary_complete_streaming(
     chain = _build_chain()
     if not chain:
         raise RuntimeError("No LLM providers registered (configure API keys or Ollama)")
+    if current_privacy_mode(s) == PrivacyMode.LOCAL_ONLY:
+        if not reg.get_provider("ollama"):
+            raise RuntimeError(
+                "Privacy mode is local_only but Ollama is not registered. "
+                "Enable Ollama or set AETHOS_PRIVACY_MODE to observe."
+            )
+        chain = ["ollama"]
 
     temp = temperature if temperature is not None else s.nexa_llm_temperature
     mt = max_tokens if max_tokens is not None else s.nexa_llm_max_tokens
@@ -275,9 +333,10 @@ async def primary_complete_streaming(
             logger.warning("LLM provider %s blocked by egress policy: %s", name, block)
             continue
         try:
+            gated = _gate_llm_messages(messages, prov=prov, provider_name=name, settings=s)
             buf: list[str] = []
             async for chunk in prov.complete_chat_streaming(
-                messages,
+                gated,
                 temperature=temp,
                 max_tokens=mt,
                 response_format_json=response_format_json,
@@ -294,6 +353,8 @@ async def primary_complete_streaming(
                     description="LLM streaming call",
                 )
             return
+        except EgressBlocked as exc:
+            raise RuntimeError((exc.payload or {}).get("reason") or str(exc)) from exc
         except Exception as exc:  # noqa: BLE001
             last_err = exc
             logger.warning("LLM streaming provider %s failed: %s", name, exc)
@@ -342,7 +403,9 @@ def providers_available() -> bool:
     p = (s.nexa_llm_provider or "").strip().lower()
     if (s.nexa_llm_api_key or "").strip() and p not in ("", "auto"):
         return True
-    if s.nexa_ollama_enabled or p == "ollama" or (s.nexa_local_first and p in ("auto", "")):
+    if s.nexa_ollama_enabled or p == "ollama" or (s.nexa_local_first and p in ("auto", "")) or (
+        bool(getattr(s, "aethos_local_first_enabled", False)) and p in ("auto", "")
+    ):
         return is_ollama_ready()
     return False
 

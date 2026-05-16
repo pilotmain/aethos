@@ -8,6 +8,7 @@ from __future__ import annotations
 from typing import Any
 
 from app.core.config import get_settings
+from app.privacy.llm_privacy_gate import recent_llm_privacy_decisions
 
 
 def build_mission_control_privacy_panel() -> dict[str, Any]:
@@ -24,4 +25,5 @@ def build_mission_control_privacy_panel() -> dict[str, Any]:
         "allow_external_fallback": bool(getattr(s, "aethos_allow_external_fallback", True)),
         "encryption_at_rest_enabled": bool(getattr(s, "aethos_encryption_at_rest_enabled", False)),
         "encryption_key_source": getattr(s, "aethos_encryption_key_source", "env"),
+        "recent_llm_routing": recent_llm_privacy_decisions(limit=8),
     }

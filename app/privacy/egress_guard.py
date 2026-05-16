@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from app.privacy.privacy_events import PrivacyEventType, emit_privacy_event
 from app.privacy.privacy_policy import block_egress_on_pii, current_privacy_mode, observe_only
@@ -17,9 +17,10 @@ if TYPE_CHECKING:
 class EgressBlocked(Exception):
     """Raised when ``block`` mode refuses an outbound boundary because PII is present."""
 
-    def __init__(self, message: str) -> None:
+    def __init__(self, message: str, *, payload: dict[str, Any] | None = None) -> None:
         super().__init__(message)
         self.message = message
+        self.payload: dict[str, Any] = dict(payload or {})
 
 
 def evaluate_egress(

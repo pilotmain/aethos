@@ -13,7 +13,9 @@ from pydantic import BaseModel, Field
 
 from app.core.config import get_settings
 from app.core.security import get_valid_web_user_id
+from app.privacy.llm_privacy_gate import evaluate_text_egress
 from app.privacy.pii_detection import detect_pii
+from app.privacy.pii_redaction import redact_text
 from app.privacy.privacy_audit import privacy_logs_dir
 from app.privacy.privacy_events import PrivacyEventType, emit_privacy_event
 from app.privacy.privacy_modes import PrivacyMode
@@ -24,6 +26,15 @@ router = APIRouter(tags=["privacy"])
 
 class ScanBody(BaseModel):
     text: str = Field(..., max_length=500_000)
+
+
+class RedactBody(BaseModel):
+    text: str = Field(..., max_length=500_000)
+
+
+class EvaluateEgressBody(BaseModel):
+    text: str = Field(..., max_length=500_000)
+    boundary: str = Field(default="http", max_length=64)
 
 
 @router.get("/privacy/status")
@@ -86,3 +97,32 @@ def privacy_scan(
         "categories": cats,
         "matches": [m.as_public_dict() for m in matches],
     }
+
+
+@router.post("/privacy/redact")
+def privacy_redact(
+    body: RedactBody,
+    _: str = Depends(get_valid_web_user_id),
+) -> dict[str, Any]:
+    """Deterministic redaction of ``body.text`` (authenticated; no raw secret echo)."""
+    matches = detect_pii(body.text)
+    out = redact_text(body.text, matches)
+    cats = sorted({m.category for m in matches})
+    emit_privacy_event(
+        PrivacyEventType.PII_REDACTED,
+        details={"source": "api_redact", "count": len(matches), "categories": cats},
+    )
+    return {
+        "redacted_text": out,
+        "count": len(matches),
+        "categories": cats,
+    }
+
+
+@router.post("/privacy/evaluate-egress")
+def privacy_evaluate_egress_route(
+    body: EvaluateEgressBody,
+    _: str = Depends(get_valid_web_user_id),
+) -> dict[str, Any]:
+    """Structured egress evaluation for arbitrary text (parity with privacy gate policy)."""
+    return evaluate_text_egress(body.text, boundary=body.boundary or "http")

@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from app.core.config import get_settings
+from app.privacy.deploy_privacy import augment_deployment_result_privacy
 from app.services.deployment.detector import DeploymentDetector, _normalize_provider
 from app.services.deployment.project_layout import bundle_deploy_metadata, find_project_root
 
@@ -285,6 +286,7 @@ class DeploymentExecutor:
             result.update(bundle_deploy_metadata(cwd))
         if not ok:
             result["error"] = err_tail or out_tail or f"exit code {proc.returncode}"
+        augment_deployment_result_privacy(result)
         return result
 
     @staticmethod

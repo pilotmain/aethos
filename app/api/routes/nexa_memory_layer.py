@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
 from app.core.security import get_valid_web_user_id
+from app.privacy.memory_privacy import prepare_memory_write
 from app.services.memory.memory_store import MemoryStore
 
 router = APIRouter(prefix="/nexa-memory", tags=["nexa-memory"])
@@ -35,12 +36,15 @@ def post_nexa_memory(
     app_user_id: str = Depends(get_valid_web_user_id),
 ) -> dict[str, Any]:
     store = MemoryStore()
+    b, t, priv = prepare_memory_write(body.body or "", body.title or "")
+    meta = dict(body.meta or {})
+    meta["privacy"] = priv
     rec = store.append_entry(
         app_user_id,
         kind=body.kind or "note",
-        title=body.title or "",
-        body_md=body.body or "",
-        meta=body.meta,
+        title=t or "",
+        body_md=b or "",
+        meta=meta,
     )
     return {"ok": True, "entry": rec}
 

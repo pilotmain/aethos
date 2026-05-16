@@ -284,7 +284,19 @@ def main() -> int:
     priv_sub.add_parser("status", help="GET /api/v1/privacy/status")
     priv_sub.add_parser("audit", help="GET /api/v1/privacy/audit")
     sp_priv_scan = priv_sub.add_parser("scan", help="POST /api/v1/privacy/scan")
-    sp_priv_scan.add_argument("--text", default="", help="Inline text (default: read stdin)")
+    sp_priv_scan.add_argument(
+        "scan_path",
+        nargs="?",
+        default="",
+        metavar="PATH",
+        help="Optional file or directory to scan (e.g. .); else --text or stdin",
+    )
+    sp_priv_scan.add_argument("--text", default="", help="Inline text (if no PATH and no stdin)")
+    sp_priv_redact = priv_sub.add_parser("redact", help="POST /api/v1/privacy/redact")
+    sp_priv_redact.add_argument("--text", default="", help="Text to redact (default: stdin)")
+    sp_priv_ev = priv_sub.add_parser("evaluate-egress", help="POST /api/v1/privacy/evaluate-egress")
+    sp_priv_ev.add_argument("--text", default="", help="Text to evaluate (default: stdin)")
+    sp_priv_ev.add_argument("--boundary", default="http", help="Boundary label (default http)")
     sp_priv_mode = priv_sub.add_parser("mode", help="GET /api/v1/privacy/policy (+ optional env hint)")
     sp_priv_mode.add_argument(
         "target_mode",
@@ -645,11 +657,35 @@ def main() -> int:
             print(body[:24000])
             return 0 if code == 200 else 1
         if args.privacy_cmd == "scan":
+            from pathlib import Path
+
+            from app.privacy.privacy_path_scan import aggregate_text_for_scan
+
+            scan_path = (getattr(args, "scan_path", "") or "").strip()
+            txt = (getattr(args, "text", "") or "").strip()
+            if scan_path:
+                txt = aggregate_text_for_scan(Path(scan_path))
+            elif not txt:
+                txt = sys.stdin.read()
+            payload = json.dumps({"text": txt}).encode()
+            code, body = _req("POST", "/api/v1/privacy/scan", uid=uid, body=payload)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.privacy_cmd == "redact":
             txt = (getattr(args, "text", "") or "").strip()
             if not txt:
                 txt = sys.stdin.read()
             payload = json.dumps({"text": txt}).encode()
-            code, body = _req("POST", "/api/v1/privacy/scan", uid=uid, body=payload)
+            code, body = _req("POST", "/api/v1/privacy/redact", uid=uid, body=payload)
+            print(body[:24000])
+            return 0 if code == 200 else 1
+        if args.privacy_cmd == "evaluate-egress":
+            txt = (getattr(args, "text", "") or "").strip()
+            if not txt:
+                txt = sys.stdin.read()
+            bnd = (getattr(args, "boundary", "") or "http").strip() or "http"
+            payload = json.dumps({"text": txt, "boundary": bnd}).encode()
+            code, body = _req("POST", "/api/v1/privacy/evaluate-egress", uid=uid, body=payload)
             print(body[:24000])
             return 0 if code == 200 else 1
         if args.privacy_cmd == "mode":
