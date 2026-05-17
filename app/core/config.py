@@ -1161,60 +1161,18 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
-    settings = Settings()
-    print(f"WEB API TOKEN SET: {bool(settings.nexa_web_api_token)}")
-    return settings
+    return Settings()
 
 
 def print_local_service_urls() -> None:
-    """Log human-facing URLs for this API process (Uvicorn on the host or Docker)."""
-    s = get_settings()
-    base = s.api_base_url.rstrip("/")
-    p = s.api_v1_prefix
-    print("--- Local service URLs ---", flush=True)
-    print(f"  Backend / health     {base}{p}/health", flush=True)
-    print(f"  System health        {base}{p}/system/health", flush=True)
-    print(f"  API docs (Swagger)   {base}/docs", flush=True)
-    print(f"  ReDoc                {base}/redoc", flush=True)
-    print(f"  Dashboard            {base}/dashboard", flush=True)
-    print("  Telegram bot         no local URL; chat in the Telegram app", flush=True)
-    print(f"  Email inbound        {base}{p}/email/inbound  (X-Email-Webhook-Secret)", flush=True)
-    print(f"  WhatsApp webhook     {base}{p}/whatsapp/webhook  (GET verify + POST)", flush=True)
-    if getattr(s, "nexa_whatsapp_twilio_inbound_enabled", False):
-        print(
-            f"  WhatsApp (Twilio)    {base}{p}/whatsapp/twilio-inbound  (POST form; opt-in)",
-            flush=True,
-        )
-    print(f"  SMS inbound (Twilio) {base}{p}/sms/inbound  (POST form)", flush=True)
-    print(
-        f"  Apple Messages        {base}{p}/apple-messages/inbound  (POST JSON)",
-        flush=True,
-    )
-    if getattr(s, "sso_enabled", False) and (s.sso_client_id or "").strip() and (s.sso_oidc_issuer or "").strip():
-        print(f"  OIDC SSO (authorize)  {base}{p}/sso/login", flush=True)
-        print(f"  OIDC SSO (callback)   {base}{p}/sso/callback", flush=True)
-    print(
-        f"  GitHub PR review      {base}{p}/pr-review/webhook  (POST; NEXA_PR_REVIEW_ENABLED)",
-        flush=True,
-    )
-    print("--------------------------", flush=True)
+    """Operator-facing startup URLs — Mission Control first, advanced optional."""
+    from app.services.runtime.runtime_operator_surface import print_operator_startup_surface
+
+    print_operator_startup_surface(component="api")
 
 
 def print_llm_debug_banner() -> None:
     """Log env-driven LLM flags once at process startup (API or bot)."""
-    import logging
+    from app.services.runtime.runtime_operator_surface import print_llm_operator_banner
 
-    s = get_settings()
-    log = logging.getLogger("nexa.settings")
-    log.info(
-        "LLM settings use_real_llm=%s anthropic_configured=%s openai_configured=%s llm_provider=%s nexa_llm_provider=%s",
-        s.use_real_llm,
-        bool(s.anthropic_api_key),
-        bool(s.openai_api_key),
-        (s.llm_provider or "").strip(),
-        (s.nexa_llm_provider or "").strip(),
-    )
-    if not s.use_real_llm and (s.anthropic_api_key or s.openai_api_key):
-        log.warning(
-            "API keys present but USE_REAL_LLM is false; set USE_REAL_LLM=true in .env and restart."
-        )
+    print_llm_operator_banner()

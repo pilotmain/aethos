@@ -61,7 +61,7 @@ def ensure_nexa_secret_key() -> bool:
                 f"NEXA_SECRET_KEY={_generate_secret()}\n"
             )
         print(
-            "Nexa: appended NEXA_SECRET_KEY to .env. Add TELEGRAM_BOT_TOKEN if needed. "
+            "AethOS: appended runtime secret to .env. Add TELEGRAM_BOT_TOKEN if needed. "
             "The new secret is not shown here.",
             flush=True,
         )
@@ -72,16 +72,15 @@ def ensure_nexa_secret_key() -> bool:
             encoding="utf-8",
         )
         print(
-            "Nexa: created minimal .env with NEXA_SECRET_KEY. Run python scripts/nexa_bootstrap.py "
-            "or copy env.docker.example, then set TELEGRAM_BOT_TOKEN. "
-            "The new secret is not shown here.\n",
+            "AethOS: created minimal .env with runtime secret. Run `aethos setup` for the full template, "
+            "then set TELEGRAM_BOT_TOKEN. The new secret is not shown here.\n",
             flush=True,
         )
     else:
         os.environ["NEXA_SECRET_KEY"] = _generate_secret()
         print(
-            "Nexa: NEXA_SECRET_KEY set in-process only (no writable .env in project root). "
-            "For persistent BYOK, run: python scripts/nexa_bootstrap.py",
+            "AethOS: runtime secret set in-process only (no writable .env in project root). "
+            "For persistent configuration, run: aethos setup",
             flush=True,
         )
     load_dotenv(p, override=True) if p.is_file() else None
@@ -103,9 +102,9 @@ def print_env_validation_at_startup(component: str) -> None:
         return
     t = format_env_validation_report()
     if not issues:
-        print(f"Nexa ({component}): {t}\n", flush=True)
+        print(f"AethOS ({component}): {t}\n", flush=True)
         return
-    print(f"Nexa ({component}) — configuration warnings (see also /dev doctor in Telegram):\n{t}\n", flush=True)
+    print(f"AethOS ({component}) — configuration notes:\n{t}\n", flush=True)
     for iss in issues[:3]:
         if "psycopg2" in (iss or "").lower() or "import" in (iss or "").lower():
             print("  Hint: pip install psycopg2-binary  (in your .venv on the host)\n", flush=True)
@@ -131,7 +130,7 @@ def maybe_warn_missing_venv() -> None:
     if v.is_dir():
         return
     print(
-        "Nexa: .venv not found. For a one-command host setup, run: python scripts/nexa_bootstrap.py\n"
+        "AethOS: .venv not found. For setup, run: curl -fsSL …/install.sh | bash  or  aethos setup\n"
         "      (In Docker, dependencies are in the image — this is normal.)\n",
         flush=True,
     )
@@ -148,4 +147,4 @@ def print_missing_python_modules_hint() -> None:
     except Exception:
         missing.append("pip install psycopg2-binary")
     for m in missing:
-        print(f"Nexa: missing optional import — {m}  (only needed for some local scripts)\n", flush=True)
+        print(f"AethOS: optional dependency — {m}  (only needed for some local scripts)\n", flush=True)

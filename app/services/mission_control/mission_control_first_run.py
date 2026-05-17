@@ -54,11 +54,20 @@ def build_mission_control_first_run(truth: dict[str, Any] | None = None) -> dict
     truth = truth or {}
     profile = _profile()
     tour = _tour_state()
+    from app.services.setup.first_run_operator_onboarding import (
+        build_first_run_onboarding_prompt,
+        needs_first_run_operator_onboarding,
+    )
+
+    onboarding = build_first_run_onboarding_prompt()
     setup_complete = Path.home() / ".aethos" / "onboarding_profile.json"
     tour_active = bool(tour.get("requested")) and not tour.get("completed") and not tour.get("dismissed")
+    first_run_pending = needs_first_run_operator_onboarding()
     return {
         "mission_control_first_run": {
-            "welcome": _welcome_message(profile),
+            "welcome": _welcome_message(profile, first_run_pending=first_run_pending),
+            "first_run_onboarding_pending": first_run_pending,
+            "first_run_onboarding": onboarding.get("first_run_operator_onboarding"),
             "guided_tour": {
                 "active": tour_active,
                 "completed": bool(tour.get("completed")),
@@ -96,7 +105,12 @@ def build_mission_control_first_run(truth: dict[str, Any] | None = None) -> dict
     }
 
 
-def _welcome_message(profile: dict[str, Any]) -> str:
+def _welcome_message(profile: dict[str, Any], *, first_run_pending: bool = False) -> str:
+    if first_run_pending:
+        return (
+            "Welcome — I'm AethOS. I coordinate runtime workers, providers, governance, and operational systems. "
+            "Before we begin, share how you work so I can adapt over time."
+        )
     name = profile.get("display_name") or profile.get("user_address")
     if name:
         return f"Welcome to AethOS, {name}. Your orchestrator coordinates workers, providers, and governance from one calm surface."

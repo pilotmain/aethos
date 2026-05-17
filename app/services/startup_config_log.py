@@ -54,10 +54,11 @@ def log_sanitized_nexa_config(component: str) -> None:
             )
 
     lines: list[str] = [
-        f"=== Nexa config ({component}) ===",
+        f"=== AethOS config ({component}) ===",
         f"APP_NAME={s.app_name}",
         f"APP_ENV={s.app_env}",
         f"USE_REAL_LLM={s.use_real_llm}",
+        f"ACTIVE_PROVIDER={(s.nexa_llm_provider or s.llm_provider or 'auto').strip() or 'auto'}",
         f"DB={db}",
         f"DEV_EXECUTOR_ON_HOST={s.dev_executor_on_host}",
         f"OPERATOR_AUTO_RUN_DEV_EXECUTOR={s.operator_auto_run_dev_executor}",
@@ -88,7 +89,7 @@ def log_sanitized_nexa_config(component: str) -> None:
             print(warn, flush=True)
     except Exception:  # noqa: BLE001
         pass
-    block = "\n".join(lines) + "\n=== end Nexa config ==="
+    block = "\n".join(lines) + "\n=== end AethOS config ==="
     print(block, flush=True)
     logger.info("sanitized_nexa_config component=%s db=%s", component, db)
 

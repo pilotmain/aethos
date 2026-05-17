@@ -15,11 +15,7 @@ from aethos_cli.setup_health import run_setup_health_checks
 from aethos_cli.setup_integrations_detect import detect_integrations
 from aethos_cli.setup_interactive_mode import setup_interactive
 from aethos_cli.setup_mission_control import seed_mission_control_connection
-from aethos_cli.setup_onboarding_profile import (
-    load_onboarding_profile,
-    run_onboarding_profile_questions,
-    save_onboarding_profile,
-)
+from aethos_cli.setup_onboarding_profile import load_onboarding_profile
 from aethos_cli.setup_ready_state_semantics import build_setup_completion_card
 from aethos_cli.setup_routing import CANONICAL_ROUTING_MODES, build_routing_env_updates, routing_summary
 from aethos_cli.setup_web_search import PROVIDERS, configure_web_search
@@ -148,32 +144,18 @@ def run_enterprise_setup_extensions(
     if _section_targeted(bag, "onboarding"):
         set_prompt_context(section="onboarding")
         existing = load_onboarding_profile()
-        run_onboarding = True
-        if existing and setup_interactive():
-            preview = [
-                f"Name: {existing.get('display_name') or '—'}",
-                f"Assistant: {existing.get('assistant_name') or 'AethOS'}",
-                f"Tone: {existing.get('tone') or '—'}",
-            ]
-            action = prompt_section_review("Onboarding profile", preview)
-            if action == "keep":
-                run_onboarding = False
-                bag["onboarding_profile"] = existing
-            elif action == "skip":
-                run_onboarding = False
-        if run_onboarding:
-            if confirm("Orchestrator onboarding (recommended)?", default=True):
-                print_step("5g", "Orchestrator onboarding")
-                from aethos_cli.setup_orchestrator_onboarding import run_orchestrator_onboarding
+        if existing:
+            bag["onboarding_profile"] = existing
+            print_info("Operator profile on file — relationship onboarding continues at first Mission Control launch.")
+        else:
+            from app.services.setup.first_run_operator_onboarding import mark_onboarding_deferred_from_setup
 
-                profile = run_orchestrator_onboarding()
-                bag["onboarding_profile"] = profile
-            elif confirm("Quick profile only (name, goals, tone)?", default=False):
-                print_step("5g", "First-run profile")
-                profile = run_onboarding_profile_questions()
-                if profile:
-                    save_onboarding_profile(profile)
-                    bag["onboarding_profile"] = profile
+            mark_onboarding_deferred_from_setup()
+            bag["onboarding_deferred"] = True
+            print_info(
+                "Personal onboarding is deferred until AethOS is operational — "
+                "you'll be welcomed in Mission Control or Telegram on first use."
+            )
 
     return bag
 

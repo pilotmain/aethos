@@ -150,7 +150,8 @@ def print_welcome_intro() -> None:
         "Welcome — I am AethOS",
         [
             "I am your orchestrator — not the thinking model itself.",
-            "I will help you configure runtime, providers, Mission Control, workspace, and first-run preferences.",
+            "I will help you configure runtime, providers, Mission Control, and workspace.",
+            "Personal onboarding begins after AethOS is operational.",
             "Setup usually takes a few minutes.",
             "At any prompt you can type: help · why · back · status · repair · quit",
         ],

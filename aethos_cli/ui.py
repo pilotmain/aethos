@@ -184,8 +184,7 @@ def interactive_feature_toggle(
     default_enabled: Sequence[int] | None = None,
 ) -> list[str]:
     """
-    Phase 32 — toggle features by number until user presses Enter on empty line.
-    Shows [✓]/[ ] next to each option; type ``3`` + Enter to flip feature 3.
+    Multi-select features — comma/space lists, all, none, recommended, or toggle-by-number.
     """
     default_enabled = tuple(default_enabled or (1, 2, 3))
     n = len(options)
@@ -193,9 +192,28 @@ def interactive_feature_toggle(
     if _cli_noninteractive() or not sys.stdin.isatty():
         return [options[i - 1][1] for i in sorted(on)]
 
+    help_lines = (
+        "You can enter:",
+        "• a single number (toggles that feature)",
+        "• multiple values separated by commas or spaces (e.g. 1,2,5)",
+        "• all",
+        "• none",
+        "• recommended",
+        "• empty line when done",
+    )
+
+    def render_enabled_summary() -> None:
+        if not on:
+            return
+        print("\n   Enabled:")
+        for i in sorted(on):
+            print(f"   ✓ {options[i - 1][0]}")
+
     def render() -> None:
         print(f"\n   {title}")
-        print("   Enter a number to toggle that feature, or press Enter when done.\n")
+        for line in help_lines:
+            print(f"   {line}")
+        print()
         for i, (label, _value, desc) in enumerate(options, 1):
             mark = "✓" if i in on else " "
             extra = f" — {desc}" if desc else ""
@@ -203,12 +221,22 @@ def interactive_feature_toggle(
 
     while True:
         render()
+        render_enabled_summary()
         try:
-            raw = input("\n   Toggle # (empty = done): ").strip().lower()
+            raw = input("\n   Selection (empty = done): ").strip().lower()
         except EOFError:
             break
         if not raw:
             break
+        if raw == "all":
+            on = set(range(1, n + 1))
+            continue
+        if raw == "none":
+            on.clear()
+            continue
+        if raw == "recommended":
+            on = {i for i in default_enabled if 1 <= i <= n}
+            continue
         if raw.isdigit():
             idx = int(raw)
             if 1 <= idx <= n:
@@ -217,9 +245,27 @@ def interactive_feature_toggle(
                 else:
                     on.add(idx)
             else:
-                print_warn("Invalid number.")
-        else:
-            print_warn(f"Enter a single digit 1–{n}, or empty line to finish.")
+                print_warn(f"Enter a number from 1 to {n}.")
+            continue
+        parts = [p for p in raw.replace(",", " ").split() if p]
+        if not parts:
+            print_warn("Unrecognized input.")
+            continue
+        valid = True
+        for part in parts:
+            try:
+                idx = int(part)
+            except ValueError:
+                print_warn(f"Invalid entry: {part!r}")
+                valid = False
+                break
+            if 1 <= idx <= n:
+                on.add(idx)
+            else:
+                print_warn(f"Invalid number: {idx} (use 1–{n})")
+                valid = False
+        if valid and parts:
+            render_enabled_summary()
 
     return [options[i - 1][1] for i in sorted(on)]
 

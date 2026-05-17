@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, Query, WebSocket, WebSocketDisconnect
 from sqlalchemy.orm import Session
@@ -635,6 +636,27 @@ def mc_tour_complete(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
 
     mark_mission_control_tour_complete()
     return {"ok": True, "completed": True}
+
+
+@router.post("/onboarding/complete-profile")
+def mc_complete_operator_profile(
+    body: dict,
+    app_user_id: str = Depends(get_valid_web_user_id),
+) -> dict:
+    from app.services.setup.first_run_operator_onboarding import mark_first_run_onboarding_complete
+
+    profile = body.get("profile") if isinstance(body.get("profile"), dict) else body
+    if not isinstance(profile, dict):
+        profile = {}
+    path = Path.home() / ".aethos" / "onboarding_profile.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    import json
+
+    merged = {k: v for k, v in profile.items() if v is not None and str(v).strip()}
+    merged["orchestrator_intro_complete"] = True
+    path.write_text(json.dumps({"v": 1, "profile": merged}, indent=2), encoding="utf-8")
+    mark_first_run_onboarding_complete()
+    return {"ok": True, "profile_saved": True}
 
 
 @router.get("/runtime/posture")
