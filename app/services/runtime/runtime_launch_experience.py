@@ -7,16 +7,13 @@ from __future__ import annotations
 
 from typing import Any
 
-LAUNCH_STAGES = (
-    {"id": "preparing_environment", "label": "Preparing environment"},
-    {"id": "loading_runtime_services", "label": "Loading runtime services"},
-    {"id": "restoring_continuity", "label": "Restoring operational continuity"},
-    {"id": "starting_orchestration", "label": "Starting enterprise orchestration"},
-    {"id": "hydrating_truth", "label": "Hydrating operational truth"},
-    {"id": "preparing_mission_control", "label": "Preparing Mission Control"},
-    {"id": "command_available", "label": "Operational command becoming available"},
-    {"id": "enterprise_ready", "label": "Enterprise runtime ready"},
+from app.services.runtime.runtime_launch_orchestration import (
+    UNIFIED_LAUNCH_STAGES,
+    derive_operator_readiness_state,
+    launch_stages_as_dicts,
 )
+
+LAUNCH_STAGES = launch_stages_as_dicts()
 
 
 def build_runtime_launch_experience(truth: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -27,17 +24,23 @@ def build_runtime_launch_experience(truth: dict[str, Any] | None = None) -> dict
     current = LAUNCH_STAGES[idx]
     api_ok = bool((truth.get("runtime_launch_integrity") or {}).get("api_reachable"))
     mc_ok = bool((truth.get("runtime_launch_integrity") or {}).get("mission_control_reachable"))
-    truly_ready = api_ok and mc_ok and readiness.get("canonical_state") in ("stable", "enterprise_ready", "operational")
+    op_state = derive_operator_readiness_state(
+        api_reachable=api_ok,
+        mc_reachable=mc_ok,
+        hydration_partial=bool((truth.get("hydration_progress") or {}).get("partial")),
+    )
+    truly_ready = op_state == "operational"
     return {
         "runtime_launch_experience": {
-            "phase": "phase4_step28",
+            "phase": "phase4_step30",
             "current_stage": current,
             "stages": LAUNCH_STAGES,
             "truly_operational": truly_ready,
+            "operator_readiness_state": op_state,
             "message": (
-                "Enterprise runtime ready"
+                "AethOS is operational."
                 if truly_ready
-                else "AethOS is preparing operational services."
+                else "AethOS is preparing operational services…"
             ),
             "bounded": True,
         },

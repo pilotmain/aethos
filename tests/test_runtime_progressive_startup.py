@@ -10,7 +10,7 @@ from app.services.runtime.runtime_progressive_startup import (
 
 
 def test_progressive_startup_stages_count() -> None:
-    assert len(PROGRESSIVE_STARTUP_STAGES) == 7
+    assert len(PROGRESSIVE_STARTUP_STAGES) == 8
 
 
 def test_health_dashboard_offline() -> None:

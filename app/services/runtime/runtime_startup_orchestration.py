@@ -87,7 +87,7 @@ def build_runtime_startup_orchestration(truth: dict[str, Any] | None = None) -> 
             "mission_control_reachable": launch.get("mission_control_reachable"),
             "truly_operational": launch.get("coordination_complete"),
             "never_premature_ready": True,
-            "progressive_stages": 7,
+            "progressive_stages": 8,
             "bounded": True,
         }
     }

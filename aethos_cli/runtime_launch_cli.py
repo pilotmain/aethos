@@ -16,11 +16,20 @@ def _repo_root() -> Path:
 
 
 def cmd_runtime_launch() -> int:
+    from app.services.runtime.runtime_launch_orchestration import finalize_first_launch_experience
     from app.services.runtime.runtime_startup_orchestration import orchestrate_startup, prompt_startup_choice
+    from aethos_cli.setup_interactive_mode import setup_interactive
 
     choice = prompt_startup_choice()
     result = orchestrate_startup(choice=choice, repo_root=_repo_root())
-    print(result.get("message") or "Launch complete.", file=sys.stderr)
+    if choice not in ("save_only", "review"):
+        result = finalize_first_launch_experience(
+            result,
+            interactive=setup_interactive(),
+            auto_open=choice == "api_and_mission_control",
+        )
+    else:
+        print(result.get("message") or "Launch complete.", file=sys.stderr)
     if os.environ.get("AETHOS_RUNTIME_JSON"):
         print(json.dumps(result, indent=2, default=str)[:12000])
     return 0 if result.get("ok") else 1

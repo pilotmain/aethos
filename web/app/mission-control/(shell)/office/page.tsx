@@ -7,7 +7,7 @@ import {
   operationalBanner,
   type OperationalStatus,
 } from "@/lib/runtimeResilience";
-import { startupBanner, type RuntimeStartupPayload } from "@/lib/runtimeStartup";
+import { startupBanner, warmupChecklist, readinessStateLabel, type RuntimeStartupPayload } from "@/lib/runtimeStartup";
 
 type OfficeAgent = {
   agent_id: string;
@@ -110,13 +110,17 @@ export default function OfficePage() {
   const events = office.recent_events ?? [];
   const routing = office.routing ?? {};
 
+  const warmup = warmupChecklist(startup);
+  const readiness = readinessStateLabel(startup);
+  const officeIntro = startup.runtime_startup_experience?.office_home_intro;
+
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-6">
       <header className="flex flex-wrap items-end justify-between gap-4 border-b border-border/60 pb-5">
         <div>
           <h1 className="text-xl font-semibold tracking-tight">The Office</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Operational command center — health, readiness, orchestrator, active work, and routing
+            {officeIntro ?? "Operational command center — health, readiness, orchestrator, active work, and routing"}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -136,8 +140,21 @@ export default function OfficePage() {
       </header>
 
       {startupBanner(startup) ? (
-        <section className="rounded-lg border border-violet-500/25 bg-violet-500/5 px-4 py-3 text-sm">
+        <section className="rounded-lg border border-violet-500/25 bg-violet-500/5 px-4 py-3 text-sm space-y-2">
           <p className="text-foreground">{startupBanner(startup)}</p>
+          {readiness ? (
+            <p className="text-xs text-muted-foreground capitalize">Readiness: {readiness.replace(/_/g, " ")}</p>
+          ) : null}
+          {warmup.length ? (
+            <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
+              {warmup.map((item) => (
+                <li key={item.id ?? item.label} className="flex items-center gap-2">
+                  <span>{item.complete ? "✓" : "•"}</span>
+                  <span className={item.complete ? "text-foreground" : ""}>{item.label}</span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </section>
       ) : null}
 

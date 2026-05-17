@@ -22,6 +22,7 @@ def build_office_operational_authority(truth: dict[str, Any] | None = None) -> d
     return {
         "office_operational_authority": {
             "authoritative_command_center": True,
+            "primary_entrypoint": True,
             "single_operational_command_surface": True,
             "never_noisy": True,
             "no_conflicting_states": True,

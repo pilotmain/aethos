@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (c) 2025 AethOS AI
 
-"""Seven-stage progressive startup with live operational feedback."""
+"""Eight-stage progressive startup with live operational feedback."""
 
 from __future__ import annotations
 
@@ -15,15 +15,16 @@ import urllib.request
 from pathlib import Path
 from typing import Any, Callable
 
-PROGRESSIVE_STARTUP_STAGES: tuple[tuple[str, str], ...] = (
-    ("coordination", "Initializing runtime coordination"),
-    ("environment", "Validating environment integrity"),
-    ("api", "Starting API services"),
-    ("mission_control", "Starting Mission Control"),
-    ("readiness", "Verifying operational readiness"),
-    ("visibility", "Establishing runtime visibility"),
-    ("workspace", "Preparing operator workspace"),
+from app.services.runtime.runtime_launch_orchestration import (
+    UNIFIED_LAUNCH_STAGES,
+    build_service_visibility_checklist,
+    build_startup_recovery_copy,
+    build_warmup_awareness_payload,
+    derive_operator_readiness_state,
+    print_unified_launch_header,
 )
+
+PROGRESSIVE_STARTUP_STAGES = UNIFIED_LAUNCH_STAGES
 
 
 def _port_open(port: int, host: str = "127.0.0.1") -> bool:
@@ -82,19 +83,13 @@ def build_startup_health_dashboard(
     api_reachable: bool = False,
     mc_reachable: bool = False,
 ) -> list[str]:
-    db = "healthy" if _db_healthy() else "needs attention"
-    api_state = "reachable" if api_reachable else ("starting…" if _port_open(api_port) else "offline")
-    mc_state = "reachable" if mc_reachable else ("starting…" if _port_open(mc_port) else "offline")
-    hydration = "warming runtime truth" if api_reachable and not mc_reachable else ("ready" if api_reachable else "pending")
-    routing = "operational" if api_reachable else "pending"
-    return [
-        f"API: {api_state}",
-        f"Mission Control: {mc_state}",
-        f"Database: {db}",
-        f"Hydration: {hydration}",
-        f"Workers: idle",
-        f"Routing: {routing}",
-    ]
+    return build_service_visibility_checklist(
+        api_reachable=api_reachable,
+        mc_reachable=mc_reachable,
+        db_healthy=_db_healthy(),
+        hydration_partial=api_reachable and not mc_reachable,
+        routing_operational=api_reachable,
+    )
 
 
 def _print_stage(index: int, total: int, label: str) -> None:
@@ -115,13 +110,24 @@ def _coordinate_before_start() -> dict[str, Any]:
         return {"ok": False, "message": str(exc)[:120]}
 
 
+def _hydration_partial(status_blob: dict[str, Any]) -> bool:
+    readiness = status_blob.get("runtime_readiness") or {}
+    if readiness.get("ready") is False:
+        return True
+    exp = status_blob.get("runtime_startup_experience") or {}
+    if exp.get("partial_mode"):
+        return True
+    pct = float(exp.get("readiness_percent") or 1.0)
+    return pct < 0.85
+
+
 def orchestrate_progressive_startup(
     *,
     choice: str,
     repo_root: Path | None = None,
     on_stage: Callable[[int, int, str], None] | None = None,
 ) -> dict[str, Any]:
-    """Coordinate, launch, verify — with staged calm progress."""
+    """Coordinate, launch, verify — one orchestrated operational flow."""
     root = repo_root or Path(__file__).resolve().parents[2]
     port = int(os.environ.get("AETHOS_SERVE_PORT") or os.environ.get("NEXA_SERVE_PORT") or "8010")
     mc_port = 3000
@@ -133,19 +139,35 @@ def orchestrate_progressive_startup(
             "started": False,
             "choice": choice,
             "truly_operational": False,
-            "message": "Configuration saved. Start later with `aethos runtime launch`.",
+            "message": "Configuration saved. Start later with `aethos start`.",
         }
 
+    print_unified_launch_header()
     emit = on_stage or _print_stage
     stages_done: list[str] = []
 
     emit(1, total, PROGRESSIVE_STARTUP_STAGES[0][1])
     coord = _coordinate_before_start()
+    if not coord.get("ok"):
+        return {
+            "ok": False,
+            "started": False,
+            "choice": choice,
+            "truly_operational": False,
+            "message": build_startup_recovery_copy(issue=str(coord.get("message") or "")),
+            "stages": stages_done,
+            "coordination": coord,
+        }
     stages_done.append("coordination")
 
     emit(2, total, PROGRESSIVE_STARTUP_STAGES[1][1])
-    env_ok = _db_healthy() and _ownership_healthy()
-    stages_done.append("environment")
+    db_ok = _db_healthy()
+    stages_done.append("database")
+
+    emit(3, total, PROGRESSIVE_STARTUP_STAGES[2][1])
+    own_ok = _ownership_healthy()
+    env_ok = db_ok and own_ok
+    stages_done.append("authority")
 
     py = root / ".venv" / "bin" / "python"
     if not py.is_file():
@@ -154,7 +176,7 @@ def orchestrate_progressive_startup(
     api_proc = None
     mc_proc = None
 
-    emit(3, total, PROGRESSIVE_STARTUP_STAGES[2][1])
+    emit(4, total, PROGRESSIVE_STARTUP_STAGES[3][1])
     if not _api_health(port):
         try:
             api_proc = subprocess.Popen(
@@ -168,7 +190,7 @@ def orchestrate_progressive_startup(
                 "started": False,
                 "choice": choice,
                 "truly_operational": False,
-                "message": f"AethOS could not start API yet — {exc}",
+                "message": build_startup_recovery_copy(issue=str(exc)),
                 "stages": stages_done,
             }
     stages_done.append("api")
@@ -183,7 +205,7 @@ def orchestrate_progressive_startup(
 
     mc_ok = True
     if choice == "api_and_mission_control":
-        emit(4, total, PROGRESSIVE_STARTUP_STAGES[3][1])
+        emit(5, total, PROGRESSIVE_STARTUP_STAGES[4][1])
         web = root / "web"
         if web.joinpath("package.json").is_file() and not _port_open(mc_port):
             try:
@@ -200,33 +222,66 @@ def orchestrate_progressive_startup(
     else:
         stages_done.append("mission_control_skipped")
 
-    emit(5, total, PROGRESSIVE_STARTUP_STAGES[4][1])
-    status_blob = _startup_status(port) if api_ok else {}
+    emit(6, total, PROGRESSIVE_STARTUP_STAGES[5][1])
+    status_blob: dict[str, Any] = {}
+    warmup_deadline = time.monotonic() + 20.0
+    while time.monotonic() < warmup_deadline:
+        status_blob = _startup_status(port) if api_ok else {}
+        if api_ok and not _hydration_partial(status_blob):
+            break
+        time.sleep(1.0)
+    hydration_partial = _hydration_partial(status_blob) if api_ok else True
+    stages_done.append("warmup")
+
+    emit(7, total, PROGRESSIVE_STARTUP_STAGES[6][1])
+    try:
+        from app.services.setup.first_run_operator_onboarding import build_first_run_onboarding_prompt
+
+        build_first_run_onboarding_prompt()
+    except Exception:
+        pass
+    stages_done.append("workspace")
+
+    emit(8, total, PROGRESSIVE_STARTUP_STAGES[7][1])
     db_ok = _db_healthy()
     own_ok = _ownership_healthy()
     stages_done.append("readiness")
 
-    emit(6, total, PROGRESSIVE_STARTUP_STAGES[5][1])
-    from aethos_cli.ui import print_box
-
-    print_box("Operational status", build_startup_health_dashboard(
+    visibility = build_startup_health_dashboard(
         api_port=port,
         mc_port=mc_port,
         api_reachable=api_ok,
         mc_reachable=mc_ok,
-    ))
-    stages_done.append("visibility")
-
-    emit(7, total, PROGRESSIVE_STARTUP_STAGES[6][1])
-    stages_done.append("workspace")
-
-    truly = api_ok and (mc_ok or choice == "api_only") and db_ok and own_ok and env_ok
+    )
+    readiness_state = derive_operator_readiness_state(
+        api_reachable=api_ok,
+        mc_reachable=mc_ok,
+        db_healthy=db_ok,
+        ownership_healthy=own_ok,
+        hydration_partial=hydration_partial,
+    )
+    truly = (
+        api_ok
+        and (mc_ok or choice == "api_only")
+        and db_ok
+        and own_ok
+        and env_ok
+        and readiness_state == "operational"
+    )
     if not truly and api_ok:
         message = "AethOS is preparing operational services…"
     elif truly:
         message = "AethOS is operational."
     else:
-        message = "Runtime coordination needs attention — try `aethos doctor`."
+        message = build_startup_recovery_copy()
+
+    warmup = build_warmup_awareness_payload(
+        api_reachable=api_ok,
+        mc_reachable=mc_ok,
+        hydration_partial=hydration_partial,
+        readiness_percent=float((status_blob.get("runtime_startup_experience") or {}).get("readiness_percent") or 0.5),
+        current_stage_id="readiness" if truly else "warmup",
+    )
 
     return {
         "ok": truly or api_ok,
@@ -238,10 +293,15 @@ def orchestrate_progressive_startup(
         "database_healthy": db_ok,
         "ownership_healthy": own_ok,
         "truly_operational": truly,
+        "readiness_state": readiness_state,
+        "hydration_partial": hydration_partial,
         "coordination": coord,
         "startup_status": status_blob,
+        "warmup_awareness": warmup,
         "stages": stages_done,
+        "visibility": visibility,
         "message": message,
+        "mission_control_url": "http://localhost:3000/mission-control/office",
         "pid": api_proc.pid if api_proc else None,
         "mc_pid": mc_proc.pid if mc_proc else None,
     }

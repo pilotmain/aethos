@@ -9,6 +9,11 @@ from typing import Any
 
 from app.services.mission_control.runtime_cold_start_lock import build_runtime_readiness_progress
 from app.services.mission_control.runtime_hydration import get_hydration_metrics
+from app.services.runtime.runtime_launch_orchestration import (
+    OFFICE_HOME_INTRO,
+    build_warmup_awareness_payload,
+    derive_operator_readiness_state,
+)
 
 
 HYDRATION_STAGES = (
@@ -56,6 +61,14 @@ def build_runtime_startup_experience(truth: dict[str, Any] | None = None) -> dic
         unlocked.extend(["governance", "runtime_intelligence"])
     if not partial:
         unlocked.extend(["marketplace", "providers", "executive_overview"])
+    op_state = derive_operator_readiness_state(hydration_partial=partial)
+    warmup = build_warmup_awareness_payload(
+        api_reachable=True,
+        mc_reachable=not partial,
+        hydration_partial=partial,
+        readiness_percent=pct,
+        current_stage_id=current.get("id"),
+    )
     return {
         "runtime_startup_experience": {
             "current_stage": current,
@@ -64,6 +77,8 @@ def build_runtime_startup_experience(truth: dict[str, Any] | None = None) -> dic
             "enterprise_stages_legacy": ENTERPRISE_STARTUP_STAGES_LEGACY,
             "stages": HYDRATION_STAGES,
             "readiness_percent": pct,
+            "operator_readiness_state": op_state,
+            "office_home_intro": OFFICE_HOME_INTRO,
             "partial_mode": partial,
             "progressive_surface_unlock": unlocked,
             "alive_progressive_operational": True,
@@ -76,9 +91,10 @@ def build_runtime_startup_experience(truth: dict[str, Any] | None = None) -> dic
             ),
             "no_white_screen": True,
             "tiers_complete": tiers,
-            "phase": "phase4_step23",
+            "phase": "phase4_step30",
             "bounded": True,
-        }
+        },
+        **warmup,
     }
 
 

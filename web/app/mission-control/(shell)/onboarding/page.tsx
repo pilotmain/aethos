@@ -36,6 +36,8 @@ export default function OnboardingPage() {
   const [tone, setTone] = useState("calm");
   const [goals, setGoals] = useState("");
 
+  const [tourStep, setTourStep] = useState(0);
+
   const refresh = useCallback(async () => {
     try {
       setData(await apiFetch<Payload>("/mission-control/onboarding"));
@@ -134,13 +136,20 @@ export default function OnboardingPage() {
         <section className="rounded-lg border border-border/50 bg-card/40 p-4 space-y-3">
           <h2 className="text-sm font-medium">Guided tour</h2>
           <p className="text-sm text-muted-foreground">
-            AethOS will introduce Office, runtime, workers, governance, and recovery — dismiss anytime.
+            Step {Math.min(tourStep + 1, (tour.topics ?? []).length)} of {(tour.topics ?? []).length} — calm, dismissible, resumable.
           </p>
-          <ul className="list-disc space-y-1 pl-5 text-sm">
-            {(tour.topics ?? []).map((t) => (
-              <li key={t.id}>
-                <Link href={t.path ?? "#"} className="text-primary hover:underline">
-                  {t.title}
+          <ul className="space-y-2 text-sm">
+            {(tour.topics ?? []).map((t, i) => (
+              <li
+                key={t.id}
+                className={i === tourStep ? "rounded border border-primary/30 bg-primary/5 px-3 py-2" : "px-3 py-1"}
+              >
+                <Link
+                  href={t.path ?? "#"}
+                  className="text-primary hover:underline"
+                  onClick={() => setTourStep(i)}
+                >
+                  {i + 1}. {t.title}
                 </Link>
               </li>
             ))}

@@ -74,7 +74,7 @@ def prompt_guided_first_run_tour() -> bool:
     return False
 
 
-def try_open_mission_control(*, mc_url: str = "http://localhost:3000/mission-control/onboarding") -> bool:
+def try_open_mission_control(*, mc_url: str = "http://localhost:3000/mission-control/office") -> bool:
     try:
         import socket
 

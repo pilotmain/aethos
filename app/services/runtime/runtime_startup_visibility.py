@@ -16,15 +16,15 @@ def build_runtime_startup_visibility(truth: dict[str, Any] | None = None) -> dic
     exp = launch.get("runtime_launch_experience") or {}
     in_progress = not exp.get("truly_operational")
     headline = (
-        "Enterprise runtime startup is still in progress."
+        "AethOS is preparing operational services…"
         if in_progress
-        else "Operational startup completed."
+        else "AethOS is operational."
     )
     return {
         "runtime_startup_visibility": {
-            "phase": "phase4_step28",
+            "phase": "phase4_step30",
             "headline": headline,
-            "banner": "AethOS is preparing operational services." if in_progress else "Enterprise runtime operational.",
+            "banner": "AethOS is preparing operational services…" if in_progress else "AethOS is operational.",
             "startup_in_progress": in_progress,
             "no_duplicate_narratives": True,
             "no_panic": True,

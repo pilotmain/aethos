@@ -11,7 +11,7 @@ from app.services.runtime.runtime_startup_orchestration import orchestrate_start
 def test_startup_save_only_skips_start() -> None:
     result = orchestrate_startup(choice="save_only")
     assert result["started"] is False
-    assert "aethos runtime launch" in result["message"]
+    assert "aethos start" in result["message"]
 
 
 def test_prompt_startup_default_noninteractive() -> None:

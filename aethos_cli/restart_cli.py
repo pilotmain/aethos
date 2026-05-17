@@ -56,7 +56,9 @@ def _start_web(repo: Path) -> subprocess.Popen | None:
 
 def cmd_restart(target: str = "all") -> int:
     from app.services.mission_control.runtime_restart_manager import record_restart_event
+    from app.services.runtime.runtime_launch_orchestration import build_runtime_continuity_message
 
+    print(build_runtime_continuity_message(restarting=True), flush=True)
     repo = _repo_root()
     target = (target or "all").lower()
     ok = True

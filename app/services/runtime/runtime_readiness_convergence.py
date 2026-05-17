@@ -10,10 +10,12 @@ from typing import Any
 CANONICAL_READINESS_STATES = (
     "initializing",
     "warming",
+    "partially_operational",
     "partially_ready",
     "operational",
     "degraded",
     "recovering",
+    "maintenance",
     "stable",
     "enterprise_ready",
 )
@@ -32,7 +34,7 @@ def build_runtime_readiness_convergence(truth: dict[str, Any] | None = None) -> 
     elif degraded:
         state = "degraded"
     elif partial:
-        state = "partially_ready"
+        state = "partially_operational"
     elif score >= 0.9:
         state = "stable"
     elif score >= 0.7:
