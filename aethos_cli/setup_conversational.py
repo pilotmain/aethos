@@ -8,25 +8,53 @@ from __future__ import annotations
 from aethos_cli.ui import confirm, print_box, print_info, select
 
 
-def print_welcome_back_resume() -> str:
-    """Ask how to continue after interruption. Returns: continue | review | restart."""
+def print_existing_setup_menu() -> str:
+    """When install already exists. Returns: continue | review | section | restart."""
     print_box(
-        "Welcome back",
+        "AethOS found an existing setup",
         [
-            "AethOS saved your progress.",
-            "Continue where you left off, review configuration, or restart onboarding.",
+            "What would you like to do?",
+            "Continue — resume saved progress",
+            "Review — inspect current configuration",
+            "Change one section — adjust routing, providers, Mission Control, …",
+            "Restart — clear wizard state and run fresh",
         ],
     )
-    choice = select(
+    return select(
         "How would you like to proceed?",
         [
-            ("Continue setup", "continue", "Recommended"),
-            ("Review saved progress only", "review", "Shows what is already configured"),
-            ("Restart onboarding", "restart", "Clears saved wizard state"),
+            ("Continue where I left off", "continue", "Recommended"),
+            ("Review current configuration", "review", "Read-only summary"),
+            ("Change one section", "section", "Pick a section to reconfigure"),
+            ("Restart setup", "restart", "Clears saved wizard state"),
         ],
         default_index=0,
     )
-    return choice
+
+
+def print_welcome_back_resume() -> str:
+    """Ask how to continue after interruption. Returns: continue | review | section | restart."""
+    return print_existing_setup_menu()
+
+
+def print_change_one_section_menu() -> str | None:
+    """Return section id to re-run, or None to skip."""
+    return select(
+        "Which section would you like to change?",
+        [
+            ("Runtime strategy", "runtime_strategy", "Local / cloud / hybrid"),
+            ("Providers & API keys", "providers", "LLM providers"),
+            ("Channels", "channels", "Telegram and messaging"),
+            ("Mission Control connection", "mission_control", "Bearer token and web env"),
+            ("Workspace", "workspace", "Project workspace path"),
+            ("Onboarding profile", "onboarding", "Operator preferences"),
+            ("Web search", "web_search", "Search provider"),
+            ("Integrations", "integrations", "Detected integrations"),
+            ("Privacy", "privacy", "Privacy posture"),
+            ("Skip — return to setup", "skip", ""),
+        ],
+        default_index=9,
+    )
 
 
 def print_runtime_strategy_guidance() -> None:

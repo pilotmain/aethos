@@ -1,0 +1,1607 @@
+./.cursor/rules/openclaw-parity-first.mdc:2:description: Enforce OpenClaw parity-first development for AethOS/nexa-next
+./.cursor/rules/openclaw-parity-first.mdc:8:# OpenClaw parity-first rule
+./.cursor/rules/openclaw-parity-first.mdc:10:The final objective for Phase 1 is exact functional parity with OpenClaw as it exists today.
+./.cursor/rules/openclaw-parity-first.mdc:12:Work in this repo must prioritize reproducing OpenClaw behavior before privacy, PII filtering, local-first differentiation, cost transparency, custom UX, or novel architecture.
+./.cursor/rules/openclaw-parity-first.mdc:18:- Prefer the change that gets closer to OpenClaw parity.
+./.cursor/rules/openclaw-parity-first.mdc:19:- Do not introduce architectural divergence unless required to reproduce OpenClaw behavior.
+./.cursor/rules/openclaw-parity-first.mdc:20:- Treat privacy/PII/local-first improvements as Phase 2 unless required for current OpenClaw-compatible behavior.
+./.cursor/rules/openclaw-parity-first.mdc:28:OpenClaw behavior reproduced:
+./.cursor/rules/commit-and-push-after-task.mdc:56:## 2. Work that comes from the **bot** (agent tasks via Telegram / Nexa, etc.)
+./migrations/add_rbac_fields.py:4:Run after upgrading Nexa:
+./app/tools/__init__.py:1:"""OpenClaw-class tool runtimes (shell, file, workspace) — workspace-scoped, allowlisted."""
+./app/tools/runtime_shell.py:1:"""Allowlisted shell execution under the AethOS workspace (OpenClaw parity)."""
+./app/core/logging.py:8:and :func:`redact_sensitive_data` is also used by :class:`~app.services.logging.json_formatter.NexaJsonFormatter`.
+./app/core/config.py:214:    # OpenClaw parity — bounded ``aethos.json`` growth + execution retry caps (``AETHOS_*``).
+./app/core/config.py:393:    # Dev workspace: new project scaffold (ask Nexa to create a project for a key) and /dev workspace
+./app/core/config.py:423:    # Phase 6 — pluggable skills (ClawHub-style); see docs/SKILLS_SYSTEM.md
+./app/core/config.py:432:    # When the remote ClawHub-compatible registry is down (HTTP errors, empty JSON), serve a
+./app/core/config.py:841:    # Required for real runs: HTTPS GitHub repo URL Nexa is allowed to target.
+./app/core/config.py:856:    # --- Nexa Next (gateway runtime + privacy firewall; incremental rollout) ---
+./app/core/config.py:903:    # Phase 22 — OpenClaw parity (memory, autonomy, local-first).
+./app/core/config.py:952:    # ``general_chat`` — OpenClaw-style "trust the model" routing. Keep ``false`` for legacy behavior/tests.
+./app/core/config.py:961:    # Phase 39 — periodic autonomy heartbeat (OpenClaw-style background tick)
+./app/core/config.py:1001:    # Slack: use NexaGateway route_inbound instead of legacy channel gateway pipeline.
+./app/core/branding.py:4:"""Central user-facing product name and strings (AethOS vs legacy \"Nexa\" copy).
+./app/core/branding.py:45:_NEXA_WORD = re.compile(r"\bNexa\b")
+./app/core/branding.py:50:    Replace standalone word ``Nexa`` with the configured product name.
+./app/core/paths.py:42:    """Canonical JSON runtime state (OpenClaw-class persistent runtime parity)."""
+./app/core/paths.py:47:    """Timestamped ``aethos.*.json`` snapshots (OpenClaw resilience parity)."""
+./app/plugins/__init__.py:4:"""Built-in Nexa plugins (tool/channel extensions)."""
+./app/environments/environment_locks.py:4:"""Per-environment deployment locks (OpenClaw continuity — prevent concurrent deploys)."""
+./app/environments/__init__.py:4:"""Named environments persisted in ``aethos.json`` (OpenClaw parity)."""
+./app/runtime/runtime_reliability.py:4:"""Long-run stability counters + operational reliability summary (OpenClaw parity lock)."""
+./app/runtime/__init__.py:4:"""Persistent runtime parity (OpenClaw-class): ``~/.aethos/aethos.json``, workspace, heartbeat."""
+./app/runtime/runtime_state.py:54:        # --- OpenClaw orchestration runtime parity (Phase 1; JSON until DB-backed) ---
+./app/runtime/runtime_state.py:71:        # --- OpenClaw autonomous execution parity (Phase 1; JSON until DB-backed) ---
+./app/runtime/runtime_state.py:280:    """Merge deployment + environment runtime keys (OpenClaw infra ops parity)."""
+./app/runtime/runtime_state.py:310:    """Merge autonomous multi-agent coordination keys (OpenClaw parity)."""
+./app/runtime/runtime_state.py:334:    """Merge adaptive planning + intelligence runtime keys (OpenClaw parity)."""
+./app/runtime/runtime_state.py:352:    """Merge resilience / quarantine keys (OpenClaw recovery hardening parity)."""
+./app/runtime/runtime_state.py:439:    """Merge OpenClaw multi-session + runtime event buffers (forward-compatible)."""
+./app/runtime/sessions/__init__.py:4:"""Multi-session runtime registry (OpenClaw Phase 1 — JSON-backed)."""
+./app/runtime/sessions/session_recovery.py:1:"""Recover session rows after process restart (OpenClaw parity)."""
+./app/runtime/retention.py:4:"""Bounded growth: trim planning lists, quarantine, backups (OpenClaw runtime caps)."""
+./app/runtime/integrity/__init__.py:4:"""Runtime integrity validation and safe cleanup (OpenClaw consolidation parity)."""
+./app/runtime/events/__init__.py:4:"""Runtime event bus package (OpenClaw parity)."""
+./app/planning/__init__.py:4:"""Adaptive planning + orchestration intelligence (OpenClaw parity — JSON-backed)."""
+./app/agents/agent_health.py:4:"""Coordination agent health vocabulary (OpenClaw reliability parity)."""
+./app/agents/agent_assignment_policy.py:5:Deterministic coordination-agent selection (OpenClaw reliability — Step 1).
+./app/agents/__init__.py:4:"""Autonomous multi-agent coordination (OpenClaw parity — JSON-backed)."""
+./app/models/user_settings.py:4:"""Per-user Nexa preferences (Phase 20) — privacy mode + UI prefs persisted in DB."""
+./app/models/user_settings.py:20:class NexaUserSettings(Base):
+./app/models/autonomy.py:20:class NexaAutonomousTask(Base):
+./app/models/autonomy.py:38:class NexaTaskFeedback(Base):
+./app/models/autonomy.py:52:class NexaAutonomyDecisionLog(Base):
+./app/models/autonomy.py:64:__all__ = ["NexaAutonomousTask", "NexaAutonomyDecisionLog", "NexaTaskFeedback"]
+./app/models/dev_runtime.py:21:class NexaDevWorkspace(Base):
+./app/models/dev_runtime.py:35:class NexaDevRun(Base):
+./app/models/dev_runtime.py:52:class NexaDevStep(Base):
+./app/models/dev_runtime.py:72:__all__ = ["NexaDevWorkspace", "NexaDevRun", "NexaDevStep"]
+./app/models/__init__.py:11:from app.models.autonomy import NexaAutonomousTask, NexaAutonomyDecisionLog, NexaTaskFeedback
+./app/models/__init__.py:19:from app.models.dev_runtime import NexaDevRun, NexaDevStep, NexaDevWorkspace
+./app/models/__init__.py:26:from app.models.long_running_session import NexaLongRunningSession
+./app/models/__init__.py:28:from app.models.nexa_next_runtime import NexaArtifact, NexaExternalCall, NexaMission, NexaMissionTask
+./app/models/__init__.py:29:from app.models.nexa_scheduler_job import NexaSchedulerJob
+./app/models/__init__.py:30:from app.models.openclaw_store import NexaActivityLedgerEvent, NexaConsentGrant
+./app/models/__init__.py:34:from app.models.project_context import NexaWorkspaceProject
+./app/models/__init__.py:42:from app.models.user_settings import NexaUserSettings
+./app/models/__init__.py:50:    "NexaUserSettings",
+./app/models/__init__.py:79:    "NexaWorkspaceProject",
+./app/models/__init__.py:86:    "NexaMission",
+./app/models/__init__.py:87:    "NexaMissionTask",
+./app/models/__init__.py:88:    "NexaArtifact",
+./app/models/__init__.py:89:    "NexaExternalCall",
+./app/models/__init__.py:90:    "NexaAutonomousTask",
+./app/models/__init__.py:91:    "NexaAutonomyDecisionLog",
+./app/models/__init__.py:92:    "NexaTaskFeedback",
+./app/models/__init__.py:93:    "NexaSchedulerJob",
+./app/models/__init__.py:94:    "NexaLongRunningSession",
+./app/models/__init__.py:95:    "NexaDevWorkspace",
+./app/models/__init__.py:96:    "NexaDevRun",
+./app/models/__init__.py:97:    "NexaDevStep",
+./app/models/__init__.py:98:    "NexaConsentGrant",
+./app/models/__init__.py:99:    "NexaActivityLedgerEvent",
+./app/models/channel_user.py:12:    """Maps (channel, channel_user_id) to Nexa `user_id` (e.g. tg_123). One row per provider identity."""
+./app/models/project_context.py:4:"""User-defined Nexa workspace projects — folders inside approved workspace roots.
+./app/models/project_context.py:19:class NexaWorkspaceProject(Base, TimestampMixin):
+./app/models/project_context.py:21:    A named folder the user treats as their current Nexa project.
+./app/models/conversation_context.py:32:    # Nexa workspace project (labeled folder); distinct from Ops ``active_project`` key above.
+./app/models/nexa_scheduler_job.py:20:class NexaSchedulerJob(Base):
+./app/models/nexa_next_runtime.py:4:"""Nexa Next gateway runtime persistence — missions, tasks, artifacts."""
+./app/models/nexa_next_runtime.py:21:class NexaMission(Base):
+./app/models/nexa_next_runtime.py:32:class NexaMissionTask(Base):
+./app/models/nexa_next_runtime.py:47:class NexaExternalCall(Base):
+./app/models/nexa_next_runtime.py:63:class NexaArtifact(Base):
+./app/models/workspace_root.py:16:    """An absolute directory the owner allowed Nexa to treat as a workspace boundary."""
+./app/models/openclaw_store.py:4:"""Durable consent grants and activity ledger (OpenClaw-style governance)."""
+./app/models/openclaw_store.py:16:class NexaConsentGrant(Base):
+./app/models/openclaw_store.py:29:class NexaActivityLedgerEvent(Base):
+./app/models/openclaw_store.py:42:__all__ = ["NexaActivityLedgerEvent", "NexaConsentGrant"]
+./app/models/project.py:4:"""Registered projects for multi-cloud / multi-repo Nexa Ops and Dev agents."""
+./app/models/long_running_session.py:20:class NexaLongRunningSession(Base):
+./app/cli/clawhub.py:4:"""ClawHub marketplace CLI (Phase 17) — ``nexa clawhub …``."""
+./app/cli/clawhub.py:18:        from app.services.skills.clawhub_client import ClawHubClient
+./app/cli/clawhub.py:20:        client = ClawHubClient()
+./app/cli/clawhub.py:33:        from app.services.skills.clawhub_client import ClawHubClient
+./app/cli/clawhub.py:35:        client = ClawHubClient()
+./app/cli/clawhub.py:78:            print("(no ClawHub-installed skills recorded)")
+./app/cli/clawhub.py:101:    sp_ch = sub.add_parser("clawhub", help="ClawHub marketplace (Phase 17)")
+./app/cli/plugin.py:4:"""Marketplace **plugins/skills** CLI — bridges OpenClaw-style commands to Phase 17 ClawHub + Phase 6 skills.
+./app/cli/plugin.py:158:                    print("(no ClawHub-installed skills to update)")
+./app/cli/plugin.py:209:        help="Marketplace skills/plugins (ClawHub + local skill.yaml; wraps clawhub + skills install)",
+./app/cli/plugin.py:213:    sq = ch.add_parser("search", help="Search ClawHub registry")
+./app/cli/plugin.py:217:    ch.add_parser("popular", help="List popular skills on ClawHub")
+./app/cli/plugin.py:218:    ch.add_parser("list", help="List installed marketplace (ClawHub) skills")
+./app/cli/plugin.py:220:    ib = ch.add_parser("install", help="Install from ClawHub by name, or --local path to skill.yaml / skill dir")
+./app/cli/plugin.py:221:    ib.add_argument("name", nargs="?", default=None, help="ClawHub skill name (omit when using --local)")
+./app/cli/plugin.py:227:        help="Bypass NEXA_CLAWHUB_REQUIRE_INSTALL_APPROVAL for ClawHub installs",
+./app/cli/plugin.py:230:    ub = ch.add_parser("uninstall", help="Remove installed ClawHub skill")
+./app/cli/plugin.py:233:    ub2 = ch.add_parser("update", help="Update one ClawHub skill, or all with --all")
+./app/cli/plugin.py:235:    ub2.add_argument("--all", action="store_true", dest="update_all", help="Update every ClawHub-installed skill")
+./app/operations/__init__.py:4:"""Operational workflows (OpenClaw parity — JSON-backed queue)."""
+./app/schemas/web_ui.py:261:class WebNexaWorkspaceProjectOut(BaseModel):
+./app/schemas/web_ui.py:271:class WebNexaWorkspaceProjectCreateIn(BaseModel):
+./app/schemas/web_ui.py:278:    """Set active Nexa workspace project for a chat session."""
+./app/schemas/web_ui.py:287:    project: WebNexaWorkspaceProjectOut | None = None
+./app/execution/workflow_builder.py:1:"""Deterministic operator text → execution plan steps (OpenClaw workflow parity, Phase 1)."""
+./app/execution/workflow_builder.py:111:    # Real-world benchmark phrases (deterministic; no LLM) — OpenClaw quality parity.
+./app/execution/__init__.py:1:"""Autonomous execution parity (OpenClaw Phase 1 — JSON-backed)."""
+./app/execution/execution_plan.py:1:"""Persistent execution plans (OpenClaw-style graphs in ``aethos.json``)."""
+./app/orchestration/agent_runtime.py:1:"""Agent runtime registry (subset of OpenClaw multi-agent parity)."""
+./app/orchestration/task_recovery.py:1:"""Boot-time queue / task recovery (OpenClaw parity sequence, subset in Phase 1)."""
+./app/orchestration/__init__.py:1:"""OpenClaw-equivalent orchestration runtime (persistent queues, registry, scheduler)."""
+./app/orchestration/orchestration_log.py:1:"""Structured JSON lines under ``~/.aethos/logs/*.log`` (OpenClaw-style events)."""
+./app/api/routes/nexa_memory_layer.py:20:class NexaMemoryAppend(BaseModel):
+./app/api/routes/nexa_memory_layer.py:35:    body: NexaMemoryAppend,
+./app/api/routes/web.py:54:    WebNexaWorkspaceProjectCreateIn,
+./app/api/routes/web.py:55:    WebNexaWorkspaceProjectOut,
+./app/api/routes/web.py:973:def _nxp_out(row: Any) -> WebNexaWorkspaceProjectOut:
+./app/api/routes/web.py:974:    return WebNexaWorkspaceProjectOut(
+./app/api/routes/web.py:983:@router.get("/workspace/nexa-projects", response_model=list[WebNexaWorkspaceProjectOut])
+./app/api/routes/web.py:987:) -> list[WebNexaWorkspaceProjectOut]:
+./app/api/routes/web.py:992:@router.post("/workspace/nexa-projects", response_model=WebNexaWorkspaceProjectOut)
+./app/api/routes/web.py:994:    body: WebNexaWorkspaceProjectCreateIn,
+./app/api/routes/web.py:997:) -> WebNexaWorkspaceProjectOut:
+./app/api/routes/web.py:1012:@router.delete("/workspace/nexa-projects/{project_id}", response_model=WebNexaWorkspaceProjectOut)
+./app/api/routes/web.py:1017:) -> WebNexaWorkspaceProjectOut:
+./app/api/routes/nexa_skills_api.py:35:    """NexaForge soft launch — local JSON catalog + safe-preview install eligibility."""
+./app/api/routes/mission_control.py:12:- ``POST /mission-control/gateway/run`` — Nexa gateway admission.
+./app/api/routes/mission_control.py:35:from app.models.autonomy import NexaAutonomousTask
+./app/api/routes/mission_control.py:36:from app.models.nexa_next_runtime import NexaMission
+./app/api/routes/mission_control.py:209:    row = db.get(NexaAutonomousTask, tid)
+./app/api/routes/mission_control.py:348:    """Run user text through :class:`~app.services.gateway.runtime.NexaGateway`."""
+./app/api/routes/mission_control.py:367:    from app.services.gateway.runtime import NexaGateway
+./app/api/routes/mission_control.py:370:    return NexaGateway().handle_message(ctx, text, db=db)
+./app/api/routes/mission_control.py:381:    from app.services.gateway.runtime import NexaGateway
+./app/api/routes/mission_control.py:383:    m = db.get(NexaMission, mission_id)
+./app/api/routes/mission_control.py:393:    out = NexaGateway().handle_message(ctx, raw, db=db)
+./app/api/routes/memory.py:7:Persistent Nexa memory documents: ``/api/v1/nexa-memory``.
+./app/api/routes/mobile.py:409:    """Minimal authenticated JSON channel; extend to Nexa gateway streaming later."""
+./app/api/routes/dev_runtime.py:18:from app.models.dev_runtime import NexaDevRun, NexaDevStep
+./app/api/routes/dev_runtime.py:22:from app.services.scheduler.service import NexaSchedulerService
+./app/api/routes/dev_runtime.py:25:_scheduler = NexaSchedulerService()
+./app/api/routes/dev_runtime.py:65:def _run_row(r: NexaDevRun, *, steps: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+./app/api/routes/dev_runtime.py:211:    r = db.get(NexaDevRun, run_id)
+./app/api/routes/dev_runtime.py:241:            select(NexaDevRun)
+./app/api/routes/dev_runtime.py:242:            .where(NexaDevRun.user_id == app_user_id)
+./app/api/routes/dev_runtime.py:243:            .order_by(NexaDevRun.created_at.desc())
+./app/api/routes/dev_runtime.py:305:    r = db.get(NexaDevRun, run_id)
+./app/api/routes/dev_runtime.py:310:            select(NexaDevStep).where(NexaDevStep.run_id == run_id).order_by(NexaDevStep.id.asc())
+./app/api/routes/runtime_workflow.py:1:"""Runtime workflow + multi-session operational APIs (OpenClaw parity — ``/api/v1/runtime/*``)."""
+./app/api/routes/admin_privacy.py:14:from app.models.nexa_next_runtime import NexaExternalCall
+./app/api/routes/admin_privacy.py:39:        db.scalars(select(NexaExternalCall).order_by(NexaExternalCall.created_at.desc()).limit(limit)).all()
+./app/api/routes/nexa_scheduler_api.py:16:from app.services.scheduler.service import NexaSchedulerService
+./app/api/routes/nexa_scheduler_api.py:19:_svc = NexaSchedulerService()
+./app/api/routes/dashboard.py:18:  <title>Nexa Dashboard</title>
+./app/api/routes/dashboard.py:228:        <p class="lede">This is the local control room for Nexa. Load one user, inspect the current state, forget stale reminders, approve jobs, and track Cursor handoffs without jumping between Telegram and SQLite.</p>
+./app/api/routes/email.py:110:        re_subj = f"Re: {subj_in}" if subj_in else "Re: Nexa"
+./app/api/routes/clawhub.py:4:"""ClawHub marketplace API — Bearer ``NEXA_CRON_API_TOKEN`` (same gate as cron automation)."""
+./app/api/routes/clawhub.py:14:from app.services.skills.clawhub_client import ClawHubClient
+./app/api/routes/clawhub.py:19:_client = ClawHubClient()
+./app/api/routes/marketplace.py:9::class:`~app.services.skills.clawhub_client.ClawHubClient` and
+./app/api/routes/marketplace.py:22:``GET /marketplace/-/registry-status`` probes upstream ClawHub reachability and reports
+./app/api/routes/marketplace.py:41:from app.services.skills.clawhub_client import ClawHubClient
+./app/api/routes/marketplace.py:107:    results = await ClawHubClient().search_skills(q, safe_limit, category=cat)
+./app/api/routes/marketplace.py:140:    results = await ClawHubClient().list_popular(safe_limit)
+./app/api/routes/marketplace.py:157:    results = await ClawHubClient().list_featured(safe_limit)
+./app/api/routes/marketplace.py:173:    skill = await ClawHubClient().get_skill_info(name)
+./app/api/routes/marketplace.py:194:    skill = await ClawHubClient().get_skill_info(name)
+./app/api/routes/marketplace.py:222:    client = ClawHubClient()
+./app/api/routes/marketplace.py:335:    client = ClawHubClient()
+./app/api/routes/permissions.py:144:            f"Approved this permission, but Nexa could not queue the original action: {e}. "
+./app/api/routes/deployment_environment.py:4:"""Deployment + environment + operational workflow APIs (OpenClaw infra parity)."""
+./app/api/routes/agent_coordination.py:4:"""Coordination agent HTTP API (OpenClaw multi-agent parity).
+./app/api/routes/slack.py:218:                "Your Slack user is not linked in Nexa yet — send a message to the bot first.",
+./app/bot/telegram_bot.py:23:from app.services.gateway.runtime import NexaGateway
+./app/bot/telegram_bot.py:726:                body = NexaGateway().compose_llm_reply(
+./app/bot/telegram_bot.py:742:                body = NexaGateway().compose_llm_reply(
+./app/bot/telegram_bot.py:2379:                        gw_struct = NexaGateway().try_structured_turn(_gateway_ctx, tstrip, db=db)
+./app/bot/telegram_bot.py:2399:                    gw_appr = NexaGateway().try_approval_only(_gateway_ctx, tstrip, db=db)
+./app/bot/telegram_bot.py:3698:                        gw_chat = NexaGateway().continue_after_structured(_gateway_ctx, text, db=db)
+./app/bot/clawhub_commands.py:5:Telegram — ClawHub marketplace commands (Phase 71).
+./app/bot/clawhub_commands.py:8:    /skills_search <query>             — search the configured ClawHub registry
+./app/bot/clawhub_commands.py:9:    /skills_popular                    — list popular skills on ClawHub
+./app/bot/clawhub_commands.py:31:from app.services.skills.clawhub_client import ClawHubClient
+./app/bot/clawhub_commands.py:43:        return "ClawHub marketplace is disabled (NEXA_CLAWHUB_ENABLED=false)."
+./app/bot/clawhub_commands.py:85:    rows = await ClawHubClient().search_skills(query, limit=10)
+./app/bot/clawhub_commands.py:102:    rows = await ClawHubClient().list_popular(limit=10)
+./app/bot/clawhub_commands.py:105:            "Popular list empty (the configured ClawHub registry returned nothing)."
+./app/bot/clawhub_commands.py:108:    lines = ["Popular skills on ClawHub:"]
+./app/bot/simulation_commands.py:196:            "(same as asking Nexa to run a host tool, but dry-run only).\n\n"
+./app/services/ops_handler.py:45:            "Ops execution is restricted on this Nexa instance.\n\n"
+./app/services/ops_handler.py:97:        return "This operation is not supported in Nexa yet (not in the v1 allowlist)."
+./app/services/ops_handler.py:100:        return "Ops execution is restricted on this Nexa instance."
+./app/services/ops_handler.py:117:        title=f"Nexa Ops: {name}"[:255],
+./app/services/web_access.py:274:            error="web access is disabled on this Nexa instance (set NEXA_WEB_ACCESS_ENABLED=true to enable).",
+./app/services/web_access.py:539:    """Nexa-internal: inject into the LLM; not shown verbatim to the user on its own."""
+./app/services/host_executor_chat.py:697:                    "That folder isn’t under Nexa’s configured host work root (`HOST_EXECUTOR_WORK_ROOT`). "
+./app/services/host_executor_chat.py:1212:                            "That folder isn’t under Nexa’s configured host work root (`HOST_EXECUTOR_WORK_ROOT`). "
+./app/services/host_executor_chat.py:1369:                    "machine via Nexa."
+./app/services/agent_team/service.py:99:        description="Default Nexa agent organization",
+./app/services/ops_approval.py:4:"""Nexa Ops: approval-gated jobs (worker_type=ops_worker) and on-approve execution."""
+./app/services/ops_approval.py:51:    If job is a Nexa ops action, handle approve/deny and return a message.
+./app/services/artifacts/store.py:13:from app.models.nexa_next_runtime import NexaArtifact, NexaMission, NexaMissionTask
+./app/services/artifacts/store.py:19:    row = NexaArtifact(mission_id=mission_id, agent_handle=agent_handle, artifact_json=artifact)
+./app/services/artifacts/store.py:28:        select(NexaArtifact).where(NexaArtifact.mission_id == mission_id).order_by(NexaArtifact.id)
+./app/services/artifacts/store.py:41:    """Remove all Nexa Next runtime rows (tests)."""
+./app/services/artifacts/store.py:42:    db.execute(delete(NexaArtifact))
+./app/services/artifacts/store.py:43:    db.execute(delete(NexaMissionTask))
+./app/services/artifacts/store.py:44:    db.execute(delete(NexaMission))
+./app/services/tasks/__init__.py:6:from app.services.tasks.unified_task import NexaTask
+./app/services/tasks/__init__.py:8:__all__ = ["NexaTask"]
+./app/services/tasks/unified_task.py:14:class NexaTask:
+./app/services/tasks/unified_task.py:34:    ) -> NexaTask:
+./app/services/tasks/unified_task.py:55:    def from_long_running_row(cls, *, user_id: str, session_key: str, iteration: int, goal: str) -> NexaTask:
+./app/services/tasks/unified_task.py:68:__all__ = ["NexaTask"]
+./app/services/memory/__init__.py:4:"""Persistent Nexa memory layer (filesystem + index) — Phase 22."""
+./app/services/next_action_apply.py:55:    # Gateway-only: override intent in NexaGateway._try_host_executor_turn (e.g. command_completed).
+./app/services/enforcement_pipeline.py:39:            "Confirm explicitly before Nexa sends this off your machine."
+./app/services/identity/legacy_strings.py:4:"""Blocked legacy Nexa phrases — prompts and outgoing copy must stay identity-clean."""
+./app/services/identity/legacy_strings.py:16:# Substrings that must not appear in user-facing Nexa output (Phase 48).
+./app/services/identity/scrub.py:39:    """Best-effort replacement so Nexa reads as one system, not a compatibility layer."""
+./app/services/identity/scrub.py:43:    t = t.replace("Development agent", "Nexa")
+./app/services/identity/scrub.py:44:    t = t.replace("development agent", "Nexa")
+./app/services/identity/scrub.py:45:    t = t.replace("Dev Agent", "Nexa")
+./app/services/identity/scrub.py:46:    t = t.replace("Development Agent", "Nexa")
+./app/services/mention_incoming_for_http.py:310:                "No project configured. Add a project in Nexa (or /project add in Telegram) first.",
+./app/services/custom_agent_parser.py:287:    role = f"{display} — custom Nexa assistant"
+./app/services/custom_agent_parser.py:359:            role = f"{display} — custom Nexa assistant"
+./app/services/telegram_project_commands.py:50:        lines: list[str] = ["Nexa projects (summary, no host paths on shared bots):\n"]
+./app/services/host_executor_nl_chain.py:29:_DEFAULT_LINE = "Service updated via Nexa."
+./app/services/operator_pulse.py:5:Optional standing orders from ``PULSE.md`` (OpenClaw-style continuity hint).
+./app/services/operator_pulse.py:65:    Compact standing-orders block for prompts or summaries (OpenClaw-style memory hint).
+./app/services/release_updates.py:4:"""User-facing release notes (CHANGELOG.md) for Nexa — no secrets, no commit dumps."""
+./app/services/release_updates.py:192:            "headline": "Nexa",
+./app/services/release_updates.py:201:        "headline": f"Nexa · {rid}" if rid else "Nexa",
+./app/services/release_updates.py:208:    lines = ["Nexa Updates", "", "Latest:"]
+./app/services/missions/__init__.py:4:"""Mission parsing and graph (Nexa Next) — see ``parser``."""
+./app/services/run_steering/service.py:4:"""DB-backed steering for :class:`~app.models.dev_runtime.NexaDevRun`."""
+./app/services/run_steering/service.py:12:from app.models.dev_runtime import NexaDevRun
+./app/services/run_steering/service.py:19:def cancel_run(db: Session, run_id: str, user_id: str) -> NexaDevRun | None:
+./app/services/run_steering/service.py:20:    r = db.get(NexaDevRun, run_id)
+./app/services/run_steering/service.py:34:def pause_run(db: Session, run_id: str, user_id: str) -> NexaDevRun | None:
+./app/services/run_steering/service.py:35:    r = db.get(NexaDevRun, run_id)
+./app/services/run_steering/service.py:47:def resume_run(db: Session, run_id: str, user_id: str) -> NexaDevRun | None:
+./app/services/run_steering/service.py:48:    r = db.get(NexaDevRun, run_id)
+./app/services/run_steering/service.py:59:def edit_run_goal(db: Session, run_id: str, user_id: str, new_goal: str) -> NexaDevRun | None:
+./app/services/run_steering/service.py:60:    r = db.get(NexaDevRun, run_id)
+./app/services/next_action_confirmation.py:223:    """User-visible line before the main pipeline runs (Nexa co-pilot / next-step)."""
+./app/services/plugins/registry.py:5:Nexa plugin host — register tool descriptors that merge into the global tool map.
+./app/services/plugins/registry.py:20:class NexaPlugin(Protocol):
+./app/services/plugins/registry.py:44:def register_plugin(plugin: NexaPlugin | Any) -> None:
+./app/services/plugins/registry.py:85:    "NexaPlugin",
+./app/services/plugins/__init__.py:7:    NexaPlugin,
+./app/services/plugins/__init__.py:13:__all__ = ["NexaPlugin", "PluginRegistry", "load_plugins", "register_plugin"]
+./app/services/agent_catalog.py:4:"""Nexa capability registry for mention routing and help copy."""
+./app/services/web_user_id.py:4:"""Validation for the Nexa web API X-User-Id header — reject bot tokens and malformed ids."""
+./app/services/web_user_id.py:12:    "Invalid Web User ID. Use a Nexa channel user id "
+./app/services/startup_config_log.py:57:        f"=== Nexa config ({component}) ===",
+./app/services/startup_config_log.py:91:    block = "\n".join(lines) + "\n=== end Nexa config ==="
+./app/services/providers/external_audit.py:26:    from app.models.nexa_next_runtime import NexaExternalCall
+./app/services/providers/external_audit.py:28:    row = NexaExternalCall(
+./app/services/ops_executor.py:5:Whitelisted infrastructure actions for Nexa Ops. No user-controlled argv beyond allowlisted keys.
+./app/services/ops_executor.py:117:                return f"Nexa: could not read {p}: {e!s}\n"
+./app/services/ops_executor.py:119:            f"Nexa Ops — logs for `{s}`\n\n"
+./app/services/ops_executor.py:126:        return f"Nexa: compose file not found for this project (looked under `{work_root!s}`). Set NEXA_OPS_DOCKER_COMPOSE or add docker-compose.yml."
+./app/services/ops_executor.py:174:        return f"Nexa: only `KEY=value` with uppercase safe names is allowed (got {k!r})."
+./app/services/ops_executor.py:176:        f"Nexa Ops will not write secrets or cloud env from chat. If approved on the host, set `{k}` "
+./app/services/ops_executor.py:188:        return "No jobs yet in Nexa."
+./app/services/ops_executor.py:214:        return "Nexa: this operation is not in the v1 allowlist."
+./app/services/ops_executor.py:222:        return "Nexa: jobs/queue need an active user context on this run."
+./app/services/ops_executor.py:225:        return "Nexa: this op needs a database session (set up projects first)."
+./app/services/ops_executor.py:236:            return "Nexa: no project to run against. Use `/project add` or the default `nexa` seed."
+./app/services/ops_executor.py:260:                f"Nexa: provider `{proj.provider_key}` is not registered. "
+./app/services/ops_executor.py:278:                    + "Nexa Ops — **status** (dry run). Set `NEXA_OPS_DRY_RUN=0` on the worker to run "
+./app/services/ops_executor.py:284:                    + "Nexa: no provider for this project — cannot read deployment status. "
+./app/services/ops_executor.py:292:            return (hdr + f"**Nexa Ops — status**\n{sanitize_log_text(raw, 2800)}")[:10_000]
+./app/services/ops_executor.py:297:                body = "Nexa Ops — worker status unknown (no heartbeat on this host). See `/dev health`."
+./app/services/ops_executor.py:299:                body = f"**Nexa Ops — health**\n{sanitize_log_text(h, 1200)}"
+./app/services/ops_executor.py:320:                    return "Nexa: no provider for this project; cannot use provider logs."
+./app/services/ops_executor.py:335:                        f"🚀 **Nexa Ops — {label} deploy (dry run)**\n\n**Project:** {proj.display_name} "
+./app/services/ops_executor.py:345:                return "Nexa: provider missing for this project (cannot run)."
+./app/services/ops_executor.py:352:                    "Nexa: the `railway` CLI is not on PATH for the worker. Install and log in, or switch provider."
+./app/services/ops_executor.py:364:        return "Something went wrong while executing this action. Check logs or try again in Nexa."
+./app/services/ops_executor.py:365:    return f"Nexa: unhandled op `{action_name}`."
+./app/services/permission_resume_execution.py:113:            "No pending action stored for this permission — ask Nexa again for what you wanted to run."
+./app/services/permission_resume_execution.py:155:            "That host action cannot be resumed anymore — ask Nexa again with a supported request."
+./app/services/telegram_memory_commands.py:29:    return """Nexa memory files (repo paths: `docs/development/soul.md`, `docs/development/memory.md`):
+./app/services/telegram_memory_commands.py:70:        "Nexa memory status:",
+./app/services/access_permissions.py:149:    }.get(s, "Scoped local access via Nexa tools.")
+./app/services/access_permissions.py:580:                f"(risk >= {required_risk}). Use /permissions or ask Nexa to request access.",
+./app/services/access_permissions.py:892:        "I can help set up broader access, but Nexa still scopes work to approved folders and "
+./app/services/nexa_bootstrap.py:30:MARKER = "# ——— Nexa bootstrap (defaults) ———"
+./app/services/nexa_bootstrap.py:469:        print("Nexa recommends Python 3.10+.\n", flush=True)
+./app/services/nexa_bootstrap.py:476:            "Nexa: .env refreshed from template (existing API keys/tokens kept).\n",
+./app/services/nexa_bootstrap.py:480:        print("Nexa: .env was created. NEXA_SECRET_KEY is in the file (value not shown).\n", flush=True)
+./app/services/nexa_bootstrap.py:482:        print("Nexa: .env already exists; not overwriting (re-run with --force-env to refresh).\n", flush=True)
+./app/services/nexa_bootstrap.py:485:        print("Nexa: venv and requirements look good.\n", flush=True)
+./app/services/nexa_bootstrap.py:488:            f"Nexa: venv step: {s}. If needed: python3 -m venv .venv && .venv/bin/pip install -r requirements.txt",
+./app/services/nexa_bootstrap.py:512:        print("Nexa: run_everything.sh may still be building. Re-run or check: docker compose ps\n", flush=True)
+./app/services/nexa_bootstrap.py:517:            "Nexa: API not healthy yet. When the stack is up, check http://127.0.0.1:8000/api/v1/health and set TELEGRAM_BOT_TOKEN in .env if needed.\n",
+./app/services/setup/legacy_reference_policy.py:14:    {"pattern": "Nexa", "path_contains": "tests/test_openclaw", "classification": "allowed", "severity": "allowed"},
+./app/services/setup/legacy_reference_policy.py:15:    {"pattern": "OpenClaw", "path_contains": "docs/OPENCLAW", "classification": "allowed_parity_doc", "severity": "allowed"},
+./app/services/setup/legacy_reference_policy.py:17:    {"pattern": "Nexa", "path_contains": "web/", "classification": "must_replace_ui", "severity": "operator_visible"},
+./app/services/setup/legacy_reference_policy.py:18:    {"pattern": "ClawHub", "path_contains": "web/", "classification": "must_replace_ui", "severity": "critical"},
+./app/services/setup/legacy_reference_policy.py:19:    {"pattern": "Nexa", "path_contains": "aethos_cli/", "classification": "must_replace_operator_surface", "severity": "operator_visible"},
+./app/services/setup/branding_purge.py:12:FORBIDDEN_USER_FACING = ("OpenHub", "openhub", "ClawHub", "clawhub")
+./app/services/setup/branding_purge.py:22:ALLOWED_README_OPENCLAW = re.compile(r"Inspired by OpenClaw", re.I)
+./app/services/setup/branding_purge.py:61:            if "OpenClaw" in text or "openclaw" in text:
+./app/services/setup/branding_purge.py:64:                        violations.append({"path": rel, "term": "OpenClaw"})
+./app/services/setup/branding_convergence_final.py:27:            "disallowed_operator_visible": ["Nexa", "OpenClaw", "ClawHub", "OpenHub"],
+./app/services/setup/setup_branding_convergence.py:31:            "disallowed_visible": ["Nexa wizard", "OpenClaw setup", "numbered developer wizard"],
+./app/services/setup/ui_branding_purge_final.py:11:USER_FACING_NEXA_PATTERNS = ("Nexa ", " Nexa", "Nexa's", "the Nexa", "Open Nexa", "Back to Nexa")
+./app/services/setup/ui_branding_purge_final.py:42:        for term in ("ClawHub", "OpenHub"):
+./app/services/memory_preferences.py:209:            "Nexa’s creator profile in soul.md: he/him. Use he/him for that person when the question is about Raya, not a gender guess from the name."
+./app/services/scheduler/worker.py:4:"""Execute a stored scheduler job through :class:`~app.services.gateway.runtime.NexaGateway`."""
+./app/services/scheduler/worker.py:9:from app.models.nexa_scheduler_job import NexaSchedulerJob
+./app/services/scheduler/worker.py:11:from app.services.gateway.runtime import NexaGateway
+./app/services/scheduler/worker.py:20:        row = db.get(NexaSchedulerJob, job_id)
+./app/services/scheduler/worker.py:40:            NexaGateway().handle_message(gctx, text, db=db)
+./app/services/scheduler/service.py:4:"""CRUD + APScheduler registration for :class:`~app.models.nexa_scheduler_job.NexaSchedulerJob`."""
+./app/services/scheduler/service.py:16:from app.models.nexa_scheduler_job import NexaSchedulerJob
+./app/services/scheduler/service.py:25:    rows = list(db.scalars(select(NexaSchedulerJob).where(NexaSchedulerJob.enabled.is_(True))))
+./app/services/scheduler/service.py:54:class NexaSchedulerService:
+./app/services/scheduler/service.py:60:                select(NexaSchedulerJob)
+./app/services/scheduler/service.py:61:                .where(NexaSchedulerJob.user_id == user_id)
+./app/services/scheduler/service.py:62:                .order_by(NexaSchedulerJob.created_at.desc())
+./app/services/scheduler/service.py:89:    ) -> NexaSchedulerJob:
+./app/services/scheduler/service.py:91:        row = NexaSchedulerJob(
+./app/services/scheduler/service.py:108:        row = db.get(NexaSchedulerJob, job_id)
+./app/services/scheduler/service.py:121:__all__ = ["NexaSchedulerService", "register_apscheduler_jobs_from_db"]
+./app/services/scheduler/__init__.py:9:    NexaSchedulerService,
+./app/services/scheduler/__init__.py:13:__all__ = ["NexaSchedulerService", "register_apscheduler_jobs_from_db"]
+./app/services/scheduler/dev_jobs.py:13:from app.models.nexa_scheduler_job import NexaSchedulerJob
+./app/services/scheduler/dev_jobs.py:15:from app.services.gateway.runtime import NexaGateway
+./app/services/scheduler/dev_jobs.py:57:def execute_dev_mission_job(db: Session, row: NexaSchedulerJob) -> bool:
+./app/services/scheduler/dev_jobs.py:80:    NexaGateway().handle_message(gctx, "", db=db)
+./app/services/execution_loop.py:281:    Minimal synchronous multi-step runner (light NexaForge / Lobster-style slice).
+./app/services/cli_backends.py:5:Explicit CLI backend registry (OpenClaw-style): resolve ``vercel``, ``gh``, etc. to concrete binaries.
+./app/services/agents/long_running.py:19:from app.models.long_running_session import NexaLongRunningSession
+./app/services/agents/long_running.py:150:) -> NexaLongRunningSession:
+./app/services/agents/long_running.py:156:        select(NexaLongRunningSession).where(
+./app/services/agents/long_running.py:157:            NexaLongRunningSession.user_id == uid,
+./app/services/agents/long_running.py:158:            NexaLongRunningSession.session_key == sk,
+./app/services/agents/long_running.py:164:        row = NexaLongRunningSession(
+./app/services/agents/long_running.py:192:def list_db_sessions(db: Session, *, user_id: str | None = None, active_only: bool = True) -> list[NexaLongRunningSession]:
+./app/services/agents/long_running.py:193:    q = select(NexaLongRunningSession).order_by(NexaLongRunningSession.updated_at.desc())
+./app/services/agents/long_running.py:195:        q = q.where(NexaLongRunningSession.user_id == user_id.strip())
+./app/services/agents/long_running.py:197:        q = q.where(NexaLongRunningSession.active.is_(True))
+./app/services/agents/long_running.py:205:        db.scalars(select(NexaLongRunningSession).where(NexaLongRunningSession.active.is_(True))).all()
+./app/services/agents/long_running.py:239:                from app.services.gateway.runtime import NexaGateway
+./app/services/agents/long_running.py:251:                NexaGateway().handle_message(
+./app/services/agents/agent_selection.py:10:from app.services.tasks.unified_task import NexaTask
+./app/services/agents/agent_selection.py:13:def select_best_agent(task: NexaTask, agents: list[dict[str, Any]]) -> dict[str, Any] | None:
+./app/services/conversation_context_service.py:268:    ctx.summary = "Context cleared in Nexa. The next message starts fresh (no prior topic or agent handoff)."
+./app/services/conversation_context_service.py:333:        return "Nexa product"
+./app/services/conversation_context_service.py:345:        return "Nexa autonomous development loop"
+./app/services/conversation_context_service.py:497:        from app.models.project_context import NexaWorkspaceProject
+./app/services/conversation_context_service.py:499:        row = db.get(NexaWorkspaceProject, int(apid))
+./app/services/user_api_keys.py:200:    lines: list[str] = ["AethOS / Nexa API keys (your account)", ""]
+./app/services/agent_status_text.py:63:    return "idle — ask Nexa to run a development task or improve this code."
+./app/services/agent_status_text.py:106:    out: list[str] = ["Nexa agent status:", ""]
+./app/services/nexa_workspace_project_registry.py:4:"""User-scoped Nexa workspace projects — labeled folders inside approved roots (no scanning)."""
+./app/services/nexa_workspace_project_registry.py:16:from app.models.project_context import NexaWorkspaceProject
+./app/services/nexa_workspace_project_registry.py:116:) -> NexaWorkspaceProject:
+./app/services/nexa_workspace_project_registry.py:125:        select(NexaWorkspaceProject).where(
+./app/services/nexa_workspace_project_registry.py:126:            NexaWorkspaceProject.owner_user_id == owner_user_id[:64],
+./app/services/nexa_workspace_project_registry.py:127:            NexaWorkspaceProject.path_normalized == pn,
+./app/services/nexa_workspace_project_registry.py:132:    row = NexaWorkspaceProject(
+./app/services/nexa_workspace_project_registry.py:145:def list_workspace_projects(db: Session, owner_user_id: str, *, limit: int = 50) -> list[NexaWorkspaceProject]:
+./app/services/nexa_workspace_project_registry.py:147:        select(NexaWorkspaceProject)
+./app/services/nexa_workspace_project_registry.py:148:        .where(NexaWorkspaceProject.owner_user_id == owner_user_id[:64])
+./app/services/nexa_workspace_project_registry.py:149:        .order_by(NexaWorkspaceProject.name.asc())
+./app/services/nexa_workspace_project_registry.py:155:def get_workspace_project(db: Session, owner_user_id: str, project_id: int) -> NexaWorkspaceProject | None:
+./app/services/nexa_workspace_project_registry.py:156:    row = db.get(NexaWorkspaceProject, project_id)
+./app/services/nexa_workspace_project_registry.py:162:def remove_workspace_project(db: Session, owner_user_id: str, project_id: int) -> NexaWorkspaceProject | None:
+./app/services/nexa_workspace_project_registry.py:187:) -> NexaWorkspaceProject | None:
+./app/services/nexa_workspace_project_registry.py:229:) -> NexaWorkspaceProject | None:
+./app/services/nexa_workspace_project_registry.py:261:    Does not elevate permissions — only selects among existing NexaWorkspaceProject rows.
+./app/services/nexa_workspace_project_registry.py:271:        return "Cleared active Nexa project. Paths default to the host work root unless you specify."
+./app/services/idea_project_service.py:4:"""Create Nexa projects from idea intake and optional repo-scaffold jobs."""
+./app/services/idea_project_service.py:56:        f"**Next:** ask Nexa to **validate strategy** for `{p.key}`"
+./app/services/idea_project_service.py:98:        f"**Action: create_repo** (requires approval — Nexa)\n\n"
+./app/services/idea_project_service.py:139:            instruction=f"Create {target}, git init, README, and register project `{k}` in Nexa.",
+./app/services/idea_project_service.py:151:        f"Create new project? (Nexa)\n\n"
+./app/services/permissions/consents.py:16:from app.models.openclaw_store import NexaConsentGrant
+./app/services/permissions/consents.py:36:def _row_to_record(row: NexaConsentGrant) -> ConsentRecord:
+./app/services/permissions/consents.py:68:        row = NexaConsentGrant(
+./app/services/permissions/consents.py:88:        row = db.get(NexaConsentGrant, consent_id)
+./app/services/permissions/consents.py:105:            select(NexaConsentGrant).where(
+./app/services/permissions/consents.py:106:                NexaConsentGrant.scope == scope,
+./app/services/permissions/consents.py:107:                NexaConsentGrant.resource == resource,
+./app/services/permissions/consents.py:124:        for row in db.scalars(select(NexaConsentGrant)).all():
+./app/services/dev_runtime/planner.py:10:from app.models.dev_runtime import NexaDevWorkspace
+./app/services/dev_runtime/planner.py:15:    workspace: NexaDevWorkspace,
+./app/services/dev_runtime/service.py:16:from app.models.dev_runtime import NexaDevRun, NexaDevStep
+./app/services/dev_runtime/service.py:160:    run = NexaDevRun(
+./app/services/dev_runtime/service.py:242:            row = NexaDevStep(
+./app/services/dev_runtime/service.py:530:            row = NexaDevStep(
+./app/services/dev_runtime/git_tools.py:13:from app.models.dev_runtime import NexaDevWorkspace
+./app/services/dev_runtime/git_tools.py:250:def prepare_pr_summary(workspace: NexaDevWorkspace, run_result: dict[str, Any] | None) -> dict[str, Any]:
+./app/services/dev_runtime/github_pr.py:59:    title = str(summary.get("title") or goal or "Nexa dev run")[:240]
+./app/services/dev_runtime/github_pr.py:60:    body = str(summary.get("body") or "Automated PR from Nexa dev mission.")[:60_000]
+./app/services/dev_runtime/github_pr.py:76:            "User-Agent": "Nexa-Next-Phase46",
+./app/services/dev_runtime/gateway_hint.py:13:from app.models.dev_runtime import NexaDevWorkspace
+./app/services/dev_runtime/gateway_hint.py:40:        select(func.count()).select_from(NexaDevWorkspace).where(NexaDevWorkspace.user_id == user_id)
+./app/services/dev_runtime/coding_agents/registry.py:46:            from app.services.tasks.unified_task import NexaTask
+./app/services/dev_runtime/coding_agents/registry.py:63:            nt = NexaTask(
+./app/services/dev_runtime/step_record.py:4:"""Persist NexaDevStep rows with Phase 25 iteration metadata."""
+./app/services/dev_runtime/step_record.py:13:from app.models.dev_runtime import NexaDevStep
+./app/services/dev_runtime/step_record.py:33:) -> NexaDevStep:
+./app/services/dev_runtime/step_record.py:34:    row = NexaDevStep(
+./app/services/dev_runtime/steering.py:4:"""Cooperative pause/cancel checks for long dev runs (OpenClaw-style run steering)."""
+./app/services/dev_runtime/steering.py:12:from app.models.dev_runtime import NexaDevRun
+./app/services/dev_runtime/steering.py:33:        run = db.get(NexaDevRun, run_id)
+./app/services/dev_runtime/run_dev_gateway.py:67:    ``scheduled_dev_mission`` JSON payload so dev execution stays inside :meth:`NexaGateway.handle_message`.
+./app/services/dev_runtime/run_dev_gateway.py:79:    from app.services.tasks.unified_task import NexaTask
+./app/services/dev_runtime/run_dev_gateway.py:89:    task = NexaTask.from_scheduler_dev_payload(payload, job_id=str(jid) if jid else None)
+./app/services/dev_runtime/workspace.py:15:from app.models.dev_runtime import NexaDevWorkspace
+./app/services/dev_runtime/workspace.py:59:) -> NexaDevWorkspace:
+./app/services/dev_runtime/workspace.py:62:    row = NexaDevWorkspace(
+./app/services/dev_runtime/workspace.py:77:def get_workspace(db: Session, user_id: str, workspace_id: str) -> NexaDevWorkspace | None:
+./app/services/dev_runtime/workspace.py:78:    row = db.get(NexaDevWorkspace, workspace_id)
+./app/services/dev_runtime/workspace.py:88:) -> NexaDevWorkspace | None:
+./app/services/dev_runtime/workspace.py:104:        select(NexaDevWorkspace).where(
+./app/services/dev_runtime/workspace.py:105:            NexaDevWorkspace.user_id == uid,
+./app/services/dev_runtime/workspace.py:106:            NexaDevWorkspace.repo_path == pn,
+./app/services/dev_runtime/workspace.py:112:    row = NexaDevWorkspace(
+./app/services/dev_runtime/workspace.py:127:def list_workspaces(db: Session, user_id: str, *, limit: int = 100) -> list[NexaDevWorkspace]:
+./app/services/dev_runtime/workspace.py:131:        select(NexaDevWorkspace)
+./app/services/dev_runtime/workspace.py:132:        .where(NexaDevWorkspace.user_id == user_id)
+./app/services/dev_runtime/workspace.py:133:        .order_by(NexaDevWorkspace.created_at.desc())
+./app/services/operator_orchestration_intro.py:5:OpenClaw-style proactive copy when operator mode is on (enhanced orchestration slice).
+./app/services/extensions/__init__.py:4:"""Dynamic imports for optional Nexa extension packages (``nexa_ext.*``)."""
+./app/services/dev_tools/__init__.py:4:"""Pluggable dev tool connectors (IDE, CLI agent, manual) for Nexa development execution."""
+./app/services/dev_tools/formatting.py:10:    lines = ["Nexa Dev tools:\n"]
+./app/services/startup_ensure.py:64:            "Nexa: appended NEXA_SECRET_KEY to .env. Add TELEGRAM_BOT_TOKEN if needed. "
+./app/services/startup_ensure.py:75:            "Nexa: created minimal .env with NEXA_SECRET_KEY. Run python scripts/nexa_bootstrap.py "
+./app/services/startup_ensure.py:83:            "Nexa: NEXA_SECRET_KEY set in-process only (no writable .env in project root). "
+./app/services/startup_ensure.py:106:        print(f"Nexa ({component}): {t}\n", flush=True)
+./app/services/startup_ensure.py:108:    print(f"Nexa ({component}) — configuration warnings (see also /dev doctor in Telegram):\n{t}\n", flush=True)
+./app/services/startup_ensure.py:134:        "Nexa: .venv not found. For a one-command host setup, run: python scripts/nexa_bootstrap.py\n"
+./app/services/startup_ensure.py:151:        print(f"Nexa: missing optional import — {m}  (only needed for some local scripts)\n", flush=True)
+./app/services/aethos_differentiation.py:20:    """Single payload for why AethOS differs from OpenClaw — all runtime-backed."""
+./app/services/llm_key_resolution.py:61:    """Who can pay for LLM calls for this Nexa user (BYOK first, then server env)."""
+./app/services/channel_gateway/slack_blocks.py:4:"""Slack Block Kit for permission cards (interactions call Nexa grant/deny, not raw URLs)."""
+./app/services/channel_gateway/slack_blocks.py:31:    reason = (pr.get("reason") or pr.get("message") or "Nexa needs permission for this action.").strip()
+./app/services/channel_gateway/apple_messages_adapter.py:32:    """Stable Nexa id ``am_<hex>`` (distinct from ``em_*``, ``sms_*``, …)."""
+./app/services/channel_gateway/sms_adapter.py:31:    """Stable Nexa id ``sms_<digits>`` (distinct from ``wa_*``, ``tg_*``, …)."""
+./app/services/channel_gateway/slack_adapter.py:20:    """Stable Nexa id for a Slack user (distinct from `tg_*`)."""
+./app/services/channel_gateway/email_adapter.py:33:    Stable Nexa id for an email address (distinct from ``tg_*`` / ``slack_*`` / ``web_*``).
+./app/services/channel_gateway/email_adapter.py:94:        subject: str = "Nexa",
+./app/services/channel_gateway/email_adapter.py:126:        self.send_message(db, user_id, body.strip(), subject="Nexa — permission required")
+./app/services/channel_gateway/whatsapp_adapter.py:23:    """Stable Nexa id: ``wa_<digits>`` (distinct from ``tg_*``, ``em_*``, …)."""
+./app/services/channel_gateway/router.py:22:    Single entry for normalized channel payloads into Nexa core (delegates to web_chat_service).
+./app/services/channel_gateway/email_links.py:45:        "Nexa needs your approval. Open one of the following links in your browser:\n\n"
+./app/services/channel_gateway/identity.py:23:    Resolve Nexa `user_id` for a channel-scoped identity.
+./app/services/channel_gateway/base.py:13:    """Shared contract for bringing channel-specific updates into Nexa core."""
+./app/services/channel_gateway/base.py:19:        """Map channel identity to Nexa `app_user_id` (e.g. link / upsert)."""
+./app/services/channel_gateway/telegram_adapter.py:186:    # Phase 71 — ClawHub marketplace commands (mutations require owner role).
+./app/services/cleanup/url_scheme_impostors.py:11:from app.models.nexa_next_runtime import NexaArtifact, NexaMission, NexaMissionTask
+./app/services/cleanup/url_scheme_impostors.py:21:        delete(NexaMissionTask).where(func.lower(NexaMissionTask.agent_handle).in_(["http", "https"]))
+./app/services/cleanup/url_scheme_impostors.py:25:    all_mids = {x for x in db.scalars(select(NexaMission.id)).all()}
+./app/services/cleanup/url_scheme_impostors.py:26:    covered = {x for x in db.scalars(select(NexaMissionTask.mission_id).distinct()).all()}
+./app/services/cleanup/url_scheme_impostors.py:31:        ar = db.execute(delete(NexaArtifact).where(NexaArtifact.mission_id.in_(orphan_ids)))
+./app/services/cleanup/url_scheme_impostors.py:33:        mr = db.execute(delete(NexaMission).where(NexaMission.id.in_(orphan_ids)))
+./app/services/cleanup/retention.py:4:"""Delete aged Nexa Next runtime rows (artifacts, missions, audit calls)."""
+./app/services/cleanup/retention.py:14:from app.models.nexa_next_runtime import NexaArtifact, NexaExternalCall, NexaMission, NexaMissionTask
+./app/services/cleanup/retention.py:41:        db.scalars(select(NexaMission.id).where(NexaMission.created_at < cutoff)).all()
+./app/services/cleanup/retention.py:47:    db.execute(delete(NexaArtifact).where(NexaArtifact.mission_id.in_(mids)))
+./app/services/cleanup/retention.py:48:    db.execute(delete(NexaMissionTask).where(NexaMissionTask.mission_id.in_(mids)))
+./app/services/cleanup/retention.py:49:    db.execute(delete(NexaMission).where(NexaMission.id.in_(mids)))
+./app/services/cleanup/retention.py:52:    ec = db.execute(delete(NexaExternalCall).where(NexaExternalCall.created_at < cutoff))
+./app/services/autonomy/self_improve.py:15:from app.models.autonomy import NexaTaskFeedback
+./app/services/autonomy/self_improve.py:44:                    select(NexaTaskFeedback.meta_json)
+./app/services/autonomy/self_improve.py:45:                    .where(NexaTaskFeedback.user_id == uid)
+./app/services/autonomy/self_improve.py:46:                    .order_by(NexaTaskFeedback.created_at.desc())
+./app/services/autonomy/feedback.py:14:from app.models.autonomy import NexaTaskFeedback
+./app/services/autonomy/feedback.py:25:) -> NexaTaskFeedback:
+./app/services/autonomy/feedback.py:26:    row = NexaTaskFeedback(
+./app/services/autonomy/cost_intel.py:10:from app.services.tasks.unified_task import NexaTask
+./app/services/autonomy/cost_intel.py:13:def predict_cost(task: NexaTask, *, provider: str = "anthropic") -> dict[str, Any]:
+./app/services/autonomy/intelligence.py:14:from app.services.tasks.unified_task import NexaTask
+./app/services/autonomy/intelligence.py:70:    task: NexaTask,
+./app/services/autonomy/decision.py:4:"""Phase 44A — autonomous decision loop: signals → prioritized NexaTask candidates → persistence."""
+./app/services/autonomy/decision.py:16:from app.models.autonomy import NexaAutonomousTask, NexaAutonomyDecisionLog
+./app/services/autonomy/decision.py:17:from app.models.dev_runtime import NexaDevRun
+./app/services/autonomy/decision.py:18:from app.models.nexa_next_runtime import NexaMission
+./app/services/autonomy/decision.py:24:from app.services.tasks.unified_task import NexaTask
+./app/services/autonomy/decision.py:29:        db.scalars(select(NexaDevRun.user_id).order_by(desc(NexaDevRun.created_at)).limit(120)).all()
+./app/services/autonomy/decision.py:46:        select(NexaAutonomousTask).where(
+./app/services/autonomy/decision.py:47:            NexaAutonomousTask.user_id == user_id,
+./app/services/autonomy/decision.py:48:            NexaAutonomousTask.title == t,
+./app/services/autonomy/decision.py:49:            NexaAutonomousTask.state == "pending",
+./app/services/autonomy/decision.py:95:                select(NexaDevRun)
+./app/services/autonomy/decision.py:96:                .where(NexaDevRun.user_id == uid, NexaDevRun.status.in_(("failed", "blocked")))
+./app/services/autonomy/decision.py:97:                .order_by(desc(NexaDevRun.created_at))
+./app/services/autonomy/decision.py:103:                select(NexaMission)
+./app/services/autonomy/decision.py:104:                .where(NexaMission.user_id == uid, NexaMission.status == "running")
+./app/services/autonomy/decision.py:105:                .order_by(desc(NexaMission.created_at))
+./app/services/autonomy/decision.py:112:        candidates: list[NexaTask] = []
+./app/services/autonomy/decision.py:115:                NexaTask(
+./app/services/autonomy/decision.py:126:                NexaTask(
+./app/services/autonomy/decision.py:139:                NexaTask(
+./app/services/autonomy/decision.py:151:            nt = NexaTask(
+./app/services/autonomy/decision.py:166:            log = NexaAutonomyDecisionLog(
+./app/services/autonomy/decision.py:184:            row = NexaAutonomousTask(
+./app/services/autonomy/decision.py:208:        log = NexaAutonomyDecisionLog(
+./app/services/autonomy/prioritize.py:10:from app.services.tasks.unified_task import NexaTask
+./app/services/autonomy/prioritize.py:13:def prioritize_tasks(tasks: list[NexaTask], *, user_id: str | None = None) -> list[NexaTask]:
+./app/services/autonomy/prioritize.py:34:    def score(t: NexaTask) -> tuple[int, int, int]:
+./app/services/autonomy/goal_engine.py:16:from app.models.autonomy import NexaAutonomousTask
+./app/services/autonomy/goal_engine.py:25:        select(NexaAutonomousTask).where(
+./app/services/autonomy/goal_engine.py:26:            NexaAutonomousTask.user_id == user_id,
+./app/services/autonomy/goal_engine.py:27:            NexaAutonomousTask.title == t,
+./app/services/autonomy/goal_engine.py:28:            NexaAutonomousTask.state == "pending",
+./app/services/autonomy/goal_engine.py:61:        row = NexaAutonomousTask(
+./app/services/autonomy/goal_engine.py:84:            child = NexaAutonomousTask(
+./app/services/autonomy/rate_control.py:14:from app.models.autonomy import NexaAutonomousTask
+./app/services/autonomy/rate_control.py:34:                    .select_from(NexaAutonomousTask)
+./app/services/autonomy/rate_control.py:35:                    .where(NexaAutonomousTask.user_id == uid, NexaAutonomousTask.state == "pending")
+./app/services/autonomy/safety.py:9:from app.models.autonomy import NexaAutonomousTask
+./app/services/autonomy/safety.py:18:    task_row: NexaAutonomousTask | None = None,
+./app/services/autonomy/executor.py:4:"""Phase 45A — drain pending autonomous tasks through :class:`~app.services.gateway.runtime.NexaGateway`."""
+./app/services/autonomy/executor.py:16:from app.models.autonomy import NexaAutonomousTask
+./app/services/autonomy/executor.py:24:from app.services.gateway.runtime import NexaGateway
+./app/services/autonomy/executor.py:26:from app.services.tasks.unified_task import NexaTask
+./app/services/autonomy/executor.py:29:def get_pending_tasks(db: Session, user_id: str, *, limit: int) -> list[NexaAutonomousTask]:
+./app/services/autonomy/executor.py:35:            select(NexaAutonomousTask)
+./app/services/autonomy/executor.py:36:            .where(NexaAutonomousTask.user_id == uid, NexaAutonomousTask.state == "pending")
+./app/services/autonomy/executor.py:37:            .order_by(desc(NexaAutonomousTask.priority), NexaAutonomousTask.created_at)
+./app/services/autonomy/executor.py:54:def build_autonomy_gateway_context(row: NexaAutonomousTask) -> GatewayContext:
+./app/services/autonomy/executor.py:62:    task = NexaTask(
+./app/services/autonomy/executor.py:116:    gw = NexaGateway()
+./app/services/autonomy/executor.py:250:            select(NexaAutonomousTask.user_id)
+./app/services/autonomy/executor.py:251:            .where(NexaAutonomousTask.state == "pending")
+./app/services/agent_orchestrator.py:601:    from app.services.gateway.runtime import NexaGateway
+./app/services/agent_orchestrator.py:637:        body = NexaGateway().compose_llm_reply(
+./app/services/agent_orchestrator.py:648:    body = NexaGateway().compose_llm_reply(
+./app/services/agent_orchestrator.py:986:    from app.services.gateway.runtime import NexaGateway
+./app/services/agent_orchestrator.py:993:    body = NexaGateway().compose_llm_reply(
+./app/services/workspace_resolver.py:23:# Persisted under NexaUserSettings.ui_preferences (Phase 35).
+./app/services/external_execution_session.py:91:    """After Nexa prompts for access/prefs, remember so the next user turn can resume."""
+./app/services/external_execution_session.py:674:    explicitly claims local CLI auth and asks Nexa to verify on-host.
+./app/services/response_engine.py:4:"""Nexa-facing entry points for behavior composition (wraps legacy helpers; Phase 51)."""
+./app/services/web_chat_service.py:63:    """Map :meth:`NexaGateway.handle_message` dict to web reply text and intent."""
+./app/services/web_chat_service.py:857:            from app.services.gateway.runtime import NexaGateway
+./app/services/web_chat_service.py:886:            gw_out = NexaGateway().handle_message(gctx, tstrip, db=db)
+./app/services/custom_agent_templates.py:17:            "You are the user's financial-advisor style assistant inside Nexa. Help with personal "
+./app/services/custom_agent_templates.py:29:            "You are a fitness and wellness coach style assistant in Nexa. Suggest general exercise "
+./app/services/custom_agent_templates.py:39:            "You are a business strategy sparring partner in Nexa. Help clarify goals, options, and "
+./app/services/custom_agent_templates.py:49:            "You are a writing and editing helper in Nexa. Improve clarity, tone, and structure. If "
+./app/services/custom_agent_templates.py:58:            "You are a travel planning helper in Nexa. Offer itinerary ideas, packing tips, and "
+./app/services/custom_agent_templates.py:60:            "Nexa adds that later; say so if asked for real-time booking access."
+./app/services/custom_agent_templates.py:68:            "You explain general legal and policy concepts in Nexa, in plain language. You are not a "
+./app/services/custom_agent_templates.py:78:            "You act as a **legal research and drafting-support** assistant inside Nexa. You are **not** a "
+./app/services/custom_agent_templates.py:89:            "You act as a **legal research and drafting-support** assistant inside Nexa. You are **not** a "
+./app/services/custom_agent_templates.py:109:            f"You are a personal assistant in Nexa named {label[:80]!r} (in spirit). Be helpful, "
+./app/services/custom_agent_templates.py:111:            "If asked for such actions, say Nexa can route those to other agents when the user uses "
+./app/services/activity_ledger/ledger.py:14:from app.models.openclaw_store import NexaActivityLedgerEvent
+./app/services/activity_ledger/ledger.py:29:            select(NexaActivityLedgerEvent)
+./app/services/activity_ledger/ledger.py:30:            .order_by(NexaActivityLedgerEvent.id.desc())
+./app/services/activity_ledger/ledger.py:60:        row = NexaActivityLedgerEvent(
+./app/services/activity_ledger/ledger.py:86:            select(NexaActivityLedgerEvent).order_by(NexaActivityLedgerEvent.id.asc())
+./app/services/activity_ledger/ledger.py:120:        for row in db.scalars(select(NexaActivityLedgerEvent)).all():
+./app/services/operator_shell_cli.py:8:then ``/bin/bash``. Argv is built only from Nexa allowlists — never raw user shell strings.
+./app/services/operator_shell_cli.py:32:    Re-apply the same PATH Nexa built in Python as the first line of the -c script.
+./app/services/user_settings/service.py:4:"""Load and persist per-user Nexa settings (privacy mode + UI preferences)."""
+./app/services/user_settings/service.py:13:from app.models.user_settings import NexaUserSettings
+./app/services/user_settings/service.py:20:        row = db.get(NexaUserSettings, user_id)
+./app/services/user_settings/service.py:46:    row = db.get(NexaUserSettings, user_id)
+./app/services/user_settings/service.py:74:    row = db.get(NexaUserSettings, user_id)
+./app/services/user_settings/service.py:76:        row = NexaUserSettings(user_id=user_id, privacy_mode=None, ui_preferences={})
+./app/services/agent_runtime/tool_registry.py:76:        "- To use a tool, request a governed tool call via the Nexa API / agent runtime.\n"
+./app/services/nexa_safety_policy.py:25:POLICY_TEXT = """Nexa privileged execution policy (immutable core):
+./app/services/workers/loop.py:16:from app.models.nexa_next_runtime import NexaMissionTask
+./app/services/workers/loop.py:86:        row = db.get(NexaMissionTask, pk)
+./app/services/workers/loop.py:105:        row = db.get(NexaMissionTask, pk)
+./app/services/workers/loop.py:182:            row = db.get(NexaMissionTask, pk)
+./app/services/mission_control/orchestration_runtime_snapshot.py:4:"""Mission Control JSON snapshot slice for ``aethos.json`` orchestration (OpenClaw parity)."""
+./app/services/mission_control/db_purge.py:24:if that file is your ``DATABASE_URL``; use the API purge below to clear one Nexa user without
+./app/services/mission_control/operator_language_guide.py:22:AVOID_TERMS = ("Nexa", "OpenClaw", "ClawHub", "OpenHub", "white screen", "internal server error")
+./app/services/mission_control/strategic_differentiation.py:4:"""Strategic differentiation beyond OpenClaw (Phase 4 Step 1)."""
+./app/services/mission_control/identity_convergence_audit.py:29:            "disallowed_in_ui": ["Nexa", "OpenHub", "ClawHub", "legacy onboarding labels"],
+./app/services/mission_control/export_import.py:4:"""Export / import Nexa Next mission bundles (Phase 20)."""
+./app/services/mission_control/export_import.py:15:from app.models.nexa_next_runtime import NexaArtifact, NexaMission, NexaMissionTask
+./app/services/mission_control/export_import.py:23:    m = db.get(NexaMission, mission_id)
+./app/services/mission_control/export_import.py:27:    tasks = db.scalars(select(NexaMissionTask).where(NexaMissionTask.mission_id == mission_id)).all()
+./app/services/mission_control/export_import.py:28:    arts = db.scalars(select(NexaArtifact).where(NexaArtifact.mission_id == mission_id)).all()
+./app/services/mission_control/export_import.py:74:        NexaMission(
+./app/services/mission_control/export_import.py:88:            NexaMissionTask(
+./app/services/mission_control/export_import.py:104:            NexaArtifact(
+./app/services/mission_control/nexa_next_state.py:17:from app.models.autonomy import NexaAutonomousTask, NexaAutonomyDecisionLog, NexaTaskFeedback
+./app/services/mission_control/nexa_next_state.py:18:from app.models.dev_runtime import NexaDevRun, NexaDevWorkspace
+./app/services/mission_control/nexa_next_state.py:19:from app.models.long_running_session import NexaLongRunningSession
+./app/services/mission_control/nexa_next_state.py:20:from app.models.nexa_next_runtime import NexaArtifact, NexaExternalCall, NexaMission, NexaMissionTask
+./app/services/mission_control/nexa_next_state.py:21:from app.models.nexa_scheduler_job import NexaSchedulerJob
+./app/services/mission_control/nexa_next_state.py:385:    q = select(func.count()).select_from(NexaExternalCall).where(NexaExternalCall.blocked.is_(True))
+./app/services/mission_control/nexa_next_state.py:387:        q = q.where(NexaExternalCall.user_id == user_id)
+./app/services/mission_control/nexa_next_state.py:423:    q = select(NexaMission).order_by(NexaMission.created_at.desc())
+./app/services/mission_control/nexa_next_state.py:425:        q = q.where(NexaMission.user_id == user_id)
+./app/services/mission_control/nexa_next_state.py:449:        task_rows = db.scalars(select(NexaMissionTask).where(NexaMissionTask.mission_id.in_(mids))).all()
+./app/services/mission_control/nexa_next_state.py:515:                select(NexaArtifact)
+./app/services/mission_control/nexa_next_state.py:516:                .where(NexaArtifact.mission_id.in_(mids))
+./app/services/mission_control/nexa_next_state.py:517:                .order_by(NexaArtifact.created_at.desc())
+./app/services/mission_control/nexa_next_state.py:574:                select(NexaDevWorkspace)
+./app/services/mission_control/nexa_next_state.py:575:                .where(NexaDevWorkspace.user_id == user_id)
+./app/services/mission_control/nexa_next_state.py:576:                .order_by(NexaDevWorkspace.created_at.desc())
+./app/services/mission_control/nexa_next_state.py:592:                select(NexaDevRun)
+./app/services/mission_control/nexa_next_state.py:593:                .where(NexaDevRun.user_id == user_id)
+./app/services/mission_control/nexa_next_state.py:594:                .order_by(NexaDevRun.created_at.desc())
+./app/services/mission_control/nexa_next_state.py:650:                select(NexaLongRunningSession)
+./app/services/mission_control/nexa_next_state.py:651:                .where(NexaLongRunningSession.user_id == user_id)
+./app/services/mission_control/nexa_next_state.py:652:                .order_by(NexaLongRunningSession.updated_at.desc())
+./app/services/mission_control/nexa_next_state.py:672:                select(NexaSchedulerJob)
+./app/services/mission_control/nexa_next_state.py:673:                .where(NexaSchedulerJob.user_id == user_id)
+./app/services/mission_control/nexa_next_state.py:674:                .order_by(NexaSchedulerJob.created_at.desc())
+./app/services/mission_control/nexa_next_state.py:702:                select(NexaAutonomousTask)
+./app/services/mission_control/nexa_next_state.py:703:                .where(NexaAutonomousTask.user_id == user_id)
+./app/services/mission_control/nexa_next_state.py:704:                .order_by(NexaAutonomousTask.priority.desc(), NexaAutonomousTask.created_at.desc())
+./app/services/mission_control/nexa_next_state.py:745:                select(NexaAutonomyDecisionLog)
+./app/services/mission_control/nexa_next_state.py:746:                .where(NexaAutonomyDecisionLog.user_id == user_id)
+./app/services/mission_control/nexa_next_state.py:747:                .order_by(NexaAutonomyDecisionLog.created_at.desc())
+./app/services/mission_control/nexa_next_state.py:761:                select(NexaTaskFeedback)
+./app/services/mission_control/nexa_next_state.py:762:                .where(NexaTaskFeedback.user_id == user_id)
+./app/services/mission_control/nexa_next_state.py:763:                .order_by(NexaTaskFeedback.created_at.desc())
+./app/services/mission_control/nexa_next_state.py:790:        from app.services.tasks.unified_task import NexaTask
+./app/services/mission_control/nexa_next_state.py:800:            nt = NexaTask(
+./app/services/mission_control/nexa_next_state.py:818:                    .select_from(NexaAutonomousTask)
+./app/services/mission_control/nexa_next_state.py:819:                    .where(NexaAutonomousTask.user_id == user_id, NexaAutonomousTask.goal_id == gr.id)
+./app/services/mission_control/nexa_next_state.py:826:                    .select_from(NexaAutonomousTask)
+./app/services/mission_control/nexa_next_state.py:828:                        NexaAutonomousTask.user_id == user_id,
+./app/services/mission_control/nexa_next_state.py:829:                        NexaAutonomousTask.goal_id == gr.id,
+./app/services/mission_control/nexa_next_state.py:830:                        NexaAutonomousTask.state == "completed",
+./app/services/mission_control/runtime_cleanup_completion.py:22:        "nexa_next_state DB mission payload (OpenClaw parity — separate from orchestration truth)",
+./app/services/mission_control/read_model.py:4:"""Aggregate Mission Control dashboard data from existing Nexa services (no duplicate logic)."""
+./app/services/ops/ops_project_context.py:35:            return None, "Nexa: no default project. Run /projects or contact an admin."
+./app/services/ops/ops_project_context.py:43:        return None, f"Nexa: unknown project `{k}`.\n\nTry `/project add …` or pick one of: {keys}."
+./app/services/ops/ops_project_context.py:45:        return None, f"Nexa: project `{k}` is not available."
+./app/services/ops/ops_project_context.py:53:        return f"Nexa: project `{p.key}` has no `repo_path` in Nexa. Set it in the DB (or /project add)."
+./app/services/ops/ops_project_context.py:56:        return f"Nexa: project `{p.key}` repo path does not exist on the worker: `{path}`"
+./app/services/ops/providers/__init__.py:4:"""Nexa Ops — pluggable provider connectors (no shared cloud logic in ops_executor)."""
+./app/services/ops/providers/base.py:15:    Pluggable cloud / deploy backend for Nexa Ops. Fixed `argv` only (no user shell).
+./app/services/ops/providers/base.py:36:            return f"Nexa: provider error ({self.key}): {exc!s}"[:2500]
+./app/services/ops/providers/local_docker.py:126:                "Nexa: `local_docker` has no single-command rollback. Pin images or use your runbook."
+./app/services/ops/providers/local_docker.py:129:            return "Nexa: set env in `.env` on the host; not applied from chat."
+./app/services/ops/providers/local_docker.py:130:        return f"Nexa: action `{action_name}` is not available for the local_docker provider."
+./app/services/ops/__init__.py:4:"""Nexa Ops — provider registry and connectors live under this package."""
+./app/services/dev_orchestrator/formatting.py:27:    dname = getattr(project, "display_name", None) or getattr(project, "key", None) or "Nexa"
+./app/services/legacy_behavior_utils.py:6:Phase 36: user-facing entry is :class:`~app.services.gateway.runtime.NexaGateway`; this module
+./app/services/legacy_behavior_utils.py:7:remains the internal text composition layer. Prefer :meth:`~app.services.gateway.runtime.NexaGateway.compose_llm_reply`
+./app/services/skills/plugin_registry.py:90:            logger.warning("ClawHub install failed: %s (%s)", name, msg)
+./app/services/skills/registry_fallback.py:4:"""Offline / bundled marketplace catalog when the remote ClawHub registry is unreachable."""
+./app/services/skills/clawhub_client.py:4:"""ClawHub HTTP client (Phase 17) — search, metadata, download."""
+./app/services/skills/clawhub_client.py:16:from app.services.skills.clawhub_models import ClawHubSkillInfo
+./app/services/skills/clawhub_client.py:44:class ClawHubClient:
+./app/services/skills/clawhub_client.py:45:    """Async client for a ClawHub-compatible registry API."""
+./app/services/skills/clawhub_client.py:58:    def _parse_skill_info(self, data: dict[str, Any]) -> ClawHubSkillInfo:
+./app/services/skills/clawhub_client.py:87:        return ClawHubSkillInfo(
+./app/services/skills/clawhub_client.py:115:    ) -> list[ClawHubSkillInfo]:
+./app/services/skills/clawhub_client.py:164:    async def get_skill_info(self, name: str) -> ClawHubSkillInfo | None:
+./app/services/skills/clawhub_client.py:188:    async def list_popular(self, limit: int = 20) -> list[ClawHubSkillInfo]:
+./app/services/skills/clawhub_client.py:219:    async def list_featured(self, limit: int = 12) -> list[ClawHubSkillInfo]:
+./app/services/skills/clawhub_client.py:223:        a ClawHub registry that doesn't expose ``/skills/featured`` should expect
+./app/services/skills/clawhub_client.py:308:__all__ = ["ClawHubClient"]
+./app/services/skills/clawhub_models.py:4:"""Phase 17 — ClawHub marketplace models (remote catalog + local install manifest)."""
+./app/services/skills/clawhub_models.py:28:class ClawHubSkillInfo:
+./app/services/skills/clawhub_models.py:29:    """Remote skill metadata from ClawHub (best-effort mapping).
+./app/services/skills/clawhub_models.py:173:    "ClawHubSkillInfo",
+./app/services/skills/__init__.py:6:from app.services.skills.clawhub_client import ClawHubClient
+./app/services/skills/__init__.py:7:from app.services.skills.clawhub_models import ClawHubSkillInfo
+./app/services/skills/__init__.py:14:    "ClawHubClient",
+./app/services/skills/__init__.py:15:    "ClawHubSkillInfo",
+./app/services/skills/installer.py:4:"""Phase 17 — install / update / remove ClawHub skill packages (ZIP → skill.yaml → registry).
+./app/services/skills/installer.py:31:from app.services.skills.clawhub_client import ClawHubClient
+./app/services/skills/installer.py:60:        self.client = ClawHubClient()
+./app/services/skills/installer.py:104:        """Install skill from ClawHub. Returns (ok, message, registered_skill_name)."""
+./app/services/skills/loader.py:23:    :class:`~app.services.skills.clawhub_models.ClawHubSkillInfo` field). Both
+./app/services/skills/clawhub.py:4:"""HTTP-facing helpers for ClawHub-compatible skill registry (Phase 6 + 17)."""
+./app/services/skills/clawhub.py:12:from app.services.skills.clawhub_client import ClawHubClient
+./app/services/skills/clawhub.py:21:    client = ClawHubClient()
+./app/services/skills/clawhub.py:28:    client = ClawHubClient()
+./app/services/skills/clawhub.py:34:    return await ClawHubClient().download_skill(name, version)
+./app/services/skills/dependency_resolver.py:11::class:`~app.services.skills.clawhub_models.ClawHubSkillInfo`. This module
+./app/services/skills/dependency_resolver.py:13:ClawHub skills first.
+./app/services/skills/dependency_resolver.py:18:  (``ClawHubClient.get_skill_info``) so we can plan the full graph without
+./app/services/skills/dependency_resolver.py:38:which itself imports ``ClawHubClient``); the installer is resolved lazily.
+./app/services/skills/dependency_resolver.py:47:from app.services.skills.clawhub_client import ClawHubClient
+./app/services/skills/dependency_resolver.py:48:from app.services.skills.clawhub_models import ClawHubSkillInfo
+./app/services/skills/dependency_resolver.py:109:        client: ClawHubClient | None = None,
+./app/services/skills/dependency_resolver.py:113:        self.client = client or ClawHubClient()
+./app/services/skills/dependency_resolver.py:119:    async def plan(self, head_info: ClawHubSkillInfo) -> DependencyPlan:
+./app/services/skills/dependency_resolver.py:139:        info: ClawHubSkillInfo,
+./app/services/skills/dependency_resolver.py:194:        self, head_info: ClawHubSkillInfo
+./app/services/skills/marketplace.py:4:"""Local NexaForge catalog — JSON on disk, validation before install."""
+./app/services/skills/update_checker.py:5:Phase 75 — periodic ClawHub skill update checker.
+./app/services/skills/update_checker.py:47:from app.services.skills.clawhub_client import ClawHubClient
+./app/services/skills/update_checker.py:58:    """Periodic background checker for installed ClawHub skill updates."""
+./app/services/skills/update_checker.py:64:        client: ClawHubClient | None = None,
+./app/services/skills/update_checker.py:147:        """Probe every installed ClawHub skill once. Returns counters for tests.
+./app/services/skills/update_checker.py:158:        client = self._client or ClawHubClient()
+./app/services/skills/update_checker.py:188:        client: ClawHubClient,
+./app/services/skills/builtin/README.md:3:Skills that ship with Nexa use the same `skill.yaml` manifest format as community packages.
+./app/services/skills/builtin/README.md:14:Many of these map to existing Nexa missions or gateway tools; manifests here document the OpenClaw-style packaging shape.
+./app/services/operator_execution_actions.py:255:        req = urllib.request.Request(u, headers={"User-Agent": "NexaOperator/1.0"})
+./app/services/execution_policy.py:4:"""Phase 50 — when Nexa should take action-first paths vs pause for confirmation."""
+./app/services/local_file_intent.py:548:    the host work root), e.g. active Nexa workspace project.
+./app/services/document_template_intent.py:13:# Short topic lines after "for …" are still valid (e.g. "for my Nexa web UI work").
+./app/services/document_template_intent.py:117:    title = (title_guess or body_focus or "Nexa document")[:200]
+./app/services/execution_trigger.py:4:"""Phase 55 — centralized policy for when Nexa should execute vs stay in suggestion mode."""
+./app/services/session_queue.py:4:"""Per-lane serialization for gateway turns (OpenClaw-style lane queue).
+./app/services/env_validator.py:4:"""Static checks for environment combinations that often break the Nexa dev stack."""
+./app/services/env_validator.py:82:                "Set it to the parent folder for Nexa project checkouts."
+./app/services/work_context.py:14:from app.models.project_context import NexaWorkspaceProject
+./app/services/work_context.py:69:        row = db.get(NexaWorkspaceProject, int(apid))
+./app/services/audio_transcription.py:4:# Future: Telegram voice and web microphone — transcribe then run normal Nexa message pipeline.
+./app/services/logging/json_formatter.py:53:class NexaJsonFormatter(logging.Formatter):
+./app/services/logging/logger.py:17:    """Return the shared Nexa logger or a child (``nexa.worker``, ``nexa.gateway``, …)."""
+./app/services/logging/logger.py:29:        from app.services.logging.json_formatter import NexaJsonFormatter
+./app/services/logging/logger.py:32:            if isinstance(h, logging.StreamHandler) and not isinstance(h.formatter, NexaJsonFormatter):
+./app/services/logging/logger.py:33:                h.setFormatter(NexaJsonFormatter())
+./app/services/logging/logger.py:58:            from app.services.logging.json_formatter import NexaJsonFormatter
+./app/services/logging/logger.py:60:            h.setFormatter(NexaJsonFormatter())
+./app/services/idea_intake.py:4:"""Detect raw product ideas and draft Nexa project profiles (not tied to one repo)."""
+./app/services/idea_intake.py:87:        "Want me to create this as a Nexa project?\n"
+./app/services/gateway/llm_fallback.py:36:    Kept conservative so normal conversation still flows through :meth:`NexaGateway.handle_full_chat`.
+./app/services/gateway/llm_fallback.py:120:    Optional LLM interpretation before :meth:`~app.services.gateway.runtime.NexaGateway.handle_full_chat`.
+./app/services/gateway/__init__.py:5:Nexa Gateway — central runtime layer for sessions, routing, agents, tools, channels,
+./app/services/gateway/__init__.py:8:All channels should converge on ``gateway.runtime.NexaGateway`` — implementation grows phase-by-phase.
+./app/services/gateway/__init__.py:12:from app.services.gateway.runtime import NexaGateway
+./app/services/gateway/__init__.py:14:__all__ = ["GatewayContext", "NexaGateway"]
+./app/services/gateway/runtime.py:64:    """Apply OpenClaw-style operator preamble (when enabled), then identity scrub."""
+./app/services/gateway/runtime.py:165:class NexaGateway:
+./app/services/gateway/runtime.py:1593:        from app.models.nexa_next_runtime import NexaMission, NexaMissionTask
+./app/services/gateway/runtime.py:1616:            NexaMission(
+./app/services/gateway/runtime.py:1625:            row = NexaMissionTask(
+./app/services/gateway/runtime.py:1649:        nm = db.get(NexaMission, mission_id)
+./app/services/gateway/router.py:17:    Returns a small descriptor; full routing happens in ``NexaGateway``.
+./app/services/gateway/approval_flow.py:4:"""Natural-language job approval routes — invoked from NexaGateway only (Phase 37 ctx)."""
+./app/services/cron/models.py:4:"""Data models for Nexa cron jobs (Phase 13)."""
+./app/services/cron/scheduler.py:45:class NexaCronScheduler:
+./app/services/cron/scheduler.py:48:    _instance: NexaCronScheduler | None = None
+./app/services/cron/scheduler.py:50:    def __new__(cls) -> NexaCronScheduler:
+./app/services/cron/scheduler.py:87:        logger.info("Nexa cron scheduler started jobs=%s", len(store.list_all()))
+./app/services/cron/scheduler.py:92:            logger.info("Nexa cron scheduler stopped")
+./app/services/cron/scheduler.py:195:def get_nexa_cron_scheduler() -> NexaCronScheduler:
+./app/services/cron/scheduler.py:196:    return NexaCronScheduler()
+./app/services/cron/scheduler.py:199:__all__ = ["NexaCronScheduler", "get_nexa_cron_scheduler", "_sqlite_path_from_url"]
+./app/services/channels/telegram_gateway_reply.py:12:    """True when Nexa gateway produced a concrete reply (Phase 35 — chat is always composed)."""
+./app/services/channels/telegram_gateway_reply.py:35:                f"{head}: completed on Nexa’s side, but **execution was not verified** "
+./app/services/channels/__init__.py:4:"""Channel adapters — every inbound path fans into :class:`~app.services.gateway.runtime.NexaGateway`."""
+./app/services/channels/slack_channel.py:4:"""Slack-shaped adapter — inbound text routes through the Nexa gateway."""
+./app/services/channels/router.py:13:from app.services.gateway.runtime import NexaGateway
+./app/services/channels/router.py:24:    """All channels must call this (or :meth:`NexaGateway.handle_message` directly)."""
+./app/services/channels/router.py:26:    return NexaGateway().handle_message(ctx, text, db=db)
+./app/services/channels/base.py:4:"""Abstract channel — outbound stubs; inbound always delegates to the Nexa gateway."""
+./app/services/channels/base.py:25:        """Accept inbound payload and route through ``NexaGateway.handle_message``."""
+./app/services/channels/slack_bot.py:4:"""Slack → Nexa gateway funnel via :func:`~app.services.channels.router.route_inbound` (Phase 42)."""
+./app/services/media/voice.py:36:    """Local-first STT via :mod:`app.services.multimodal.stt` (OpenClaw-style voice path)."""
+./app/deployments/deployment_diagnostics.py:4:"""Structured deployment failure diagnostics (OpenClaw operational parity)."""
+./app/deployments/deployment_stages.py:4:"""Canonical deployment lifecycle stages (OpenClaw continuity parity)."""
+./app/deployments/__init__.py:4:"""Deployment runtime (OpenClaw parity — persistent deployment lifecycle in ``aethos.json``)."""
+./app/channels/__init__.py:6:from app.channels.base import ChannelMessage, ChannelResponse, InboundMessage, NexaChannel
+./app/channels/__init__.py:8:__all__ = ["ChannelMessage", "ChannelResponse", "InboundMessage", "NexaChannel"]
+./app/channels/slack/adapter.py:4:"""``NexaChannel`` binding for Slack Socket Mode."""
+./app/channels/slack/adapter.py:11:from app.channels.base import ChannelMessage, ChannelResponse, NexaChannel
+./app/channels/slack/adapter.py:18:class SlackSocketNexaChannel(NexaChannel):
+./app/channels/slack/adapter.py:72:__all__ = ["SlackSocketNexaChannel"]
+./app/channels/slack/__init__.py:6:from app.channels.slack.adapter import SlackSocketNexaChannel
+./app/channels/slack/__init__.py:9:__all__ = ["SlackSocketNexaChannel", "run_slack_socket_bot", "run_slack_socket_bot_forever"]
+./app/channels/commands/cron_http.py:99:        return f"Could not reach cron API ({exc}). Is the Nexa API running at {base}?"
+./app/channels/base.py:4:"""Abstract channel interface for Nexa multi-channel support (Phase 12)."""
+./app/channels/base.py:27:    Provider-native inbound envelope (OpenClaw-style adapter output).
+./app/channels/base.py:30:    Hand off to Nexa only after resolving to an app user id (e.g. via Channel Gateway adapters).
+./app/channels/base.py:61:class NexaChannel(ABC):
+./app/channels/base.py:81:        """Process a normalized message through Nexa (typically :func:`~app.services.channels.router.route_inbound`)."""
+./app/channels/base.py:84:__all__ = ["ChannelMessage", "ChannelResponse", "InboundMessage", "NexaChannel"]
+./CHANGELOG.md:1:# Nexa Changelog
+./Dockerfile:1:# Nexa: API, Telegram bot, and operator (scheduler) share this image.
+./web/app/mission-control/(shell)/differentiators/page.tsx:42:          Runtime-backed differentiators — OpenClaw-compatible where it matters, better where it counts.
+./web/components/mission-control/MissionControlMaintenanceControls.tsx:17: * Nexa-Next maintenance entry point (reset / purge / dev SQL erase) without legacy dashboard UI.
+./web/components/mission-control/Phase22Overview.tsx:8:type NexaMemoryResponse = { entry_count?: number; entries?: unknown[] };
+./web/components/mission-control/Phase22Overview.tsx:22:  const [memory, setMemory] = useState<NexaMemoryResponse | null>(null);
+./web/components/mission-control/Phase22Overview.tsx:34:        webFetch<NexaMemoryResponse>("/nexa-memory"),
+./web/BASELINE_UI.md:1:# Nexa Web UI Baseline
+./web/lib/aethos-types.ts:219:    /** Cursor Cloud Agents (when assignment ran via Nexa → Cursor). */
+./web/lib/navigation.ts:148:    description: "Why AethOS vs OpenClaw",
+./web/lib/webUserId.ts:47:export const isValidNexaWebUserId = isValidAethosWebUserId;
+./web/lib/webUserId.ts:66:export const describeNexaWebUserIdProblem = describeAethosWebUserIdProblem;
+./web/lib/api/governance.ts:3: * (Spec referenced `/org/*`; Nexa uses `/governance/organizations/...`.)
+./web/lib/api/marketplace.ts:20: * The ClawHub backend itself (under ``/api/v1/clawhub/*``) keeps the cron-token
+./web/lib/config.ts:13:export type NexaWebConfig = AethosWebConfig;
+./web/lib/config.ts:16:export type NexaWebConfigStored = AethosWebConfigStored;
+./web/lib/mission-control/eventsWsUrl.ts:14:/** Nexa Next live event bus (mission / task / artifact). */
+./tests/test_active_agent_projection.py:32:        active_topic="Nexa",
+./tests/test_active_agent_projection.py:34:    assert "Active topic: Nexa" in out
+./tests/test_web_search.py:192:                "app_name": "Nexa",
+./tests/test_execution_loop_railway_attempts_checks.py:13:from app.services.gateway.runtime import NexaGateway
+./tests/test_execution_loop_railway_attempts_checks.py:46:    out = NexaGateway().handle_message(
+./tests/test_task_priority.py:9:from app.services.tasks.unified_task import NexaTask
+./tests/test_task_priority.py:13:    a = NexaTask(id="a", type="system", input="nice to have", priority=10, auto_generated=True, origin="x")
+./tests/test_task_priority.py:14:    b = NexaTask(id="b", type="dev", input="fix failing tests", priority=5, auto_generated=True, origin="x")
+./tests/test_task_priority.py:15:    c = NexaTask(id="c", type="dev", input="trivial", priority=90, auto_generated=True, origin="x")
+./tests/test_gateway_approval_flow.py:4:"""Phase 36 — approvals route through NexaGateway."""
+./tests/test_gateway_approval_flow.py:15:from app.services.gateway.runtime import NexaGateway
+./tests/test_gateway_approval_flow.py:21:    out = NexaGateway().handle_message(ctx, "approve job #999999", db=db_session)
+./tests/test_gateway_approval_flow.py:43:    body = NexaGateway().compose_llm_reply("x", "general_chat", MagicMock())
+./tests/test_command_palette_clean.py:4:"""Phase 26 — command hints must not reference legacy Nexa v1 slash strings."""
+./tests/test_mobile_phase30.py:54:            "goal": "Launch Nexa mobile",
+./tests/test_gateway_host_executor_file_write.py:15:from app.services.gateway.runtime import NexaGateway
+./tests/test_gateway_host_executor_file_write.py:59:    out = NexaGateway().handle_message(
+./tests/test_gateway_host_executor_file_write.py:69:    out_yes = NexaGateway().handle_message(ctx, "yes", db=nexa_runtime_clean)
+./tests/test_no_legacy_agents.py:4:"""Phase 26 — legacy static persona chips must not ship in Nexa-Next UI."""
+./tests/conftest.py:107:    """Clear Nexa Next DB tables, bus, and ephemeral privacy/provider buffers; yields the session."""
+./tests/test_execution_loop_retry_runs.py:13:from app.services.gateway.runtime import NexaGateway
+./tests/test_execution_loop_retry_runs.py:34:    out = NexaGateway().handle_message(gctx, "retry external execution", db=db_session)
+./tests/test_dev_pipeline_full.py:11:from app.models.dev_runtime import NexaDevRun
+./tests/test_dev_pipeline_full.py:39:        run = db_session.get(NexaDevRun, out["run_id"])
+./tests/test_gateway_mission_control_nl_agent_creation.py:13:from app.services.gateway.runtime import NexaGateway
+./tests/test_gateway_mission_control_nl_agent_creation.py:19:    monkeypatch.setattr(NexaGateway, "_maybe_auto_dev_investigation", lambda *a, **k: None)
+./tests/test_gateway_mission_control_nl_agent_creation.py:39:    out = NexaGateway().handle_message(ctx, "Create a marketing agent", db=db_session)
+./tests/test_channel_routing.py:15:    """Concrete channels must call ``route_inbound``; only ``router.py`` may reference ``NexaGateway``."""
+./tests/test_channel_routing.py:21:        assert "NexaGateway" not in text, f"{path.name} must not import NexaGateway directly"
+./tests/test_channel_routing.py:26:    assert "NexaGateway" in router.read_text(encoding="utf-8")
+./tests/test_external_execution_retry_command.py:20:from app.services.gateway.runtime import NexaGateway
+./tests/test_external_execution_retry_command.py:115:    gw = NexaGateway()
+./tests/test_memory_brain_usage.py:9:from app.services.gateway.runtime import NexaGateway
+./tests/test_memory_brain_usage.py:23:    monkeypatch.setattr(NexaGateway, "compose_llm_reply", fake_compose)
+./tests/test_memory_brain_usage.py:30:    out = NexaGateway().handle_full_chat(gctx, "phase43 memory probe text", db=db_session)
+./tests/test_memory_brain_usage.py:46:    monkeypatch.setattr(NexaGateway, "compose_llm_reply", fake_compose)
+./tests/test_memory_brain_usage.py:54:    NexaGateway().handle_full_chat(gctx, "hello merge", db=db_session)
+./tests/test_event_bus.py:10:from app.services.gateway.runtime import NexaGateway
+./tests/test_event_bus.py:17:    NexaGateway().handle_message(gctx, text)
+./tests/test_user_settings.py:12:from app.models.user_settings import NexaUserSettings
+./tests/test_user_settings.py:40:        row = db_session.get(NexaUserSettings, uid)
+./tests/test_persistent_artifacts.py:11:from app.services.gateway.runtime import NexaGateway
+./tests/test_persistent_artifacts.py:17:    out = NexaGateway().handle_message(gctx, text)
+./tests/test_mission_control_execution_truth_state.py:10:from app.models.nexa_next_runtime import NexaMission, NexaMissionTask
+./tests/test_mission_control_execution_truth_state.py:86:        NexaMission(
+./tests/test_mission_control_execution_truth_state.py:95:        NexaMissionTask(
+./tests/test_mission_control_execution_truth_state.py:127:        NexaMission(
+./tests/test_mission_control_execution_truth_state.py:136:        NexaMissionTask(
+./tests/test_mission_control_execution_truth_state.py:157:        NexaMission(
+./tests/test_mission_control_execution_truth_state.py:166:        NexaMissionTask(
+./tests/test_mission_control_execution_truth_state.py:194:        NexaMission(
+./tests/test_mission_control_execution_truth_state.py:203:        NexaMissionTask(
+./tests/test_marketplace_polish_phase75.py:9:* :class:`ClawHubSkillInfo` / :class:`InstalledSkill` — round-trip new
+./tests/test_marketplace_polish_phase75.py:13:* :class:`ClawHubClient` — ``_parse_skill_info`` honours the new shape
+./tests/test_marketplace_polish_phase75.py:60:    ClawHubSkillInfo,
+./tests/test_marketplace_polish_phase75.py:79:    info = ClawHubSkillInfo(
+./tests/test_marketplace_polish_phase75.py:149:# ClawHubClient — parse + list_featured + category filter
+./tests/test_marketplace_polish_phase75.py:180:    client = clawhub_client_module.ClawHubClient()
+./tests/test_marketplace_polish_phase75.py:190:    client = clawhub_client_module.ClawHubClient()
+./tests/test_marketplace_polish_phase75.py:200:    client = clawhub_client_module.ClawHubClient()
+./tests/test_marketplace_polish_phase75.py:228:    client = clawhub_client_module.ClawHubClient()
+./tests/test_marketplace_polish_phase75.py:266:    client = clawhub_client_module.ClawHubClient()
+./tests/test_marketplace_polish_phase75.py:329:def _info(name: str, deps: list[str] | None = None) -> ClawHubSkillInfo:
+./tests/test_marketplace_polish_phase75.py:330:    return ClawHubSkillInfo(
+./tests/test_marketplace_polish_phase75.py:350:    async def fake_get_info(self, name: str) -> ClawHubSkillInfo | None:
+./tests/test_marketplace_polish_phase75.py:360:        clawhub_client_module.ClawHubClient, "get_skill_info", fake_get_info
+./tests/test_marketplace_polish_phase75.py:372:    async def fake_get_info(self, name: str) -> ClawHubSkillInfo | None:
+./tests/test_marketplace_polish_phase75.py:381:        clawhub_client_module.ClawHubClient, "get_skill_info", fake_get_info
+./tests/test_marketplace_polish_phase75.py:392:    async def fake_get_info(self, name: str) -> ClawHubSkillInfo | None:
+./tests/test_marketplace_polish_phase75.py:397:        clawhub_client_module.ClawHubClient, "get_skill_info", fake_get_info
+./tests/test_marketplace_polish_phase75.py:409:    async def fake_get_info(self, name: str) -> ClawHubSkillInfo | None:
+./tests/test_marketplace_polish_phase75.py:414:        clawhub_client_module.ClawHubClient, "get_skill_info", fake_get_info
+./tests/test_marketplace_polish_phase75.py:428:    async def fake_get_info(self, name: str) -> ClawHubSkillInfo | None:
+./tests/test_marketplace_polish_phase75.py:436:        clawhub_client_module.ClawHubClient, "get_skill_info", fake_get_info
+./tests/test_marketplace_polish_phase75.py:630:    catalog: dict[str, ClawHubSkillInfo | None]
+./tests/test_marketplace_polish_phase75.py:633:    async def get_skill_info(self, name: str) -> ClawHubSkillInfo | None:
+./tests/test_marketplace_polish_phase75.py:750:        clawhub_client_module.ClawHubClient, "list_featured", fake_featured
+./tests/test_marketplace_polish_phase75.py:762:    detailed = ClawHubSkillInfo(
+./tests/test_marketplace_polish_phase75.py:783:        clawhub_client_module.ClawHubClient, "get_skill_info", fake_info
+./tests/test_marketplace_polish_phase75.py:800:        clawhub_client_module.ClawHubClient, "get_skill_info", fake_info
+./tests/test_marketplace_polish_phase75.py:821:        clawhub_client_module.ClawHubClient, "list_popular", fake_popular
+./tests/test_marketplace_polish_phase75.py:824:        clawhub_client_module.ClawHubClient, "list_featured", fake_featured
+./tests/test_marketplace_polish_phase75.py:875:        clawhub_client_module.ClawHubClient, "search_skills", fake_search
+./tests/test_dev_scheduler_jobs.py:30:    from app.models.nexa_scheduler_job import NexaSchedulerJob
+./tests/test_dev_scheduler_jobs.py:40:    from app.models.dev_runtime import NexaDevWorkspace
+./tests/test_dev_scheduler_jobs.py:62:    row = NexaSchedulerJob(
+./tests/test_dev_scheduler_jobs.py:78:    from app.models.dev_runtime import NexaDevRun
+./tests/test_dev_scheduler_jobs.py:80:    runs = list(db_session.scalars(select(NexaDevRun).where(NexaDevRun.user_id == uid)).all())
+./tests/test_real_world_behavior_phase52.py:39:    from app.services.gateway.runtime import NexaGateway
+./tests/test_real_world_behavior_phase52.py:42:        NexaGateway,
+./tests/test_real_world_behavior_phase52.py:55:    out = NexaGateway().handle_message(
+./tests/test_auto_dev_execution_phase53.py:41:    from app.services.gateway.runtime import NexaGateway
+./tests/test_auto_dev_execution_phase53.py:75:    out = NexaGateway()._maybe_auto_dev_investigation(gctx, "auth fails", db=nexa_runtime_clean)
+./tests/test_action_first_dev_phase52.py:38:    from app.services.gateway.runtime import NexaGateway
+./tests/test_action_first_dev_phase52.py:41:        NexaGateway,
+./tests/test_action_first_dev_phase52.py:50:    out = NexaGateway().handle_message(ctx, "pytest fails", db=nexa_runtime_clean)
+./tests/test_autonomous_mode_phase43.py:14:from app.services.gateway.runtime import NexaGateway
+./tests/test_autonomous_mode_phase43.py:48:    monkeypatch.setattr(NexaGateway, "handle_message", fake_handle)
+./tests/test_kill_switch.py:10:from app.models.nexa_next_runtime import NexaExternalCall
+./tests/test_kill_switch.py:16:    db_session.execute(delete(NexaExternalCall))
+./tests/test_kill_switch.py:40:    n = db_session.scalar(select(func.count()).select_from(NexaExternalCall))
+./tests/test_decision_summary.py:106:    assert "Nexa" in s or "general" in s.lower()  # template fallback
+./tests/test_user_api_keys.py:67:    assert "Nexa API keys" in t or "Nexa" in t
+./tests/test_identity_phase40.py:4:"""Phase 40 — identity strings stay aligned with Nexa-next execution positioning."""
+./tests/test_identity_phase40.py:10:from app.services.gateway.runtime import NexaGateway
+./tests/test_identity_phase40.py:43:    assert NexaGateway().describe_capabilities() == CAPABILITIES
+./tests/test_cli_replay.py:10:from app.models.nexa_next_runtime import NexaMission
+./tests/test_cli_replay.py:24:        NexaMission(
+./tests/test_branding_purge.py:15:        for term in ("OpenHub", "ClawHub", "openhub", "ClawHub"):
+./tests/test_external_execution_followup.py:17:from app.services.gateway.runtime import NexaGateway
+./tests/test_external_execution_followup.py:95:    gw = NexaGateway()
+./tests/test_web_routes.py:65:            "reason": "Nexa used the general chat path for this message.",
+./tests/test_ui_clean_phase30.py:4:"""Phase 30 — mission-control and chat web sources must not reintroduce legacy Nexa copy."""
+./tests/test_multi_user_isolation.py:14:from app.models.nexa_next_runtime import NexaMission
+./tests/test_multi_user_isolation.py:24:        NexaMission(
+./tests/test_execution_loop_no_generic_guidance.py:14:from app.services.gateway.runtime import NexaGateway
+./tests/test_execution_loop_no_generic_guidance.py:50:    monkeypatch.setattr(NexaGateway, "compose_llm_reply", boom)
+./tests/test_execution_loop_no_generic_guidance.py:54:    out = NexaGateway().handle_message(
+./tests/test_export_import.py:14:from app.models.nexa_next_runtime import NexaArtifact, NexaMission, NexaMissionTask
+./tests/test_export_import.py:26:        NexaMission(
+./tests/test_export_import.py:35:        NexaMissionTask(
+./tests/test_export_import.py:44:    db_session.add(NexaArtifact(mission_id=mid, agent_handle="a1", artifact_json={"x": 1}))
+./tests/test_export_import.py:63:        m2 = db_session.get(NexaMission, new_id)
+./tests/test_mission_persistence.py:10:from app.models.nexa_next_runtime import NexaMission, NexaMissionTask
+./tests/test_mission_persistence.py:12:from app.services.gateway.runtime import NexaGateway
+./tests/test_mission_persistence.py:19:    out = NexaGateway().handle_message(gctx, text)
+./tests/test_mission_persistence.py:23:    m = nexa_runtime_clean.get(NexaMission, mid)
+./tests/test_mission_persistence.py:29:        select(func.count()).select_from(NexaMissionTask).where(NexaMissionTask.mission_id == mid)
+./tests/test_mission_persistence.py:33:        select(NexaMissionTask).where(NexaMissionTask.mission_id == mid)
+./tests/test_provider_gateway_privacy.py:10:from app.services.gateway.runtime import NexaGateway
+./tests/test_provider_gateway_privacy.py:91:    out = NexaGateway().handle_message(gctx, text)
+./tests/test_web_gateway_consistency_phase51.py:13:from app.services.gateway.runtime import NexaGateway
+./tests/test_web_gateway_consistency_phase51.py:19:        NexaGateway,
+./tests/test_web_gateway_consistency_phase51.py:24:        NexaGateway,
+./tests/test_web_gateway_consistency_phase51.py:40:    web = NexaGateway().handle_message(
+./tests/test_web_gateway_consistency_phase51.py:45:    tg = NexaGateway().handle_message(
+./tests/test_phase54a_memory_dev_execution.py:12:from app.models.dev_runtime import NexaDevWorkspace
+./tests/test_phase54a_memory_dev_execution.py:16:from app.services.gateway.runtime import NexaGateway
+./tests/test_phase54a_memory_dev_execution.py:21:    w = NexaDevWorkspace(
+./tests/test_phase54a_memory_dev_execution.py:68:    out = NexaGateway()._maybe_auto_dev_investigation(gctx, "Spring Boot Mongo OIDC auth fails in EKS", db=nexa_runtime_clean)
+./tests/test_phase54a_memory_dev_execution.py:93:    out = NexaGateway()._maybe_auto_dev_investigation(gctx, "pytest import error in my project", db=nexa_runtime_clean)
+./tests/test_phase54a_memory_dev_execution.py:119:        out = NexaGateway()._maybe_auto_dev_investigation(
+./tests/test_slack_integration.py:4:"""Phase 42 — Slack gateway ↔ Nexa router bridge."""
+./tests/test_prompt_budget_and_simple_faq.py:4:"""Prompt tiers + canned Nexa product FAQs."""
+./tests/test_prompt_budget_and_simple_faq.py:13:    out = try_canned_nexa_product_faq("Who created Nexa?")
+./tests/test_command_execution.py:16:from app.services.gateway.runtime import NexaGateway
+./tests/test_command_execution.py:220:        out = NexaGateway().handle_message(ctx, "run ls -la", db=nexa_runtime_clean)
+./tests/test_command_execution.py:225:        out_yes = NexaGateway().handle_message(ctx, "yes", db=nexa_runtime_clean)
+./tests/test_single_execution_path.py:4:"""Phase 43 — scheduler dev missions route through :meth:`NexaGateway.handle_message`."""
+./tests/test_single_execution_path.py:11:from app.models.nexa_scheduler_job import NexaSchedulerJob
+./tests/test_single_execution_path.py:12:from app.services.gateway.runtime import NexaGateway
+./tests/test_single_execution_path.py:19:    def fake_handle(self: NexaGateway, gctx, text: str, db=None):
+./tests/test_single_execution_path.py:23:    monkeypatch.setattr(NexaGateway, "handle_message", fake_handle)
+./tests/test_single_execution_path.py:31:    row = NexaSchedulerJob(
+./tests/test_single_execution_path.py:63:    out = NexaGateway()._try_structured_route(gctx, "run dev: should not win", db_session)
+./tests/test_public_docs_claims_phase54.py:11:    r"\bfully replaces OpenClaw\b|\benterprise certified\b|\bSOC2 compliant\b|\b500k stars\b",
+./tests/test_execution_loop_no_fake_mission.py:14:from app.services.gateway.runtime import NexaGateway
+./tests/test_execution_loop_no_fake_mission.py:39:    NexaGateway().handle_message(
+./tests/test_openclaw_parity.py:4:"""Phase 41 — OpenClaw parity surfaces: capabilities, channels, dev pipeline, memory, browser gates."""
+./tests/test_missions_parser_gateway.py:10:from app.models.nexa_next_runtime import NexaMission
+./tests/test_missions_parser_gateway.py:12:from app.services.gateway.runtime import NexaGateway
+./tests/test_missions_parser_gateway.py:54:    gw = NexaGateway()
+./tests/test_missions_parser_gateway.py:58:    n = nexa_runtime_clean.scalar(select(func.count()).select_from(NexaMission))
+./tests/test_gateway_full_ownership.py:4:"""Phase 35/36 — NexaGateway owns chat; legacy behavior utils are not called from Telegram text paths."""
+./tests/test_gateway_full_ownership.py:14:from app.services.gateway.runtime import NexaGateway
+./tests/test_gateway_full_ownership.py:29:    def track(self: NexaGateway, gctx: GatewayContext, text: str, **kw: object) -> dict:
+./tests/test_gateway_full_ownership.py:33:    monkeypatch.setattr(NexaGateway, "handle_full_chat", track)
+./tests/test_gateway_full_ownership.py:35:    out = NexaGateway().handle_message(ctx, "just chatting", db=db_session)
+./tests/test_gateway_full_ownership.py:41:    assert callable(NexaGateway.handle_full_chat)
+./tests/test_scheduler.py:11:from app.models.nexa_scheduler_job import NexaSchedulerJob
+./tests/test_scheduler.py:34:        row = db_session.get(NexaSchedulerJob, jid)
+./tests/test_scheduler.py:46:        assert db_session.get(NexaSchedulerJob, jid) is None
+./tests/test_execution_confidence_phase56.py:13:from app.services.gateway.runtime import NexaGateway
+./tests/test_execution_confidence_phase56.py:41:    out = NexaGateway()._maybe_auto_dev_investigation(gctx, "fix it", db=nexa_runtime_clean)
+./tests/test_execution_confidence_phase56.py:86:    out = NexaGateway()._maybe_auto_dev_investigation(gctx, "fix it", db=nexa_runtime_clean)
+./tests/test_execution_confidence_phase56.py:134:    out = NexaGateway()._maybe_auto_dev_investigation(
+./tests/test_external_execution_retry_no_loop.py:24:    from app.services.gateway.runtime import NexaGateway
+./tests/test_external_execution_retry_no_loop.py:56:    payload = NexaGateway().handle_full_chat(
+./tests/test_external_secret_setup_flow.py:15:from app.services.gateway.runtime import NexaGateway
+./tests/test_external_secret_setup_flow.py:29:    out = NexaGateway().handle_message(
+./tests/test_privacy_firewall_phase3.py:12:from app.services.gateway.runtime import NexaGateway
+./tests/test_privacy_firewall_phase3.py:51:    out = NexaGateway().handle_message(gctx, text)
+./tests/test_privacy_firewall_phase3.py:63:    out = NexaGateway().handle_message(gctx, text)
+./tests/test_workspace_resolver.py:28:    from app.models.user_settings import NexaUserSettings
+./tests/test_workspace_resolver.py:35:    db_session.merge(NexaUserSettings(user_id=uid, privacy_mode=None, ui_preferences={}))
+./tests/test_workspace_resolver.py:38:    row = db_session.get(NexaUserSettings, uid)
+./tests/test_phase51_gateway_scrub_and_surfaces.py:14:from app.services.gateway.runtime import NexaGateway, gateway_finalize_chat_reply
+./tests/test_phase51_gateway_scrub_and_surfaces.py:69:        NexaGateway,
+./tests/test_phase51_gateway_scrub_and_surfaces.py:74:        NexaGateway,
+./tests/test_phase51_gateway_scrub_and_surfaces.py:92:    out = NexaGateway().handle_message(
+./tests/test_phase51_gateway_scrub_and_surfaces.py:134:        NexaGateway,
+./tests/test_phase51_gateway_scrub_and_surfaces.py:143:    out = NexaGateway().handle_message(ctx, prompt, db=db_session)
+./tests/test_dev_orchestrator.py:100:    c = classify_dev_task("add a README note for Nexa")
+./tests/test_dev_orchestrator.py:107:    c = classify_dev_task("change database auth flow in Nexa")
+./tests/test_dev_orchestrator.py:205:    p = _proj(repo_path=str(tmp_path), key="nexa", display_name="Nexa")
+./tests/test_branding.py:4:"""Tests for :mod:`app.core.branding` — product name and legacy ``Nexa`` substitution."""
+./tests/test_branding.py:35:    out = substitute_legacy_product_name("Ask Nexa anything; Nexa_NEXA_env stays.")
+./tests/test_branding.py:42:    assert "Nexa" not in body
+./tests/test_memory_aware.py:76:    assert "Nexa memory status" in st
+./tests/test_memory_aware.py:97:            display_name="Nexa",
+./tests/test_https_url_no_agent_graph_tasks.py:10:from app.models.nexa_next_runtime import NexaMission, NexaMissionTask
+./tests/test_https_url_no_agent_graph_tasks.py:83:    db_session.add(NexaMission(id=mid, user_id=uid, title="bad", status="completed"))
+./tests/test_https_url_no_agent_graph_tasks.py:85:        NexaMissionTask(
+./tests/test_https_url_no_agent_graph_tasks.py:102:    assert db_session.get(NexaMission, mid) is None
+./tests/test_challenging_routing_slice.py:45:    from app.services.gateway.runtime import NexaGateway
+./tests/test_challenging_routing_slice.py:47:    monkeypatch.setattr(NexaGateway, "_maybe_auto_dev_investigation", lambda *a, **k: None)
+./tests/test_challenging_routing_slice.py:49:    out = NexaGateway().handle_message(ctx, "Make my website better", db=nexa_runtime_clean)
+./tests/test_clawhub.py:4:"""Phase 17 — ClawHub marketplace client, installer manifest, API (cron auth)."""
+./tests/test_clawhub.py:72:        from app.services.skills.clawhub_models import ClawHubSkillInfo
+./tests/test_clawhub.py:75:        return ClawHubSkillInfo(
+./tests/test_goal_task_binding.py:11:from app.models.autonomy import NexaAutonomousTask
+./tests/test_goal_task_binding.py:27:        rows = list(db_session.scalars(select(NexaAutonomousTask).where(NexaAutonomousTask.user_id == uid)).all())
+./tests/test_goal_task_binding.py:32:            parent = db_session.get(NexaAutonomousTask, s.goal_id)
+./tests/test_execution_loop_secret_setup.py:13:from app.services.gateway.runtime import NexaGateway
+./tests/test_execution_loop_secret_setup.py:33:    out = NexaGateway().handle_message(
+./tests/test_execution_loop_progress_required.py:14:from app.services.gateway.runtime import NexaGateway
+./tests/test_execution_loop_progress_required.py:29:    out = NexaGateway().handle_message(gctx, "retry railway logs check", db=db_session)
+./tests/test_dev_execution_loop.py:14:from app.models.dev_runtime import NexaDevStep
+./tests/test_dev_execution_loop.py:154:    from app.models.dev_runtime import NexaDevWorkspace
+./tests/test_dev_execution_loop.py:157:        NexaDevWorkspace(
+./tests/test_dev_execution_loop.py:206:    from app.models.dev_runtime import NexaDevWorkspace
+./tests/test_dev_execution_loop.py:209:        NexaDevWorkspace(id=wid, user_id=uid, name="x", repo_path=str(repo), status="ready")
+./tests/test_dev_execution_loop.py:215:    rows = list(db_session.scalars(select(NexaDevStep).where(NexaDevStep.run_id == rid)).all())
+./tests/test_nexa_bootstrap.py:99:    assert "Nexa" in s or "Telegram" in s or "key" in s
+./tests/test_channels.py:4:"""Phase 9 — channels must funnel through NexaGateway."""
+./tests/test_channels.py:16:        "app.services.gateway.runtime.NexaGateway.handle_message",
+./tests/test_channels.py:31:        "app.services.gateway.runtime.NexaGateway.handle_message",
+./tests/test_channels.py:42:        "app.services.gateway.runtime.NexaGateway.handle_message",
+./tests/test_channels.py:51:        "app.services.gateway.runtime.NexaGateway.handle_message",
+./tests/test_ui_branding_purge_final.py:13:    assert "What Nexa is doing" not in text
+./tests/test_release_updates.py:15:    src = """# Nexa Changelog
+./tests/test_release_updates.py:61:    assert "Nexa Updates" in t
+./tests/test_web_chat_metadata.py:13:        "🔎 **Research** (Nexa)\n\nI used public read-only page fetch. x",
+./tests/test_deterministic_workflow_slice.py:4:"""Light deterministic multi-step runner (NexaForge slice)."""
+./tests/test_unified_task_model.py:4:"""Phase 43 — :class:`~app.services.tasks.unified_task.NexaTask` shape and conversions."""
+./tests/test_unified_task_model.py:8:from app.services.tasks.unified_task import NexaTask
+./tests/test_unified_task_model.py:13:    t = NexaTask.from_scheduler_dev_payload(payload, job_id="job-abc")
+./tests/test_unified_task_model.py:22:    t = NexaTask.from_long_running_row(
+./tests/test_unified_task_model.py:35:    a = NexaTask.from_scheduler_dev_payload(p)
+./tests/test_unified_task_model.py:36:    b = NexaTask.from_scheduler_dev_payload(p)
+./tests/test_release_readiness.py:91:    assert "Nexa config" in out or "APP_NAME" in out
+./tests/test_dev_git_pr_summary.py:10:from app.models.dev_runtime import NexaDevWorkspace
+./tests/test_dev_git_pr_summary.py:22:    ws = NexaDevWorkspace(
+./tests/test_agent_selection.py:9:from app.services.tasks.unified_task import NexaTask
+./tests/test_agent_selection.py:13:    t = NexaTask(id="1", type="dev", input="fix pytest failures", context={}, priority=5, origin="x")
+./tests/test_agent_selection.py:24:    t = NexaTask(id="1", type="system", input="x", context={}, priority=0, origin="x")
+./tests/test_slack_channel.py:10:from app.channels.slack.adapter import SlackSocketNexaChannel
+./tests/test_slack_channel.py:53:    ch = SlackSocketNexaChannel()
+./tests/test_dev_tools.py:88:    assert "Nexa Dev tools" in out
+./tests/openclaw_behavioral_validation/__init__.py:1:"""OpenClaw behavioral validation (operational equivalence checks)."""
+./tests/test_operator_mode.py:41:    from app.services.gateway.runtime import NexaGateway
+./tests/test_operator_mode.py:88:    out = NexaGateway()._maybe_auto_dev_investigation(
+./tests/test_active_work_panel_phase56.py:11:from app.models.dev_runtime import NexaDevRun, NexaDevWorkspace
+./tests/test_active_work_panel_phase56.py:18:    ws = NexaDevWorkspace(
+./tests/test_active_work_panel_phase56.py:27:    run = NexaDevRun(
+./tests/test_dev_job_planner.py:53:        display_name="Nexa",
+./tests/test_dev_job_planner.py:83:        task_text="add README note for Nexa",
+./tests/test_ops_v1.py:75:    if len(o) > 0 and "Nexa" in o:  # expected message in dry env
+./tests/test_execution_loop_exact_blockers.py:14:from app.services.gateway.runtime import NexaGateway
+./tests/test_execution_loop_exact_blockers.py:36:    out = NexaGateway().handle_message(
+./tests/test_no_fake_external_mission_completion.py:8:from app.services.gateway.runtime import NexaGateway
+./tests/test_no_fake_external_mission_completion.py:38:    gw = NexaGateway()._try_structured_route(  # noqa: SLF001
+./tests/test_web_chat_sessions.py:118:                "reason": "Nexa used the general chat path for this message.",
+./tests/test_mission_replay.py:12:from app.models.nexa_next_runtime import NexaMission, NexaMissionTask
+./tests/test_mission_replay.py:22:        NexaMission(
+./tests/test_mission_replay.py:32:        NexaMissionTask(
+./tests/test_release_updates_auto.py:18:    src = """# Nexa Changelog
+./tests/test_operator_execution_loop.py:13:from app.services.gateway.runtime import NexaGateway
+./tests/test_operator_execution_loop.py:93:    out = NexaGateway().handle_message(gctx, "tail Vercel logs for my-app.vercel.app", db=db_session)
+./tests/test_run_steering_phase54.py:8:from app.models.dev_runtime import NexaDevRun
+./tests/test_run_steering_phase54.py:15:    run = NexaDevRun(
+./tests/test_run_steering_phase54.py:26:    r2 = db_session.get(NexaDevRun, rid)
+./tests/test_run_steering_phase54.py:30:    r3 = db_session.get(NexaDevRun, rid)
+./tests/test_run_steering_phase54.py:34:    assert db_session.get(NexaDevRun, rid).goal == "new goal"
+./tests/test_run_steering_phase54.py:37:    assert db_session.get(NexaDevRun, rid).status == "cancelled"
+./tests/test_autonomous_decision.py:13:from app.models.autonomy import NexaAutonomousTask, NexaAutonomyDecisionLog
+./tests/test_autonomous_decision.py:14:from app.models.dev_runtime import NexaDevRun
+./tests/test_autonomous_decision.py:28:        run = NexaDevRun(
+./tests/test_autonomous_decision.py:42:        rows = list(db_session.scalars(select(NexaAutonomousTask).where(NexaAutonomousTask.user_id == uid)).all())
+./tests/test_autonomous_decision.py:45:            db_session.scalars(select(NexaAutonomyDecisionLog).where(NexaAutonomyDecisionLog.user_id == uid)).all()
+./tests/test_nexa_workspace_projects.py:4:"""Nexa workspace projects — labeled folders under approved roots / host work tree."""
+./tests/test_browser_preview.py:21:        "nexa_web_user_agent": "NexaTest/1.0",
+./tests/test_document_generation.py:52:    t = dg.build_smart_export_title("# Nexa research summary\n\nBody here.\n", source_type="chat")
+./tests/test_document_generation.py:53:    assert "Nexa research" in t
+./tests/test_document_generation.py:177:    assert is_template_document_intent("Create a project plan PDF for my Nexa web UI work")
+./tests/test_document_generation.py:179:        "Create a project plan PDF for my Nexa web UI work",
+./tests/test_external_call_logging.py:10:from app.models.nexa_next_runtime import NexaExternalCall
+./tests/test_external_call_logging.py:16:    db_session.execute(delete(NexaExternalCall))
+./tests/test_external_call_logging.py:32:    n = db_session.scalar(select(func.count()).select_from(NexaExternalCall))
+./tests/test_external_call_logging.py:37:    db_session.execute(delete(NexaExternalCall))
+./tests/test_external_call_logging.py:53:    n = db_session.scalar(select(func.count()).select_from(NexaExternalCall))
+./tests/test_external_call_logging.py:55:    row = db_session.scalar(select(NexaExternalCall).order_by(NexaExternalCall.id.desc()).limit(1))
+./tests/test_identity_pronouns.py:64:    bad = "Raya is the founder. She created Nexa."
+./tests/test_web_chat_gateway_first.py:4:"""Web chat uses :meth:`NexaGateway.handle_message` on the main path (Phase 51)."""
+./tests/test_web_chat_gateway_first.py:13:from app.services.gateway.runtime import NexaGateway
+./tests/test_web_chat_gateway_first.py:22:        NexaGateway,
+./tests/test_web_chat_gateway_first.py:27:        NexaGateway,
+./tests/test_web_chat_gateway_first.py:54:    direct = NexaGateway().handle_message(gctx, msg, db=db_session)
+./tests/test_run_dev_gateway.py:10:from app.services.gateway.runtime import NexaGateway
+./tests/test_run_dev_gateway.py:24:    """Documents why :meth:`~app.services.gateway.runtime.NexaGateway.handle_message` runs dev first."""
+./tests/test_run_dev_gateway.py:32:    out = NexaGateway().handle_message(ctx, "run dev: fix tests", db=nexa_runtime_clean)
+./tests/test_ui_clean_state.py:4:"""Phase 26 — lightweight UI source guards for legacy Nexa strings."""
+./tests/test_marketplace_api_phase71.py:7:The marketplace router proxies the same :class:`ClawHubClient` /
+./tests/test_marketplace_api_phase71.py:34:    ClawHubSkillInfo,
+./tests/test_marketplace_api_phase71.py:41:def _fake_skill(name: str = "demo_skill", version: str = "0.1.0") -> ClawHubSkillInfo:
+./tests/test_marketplace_api_phase71.py:42:    return ClawHubSkillInfo(
+./tests/test_marketplace_api_phase71.py:107:        "app.api.routes.marketplace.ClawHubClient.search_skills", fake_search
+./tests/test_marketplace_api_phase71.py:129:        "app.api.routes.marketplace.ClawHubClient.search_skills", fake_search
+./tests/test_marketplace_api_phase71.py:153:        "app.api.routes.marketplace.ClawHubClient.list_popular", fake_popular
+./tests/test_marketplace_api_phase71.py:185:        "app.api.routes.marketplace.ClawHubClient.get_skill_info", fake_info
+./tests/test_marketplace_api_phase71.py:317:        "app.api.routes.marketplace.ClawHubClient.probe_remote",
+./tests/test_memory_intelligence.py:9:from app.services.tasks.unified_task import NexaTask
+./tests/test_memory_intelligence.py:20:    task = NexaTask(
+./tests/test_agent_handoff_artifacts.py:10:from app.models.nexa_next_runtime import NexaArtifact
+./tests/test_agent_handoff_artifacts.py:13:from app.services.gateway.runtime import NexaGateway
+./tests/test_agent_handoff_artifacts.py:23:    out = NexaGateway().handle_message(gctx, text)
+./tests/test_agent_handoff_artifacts.py:50:    n = nexa_runtime_clean.scalar(select(func.count()).select_from(NexaArtifact))
+./tests/test_agent_handoff_artifacts.py:58:    out = NexaGateway().handle_message(gctx, text)
+./tests/test_branding_convergence.py:16:    assert "Inspired by OpenClaw" in readme or "inspired by OpenClaw" in readme.lower()
+./tests/test_telegram_routed_to_gateway.py:17:from app.services.gateway.runtime import NexaGateway
+./tests/test_telegram_routed_to_gateway.py:22:        "app.services.gateway.runtime.NexaGateway.handle_full_chat",
+./tests/test_telegram_routed_to_gateway.py:30:    gw = NexaGateway().handle_message(ctx, "hello world tea cozy")
+./tests/test_telegram_routed_to_gateway.py:54:    assert "NexaGateway" in text
+./tests/test_autonomous_execution.py:12:from app.models.autonomy import NexaAutonomousTask
+./tests/test_autonomous_execution.py:14:from app.services.gateway.runtime import NexaGateway
+./tests/test_autonomous_execution.py:21:            NexaAutonomousTask(
+./tests/test_autonomous_execution.py:48:    monkeypatch.setattr(NexaGateway, "handle_message", fake_handle)
+./tests/test_autonomous_execution.py:57:        NexaAutonomousTask(
+./tests/test_autonomous_execution.py:74:        row = db_session.get(NexaAutonomousTask, tid)
+./tests/test_channels_integration.py:15:    with patch("app.services.channels.router.NexaGateway") as gw_cls:
+./tests/e2e/test_product_e2e_suite.py:36:from app.services.gateway.runtime import NexaGateway
+./tests/e2e/test_product_e2e_suite.py:53:    monkeypatch.setattr(NexaGateway, "_maybe_auto_dev_investigation", lambda *a, **k: None)
+./tests/e2e/test_product_e2e_suite.py:56:    out = NexaGateway().handle_message(ctx, "Hi!", db=nexa_runtime_clean)
+./tests/e2e/test_product_e2e_suite.py:65:    monkeypatch.setattr(NexaGateway, "_maybe_auto_dev_investigation", lambda *a, **k: None)
+./tests/e2e/test_product_e2e_suite.py:83:    out = NexaGateway().handle_message(ctx, "Create a marketing agent", db=nexa_runtime_clean)
+./tests/e2e/test_product_e2e_suite.py:93:    monkeypatch.setattr(NexaGateway, "_maybe_auto_dev_investigation", lambda *a, **k: None)
+./tests/e2e/test_product_e2e_suite.py:107:    out = NexaGateway().handle_message(ctx, phrase, db=nexa_runtime_clean)
+./tests/e2e/test_product_e2e_suite.py:118:    monkeypatch.setattr(NexaGateway, "_maybe_auto_dev_investigation", lambda *a, **k: None)
+./tests/e2e/test_product_e2e_suite.py:126:    out = NexaGateway().handle_message(ctx, "run ls -la", db=nexa_runtime_clean)
+./tests/e2e/test_product_e2e_suite.py:130:    out_yes = NexaGateway().handle_message(ctx, "yes", db=nexa_runtime_clean)
+./tests/e2e/test_product_e2e_suite.py:178:    monkeypatch.setattr(NexaGateway, "_maybe_auto_dev_investigation", lambda *a, **k: None)
+./tests/e2e/test_product_e2e_suite.py:181:    out = NexaGateway().handle_message(ctx, "show soul history", db=nexa_runtime_clean)
+./tests/e2e/openclaw_parity_workflows/support.py:4:"""Shared fixtures/helpers for OpenClaw parity workflow benchmarks."""
+./tests/e2e/openclaw_parity_workflows/__init__.py:4:"""OpenClaw real-world autonomous quality benchmarks (e2e, deterministic)."""
+./tests/test_goal_engine.py:37:        from app.models.autonomy import NexaAutonomousTask
+./tests/test_goal_engine.py:39:        rows = list(db_session.scalars(select(NexaAutonomousTask).where(NexaAutonomousTask.user_id == uid)).all())
+./tests/test_gateway_context_propagation.py:4:"""Phase 37 — GatewayContext is the single carrier through NexaGateway routing."""
+./tests/test_gateway_context_propagation.py:11:from app.services.gateway.runtime import NexaGateway
+./tests/test_gateway_context_propagation.py:23:    def structured(self: NexaGateway, gctx: GatewayContext, text: str, db) -> dict | None:
+./tests/test_gateway_context_propagation.py:27:    def approval(self: NexaGateway, gctx: GatewayContext, text: str, db) -> dict | None:
+./tests/test_gateway_context_propagation.py:31:    def full_chat(self: NexaGateway, gctx: GatewayContext, text: str, **kw) -> dict:
+./tests/test_gateway_context_propagation.py:35:    monkeypatch.setattr(NexaGateway, "_try_structured_route", structured)
+./tests/test_gateway_context_propagation.py:36:    monkeypatch.setattr(NexaGateway, "_try_approval_route", approval)
+./tests/test_gateway_context_propagation.py:37:    monkeypatch.setattr(NexaGateway, "handle_full_chat", full_chat)
+./tests/test_gateway_context_propagation.py:40:    out = NexaGateway().handle_message(ctx, "hello", db=db_session)
+./tests/test_local_action_parser.py:49:    t = "Ask  cursor what feature on the Nexa project can we add?"
+./tests/test_clawhub_fallback.py:4:"""ClawHub client falls back to bundled catalog when the remote registry fails."""
+./tests/test_clawhub_fallback.py:14:from app.services.skills.clawhub_client import ClawHubClient
+./tests/test_clawhub_fallback.py:53:        c = ClawHubClient()
+./tests/test_clawhub_fallback.py:94:        c = ClawHubClient()
+./tests/test_execution_loop_router.py:14:from app.services.gateway.runtime import NexaGateway
+./tests/test_execution_loop_router.py:52:    out = NexaGateway().handle_message(
+./tests/test_external_execution_direct_probe.py:12:from app.services.gateway.runtime import NexaGateway
+./tests/test_external_execution_direct_probe.py:95:    gw = NexaGateway()
+./tests/test_autonomy_rate_control.py:12:from app.models.autonomy import NexaAutonomousTask
+./tests/test_autonomy_rate_control.py:27:            NexaAutonomousTask(
+./tests/test_autonomy_rate_control.py:40:            NexaAutonomousTask(
+./tests/test_openclaw_cli_parity.py:4:"""OpenClaw-class CLI surfaces — see docs/OPENCLAW_FUNCTIONAL_PARITY_DIRECTIVE.md §2."""
+./tests/test_openclaw_cli_parity.py:26:        assert cmd in out, f"CLI help must advertise `{cmd}` for OpenClaw-class parity"
+./tests/test_openclaw_doctrine_docs.py:20:    "OpenClaw parity",
+./tests/test_openclaw_doctrine_docs.py:21:    "Do not introduce architectural divergence unless required to reproduce OpenClaw behavior",
+./tests/test_gateway_admission_phase33.py:4:"""Phase 33 — dev-runtime gateway shortcut is only invoked from NexaGateway."""
+./tests/test_gateway_admission_phase33.py:14:    """Public callers must use :meth:`~app.services.gateway.runtime.NexaGateway.handle_message`."""
+./tests/test_operator_enhanced_orchestration_slice.py:14:from app.services.gateway.runtime import NexaGateway
+./tests/test_operator_enhanced_orchestration_slice.py:150:    out = NexaGateway().handle_message(gctx, "tail Vercel logs for my-app.vercel.app", db=db_session)
+./tests/test_operator_enhanced_orchestration_slice.py:183:    out = NexaGateway().handle_message(gctx, "tail Vercel logs for my-app.vercel.app", db=db_session)
+./run_dev_stack.sh:2:# Nexa: kill stale API/bot, show LLM settings, start Uvicorn + Telegram bot.
+./docs/WEB_SCRAPING.md:3:Nexa adds an **HTTP-first scraping stack** (async `httpx`, BeautifulSoup, lxml) alongside Playwright browser automation (Phase 14). Use scraping for **read-only HTML/JSON fetch**, CSS/XPath extraction, and simple **next-link pagination**.
+./docs/DEV_JOBS.md:3:Nexa can run **codebase work** in a **review loop**: you queue a task (often from **Telegram** on your phone or from chat), a **dev executor** runs on a machine with the repo, and the bot **notifies** you for review, failure, and commit steps.
+./docs/PHASE66_NATURAL_AGENT_INVOCATION.md:5:When `NEXA_AGENT_ORCHESTRATION_ENABLED=true`, the gateway already calls `try_sub_agent_gateway_turn` **before** operator execution, execution loop, missions, and full chat (`NexaGateway.handle_message` in `app/services/gateway/runtime.py`). Phase 66 extends **that same early hop** so phrases like `ask security_agent to scan /path` route to a **registered** sub-agent for the current chat scope, not only leading `@name` messages.
+./docs/USER_GUIDE.md:1:# Nexa Next — User Guide
+./docs/USER_GUIDE.md:3:This guide is for anyone running Nexa Next day to day: missions, Mission Control, privacy modes, and troubleshooting.
+./docs/USER_GUIDE.md:7:A **mission** is a structured unit of work Nexa orchestrates across agents (research, coding, review, etc.). Missions are persisted in the database with:
+./docs/USER_GUIDE.md:16:2. Nexa parses intent, creates a mission and tasks, and runs agents within configured timeouts.
+./docs/USER_GUIDE.md:72:Nexa-next can run an **end-to-end developer loop** on registered repositories (inspect → tests → coding-agent stub → tests → summary), with **allowlisted shell commands only** and **stored logs redacted** for secrets.
+./docs/NATIVE_SETUP.md:3:Run Nexa **without Docker**: Python venv, local `.env`, optional **Ollama**, and the **`nexa_cli`** helpers.
+./docs/NEXA_ENHANCED_ORCHESTRATION_SPEC.md:3:**Title:** Nexa Enhanced Orchestration Specification – Borrow OpenClaw Magic + Make It Better  
+./docs/NEXA_ENHANCED_ORCHESTRATION_SPEC.md:6:**Goal:** Minimum = Nexa feels and works exactly like OpenClaw’s magical orchestration (Heartbeat + Lobster-style deterministic workflows + persistent Markdown memory + proactive gateway).  
+./docs/NEXA_ENHANCED_ORCHESTRATION_SPEC.md:7:**Maximum** = Nexa is clearly superior: privacy-first zero-trust, verifiable truth layer, lighter tokens, Mission Control observability, safer operator mode, end-to-end autonomous operator behavior without repeated confirmations.
+./docs/NEXA_ENHANCED_ORCHESTRATION_SPEC.md:9:This spec builds directly on your existing handoff (`execution_loop.py`, `operator_execution_loop.py`, gateway runtime, etc.) and injects OpenClaw’s proven “magic feel” while fixing its weaknesses.
+./docs/NEXA_ENHANCED_ORCHESTRATION_SPEC.md:15:**End-to-end orchestration** in Nexa means: User gives a high-level intent (“fix the Railway worker crash and redeploy”, “ship latest main to Vercel production”, “add auth and push the feature branch”) and Nexa autonomously executes the full lifecycle while feeling alive and proactive.
+./docs/NEXA_ENHANCED_ORCHESTRATION_SPEC.md:19:- Nexa immediately replies: “Understood. Entering Operator Mode for [clear mission summary]. I will inspect → diagnose → fix → test → commit → push → deploy → verify. Live progress in Mission Control. Only true blockers will stop me.”
+./docs/NEXA_ENHANCED_ORCHESTRATION_SPEC.md:21:- It uses OpenClaw-style **Heartbeat/Pulse** for background continuity and **Lobster-style deterministic pipelines** for multi-step safety and efficiency.
+./docs/NEXA_ENHANCED_ORCHESTRATION_SPEC.md:29:## 2. Operator Mode (Borrowed + Improved from OpenClaw)
+./docs/NEXA_ENHANCED_ORCHESTRATION_SPEC.md:33:**Capabilities (exactly like OpenClaw + better):**
+./docs/NEXA_ENHANCED_ORCHESTRATION_SPEC.md:36:- Full local repo inspection (`git status`, `git log`, file reads) — OpenClaw style.
+./docs/NEXA_ENHANCED_ORCHESTRATION_SPEC.md:45:**Nexa improvements over OpenClaw:**
+./docs/NEXA_ENHANCED_ORCHESTRATION_SPEC.md:58:- If user pastes token in chat → Nexa stores in OS vault, tests immediately (`vercel whoami`, `railway whoami`, `gh auth status`), confirms without echoing secret.
+./docs/NEXA_ENHANCED_ORCHESTRATION_SPEC.md:66:## 4. Execution Loop (The Core Magic – OpenClaw + Nexa)
+./docs/NEXA_ENHANCED_ORCHESTRATION_SPEC.md:68:**Nexa combines your execution_loop + operator_execution_loop with OpenClaw’s proven pattern:**
+./docs/NEXA_ENHANCED_ORCHESTRATION_SPEC.md:71:2. **Safe checks first** (git status, current branch, tests) — OpenClaw style.
+./docs/NEXA_ENHANCED_ORCHESTRATION_SPEC.md:73:4. **Deterministic pipeline (NexaForge = Lobster 2.0)**: Multi-step via typed JSON-pipe DAG with hard approval gates only on true side-effects.
+./docs/NEXA_ENHANCED_ORCHESTRATION_SPEC.md:78:6. **No “paste logs”** — Nexa fetches and analyzes itself.
+./docs/NEXA_ENHANCED_ORCHESTRATION_SPEC.md:98:**Heartbeat/Pulse (OpenClaw magic borrowed):**
+./docs/NEXA_ENHANCED_ORCHESTRATION_SPEC.md:106:## 6. Truth and Verification (Nexa’s Biggest Upgrade)
+./docs/NEXA_ENHANCED_ORCHESTRATION_SPEC.md:108:Nexa never lies:
+./docs/NEXA_ENHANCED_ORCHESTRATION_SPEC.md:135:- Persistent Markdown files (`SOUL.md`, `PULSE.md`, project memory) — exactly OpenClaw style but with vector search + provenance.
+./docs/NEXA_ENHANCED_ORCHESTRATION_SPEC.md:137:- Lightweight, no GPU required, token-efficient via deterministic NexaForge steps.
+./docs/NEXA_ENHANCED_ORCHESTRATION_SPEC.md:176:Nexa is “OpenClaw-level magic + better” when:
+./docs/NEXA_ENHANCED_ORCHESTRATION_SPEC.md:180:- Heartbeat/Pulse + NexaForge give the exact same “alive” proactive feel as OpenClaw.
+./docs/NEXA_ENHANCED_ORCHESTRATION_SPEC.md:183:- Token usage is lower than OpenClaw equivalents (deterministic pipelines).
+./docs/NEXA_ENHANCED_ORCHESTRATION_SPEC.md:186:**This spec makes Nexa work exactly like OpenClaw’s magical orchestration at minimum, and clearly better at maximum.**
+./docs/NEXA_ENHANCED_ORCHESTRATION_SPEC.md:194:- **Phase 2 (OpenClaw-style chat):** `### Live progress` step lines, strict deploy+verify proof for `verified` / mission footer, PULSE-driven deploy skip, workspace-stripped phase keyword detection (see `docs/NEXA_ENHANCED_ORCHESTRATION_PHASE2.md`).
+./docs/NEXA_ENHANCED_ORCHESTRATION_SPEC.md:200:- Per-command Firecracker/gVisor isolation, OS keychain vault, full Mission Control live UI, NexaForge JSON DAG engine, vector memory + `SOUL.md` productization, true background continuation of the same mission after the chat session closes, and the full §11 integration test matrix beyond existing operator/execution tests.
+./docs/MARKETPLACE.md:3:Operational plugin catalog separate from ClawHub skills (`/api/v1/marketplace/search`).
+./docs/ARCHITECTURE.md:1:# Nexa Next — architecture boundaries
+./docs/ARCHITECTURE.md:23:- **Phase 6 skills runtime** (YAML `skill.yaml`, process-local `PluginSkillRegistry`, optional ClawHub HTTP): see [SKILLS_SYSTEM.md](SKILLS_SYSTEM.md). This is separate from Phase 22 per-user JSON skills under `/api/v1/skills`.
+./docs/ARCHITECTURE.md:30:- Inbound messages must go through **`route_inbound`** in **`app/services/channels/router.py`**, which delegates to **`NexaGateway.handle_message`**. Concrete channels (`telegram_channel`, `web_channel`, `slack_channel`) must not import **`NexaGateway`** directly (`tests/test_channel_routing.py`).
+./docs/WHY_NEXA.md:1:# Why Nexa-next (honest positioning)
+./docs/WHY_NEXA.md:3:Nexa-next targets operators who want **most of the “AI employee” story** without surrendering data, budget, or execution control.
+./docs/WHY_NEXA.md:5:## Where Nexa tends to win
+./docs/WHY_NEXA.md:12:## Where Nexa is still catching up
+./docs/WHY_NEXA.md:14:- **Ecosystem size**: OpenClaw-like skill marketplaces are larger today. Nexa’s marketplace MVP is local, validated, and conservative by design.
+./docs/WHY_NEXA.md:22:Nexa-next is for builders who want **magic with enforcement knobs**, not magic with blind trust.
+./docs/INSTALLER_BRANDING_CONVERGENCE.md:7:| Nexa | `NEXA_*` env aliases only |
+./docs/INSTALLER_BRANDING_CONVERGENCE.md:8:| OpenClaw | README + parity tests only |
+./docs/MULTIMODAL_ORCHESTRATION.md:96:The gateway (`NexaGateway` / `handle_full_chat`) should receive either:
+./docs/AETHOS_DIFFERENTIATION.md:3:## OpenClaw parity
+./docs/AETHOS_DIFFERENTIATION.md:5:AethOS maintains OpenClaw-equivalent orchestration, runtime persistence, task queues, repair flows, and Mission Control visibility. Parity tests remain green.
+./docs/MIGRATING_FROM_OPENCLAW.md:1:# Migrating from OpenClaw to AethOS
+./docs/MIGRATING_FROM_OPENCLAW.md:3:This guide is now governed by the Phase 1 **OpenClaw parity** objective:
+./docs/MIGRATING_FROM_OPENCLAW.md:5:> AethOS must reproduce OpenClaw exactly as it works today before privacy, PII filtering, local-first differentiation, cost transparency, or custom AethOS-specific improvements become primary work.
+./docs/MIGRATING_FROM_OPENCLAW.md:7:Do not introduce architectural divergence unless required to reproduce OpenClaw behavior.
+./docs/MIGRATING_FROM_OPENCLAW.md:9:Use this guide to map an OpenClaw-style setup into AethOS while preserving behavior first. The **master implementation plan** (CLI matrix, priorities, test modules) is [OPENCLAW_FUNCTIONAL_PARITY_DIRECTIVE.md](OPENCLAW_FUNCTIONAL_PARITY_DIRECTIVE.md).
+./docs/MIGRATING_FROM_OPENCLAW.md:13:Do not treat differences as product advantages during Phase 1. Treat them as gaps unless they are explicitly required to reproduce OpenClaw behavior.
+./docs/MIGRATING_FROM_OPENCLAW.md:17:1. Chat/operator channels used in the current OpenClaw setup.
+./docs/MIGRATING_FROM_OPENCLAW.md:30:4. Configure the same channels used in the OpenClaw reference setup.
+./docs/MIGRATING_FROM_OPENCLAW.md:39:A migration is successful only if the reproduced workflow behaves like the OpenClaw reference workflow from the operator's perspective.
+./docs/MIGRATING_FROM_OPENCLAW.md:61:During Phase 1, these must not prevent or reshape the OpenClaw-compatible path unless explicitly required for parity.
+./docs/MIGRATING_FROM_OPENCLAW.md:65:If a feature does not yet match OpenClaw, mark it as a parity gap in `docs/OPENCLAW_PARITY_AUDIT.md`. Do not hide missing behavior behind branding, roadmap language, or claims of intentional differentiation.
+./docs/CLAWHUB_MARKETPLACE.md:1:# ClawHub marketplace (Phase 17, Phase 71)
+./docs/CLAWHUB_MARKETPLACE.md:3:Install, update, and remove **plugin skills** from a remote ClawHub-compatible registry. Coexists with Phase 6 pluggable skills (`docs/SKILLS_SYSTEM.md`) and stores disk state under `NEXA_CLAWHUB_SKILL_ROOT` (default `data/skills/`).
+./docs/CLAWHUB_MARKETPLACE.md:75:| `/skills_search <query>` | no | Search the configured ClawHub registry (top 10). |
+./docs/CLAWHUB_MARKETPLACE.md:88:- "Popular on ClawHub" section, refreshable.
+./docs/CLAWHUB_MARKETPLACE.md:127:| `/featured` row is empty | Upstream registry doesn't expose `/skills/featured` (or returned 404). | Expected for non-ClawHub registries; the UI hides the row when empty. |
+./docs/CLAWHUB_MARKETPLACE.md:136:- the remote `ClawHubSkillInfo` (parsed from `data["skill_dependencies"]`)
+./docs/CLAWHUB_MARKETPLACE.md:171:`app.services.skills.update_checker.SkillUpdateChecker` is a single in-process asyncio task started from the FastAPI `lifespan` context. It runs every `NEXA_MARKETPLACE_UPDATE_CHECK_INTERVAL_SECONDS` (or on `kick_now`), probes every installed `SkillSource.CLAWHUB` row via `ClawHubClient.get_skill_info`, and calls `SkillInstaller.mark_update_checked` to stamp `available_version` + flip the row's status to `OUTDATED` when a newer version exists. Non-clawhub rows (LOCAL / BUILTIN) are skipped without a network call. Failures are swallowed per-skill so a single 500 from the registry doesn't break the loop for the rest of the catalogue.
+./docs/OPENCLAW_SUCCESSOR_AUDIT.md:1:# OpenClaw successor roadmap — Nexa-next coverage audit (Phase 54)
+./docs/OPENCLAW_SUCCESSOR_AUDIT.md:7:| Feature | OpenClaw strength | Nexa current state | Status | Next action |
+./docs/OPENCLAW_SUCCESSOR_AUDIT.md:29:| Feature | OpenClaw strength | Nexa current state | Status | Next action |
+./docs/OPENCLAW_SUCCESSOR_AUDIT.md:40:| Feature | OpenClaw strength | Nexa current state | Status | Next action |
+./docs/OPENCLAW_SUCCESSOR_AUDIT.md:48:| Feature | OpenClaw strength | Nexa current state | Status | Next action |
+./docs/OPENCLAW_SUCCESSOR_AUDIT.md:57:| Feature | OpenClaw strength | Nexa current state | Status | Next action |
+./docs/OPENCLAW_SUCCESSOR_AUDIT.md:65:| Feature | OpenClaw strength | Nexa current state | Status | Next action |
+./docs/OPENCLAW_SUCCESSOR_AUDIT.md:73:| Feature | OpenClaw strength | Nexa current state | Status | Next action |
+./docs/OPENCLAW_SUCCESSOR_AUDIT.md:81:| Feature | OpenClaw strength | Nexa current state | Status | Next action |
+./docs/OPENCLAW_SUCCESSOR_AUDIT.md:88:| Feature | OpenClaw strength | Nexa current state | Status | Next action |
+./docs/SETUP.md:24:From an **empty directory**, this installs Nexa: clones the repo, runs the same Python bootstrap as [Quick start](#quick-start-recommended) (`nexa_bootstrap.py`), optionally merges API keys from your environment or prompts, runs `ensure_schema`, then starts services:
+./docs/development/contributing.md:3:AethOS development is currently governed by the OpenClaw parity-first rule.
+./docs/development/contributing.md:7:Reproduce OpenClaw behavior first. Do not introduce architectural divergence unless required to reproduce OpenClaw behavior.
+./docs/development/contributing.md:12:OpenClaw behavior reproduced:
+./docs/FINAL_IDENTITY_CONVERGENCE_AUDIT.md:9:| Nexa | `NEXA_*` env aliases, migration internals only |
+./docs/FINAL_IDENTITY_CONVERGENCE_AUDIT.md:10:| OpenClaw | README inspiration, parity docs/tests only |
+./docs/FINAL_IDENTITY_CONVERGENCE_AUDIT.md:11:| OpenHub / ClawHub | Not in operator UI |
+./docs/RUNTIME_CLEANUP_RECON.md:44:| `Nexa` / `nexa_*` env | Widespread; OpenClaw parity paths |
+./docs/RUNTIME_CLEANUP_RECON.md:46:| Mission Control DB models `NexaMission` | Phase 1 parity |
+./docs/RUNTIME_CLEANUP_RECON.md:67:3. Nexa → AethOS display strings in web nav only (non-breaking)
+./docs/NEXA_NEXT_PRIVACY_FIRST_GATEWAY_PLAN.md:1:# Nexa Next — Privacy-First OpenClaw-Style Multi-Agent Runtime
+./docs/NEXA_NEXT_PRIVACY_FIRST_GATEWAY_PLAN.md:15:- **One permanent platform identity:** Nexa (the runtime/gateway).
+./docs/NEXA_NEXT_PRIVACY_FIRST_GATEWAY_PLAN.md:17:- **Differentiator vs OpenClaw-style stacks:** **Privacy-first** — PII, secrets, and sensitive content are **detected, redacted, blocked, or confirmed** before third-party APIs.
+./docs/NEXA_NEXT_PRIVACY_FIRST_GATEWAY_PLAN.md:22:Nexa Gateway
+./docs/NEXA_NEXT_PRIVACY_FIRST_GATEWAY_PLAN.md:68:- **Phase 20** — Parity/exceed OpenClaw on runtime; **exceed** on privacy and trust.
+./docs/NEXA_NEXT_PRIVACY_FIRST_GATEWAY_PLAN.md:70:## Environment (Nexa Next–oriented)
+./docs/NEXA_NEXT_PRIVACY_FIRST_GATEWAY_PLAN.md:72:See root **`.env.example`** — section **Nexa Next (gateway + privacy firewall)**.
+./docs/PHASE71_MARKETPLACE_SURFACES.md:5:The Phase 17 ClawHub backend (`app/services/skills/{clawhub_client,clawhub_models,installer}.py`, `app/api/routes/clawhub.py`, `app/cli/clawhub.py`, `tests/test_clawhub.py`) shipped the full ClawHub-compatible install / update / remove pipeline against `installed.yaml` and the plugin registry. It was, however, only reachable via the cron-token-gated REST endpoints (`Authorization: Bearer <NEXA_CRON_API_TOKEN>`) and the `nexa_cli clawhub …` argparse subcommand.
+./docs/PHASE71_MARKETPLACE_SURFACES.md:55:   - Search / popular / installed proxy through to `ClawHubClient` and `SkillInstaller`.
+./docs/PHASE71_MARKETPLACE_SURFACES.md:70:The Phase 17 settings (`NEXA_CLAWHUB_ENABLED`, `NEXA_CLAWHUB_TRUSTED_PUBLISHERS`, `NEXA_CLAWHUB_REQUIRE_SIGNATURE`, `NEXA_CLAWHUB_REQUIRE_INSTALL_APPROVAL`, …) still apply to **every** surface — cron API, CLI, Telegram, web — because they all delegate to `SkillInstaller` and `ClawHubClient`.
+./docs/OPENCLAW_FUNCTIONAL_PARITY_STATUS.md:1:# AethOS — OpenClaw functional parity implementation status
+./docs/OPENCLAW_FUNCTIONAL_PARITY_STATUS.md:29:| **Phase 1 final operational certification** (closure totals + boundedness table in [OPENCLAW_FINAL_PARITY_AUDIT.md](OPENCLAW_FINAL_PARITY_AUDIT.md)) | Documented; local suites **142** (`test_openclaw_*`) + **27** (`production_like`) + **8** (`edge_cases`) + **9** (behavioral) + **6** (soak) + **13** (OpenClaw e2e slice); combined **177** passed `test_openclaw_*`+`production_like`+`edge_cases` |
+./docs/OPENCLAW_FUNCTIONAL_PARITY_STATUS.md:40:**Doctrine rule (verbatim):** Do not introduce architectural divergence unless required to reproduce OpenClaw behavior.
+./docs/OPENCLAW_FUNCTIONAL_PARITY_STATUS.md:42:**Doctrine coverage:** OpenClaw **functionality** parity first; **AethOS** branding retained; privacy / PII / local-first deferred to Phase 2 unless required for OpenClaw-compatible behavior; **capability** parity over branding parity.
+./docs/OPENCLAW_FUNCTIONAL_PARITY_STATUS.md:123:`tests/test_openclaw_doctrine_docs.py` requires listed docs to include **OpenClaw parity** language and the **divergence** sentence; `docs/OPENCLAW_FUNCTIONAL_PARITY_DIRECTIVE.md` is in the required file set.
+./docs/OPENCLAW_FUNCTIONAL_PARITY_STATUS.md:158:| **Richer gateway runtime** | Session manager, autonomous loops, long-running coordination, multi-agent execution, channel-driven queues (match OpenClaw reference) |
+./docs/OPENCLAW_FUNCTIONAL_PARITY_STATUS.md:166:**AethOS** is aligned on **OpenClaw functional parity first.**
+./docs/OPENCLAW_FUNCTIONAL_PARITY_STATUS.md:171:| **AethOS** naming and product identity | Imitating OpenClaw **brand** |
+./docs/OPENCLAW_FUNCTIONAL_PARITY_STATUS.md:173:**Capability target:** OpenClaw-equivalent operational power for the operator.
+./docs/NEXA_PROVIDER_ROUTING_HANOFF.md:6:**Goal:** Make Nexa’s gateway + brain reliably detect the correct provider (Vercel, Railway, GitHub, generic) from user intent and URLs **before** any preferences recording or runner selection.
+./docs/NEXA_PROVIDER_ROUTING_HANOFF.md:15:- Nexa still recorded “Railway/deploy preferences” and talked about Railway.
+./docs/UI_BRANDING_PURGE_FINAL.md:5:User-facing copy uses **AethOS**. Remaining `Nexa` allowed only in type aliases (`NexaWebConfig`), API path comments, and legacy internal identifiers.
+./docs/AGENT_ORCHESTRATION.md:26:| **Primary agent** | `NexaGateway` + response stack; user always talks to Nexa first unless a sub-agent turn is explicitly selected. |
+./docs/AGENT_ORCHESTRATION.md:48:NexaGateway.handle_message (sync)
+./docs/AGENT_ORCHESTRATION.md:74:**Sync only:** `NexaGateway.handle_message` is synchronous. Do **not** introduce `async def route` unless the gateway is deliberately refactored for async (out of scope for Week 4 v1).
+./docs/AGENT_ORCHESTRATION.md:100:| `NexaGateway.handle_message` | After external-credential handling, before operator execution: call `try_sub_agent_gateway_turn`. Gated by `nexa_agent_orchestration_enabled`. |
+./docs/AGENT_ORCHESTRATION.md:191:| Gateway hook in `NexaGateway.handle_message` | ✅ Phase 2 |
+./docs/RUNBOOK_HOST_EXECUTOR_GIT_README.md:16:### FAQ: Why didn’t Nexa push after verifying GitHub / Vercel?
+./docs/BRANDING_CONVERGENCE_FINAL.md:9:| OpenClaw | README inspiration, parity docs/tests |
+./docs/BRANDING_CONVERGENCE_FINAL.md:10:| Nexa | `NEXA_*` env aliases, migration internals |
+./docs/NEXA_FOCUS_AND_CLEAN_RESPONSE_HANDOFF.md:3:**Title:** Nexa Focus & Clean Response Discipline  
+./docs/GUIDED_CLI_LOGIN_FOR_OPERATORS.md:1:# Guided CLI login for Nexa operators
+./docs/GUIDED_CLI_LOGIN_FOR_OPERATORS.md:3:This document describes **why** Telegram/API workflows cannot “open a terminal,” how **Docker vs host** differs for `vercel` / `gh`, and how Nexa **surfaces copy-paste login steps** when CLIs are installed but not authenticated.
+./docs/PLUGIN_VS_SKILL_ARCHITECTURE.md:12:## Skills (ClawHub-style marketplace)
+./docs/PLUGIN_VS_SKILL_ARCHITECTURE.md:33:| Skills | `/api/v1/mission-control/marketplace` (and ClawHub-compatible registry) |
+./docs/INSTALL.md:1:# Installing Nexa-next
+./docs/WEB_UI.md:3:The Nexa **web app** (Next.js) is started alongside the API when you use `run_everything.sh` and Node is available, typically on **port 3000** (see the script banner; your `.env` may set `NEXA_WEB_BASE_URL`).
+./docs/LOCAL_DOCKER_TELEGRAM.md:1:# Nexa-Next — Docker + Telegram + Startup (current state)
+./docs/COMMERCIAL_POSITIONING.md:7:## vs OpenClaw
+./docs/RELEASE_CANDIDATE_NARRATIVE.md:12:OpenClaw parity remains an internal behavioral contract; the product identity is **AethOS**.
+./docs/ENTERPRISE_STABILITY_CERTIFICATION.md:17:- Complete OpenClaw parity sweep (CI/nightly)
+./docs/PHASE77_CONFIG_QUERY.md:13:4. **Gateway** — `NexaGateway.handle_message` answers config queries **after** credential merge and **before** sub-agent routing, operator execution, and the execution loop (`app/services/gateway/runtime.py`).
+./docs/NEXA_DYNAMIC_ROUTING_AND_FOCUS_V2_HANDOFF.md:3:**Title:** Nexa Dynamic Provider Routing + Strict Focus Discipline (V2)  
+./docs/README.md:5:AethOS is in a strict OpenClaw parity-first phase. The project must reproduce OpenClaw exactly as it works today before prioritizing privacy, PII filtering, local-first differentiation, cost transparency, or custom AethOS-specific architecture.
+./docs/README.md:7:Do not introduce architectural divergence unless required to reproduce OpenClaw behavior.
+./docs/README.md:12:- [OpenClaw parity audit](OPENCLAW_PARITY_AUDIT.md)
+./docs/README.md:13:- [OpenClaw final parity audit — Phase 1 freeze & confidence lock](OPENCLAW_FINAL_PARITY_AUDIT.md)
+./docs/README.md:16:- [Migrating from OpenClaw](MIGRATING_FROM_OPENCLAW.md)
+./docs/README.md:17:- [OpenClaw functional parity directive (master plan)](OPENCLAW_FUNCTIONAL_PARITY_DIRECTIVE.md)
+./docs/README.md:18:- [OpenClaw functional parity implementation status](OPENCLAW_FUNCTIONAL_PARITY_STATUS.md)
+./docs/README.md:53:Operational and phase-specific guides remain as separate files in this `docs/` directory. During Phase 1, update docs whenever behavior changes and keep all claims tied to OpenClaw parity status.
+./docs/NEXA_CLI_PATH_FINAL_FIX_HANDOFF.md:3:**Title:** Nexa Final CLI PATH Fix (nvm + Full Shell Load)  
+./docs/NEXA_CLI_PATH_FINAL_FIX_HANDOFF.md:10:## 1. Why Cursor / “you” can run `vercel` but Nexa says it cannot
+./docs/NEXA_CLI_PATH_FINAL_FIX_HANDOFF.md:14:| Factor | Your interactive terminal | Nexa API / worker process |
+./docs/NEXA_CLI_PATH_FINAL_FIX_HANDOFF.md:21:So: **“CLI works on my machine”** in Terminal does **not** imply **the same Python worker** sees those binaries. Nexa only sees what its **process environment + filesystem** provide.
+./docs/NEXA_CLI_PATH_FINAL_FIX_HANDOFF.md:53:**Shell binary:** Nexa uses **`resolve_login_shell_executable()`** — prefers **`$SHELL`** (same default as Terminal/Cursor when the worker inherits your environment), then **`/bin/zsh`**, **`/bin/bash`**, **`/bin/sh`**. Invocation is **`[shell, "-l", "-c", script]`** (login shell + script). This avoids hard-coding **bash** when your profile is **zsh**-centric.
+./docs/NEXA_CLI_PATH_FINAL_FIX_HANDOFF.md:75:## 7. How to verify on the host where Nexa runs
+./docs/NEXA_CLI_PATH_FINAL_FIX_HANDOFF.md:78:   If Nexa runs **inside Docker** on your Mac, the container must **install** or **mount** nvm/node CLI — **bind-mounting only the repo is not enough**.
+./docs/NEXA_CLI_PATH_FINAL_FIX_HANDOFF.md:96:4. **`which vercel`** only matches Nexa if run **inside** the same environment as the worker (same container, same user).
+./docs/USERGUID.md:1:# Nexa — User Guide
+./docs/USERGUID.md:3:**Nexa is your personal execution system.**
+./docs/USERGUID.md:10:## What Nexa does
+./docs/USERGUID.md:14:Nexa goes further:
+./docs/USERGUID.md:26:You talk to Nexa like a normal chat:
+./docs/USERGUID.md:30:Nexa responds with:
+./docs/USERGUID.md:40:And Nexa continues the work.
+./docs/USERGUID.md:44:## What makes Nexa different
+./docs/USERGUID.md:46:Nexa is not:
+./docs/USERGUID.md:52:Nexa is:
+./docs/USERGUID.md:76:**Nexa:**
+./docs/USERGUID.md:86:**Nexa:**
+./docs/USERGUID.md:94:## Why Nexa exists
+./docs/USERGUID.md:102:Nexa reduces that gap.
+./docs/USERGUID.md:108:1. Run Nexa locally  
+./docs/USERGUID.md:128:Nexa is evolving into a **personal operating system for work**.
+./docs/BRANDING_PURGE_AUDIT.md:7:- README: *Inspired by OpenClaw.*
+./docs/BRANDING_PURGE_AUDIT.md:14:- OpenClaw / ClawHub / OpenHub in CLI help and common MC copy
+./docs/BRANDING_PURGE_AUDIT.md:15:- Marketplace copy uses “skill registry” instead of ClawHub
+./docs/CHANNEL_GATEWAY.md:4:**Goal:** Extend Nexa from **Telegram + Web** into a **channel gateway platform** (Slack, WhatsApp, email, SMS, iMessage via providers, etc.) **without** weakening permissions, approval flow, audit/trust, or agent routing.
+./docs/CHANNEL_GATEWAY.md:26:Channel → Gateway → Nexa Core → Gateway → Channel
+./docs/CHANNEL_GATEWAY.md:77:Links Telegram `user_id`, Slack `team_id+user`, email address, E.164 phone, etc. to the **same** internal Nexa user model used everywhere else.
+./docs/CHANNEL_GATEWAY.md:152:Nexa becomes **gateway + governance** for AI agents across **communication channels**, not “only a Telegram bot + web app.”
+./docs/CHANNEL_GATEWAY.md:154:**One-line summary:** Convert the Telegram integration into a **reusable Channel Gateway** so Nexa can operate across Slack, WhatsApp, email, and beyond **without** breaking the core governance model.
+./docs/RESPONSE_SUGGESTION_AUDIT.md:11:| `web_chat_service.py` main path | `handle_agent_request` only | `NexaGateway.handle_message` first; fallback to orchestrator | Gateway-first |
+./docs/RESPONSE_SUGGESTION_AUDIT.md:12:| `agent_orchestrator.py` developer route | “tell Cursor” phrasing | Action-oriented Nexa copy | Rewritten |
+./docs/RESPONSE_SUGGESTION_AUDIT.md:15:| `response_sanitizer.py` | `_DEV_DISABLED` / execution-lead mentioned Cursor | Nexa-neutral wording (host executor / IDE-linked) | Rewritten |
+./docs/MCP_ROADMAP.md:3:Nexa can connect specialized agents to external tools and data through a **standard connector** model. MCP is powerful; treat it as a **privilege boundary**, not a convenience shortcut.
+./docs/SLACK_SETUP.md:3:Nexa supports Slack in two ways — pick **one primary transport** per workspace to avoid duplicate processing:
+./docs/SLACK_SETUP.md:39:- `app/channels/base.py` — `NexaChannel` abstraction  
+./docs/SLACK_SETUP.md:40:- `app/channels/slack/` — Bolt handlers + `SlackSocketNexaChannel`  
+./docs/ROADMAP.md:1:# Nexa Roadmap (Arcturus)
+./docs/ROADMAP.md:3:Single source of truth for **where Nexa is going**. For how the system is built today, see [ARCHITECTURE.md](ARCHITECTURE.md).
+./docs/ROADMAP.md:28:**Goal:** Make Nexa **feel like a coherent system**, not a disposable chat tab.
+./docs/ROADMAP.md:93:> **Every feature should move Nexa toward being a system, not just a chat.**
+./docs/API_CONTRACT.md:1:# Nexa-Next API contract (frozen)
+./docs/API_CONTRACT.md:40:| Persistent Nexa memory documents | `/nexa-memory` (GET/POST `""`) |
+./docs/CRON_SCHEDULING.md:12:| `app/services/cron/scheduler.py` | `NexaCronScheduler` singleton (memory job store + reload from SQLite on API boot) |
+./docs/SOCIAL_AUTOMATION.md:3:Nexa can **post** and **read** on selected platforms behind explicit flags and credentials. This is **operator-controlled** automation — always respect each platform’s Terms of Service and rate limits.
+./docs/SOCIAL_AUTOMATION.md:53:- **`media_urls`**: **required** — first entry must be an **https** URL to a video file Nexa can download (subject to egress allowlist and `NEXA_SOCIAL_MAX_MEDIA_SIZE_MB`).
+./docs/OPENCLAW_FUNCTIONAL_PARITY_DIRECTIVE.md:1:# AethOS — OpenClaw functional parity directive (master implementation plan)
+./docs/OPENCLAW_FUNCTIONAL_PARITY_DIRECTIVE.md:5:AethOS must achieve the **same functionality, workflows, operator experience, and autonomous capabilities** as OpenClaw as it exists today.
+./docs/OPENCLAW_FUNCTIONAL_PARITY_DIRECTIVE.md:11:- reproduce OpenClaw **behavior**
+./docs/OPENCLAW_FUNCTIONAL_PARITY_DIRECTIVE.md:12:- reproduce OpenClaw **workflows**
+./docs/OPENCLAW_FUNCTIONAL_PARITY_DIRECTIVE.md:13:- reproduce OpenClaw **operational capabilities**
+./docs/OPENCLAW_FUNCTIONAL_PARITY_DIRECTIVE.md:14:- reproduce OpenClaw **user outcomes**
+./docs/OPENCLAW_FUNCTIONAL_PARITY_DIRECTIVE.md:15:- reproduce OpenClaw **orchestration patterns**
+./docs/OPENCLAW_FUNCTIONAL_PARITY_DIRECTIVE.md:16:- reproduce OpenClaw **deployment and gateway experience**
+./docs/OPENCLAW_FUNCTIONAL_PARITY_DIRECTIVE.md:28:**OpenClaw parity** is measured by operator-visible behavior and workflows, not labels.
+./docs/OPENCLAW_FUNCTIONAL_PARITY_DIRECTIVE.md:30:Do not introduce architectural divergence unless required to reproduce OpenClaw behavior.
+./docs/OPENCLAW_FUNCTIONAL_PARITY_DIRECTIVE.md:34:**Does this move AethOS closer to OpenClaw functional parity?**
+./docs/OPENCLAW_FUNCTIONAL_PARITY_DIRECTIVE.md:40:## What must match OpenClaw
+./docs/OPENCLAW_FUNCTIONAL_PARITY_DIRECTIVE.md:42:AethOS should behave like OpenClaw from the **operator** perspective. The following areas are mandatory parity targets.
+./docs/OPENCLAW_FUNCTIONAL_PARITY_DIRECTIVE.md:58:Required **AethOS** commands (workflows equivalent to OpenClaw):
+./docs/OPENCLAW_FUNCTIONAL_PARITY_DIRECTIVE.md:103:Telegram, Slack, web sessions, gateway messaging, persistent routing, multi-channel assistant identity where OpenClaw provides comparable surfaces.
+./docs/OPENCLAW_FUNCTIONAL_PARITY_DIRECTIVE.md:115:These may proceed only after **AethOS behaviorally matches OpenClaw** for Phase 1 checkpoints.
+./docs/OPENCLAW_FUNCTIONAL_PARITY_DIRECTIVE.md:127:1. What OpenClaw behavior does this reproduce?
+./docs/OPENCLAW_FUNCTIONAL_PARITY_DIRECTIVE.md:221:AethOS is not imitating OpenClaw **branding**. AethOS is achieving the same **operational capability**, **workflows**, **orchestration power**, **autonomous execution behavior**, and **operator outcomes** as OpenClaw. **Branding remains AethOS.** **Functionality** must reach OpenClaw parity first. **Everything else is Phase 2.**
+./docs/NEXA_USE_USER_SHELL_AND_NVM_FINAL_HANDOFF.md:3:**Title:** Nexa Use User's Default Shell + Full nvm Load (Final CLI Fix)  
+./docs/NEXA_USE_USER_SHELL_AND_NVM_FINAL_HANDOFF.md:18:**Why Cursor “has CLI” but Nexa might not:** The IDE agent runs in **your** terminal session; Nexa runs in **the API worker process** (often Docker/systemd), which may omit **`SHELL`**, **`HOME`**, or the host filesystem — see `docs/NEXA_CLI_PATH_FINAL_FIX_HANDOFF.md`.
+./docs/NEXA_USE_USER_SHELL_AND_NVM_FINAL_HANDOFF.md:22:After a non-zero exit, Nexa appends a short hint from **`command -v`** for the CLI binary, run through the **same** profile script (diagnostic only).
+./docs/PHASE1_CERTIFICATION_CLOSURE_PHASE2_BOUNDARY.md:3:This document is the **normative boundary** between Phase 1 (OpenClaw parity mandate) and Phase 2 (privacy / PII / local-first layers). Quantitative certification totals, boundedness metrics tables, and suite pass counts live in **[OPENCLAW_FINAL_PARITY_AUDIT.md](OPENCLAW_FINAL_PARITY_AUDIT.md)** (*Phase 1 final operational certification (closure)*). This file states **what is frozen**, **what may still change**, and **when Phase 2 work may begin**.
+./docs/PHASE1_CERTIFICATION_CLOSURE_PHASE2_BOUNDARY.md:9:For the Phase 1 mandate, AethOS is treated as having **practical OpenClaw-equivalent operational capability**: bounded runtime growth, deterministic summaries (`summarize_runtime_reliability`, `summarize_runtime_continuity`), stable deployment / rollback / reassignment / recovery continuity under churn, Mission Control orchestration snapshot usefulness, and CLI triage surfaces (`aethos status`, `aethos doctor`, `deployments`, `planning`, `logs`) without requiring raw `aethos.json` inspection for routine operations.
+./docs/PHASE1_CERTIFICATION_CLOSURE_PHASE2_BOUNDARY.md:23:| Deployment lifecycle | No redesign of stage graph semantics aligned to OpenClaw parity |
+./docs/PHASE1_CERTIFICATION_CLOSURE_PHASE2_BOUNDARY.md:41:- Production stability improvements that **preserve** OpenClaw-equivalent default behavior  
+./docs/PHASE1_CERTIFICATION_CLOSURE_PHASE2_BOUNDARY.md:84:Only after the boundary is satisfied—**without** breaking OpenClaw-equivalent **default** operational behavior:
+./docs/PHASE1_CERTIFICATION_CLOSURE_PHASE2_BOUNDARY.md:105:AethOS should be treated as a **production-grade OpenClaw-equivalent autonomous operations platform** for Phase 1 objectives. The roadmap shifts to **refinement, optimization, production telemetry, reasoning quality, privacy/local-first layers, and long-duration soak**—not core parity construction.
+./docs/RUNTIME_SIMPLIFICATION_AUDIT.md:24:| `nexa_next_state` DB mission slice | OpenClaw / Phase 1 parity |
+./docs/RUNTIME_SIMPLIFICATION_AUDIT.md:26:| ClawHub marketplace vs runtime plugin marketplace | Different products |
+./docs/OPENCLAW_PARITY_AUDIT.md:1:# OpenClaw parity audit — AethOS Phase 1
+./docs/OPENCLAW_PARITY_AUDIT.md:7:AethOS must reproduce OpenClaw exactly as it works today before the project prioritizes privacy, PII filtering, local-first differentiation, cost transparency, or custom AethOS-specific architecture.
+./docs/OPENCLAW_PARITY_AUDIT.md:9:Phase 1 is complete only when OpenClaw-equivalent workflows can be installed, configured, run, tested, and demonstrated without relying on future Phase 2 differentiators.
+./docs/OPENCLAW_PARITY_AUDIT.md:17:Do not introduce architectural divergence unless required to reproduce OpenClaw behavior.
+./docs/OPENCLAW_PARITY_AUDIT.md:19:When a tradeoff appears between OpenClaw parity and AethOS differentiation, choose parity until Phase 1 is verified.
+./docs/OPENCLAW_PARITY_AUDIT.md:26:| Partial | Surface exists but behavior is incomplete, unverified, or weaker than OpenClaw. |
+./docs/OPENCLAW_PARITY_AUDIT.md:36:| Natural language gateway | Partial | Gateway paths exist, but exact OpenClaw conversational routing needs reference workflow comparison. | Capture OpenClaw reference prompts and add regression tests. |
+./docs/OPENCLAW_PARITY_AUDIT.md:37:| Specialist creation/orchestration | Partial | Dynamic agent surfaces exist. | Verify lifecycle, delegation, and output format against OpenClaw. |
+./docs/OPENCLAW_PARITY_AUDIT.md:46:| Shell execution | Partial | Allowlisted command execution exists. | Match OpenClaw command lifecycle, logs, approvals, and failures. |
+./docs/OPENCLAW_PARITY_AUDIT.md:47:| Browser/tool use | Partial | Browser preview/Playwright paths are gated. | Match OpenClaw browser workflows behind equivalent flags. |
+./docs/OPENCLAW_PARITY_AUDIT.md:54:| Web operator UI | Partial | Next.js Mission Control exists. | Map screens and flows to OpenClaw reference UI. |
+./docs/OPENCLAW_PARITY_AUDIT.md:56:| Run visibility | Partial | Status and health surfaces exist. | Ensure OpenClaw-like mission/run timeline visibility. |
+./docs/OPENCLAW_PARITY_AUDIT.md:64:| Semantic search | Partial | Pseudo/optional embedding paths exist. | Match OpenClaw retrieval quality or document gap. |
+./docs/OPENCLAW_PARITY_AUDIT.md:73:| Local model paths | Partial | Ollama/local flags exist. | Keep from changing OpenClaw-compatible defaults unless required. |
+./docs/OPENCLAW_PARITY_AUDIT.md:75:| Token/cost behavior | Deferred | Useful Phase 2 differentiator, but should not block OpenClaw parity. | Keep non-blocking during Phase 1 unless OpenClaw-compatible. |
+./docs/OPENCLAW_PARITY_AUDIT.md:115:| Task registry + task states | Partial | `task_registry` dict; states include `queued`…`recovering` per OpenClaw Phase 1 list. | Wire real task producers (gateway, agents) into registry. |
+./docs/OPENCLAW_PARITY_AUDIT.md:144:1. Build a reference OpenClaw workflow matrix with expected behavior, prompts, UI states, tool calls, and outputs.
+./docs/OPENCLAW_PARITY_AUDIT.md:173:OpenClaw behavior reproduced:
+./docs/SKILLS_SYSTEM.md:3:**Status:** Initial runtime (YAML manifests, in-memory registry, Python handlers, ClawHub HTTP client stub).  
+./docs/SKILLS_SYSTEM.md:21:| `NEXA_CLAWHUB_API_BASE` | Base URL for ClawHub-compatible APIs (default `https://clawhub.com/api/v1`). |
+./docs/SKILLS_SYSTEM.md:33:ClawHub ZIP download + unpack + local manifest are implemented in Phase 17 (`docs/CLAWHUB_MARKETPLACE.md`).
+./docs/ROADMAP_MULTIMODAL.md:1:# Nexa multimodal roadmap (product order)
+./docs/ROADMAP_MULTIMODAL.md:3:Nexa grows in layers. **Text and documents** stay primary; other modalities are additive.
+./docs/MULTI_USER.md:3:Nexa can be shared: each person can **bring their own** OpenAI and Anthropic API keys (BYOK) so chat, planning, and tools do not have to use the host’s `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` when the user has stored their own.
+./docs/MULTI_USER.md:5:1. The owner runs Nexa (API, bot, database) with the [quick start](SETUP.md#quick-start-recommended) (or full Docker) path.
+./docs/FINAL_LEGACY_POLICY.md:11:| OpenClaw | README inspiration, `docs/OPENCLAW_*`, `tests/test_openclaw_*` |
+./docs/FINAL_LEGACY_POLICY.md:12:| Nexa | `NEXA_*` env aliases, migration internals, compatibility wrappers |
+./docs/FINAL_LEGACY_POLICY.md:13:| ClawHub/OpenHub | Internal migration only; prefer **AethOS Marketplace** / **AethOS Skills** in UI |
+./docs/WORKSPACE_AND_PERMISSIONS.md:3:Technical reference for **scoped host access**, **workspace roots**, and **environment flags** used when Nexa lists files, reads paths, or runs approval-gated host jobs (`local_tool` / host executor).
+./docs/WORKSPACE_AND_PERMISSIONS.md:9:| **Unset / `false`** (default) | **Recommended for most setups.** If you have **no** roots registered via `/workspace add`, paths are allowed when they fall under **`HOST_EXECUTOR_WORK_ROOT`** (defaults to the Nexa repo root). Explicit **chat approvals** for paths outside that tree can still resolve after grant (combined with grants and permission checks). |
+./docs/WORKSPACE_AND_PERMISSIONS.md:12:**Do not** enable strict mode thinking it “fixes” Docker or arbitrary folders. For **Docker**, the API only sees paths that exist **inside** the container (often **`/app`** for the Nexa project tree). To use repos on the host, add a **bind mount** via **`docker-compose.override.yml`** (start from **`docker-compose.override.example.yml`**) and set **`HOST_EXECUTOR_WORK_ROOT`** to the **container-side** mount path. Listing host paths still depends on **approvals**, **grant resolution**, and those mounts where `local_tool_worker` runs — strict mode does not substitute for that.
+./docs/RUNTIME_DEPRECATIONS.md:24:- `NexaMission` models and mission DB snapshot fields
+./docs/RUNTIME_DEPRECATIONS.md:25:- ClawHub skill marketplace (`/api/v1/marketplace/search`)
+./docs/SUBAGENT_RUNTIME_UNIFICATION_AUDIT.md:12:| `coordination_agents` | `aethos.json` | OpenClaw task assignment (unchanged) |
+./docs/VISUAL_ARCHITECTURE.md:1:# Nexa — Enterprise / SaaS / Developer Platform (Visual Architecture)
+./docs/VISUAL_ARCHITECTURE.md:3:Single-page, **diagram-first** view of Nexa as a governed agent platform. For **how the repo is built today** (modules, folders, flows), see [ARCHITECTURE.md](ARCHITECTURE.md).
+./docs/VISUAL_ARCHITECTURE.md:105:  subgraph platform["Nexa platform"]
+./docs/VISUAL_ARCHITECTURE.md:119:  subgraph runtime["Nexa runtime / deployment"]
+./docs/VISUAL_ARCHITECTURE.md:179:  P["Nexa platform<br/><br/>Identity & tenant · Agents · Governance<br/>Permissions · Safe execution<br/>Tools · Trust & audit"]
+./docs/VISUAL_ARCHITECTURE.md:180:  R["Nexa runtime<br/><br/>Local-first execution · Host executor<br/>Egress controls · Workspace isolation"]
+./docs/VISUAL_ARCHITECTURE.md:187:## Nexa enterprise architecture layers
+./docs/VISUAL_ARCHITECTURE.md:287:## What makes Nexa different
+./docs/VISUAL_ARCHITECTURE.md:291:**Nexa optimizes for:**
+./docs/VISUAL_ARCHITECTURE.md:302:Nexa is a **governed agent platform** where custom agents, tools, permissions, approvals, execution, and audit all flow through one **safety-first runtime**.
+./docs/VISUAL_ARCHITECTURE.md:308:- **Nexa = governance layer for AI agents that touch real systems.**
+./docs/VISUAL_ARCHITECTURE.md:312:- **Nexa lets teams run AI agents with permission, approval, and audit built in.**
+./docs/DESIGN.md:187:| * | `/clawhub/*` | ClawHub / marketplace integration API |
+./docs/PR_REVIEW.md:3:Nexa can react to GitHub `pull_request` webhooks (and manual API calls), fetch the PR diff, run static checks (Python / JS / security heuristics), optionally add LLM notes when `USE_REAL_LLM=true`, and submit a GitHub pull request review (approve when configured and clean; otherwise comment or request changes).
+./docs/PR_REVIEW.md:57:- If `NEXA_PR_REVIEW_AUTO_APPROVE=true` **and** there are zero findings, Nexa submits an **APPROVE** review.
+./docs/PR_REVIEW.md:58:- Otherwise Nexa submits **REQUEST_CHANGES** if any **error**-severity finding exists, else **COMMENT**, including inline comments on specific lines when applicable.
+./docs/OPENCLAW_FINAL_PARITY_AUDIT.md:1:# OpenClaw final parity audit (Phase 1 operational freeze)
+./docs/OPENCLAW_FINAL_PARITY_AUDIT.md:46:**Latest automated spot-check (local, representative):** `USE_REAL_LLM=false NEXA_PYTEST=1 pytest tests/test_openclaw_*.py` — **142 passed**; `pytest tests/production_like/ tests/edge_cases/` — **35 passed**; `pytest tests/soak/` — **6 passed**; `pytest tests/openclaw_behavioral_validation/` — **9 passed**; OpenClaw e2e slice (`parity_workflows` + `operator_outcomes` + `runtime_stress`) — **13 passed**; collect-only: `tests/production_like` **27**, `tests/edge_cases` **8**, `tests/test_openclaw_*.py` **142** (CI remains authoritative for full `pytest` on PRs).
+./docs/OPENCLAW_FINAL_PARITY_AUDIT.md:74:**Allowed after gate:** privacy layers, PII filtering, local-first isolation, security-focused sandboxing, and privacy-preserving telemetry — **without** changing Phase 1 default OpenClaw-equivalent runtime semantics unless required for security.
+./docs/BRANDING_CONVERGENCE.md:7:README includes a single inspiration line: *Inspired by OpenClaw.* Parity docs remain internal.
+./docs/NEXA_ORCHESTRATION_FINAL_HANDOFF.md:3:**Title:** Nexa Orchestration – Full OpenClaw Magic Integration (Realistic Next Pass)  
+./docs/NEXA_ORCHESTRATION_FINAL_HANDOFF.md:6:**Goal:** OpenClaw-style **Pulse**, **deterministic steps**, **provider routing**, **truth**, and **live progress** inside existing flags and modules.
+./docs/NEXA_ORCHESTRATION_FINAL_HANDOFF.md:32:Not in scope (future layers): full JSON DAG NexaForge, OS credential vault, Mission Control streaming UI, LLM-generated step lists wired into `run_deterministic_steps`.
+./docs/legal/TRADEMARK.md:1:# Nexa — trademark and distribution policy (community builds)
+./docs/legal/TRADEMARK.md:3:This document states **project policy** for the Nexa open-source repositories. It is **not** legal advice. Consult counsel for your jurisdiction.
+./docs/legal/TRADEMARK.md:7:- **Nexa**, **Nexa Next**, and related marks identify products from this project’s maintainers.
+./docs/legal/TRADEMARK.md:8:- Third-party forks and distributions **must not** imply they are the official Nexa product, endorsed releases, or maintained by the core team unless explicitly authorized.
+./docs/legal/TRADEMARK.md:12:- Use the official Nexa logo, wordmarks, or trade dress in a way that suggests endorsement by the core maintainers without permission.
+./docs/legal/TRADEMARK.md:13:- Label builds as **“Official Nexa”**, **“Nexa Official”**, or similar unless produced by the canonical release pipeline described in this repository’s documentation.
+./docs/legal/TRADEMARK.md:18:- Describe forks accurately (for example: **“a fork of Nexa-next”**, **“based on Nexa”**).
+./docs/CHANNEL_GATEWAY_EXECUTION.md:9:Implement Channel Gateway in Nexa with a single governed execution path across all channels.
+./docs/CHANNEL_GATEWAY_EXECUTION.md:20:All channels must use the same Nexa core.
+./docs/CHANNEL_GATEWAY_EXECUTION.md:22:One-line summary: Extract Telegram into a reusable ChannelAdapter and route all channels through the same governed Nexa core.
+./docs/CHANNEL_GATEWAY_EXECUTION.md:298:Nexa Core
+./docs/CHANNEL_GATEWAY_EXECUTION.md:313:Nexa becomes a governed multi-channel AI execution gateway.
+./docs/LEGACY_REFERENCE_POLICY.md:10:- README inspiration line for OpenClaw
+./docs/NEXA_ENHANCED_ORCHESTRATION_PHASE2.md:1:# Nexa enhanced orchestration — Phase 2 (OpenClaw-style chat magic)
+./docs/NEXA_MC_DELETE_FIX_MAP.md:1:# Mission Control delete / reset — checklist vs Nexa codebase
+./docs/NEXA_MC_DELETE_FIX_MAP.md:7:| Runbook | Nexa |
+./docs/NEXA_MC_DELETE_FIX_MAP.md:14:| Runbook | Nexa |
+./docs/NEXA_MC_DELETE_FIX_MAP.md:21:| Runbook | Nexa |
+./docs/NEXA_MC_DELETE_FIX_MAP.md:23:| Generic table names (`HostJob`, etc.) | Nexa models use **`AgentJob`**, **`AgentAssignment`**, org/role tables, **`UserAgent`**, **`AccessPermission`**, optional **`AuditLog`**. See **`app/services/mission_control/db_purge.py`** — **`purge_mission_control_database_for_user`**. |
+./docs/NEXA_MC_DELETE_FIX_MAP.md:28:| Runbook | Nexa |
+./docs/NEXA_MC_DELETE_FIX_MAP.md:34:| Runbook | Nexa |
+./docs/NEXA_MC_DELETE_FIX_MAP.md:40:| Runbook | Nexa |
+./docs/NEXA_MC_DELETE_FIX_MAP.md:46:| Runbook | Nexa |
+./docs/NEXA_MC_DELETE_FIX_MAP.md:53:| Runbook | Nexa |
+./docs/BUDGET_TRACKING.md:44:Note: `/usage` is already used for **Nexa-wide LLM call statistics** (today/recent estimates). Use **`/timesheet`** for Phase 28 member usage history.
+./docs/LLM_PROVIDERS.md:36:**Second priority:** Phase 6 (skills) over Phase 7 (channels) to build the **OpenClaw-style** extensibility story.
+./docs/LLM_PROVIDERS.md:46:│                    Nexa Application                          │
+./docs/LLM_PROVIDERS.md:95:  subgraph app["Nexa application"]
+./docs/LLM_PROVIDERS.md:120:Nexa keeps **`build_openai_client` / `build_anthropic_client`** in **`app/services/providers/sdk.py`**; Phase 11 backends under **`app/services/llm/`** are allow-listed callers (same as `llm_service`). SDK imports remain forbidden outside **`app/services/providers/`** and the approved orchestration modules — see `scripts/verify_no_direct_providers.py`.
+./docs/WORKFLOW_DEMO.md:1:# Nexa Workflow Demo — From Idea to Execution
+./docs/WORKFLOW_DEMO.md:15:**Nexa:**
+./docs/WORKFLOW_DEMO.md:33:**Nexa:**
+./docs/WORKFLOW_DEMO.md:46:**Nexa:**
+./docs/WORKFLOW_DEMO.md:58:**Nexa:**
+./docs/WORKFLOW_DEMO.md:71:**Nexa:**
+./docs/WORKFLOW_DEMO.md:87:**Nexa:**
+./docs/WORKFLOW_DEMO.md:116:Nexa acts as:
+./README.md:5:*Inspired by OpenClaw.*
+./README.md:9:AethOS delivers an **enterprise-grade orchestrator** with Mission Control, provider-routed intelligence, and operational governance. Internally the project maintains a **strict OpenClaw parity phase** for behavioral equivalence.
+./README.md:11:The objective is to reproduce OpenClaw exactly as it works today before prioritizing privacy, PII filtering, local-first differentiation, cost transparency, or custom AethOS-specific architecture.
+./README.md:15:- every feature should map to a concrete OpenClaw behavior;
+./README.md:16:- every architectural decision should reduce the gap to OpenClaw parity;
+./README.md:17:- privacy/PII/local-first improvements are Phase 2 unless they are required for current OpenClaw-compatible behavior;
+./README.md:56:- Channel adapters where OpenClaw-compatible behavior is required
+./README.md:60:Do not introduce architectural divergence unless required to reproduce OpenClaw behavior.
+./README.md:78:Each PR should state which OpenClaw behavior it reproduces and which parity checkpoint it advances.
+./run_everything.sh:2:# One entrypoint for the full Nexa stack.
+./run_everything.sh:191:      echo "Stopping Nexa web (npm, pid ${p})…" >&2
+./run_everything.sh:205:    echo "warning: web/package.json missing — skip Nexa web UI" >&2
+./run_everything.sh:209:    echo "warning: npm not found — skip Nexa web UI" >&2
+./run_everything.sh:219:    echo "Nexa web (npm run dev) already running (pid ${old}); not starting another" >&2
+./run_everything.sh:236:    echo "error: could not start Nexa web" >&2
+./run_everything.sh:242:    echo "Nexa web UI: http://localhost:3000  (pid ${np}, log: ${log})"
+./CONTRIBUTING.md:7:AethOS is in a strict **OpenClaw parity-first** phase.
+./CONTRIBUTING.md:9:The project goal is to reproduce OpenClaw exactly as it works today. Privacy, PII filtering, local-first differentiation, cost transparency, and custom AethOS-specific improvements are Phase 2 unless they are required to reproduce current OpenClaw behavior.
+./CONTRIBUTING.md:15:1. Does this move us closer to OpenClaw parity?
+./CONTRIBUTING.md:16:2. What OpenClaw behavior does this reproduce?
+./CONTRIBUTING.md:21:Do not introduce architectural divergence unless required to reproduce OpenClaw behavior.
+./CONTRIBUTING.md:31:3. Make the smallest change that advances OpenClaw parity.
+./CONTRIBUTING.md:62:Defer the following unless needed for exact OpenClaw behavior:
+./CONTRIBUTING.md:70:- cost/local-first features that change OpenClaw-compatible semantics
+./.venv/lib/python3.11/site-packages/tqdm-4.66.5.dist-info/METADATA:92:|LICENCE| |OpenHub-Status| |binder-demo| |awesome-python|
+./.venv/lib/python3.11/site-packages/tqdm-4.66.5.dist-info/METADATA:1478:|GitHub-Commits| |GitHub-Issues| |GitHub-PRs| |OpenHub-Status| |GitHub-Contributions| |CII Best Practices|
+./.venv/lib/python3.11/site-packages/tqdm-4.66.5.dist-info/METADATA:1577:.. |OpenHub-Status| image:: https://www.openhub.net/p/tqdm/widgets/project_thin_badge?format=gif
+./.venv/lib/python3.11/site-packages/aethos_core-1.0.0.dist-info/licenses/LICENSE:189:   Copyright 2026 Nexa contributors
+./.venv/lib/python3.11/site-packages/aethos_core/response_formatter.py:172:        "Nexa used read-only web tools only where sources are cited below",
+./scripts/verify_nexa_web_stack.py:104:        print("Nexa web stack: FAILED", file=sys.stderr)
+./scripts/verify_nexa_web_stack.py:108:    print("Nexa web stack OK")
+./scripts/verify_web_search.py:6:Run a one-shot web search using Nexa config (reads project .env). Does not print API keys.
+./scripts/dev_reset_mission_control.py:6:Clear Mission Control–related state for one Nexa user (local development).
+./scripts/dev_reset_mission_control.py:48:    p.add_argument("--user-id", required=True, help="Nexa web/app user id (matches X-User-Id).")
+./scripts/rebrand_to_aethos.sh:2:# Phase 36 — Rebrand helper (Nexa → AethOS). Prefer tracked repo edits via git; do not blind-replace URLs.
+./scripts/rebrand_to_aethos.sh:23:echo "4) Search for leftover product string \"Nexa\" (excluding obvious repo URL nexa-next):"
+./scripts/rebrand_to_aethos.sh:24:echo "   rg '\\bNexa\\b' app web aethos_cli aethos-mobile docs --glob '!**/node_modules/**' || true"
+./scripts/scan_legacy_branding.sh:22:PATTERNS=('Nexa' 'OpenClaw' 'ClawHub' 'OpenHub')
+./scripts/scan_legacy_branding.sh:47:  bad=$(rg -n 'Nexa|ClawHub|OpenHub' "${ROOT}/web" "${ROOT}/aethos_cli" "${ROOT}/scripts/setup.py" "${ROOT}/install.sh" 2>/dev/null | wc -l | tr -d ' ')
+./scripts/validate_aethos_env.py:55:        "ClawHub / skill registry URL": bool((s.nexa_clawhub_api_base or "").strip()),
+./scripts/install.sh:2:# Nexa single-command bootstrap: clone (optional), venv + deps, .env, optional keys, DB schema, start stack.
+./scripts/install.sh:36:  echo "  --no-clone      Assume current directory is the Nexa repo root (or NEXA_ROOT)."
+./scripts/install.sh:49:  echo "=== Nexa guided setup (Phase 55) ==="
+./scripts/install.sh:145:    echo "Cloning Nexa into ./${NEXA_DIR} ..."
+./scripts/install.sh:152:[ -f scripts/nexa_bootstrap.py ] || die "not the Nexa repo root: ${ROOT}"
+./scripts/install.sh:169:echo "=== Nexa install — repo: ${ROOT} ==="
+./scripts/nexa_bootstrap.py:6:One-command Nexa setup. Run from the repo root:
+./scripts/check_nexa_stack.py:6:Nexa stack diagnostic (no secrets printed).
+./scripts/check_nexa_stack.py:39:    print("=== Nexa stack check ===\n")
+./scripts/check_nexa_stack.py:89:    print("  2. User id: web_* / tg_* / … must match the Nexa user that owns rows in the DB.")
+./scripts/smoke_concurrent_missions.py:31:    from app.services.gateway.runtime import NexaGateway
+./scripts/smoke_concurrent_missions.py:36:    out = NexaGateway().handle_message(gctx, MISSION_TEXT)
+./scripts/setup.py:1034:        # One-curl / wizard installs: OpenClaw-style gateway (tools/NL first, then trust the LLM for chat).
+./scripts/dev_agent_executor.py:274:Nexa
+./scripts/dev_agent_executor.py:581:            "cannot align the git worktree for review. Open the job in Nexa, ensure the job reached "
+./scripts/dev_agent_executor.py:843:                        " When Nexa sends a job number in Telegram, reply `approve job #<id>` "
+./scripts/nexa_next_local_all.sh:2:# Nexa Next — native “run it all” helper (distinct name from ./run_everything.sh).
+./scripts/nexa_next_local_all.sh:5:# beside another Nexa stack (typical clash: API :8010 + web :3000).
+./scripts/nexa_next_local_all.sh:394:  echo "--- Nexa Next local ---"
+./scripts/local_tool_worker.py:114:Nexa
+./scripts/local_tool_worker.py:255:    run(["git", "config", "user.name", "Nexa Idea Project"], cwd=str(tpath), timeout=15)
+./scripts/local_tool_worker.py:260:        "# Idea project (Nexa)\n\nLocal scaffold — add your app here.\n",
+./scripts/local_tool_worker.py:265:        ["git", "commit", "-m", "Nexa: init repo for idea project"],
+./scripts/local_tool_worker.py:282:        f"You can add a remote (e.g. GitHub) from your machine; Nexa did not call any cloud API."
+./scripts/local_tool_worker.py:303:    run(["git", "config", "user.name", "Nexa"], cwd=str(tpath), timeout=15)
+./scripts/local_tool_worker.py:308:        f"# {k} (Nexa)\n\nScaffolded by Nexa — add your app here.\n",
+./scripts/local_tool_worker.py:313:        ["git", "commit", "-m", "Nexa: init workspace project"],
+./scripts/nexa_doctor.sh:7:echo "=== Nexa doctor ==="
+./docker-compose.yml:1:# Nexa: Postgres + API (scheduler/operator) + Telegram bot
+./docker-compose.yml:62:      # Host ./data → Mission Control DB (mission_control.db), ClawHub skills, screenshots, etc.
+./nexa-ext-pro/nexa_ext/__init__.py:4:"""Nexa Pro extension namespace — installed via ``pip install nexa-ext-pro``."""
+./nexa-ext-pro/nexa_ext/sandbox.py:15:    ``mode`` is ``docker`` or ``process`` (matches Nexa :class:`SandboxMode` string values).
+./nexa-ext-pro/nexa_ext/routing.py:13:    Return a symbolic key consumed by Nexa core :func:`map_pro_routing_model_key`.
+./nexa-ext-pro/pyproject.toml:8:description = "Official Nexa Pro extensions (sandbox, routing, memory intel, dev execution)"
+./nexa-ext-pro/pyproject.toml:12:authors = [{ name = "Nexa" }]
+./nexa-ext-pro/README.md:3:Optional **Pro** extension modules for [Nexa](https://github.com/pilotmain/nexa-next). Core OSS runs without this package; with a valid commercial license, Nexa activates stronger sandbox isolation, adaptive model routing, memory ranking, and broader auto-dev execution.
+./nexa-ext-pro/README.md:19:Use `python -m pip` so installs land in the same interpreter as your Nexa API/bot (some shells alias `pip` to another virtualenv).
+./nexa-ext-pro/README.md:21:Set `NEXA_LICENSE_KEY` and `NEXA_LICENSE_PUBLIC_KEY_PEM` to a signed token whose `features` list includes the capability you need (see Nexa licensing docs).
+./.env.example:88:# LLM-first gateway (OpenClaw-like): after tools/NL routes, trust the LLM for most chat (intent ``general_chat``).
+./.env.example:228:# --- AethOS orchestration runtime (OpenClaw Phase 1; JSON in ~/.aethos/aethos.json) ---
+./PROJECT_HANDOFF.md:1:# AethOS project handoff — OpenClaw parity-first doctrine
+./PROJECT_HANDOFF.md:5:> **Phase 1 objective: reproduce OpenClaw exactly as it works today.**
+./PROJECT_HANDOFF.md:7:> Privacy, PII filtering, local-first differentiation, cost transparency improvements, and other AethOS-specific advantages are **Phase 2** work. They must not drive Phase 1 architecture unless they are required to reproduce current OpenClaw behavior.
+./PROJECT_HANDOFF.md:9:No contributor should optimize for novelty, differentiation, branding, or architectural preference until OpenClaw behavioral parity has been achieved and verified.
+./PROJECT_HANDOFF.md:19:| Layer | Role in OpenClaw parity |
+./PROJECT_HANDOFF.md:22:| `web/` | Next.js Mission Control UI. During Phase 1, UI work should reproduce OpenClaw workflows before custom UX improvements. |
+./PROJECT_HANDOFF.md:24:| Database | SQLite by default, optional Postgres. Use the same durable state expectations needed for OpenClaw-like runs. |
+./PROJECT_HANDOFF.md:27:Optional satellite trees such as `aethos-mobile/` and `nexa-ext-pro/` are not Phase 1 priorities unless they directly close an OpenClaw parity gap.
+./PROJECT_HANDOFF.md:33:One-curl install is certified through `install.sh` → `scripts/setup.sh` → enterprise wizard. Verify with `aethos setup certify` or `GET /api/v1/setup/certify`. User-facing branding is **AethOS**; OpenClaw remains in parity docs/tests only. See [docs/ONE_CURL_CERTIFICATION.md](docs/ONE_CURL_CERTIFICATION.md) and [docs/MISSION_CONTROL_READY_STATE.md](docs/MISSION_CONTROL_READY_STATE.md).
+./PROJECT_HANDOFF.md:57:1. Reproduces a concrete OpenClaw behavior.
+./PROJECT_HANDOFF.md:58:2. Fixes a regression that prevents OpenClaw parity.
+./PROJECT_HANDOFF.md:59:3. Adds test/verification coverage for OpenClaw parity.
+./PROJECT_HANDOFF.md:62:Do not introduce architectural divergence unless required to reproduce OpenClaw behavior.
+./PROJECT_HANDOFF.md:88:- local-first-only behavior that changes OpenClaw-compatible semantics
+./PROJECT_HANDOFF.md:97:AethOS is not considered Phase 1 complete until the following are demonstrably equivalent to OpenClaw behavior:
+./PROJECT_HANDOFF.md:109:- channel integration parity where OpenClaw supports comparable surfaces
+./PROJECT_HANDOFF.md:152:- API, Telegram, Slack/Discord workers, and scheduler/autonomy workers must share the same database URL when reproducing an integrated OpenClaw-style stack.
+./PROJECT_HANDOFF.md:184:| `NEXA_LLM_FIRST_GATEWAY` | Prefer OpenClaw-like gateway behavior when reproducing conversational flows. |
+./PROJECT_HANDOFF.md:190:Privacy and PII variables should not become Phase 1 blockers unless the exact OpenClaw behavior being reproduced depends on them.
+./PROJECT_HANDOFF.md:245:1. Which OpenClaw behavior it reproduces.
+./PROJECT_HANDOFF.md:283:- [ ] Record remaining OpenClaw divergences in `docs/OPENCLAW_PARITY_AUDIT.md`.
+./PROJECT_HANDOFF.md:289:After exact OpenClaw functional parity is verified, AethOS may resume differentiated work on privacy, PII filtering, cost transparency, local-first execution, and safer governance. Phase 2 improvements must preserve parity unless an intentional breaking change is explicitly approved.
+./data/nexa_workspace/projects/nexa-next.md:1:# Project: Nexa-Next
+./aethos_cli/parity_cli.py:4:"""OpenClaw-class CLI helpers: ``doctor`` (sanity) and ``logs`` (local tail)."""
+./aethos_cli/__main__.py:567:        help="Runtime optimization snapshot (OpenClaw parity; default: metrics)",

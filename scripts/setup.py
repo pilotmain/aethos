@@ -2036,13 +2036,35 @@ SSO_POST_LOGIN_REDIRECT=http://localhost:3000/login
         )
 
 
+def _delegate_to_aethos_setup(argv: list[str]) -> int:
+    """Canonical path: scripts/setup.py → aethos setup (enterprise wizard)."""
+    os.environ.setdefault("NEXA_SETUP_FROM_INSTALLER", "1")
+    os.environ.setdefault("AETHOS_SETUP_FROM_INSTALLER", "1")
+    setup_argv = ["setup"]
+    if "--resume" in argv:
+        setup_argv.append("resume")
+    elif any(x in argv for x in ("doctor", "validate", "repair", "certify", "status")):
+        setup_argv.extend(argv)
+    if "--skip-services" in argv:
+        os.environ["AETHOS_SETUP_SKIP_SERVICES"] = "1"
+    if "--home-env" in argv:
+        os.environ["AETHOS_ONE_CURL"] = "1"
+    sys.argv = ["aethos", *setup_argv]
+    from aethos_cli.__main__ import main as cli_main
+
+    return int(cli_main() or 0)
+
+
 def main() -> None:
     argv = sys.argv[1:]
     if _parse_help_argv(argv):
         return
 
+    if os.environ.get("AETHOS_SETUP_LEGACY") != "1" and "--legacy-wizard" not in argv:
+        raise SystemExit(_delegate_to_aethos_setup(argv))
+
     parser = argparse.ArgumentParser(
-        description="AethOS interactive setup wizard",
+        description="AethOS interactive setup wizard (legacy; use aethos setup)",
         add_help=False,
     )
     parser.add_argument(

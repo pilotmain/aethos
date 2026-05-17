@@ -386,17 +386,17 @@ def main() -> int:
     rt_sub.add_parser("workers", help="GET /api/v1/mission-control/runtime-workers")
     rt_sub.add_parser("performance", help="GET /api/v1/mission-control/runtime/performance")
     rt_sub.add_parser("cache", help="Hydration cache metrics from runtime state")
-    rt_sub.add_parser("hydration", help="Incremental hydration metrics")
+    rt_sub.add_parser("hydration-metrics", help="Incremental hydration metrics (local)")
     rt_sub.add_parser("latency", help="Operational responsiveness summary")
     rt_sub.add_parser("scalability", help="GET /api/v1/mission-control/runtime/scalability")
-    rt_sub.add_parser("payloads", help="Payload discipline metrics")
+    rt_sub.add_parser("payload-discipline", help="Payload discipline metrics (local)")
     rt_sub.add_parser("pressure", help="Operational pressure overview")
     rt_sub.add_parser("accountability", help="GET /api/v1/mission-control/runtime/accountability")
     rt_sub.add_parser("escalations", help="GET /api/v1/mission-control/runtime/escalations")
     rt_sub.add_parser("overview", help="GET /api/v1/mission-control/runtime/overview")
     rt_sub.add_parser("trust", help="GET /api/v1/mission-control/governance/trust")
     rt_sub.add_parser("continuity", help="GET /api/v1/mission-control/runtime/continuity (Phase 4 Step 5)")
-    rt_sub.add_parser("calmness", help="GET /api/v1/mission-control/runtime/calmness")
+    rt_sub.add_parser("calmness-mc", help="GET /api/v1/mission-control/runtime/calmness")
     rt_sub.add_parser("readiness", help="GET /api/v1/mission-control/runtime/readiness")
     rt_sub.add_parser("strategy", help="GET /api/v1/mission-control/runtime/strategy")
     rt_sub.add_parser("maturity", help="GET /api/v1/mission-control/runtime/maturity")
@@ -421,16 +421,16 @@ def main() -> int:
     rt_sub.add_parser("eras", help="GET /api/v1/runtime/eras long-horizon continuity")
     rt_sub.add_parser("summaries", help="GET /api/v1/runtime/summaries enterprise summaries")
     rt_sub.add_parser("partitions", help="GET /api/v1/runtime/partitions")
-    rt_sub.add_parser("calmness", help="GET /api/v1/runtime/calmness-lock integrity")
+    rt_sub.add_parser("calmness-lock", help="GET /api/v1/runtime/calmness-lock integrity")
     rt_sub.add_parser("story", help="GET /api/v1/mission-control/runtime-story")
     rt_sub.add_parser("explainability", help="GET /api/v1/mission-control/explainability")
-    rt_sub.add_parser("routing", help="GET /api/v1/runtime/routing adaptive provider visibility")
+    rt_sub.add_parser("routing-adaptive", help="GET /api/v1/runtime/routing adaptive provider visibility")
     rt_sub.add_parser("restarts", help="GET /api/v1/runtime/restarts restart history")
     rt_sub.add_parser("identity", help="GET /api/v1/runtime/identity brand lock state")
     rt_sub.add_parser("launch-focus", help="GET /api/v1/runtime/operational-focus (Step 13)")
     rt_sub.add_parser("priority-work", help="GET /api/v1/runtime/priority-work")
     rt_sub.add_parser("launch-cert", help="GET /api/v1/runtime/launch-certification")
-    rt_sub.add_parser("certify", help="GET /api/v1/runtime/certification (Step 14 RC bundle)")
+    rt_sub.add_parser("certification", help="GET /api/v1/runtime/certification (Step 14 RC bundle)")
     rt_sub.add_parser("release-candidate", help="GET /api/v1/runtime/release-candidate")
     rt_sub.add_parser("enterprise-grade", help="GET /api/v1/runtime/enterprise-grade")
     rt_sub.add_parser("readiness-progress", help="GET /api/v1/runtime/readiness-progress")
@@ -1175,7 +1175,7 @@ def main() -> int:
             code, body = _req("GET", "/api/v1/mission-control/governance/trust", uid=uid)
             print(body[:24000])
             return 0 if code == 200 else 1
-        if args.runtime_cmd == "calmness":
+        if args.runtime_cmd in ("calmness", "calmness-mc"):
             code, body = _req("GET", "/api/v1/mission-control/runtime/calmness", uid=uid)
             print(body[:24000])
             return 0 if code == 200 else 1
@@ -1241,7 +1241,7 @@ def main() -> int:
             code, body = _req("GET", "/api/v1/runtime/partitions", uid=uid)
             print(body[:24000])
             return 0 if code == 200 else 1
-        if args.runtime_cmd == "calmness":
+        if args.runtime_cmd in ("calmness-lock",):
             code, body = _req("GET", "/api/v1/runtime/calmness-lock", uid=uid)
             print(body[:24000])
             return 0 if code == 200 else 1
@@ -1253,7 +1253,7 @@ def main() -> int:
             code, body = _req("GET", "/api/v1/mission-control/explainability", uid=uid)
             print(body[:24000])
             return 0 if code == 200 else 1
-        if args.runtime_cmd == "routing":
+        if args.runtime_cmd in ("routing-adaptive",):
             code, body = _req("GET", "/api/v1/runtime/routing", uid=uid)
             print(body[:24000])
             return 0 if code == 200 else 1
@@ -1277,7 +1277,7 @@ def main() -> int:
             code, body = _req("GET", "/api/v1/runtime/launch-certification", uid=uid)
             print(body[:24000])
             return 0 if code == 200 else 1
-        if args.runtime_cmd == "certify":
+        if args.runtime_cmd == "certification":
             code, body = _req("GET", "/api/v1/runtime/certification", uid=uid)
             print(body[:24000])
             return 0 if code == 200 else 1
@@ -1337,7 +1337,7 @@ def main() -> int:
             code, body = _req("GET", "/api/v1/mission-control/runtime/recovery", uid=uid)
             print(body[:24000])
             return 0 if code == 200 else 1
-        if args.runtime_cmd == "routing":
+        if args.runtime_cmd in ("routing", "routing-mc"):
             code, body = _req("GET", "/api/v1/mission-control/runtime/routing", uid=uid)
             print(body[:24000])
             return 0 if code == 200 else 1
@@ -1365,7 +1365,7 @@ def main() -> int:
             code, body = _req("GET", f"/api/v1/mission-control/timeline/window?offset={off}&limit={lim}", uid=uid)
             print(body[:24000])
             return 0 if code == 200 else 1
-        if args.runtime_cmd in ("cache", "hydration", "latency", "scalability"):
+        if args.runtime_cmd in ("cache", "hydration-metrics", "latency", "scalability"):
             from app.services.mission_control.runtime_hydration import (
                 build_runtime_performance_block,
                 get_hydration_metrics,
@@ -1377,7 +1377,7 @@ def main() -> int:
             disc = get_runtime_discipline_metrics()
             if args.runtime_cmd == "cache":
                 out = {"hydration_metrics": h, "discipline": disc, "performance": perf}
-            elif args.runtime_cmd == "hydration":
+            elif args.runtime_cmd == "hydration-metrics":
                 out = h
             elif args.runtime_cmd == "latency":
                 out = {

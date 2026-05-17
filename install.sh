@@ -29,7 +29,10 @@ if ! command -v git &>/dev/null; then
   exit 1
 fi
 
-echo "🚀 Installing AethOS..."
+echo "🚀 Installing AethOS…"
+echo "   Launching AethOS Enterprise Setup after clone."
+echo "   • Resume: aethos setup resume  • Repair: aethos setup repair"
+echo "   • Mission Control auto-connection  • Safe .env backup"
 
 if [[ -e "${INSTALL_DIR}" ]] && [[ ! -f "${INSTALL_DIR}/scripts/setup.sh" ]]; then
   echo "⚠️  ${INSTALL_DIR} exists but is not a valid AethOS install (missing scripts/setup.sh)."

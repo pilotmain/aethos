@@ -249,6 +249,24 @@ def run_setup_wizard(*, install_kind: str | None = None) -> int:
     resume_step = 0
     bag: dict = {}
     if not _noninteractive_setup():
+        if env_path.exists() and not load_setup_state():
+            from aethos_cli.setup_conversational import print_existing_setup_menu
+
+            existing_action = print_existing_setup_menu()
+            if existing_action == "review":
+                from aethos_cli.setup_doctor import cmd_setup_validate
+
+                cmd_setup_validate()
+                if not confirm("Continue enterprise setup now?", default=True):
+                    return 0
+            elif existing_action == "restart":
+                clear_setup_state()
+            elif existing_action == "section":
+                from aethos_cli.setup_conversational import print_change_one_section_menu
+
+                section = print_change_one_section_menu()
+                if section and section != "skip":
+                    bag["section_rerun"] = section
         raw_state = load_setup_state()
         if raw_state and isinstance(raw_state.get("data"), dict):
             d = raw_state["data"]
@@ -266,15 +284,30 @@ def run_setup_wizard(*, install_kind: str | None = None) -> int:
                         bag = dict(d)
                     else:
                         return 0
+                elif action == "section":
+                    from aethos_cli.setup_conversational import print_change_one_section_menu
+
+                    section = print_change_one_section_menu()
+                    if section and section != "skip":
+                        bag["section_rerun"] = section
+                    resume_step = int(raw_state.get("step", 0))
+                    bag.update(dict(d))
                 else:
                     clear_setup_state()
 
     print_header()
     print_environment_tag(human_os_line(pinfo))
-    from aethos_cli.setup_conversational import print_global_setup_commands
+    from aethos_cli.setup_conversational import print_global_setup_commands, print_runtime_strategy_guidance
 
     print_global_setup_commands()
+    print_runtime_strategy_guidance()
     set_prompt_context(section="welcome")
+    try:
+        from aethos_cli.setup_supervision_preflight import prompt_setup_supervision_if_needed
+
+        prompt_setup_supervision_if_needed()
+    except Exception:
+        pass
 
     kind: str = install_kind or str(bag.get("kind") or "fresh")
 
@@ -544,7 +577,13 @@ def run_database_setup() -> int:
         return 1
     if r.returncode != 0:
         err = (r.stderr or r.stdout or "").strip()
-        print_warn(f"ensure_schema failed: {err[:800]}")
+        from app.services.setup.setup_db_lock_handling import format_calm_db_lock_message, sanitize_setup_error
+
+        calm = format_calm_db_lock_message(err)
+        if calm:
+            print_warn(calm)
+        else:
+            print_warn(sanitize_setup_error(err))
         return r.returncode
     print_success("Database initialized (ensure_schema).")
     return 0

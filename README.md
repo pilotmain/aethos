@@ -19,11 +19,19 @@ During this phase:
 
 See [PROJECT_HANDOFF.md](PROJECT_HANDOFF.md), [docs/OPENCLAW_PARITY_AUDIT.md](docs/OPENCLAW_PARITY_AUDIT.md), and [docs/OPENCLAW_FUNCTIONAL_PARITY_DIRECTIVE.md](docs/OPENCLAW_FUNCTIONAL_PARITY_DIRECTIVE.md) (master implementation plan).
 
-## One-curl install
+## One-curl install (canonical)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/pilotmain/aethos/main/install.sh | bash
+```
+
+CDN mirror (may lag main by a few minutes):
 
 ```bash
 curl -fsSL https://cdn.jsdelivr.net/gh/pilotmain/aethos@main/install.sh | bash
 ```
+
+Flow: `install.sh` → `scripts/setup.sh` → **`aethos setup`** (enterprise wizard). Local recovery: `bash scripts/setup.sh`. See [docs/CANONICAL_INSTALL_PATH.md](docs/CANONICAL_INSTALL_PATH.md).
 
 With a Pro / license string for the installer (optional):
 

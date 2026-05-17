@@ -1,15 +1,9 @@
 #!/usr/bin/env bash
-# AethOS Beautiful Setup — launches scripts/setup.py inside .venv when present.
-# Usage (from repo root): bash scripts/setup.sh   or   ./scripts/setup.sh
+# AethOS Enterprise Setup — thin orchestration wrapper (canonical path).
+# Public: curl -fsSL …/install.sh | bash
+# Local recovery: bash scripts/setup.sh
 #
-# API + Mission Control (npm), HTTP health waits (60s), and optional browser open are handled in
-# scripts/setup.py (step “Start API & Mission Control”). Use --no-browser or AETHOS_SETUP_NO_BROWSER=1
-# to skip opening http://localhost:3000. Use --skip-playwright-browsers or AETHOS_SETUP_SKIP_PLAYWRIGHT_BROWSERS=1
-# to skip downloading Playwright Chromium during the “Configure .env” step. Legal / TTY behavior is in setup.py.
-#
-# One-curl / home install: AETHOS_ONE_CURL=1 or an existing ~/.aethos/.env makes the wizard write
-# ~/.aethos/.env (not repo-root .env). Override with AETHOS_SETUP_REPO_ENV=1. Optional: ./scripts/setup.sh --home-env
-# Ollama: AETHOS_SETUP_SKIP_OLLAMA_BOOTSTRAP=1 skips ``ollama serve`` / ``ollama pull`` during Configure .env (CI / air-gapped).
+# Delegates to: aethos setup (aethos_cli/setup_wizard.py + enterprise extensions)
 
 set -euo pipefail
 
@@ -20,6 +14,14 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m'
+
+echo ""
+echo -e "${GREEN}Launching AethOS Enterprise Setup${NC}"
+echo "  • Resume: aethos setup resume"
+echo "  • Repair: aethos setup repair"
+echo "  • Local / cloud / hybrid routing in the wizard"
+echo "  • Mission Control auto-connection when complete"
+echo ""
 
 if ! command -v python3 &>/dev/null; then
   echo -e "${RED}Python 3 not found. Install Python 3.9+ and retry.${NC}"
@@ -36,5 +38,20 @@ fi
 source .venv/bin/activate
 
 pip install --upgrade pip -q
+if [[ -f requirements.txt ]]; then
+  pip install -q -r requirements.txt
+fi
+pip install -q -e . 2>/dev/null || true
 
-exec python3 scripts/setup.py "$@"
+export NEXA_SETUP_FROM_INSTALLER=1
+export AETHOS_SETUP_FROM_INSTALLER=1
+
+if [[ "${AETHOS_SETUP_DRY_RUN:-}" == "1" ]]; then
+  echo -e "${YELLOW}Dry run — would execute: aethos setup${NC}"
+  exit 0
+fi
+
+if command -v aethos &>/dev/null; then
+  exec aethos setup "$@"
+fi
+exec python -m aethos_cli setup "$@"

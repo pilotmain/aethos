@@ -11,7 +11,12 @@ from typing import Any
 def build_setup_flow_convergence() -> dict[str, Any]:
     return {
         "setup_flow_convergence": {
-            "entrypoints": ["install.sh", "scripts/setup.sh", "aethos setup"],
+            "entrypoints": [
+                "curl | bash → install.sh",
+                "scripts/setup.sh (local recovery)",
+                "aethos setup (canonical Python wizard)",
+            ],
+            "deprecated": ["scripts/setup.py legacy wizard (shim only)"],
             "modules": [
                 "aethos_cli/setup_wizard.py",
                 "aethos_cli/setup_orchestrator_onboarding.py",

@@ -1,10 +1,12 @@
 # SPDX-License-Identifier: Apache-2.0
 
-from __future__ import annotations
-
-from app.services.setup.setup_branding_convergence import build_setup_branding_convergence
+from pathlib import Path
 
 
-def test_installer_branding_convergence() -> None:
-    out = build_setup_branding_convergence()
-    assert out["setup_branding_convergence"]["user_facing_brand"] == "AethOS"
+def test_install_scripts_say_aethos() -> None:
+    root = Path(__file__).resolve().parents[1]
+    install = (root / "install.sh").read_text(encoding="utf-8")
+    setup_sh = (root / "scripts" / "setup.sh").read_text(encoding="utf-8")
+    assert "AethOS" in install
+    assert "Enterprise Setup" in setup_sh
+    assert "OpenClaw" not in setup_sh
