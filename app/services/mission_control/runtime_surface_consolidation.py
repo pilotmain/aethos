@@ -31,7 +31,11 @@ def build_runtime_surface_consolidation() -> dict[str, Any]:
                 "Do not duplicate readiness banners on runtime-overview and office",
                 "Use runtime-supervision for process conflicts, not runtime-overview",
             ],
-            "phase": "phase4_step20",
+            "authoritative_surfaces": ["office", "runtime_overview", "runtime_supervision", "governance"],
+            "deprecated_surfaces": ["operational_insights"],
+            "alias_surfaces": {"operational_insights": "runtime_intelligence"},
+            "fallback_surfaces": ["runtime_story", "explainability"],
+            "phase": "phase4_step22",
             "bounded": True,
         }
     }

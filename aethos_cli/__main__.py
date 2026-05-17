@@ -443,6 +443,11 @@ def main() -> int:
     sp_rt_takeover = rt_sub.add_parser("takeover", help="Force runtime ownership for this CLI session")
     sp_rt_takeover.add_argument("--yes", action="store_true", help="Confirm takeover without prompt")
     rt_sub.add_parser("release", help="Release runtime + telegram locks if owned")
+    rt_sub.add_parser("status", help="Unified runtime operational status")
+    rt_sub.add_parser("authority", help="Operational + Mission Control authority")
+    rt_sub.add_parser("integrity", help="Runtime integrity certification")
+    rt_sub.add_parser("confidence", help="Operator confidence summary")
+    rt_sub.add_parser("truth", help="Truth integrity and consistency")
     rt_sub.add_parser("certify", help="Production cut certification bundle")
     sp_ecosystem = sub.add_parser("ecosystem", help="Operational intelligence ecosystem (Phase 4 Step 3)")
     eco_sub = sp_ecosystem.add_subparsers(dest="ecosystem_cmd", required=True)
@@ -1117,10 +1122,54 @@ def main() -> int:
             return 0 if code == 200 else 1
 
     if args.cmd == "runtime":
-        if args.runtime_cmd == "health":
-            code, body = _req("GET", "/api/v1/mission-control/runtime/health", uid=uid)
+        _rt_json = (os.environ.get("AETHOS_RUNTIME_JSON") or "").strip().lower() in ("1", "true", "yes")
+
+        def _rt_print(path: str) -> int:
+            code, body = _req("GET", path, uid=uid)
+            if code != 200:
+                print(body[:8000])
+                return 1
+            if _rt_json:
+                print(body[:24000])
+                return 0
+            try:
+                data = json.loads(body)
+            except json.JSONDecodeError:
+                print(body[:24000])
+                return 0
+            for key in (
+                "runtime_status",
+                "runtime_health_summary",
+                "runtime_readiness_authority",
+                "operational_authority",
+                "runtime_integrity_certification",
+                "operator_confidence",
+                "runtime_truth_consistency",
+            ):
+                if key in data and isinstance(data[key], dict):
+                    block = data[key]
+                    msg = block.get("operator_message") or block.get("summary") or block.get("state")
+                    if msg:
+                        print(msg)
+                    for k in ("state", "score", "enterprise_ready", "safe_for_operator", "integrity_score"):
+                        if k in block:
+                            print(f"  {k}: {block[k]}")
+                    return 0
             print(body[:24000])
-            return 0 if code == 200 else 1
+            return 0
+
+        if args.runtime_cmd == "status":
+            return _rt_print("/api/v1/runtime/status")
+        if args.runtime_cmd == "health":
+            return _rt_print("/api/v1/runtime/health-summary")
+        if args.runtime_cmd == "authority":
+            return _rt_print("/api/v1/runtime/operational-authority")
+        if args.runtime_cmd == "integrity":
+            return _rt_print("/api/v1/runtime/integrity-certification")
+        if args.runtime_cmd == "confidence":
+            return _rt_print("/api/v1/runtime/operator-confidence")
+        if args.runtime_cmd == "truth":
+            return _rt_print("/api/v1/runtime/truth-consistency")
         if args.runtime_cmd == "timeline":
             code, body = _req("GET", "/api/v1/mission-control/runtime/timeline", uid=uid)
             print(body[:24000])

@@ -523,3 +523,87 @@ def runtime_provider_routing_ux(app_user_id: str = Depends(get_valid_web_user_id
     return build_provider_routing_ux(t)
 
 
+def _truth_or_empty(app_user_id: str) -> dict:
+    try:
+        return _truth_slice(app_user_id)
+    except Exception:
+        return {}
+
+
+@router.get("/status")
+def runtime_status(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_status_unification import build_unified_runtime_status
+
+    return build_unified_runtime_status(_truth_or_empty(app_user_id))
+
+
+@router.get("/health-summary")
+def runtime_health_summary(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_status_unification import build_runtime_health_summary
+
+    return build_runtime_health_summary(_truth_or_empty(app_user_id))
+
+
+@router.get("/readiness-authority")
+def runtime_readiness_authority(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_readiness_authority import build_runtime_readiness_authority
+
+    return build_runtime_readiness_authority(_truth_or_empty(app_user_id))
+
+
+@router.get("/operational-authority")
+def runtime_operational_authority(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_operational_authority import build_runtime_operational_authority
+
+    return build_runtime_operational_authority(_truth_or_empty(app_user_id))
+
+
+@router.get("/recovery-history")
+def runtime_recovery_history_route(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_recovery_integrity import build_runtime_recovery_history
+
+    return build_runtime_recovery_history(_truth_or_empty(app_user_id))
+
+
+@router.get("/recovery-integrity")
+def runtime_recovery_integrity_route(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_recovery_integrity import build_runtime_recovery_integrity
+
+    return build_runtime_recovery_integrity(_truth_or_empty(app_user_id))
+
+
+@router.get("/integrity-certification")
+def runtime_integrity_certification_route(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_integrity_certification import build_runtime_integrity_certification
+
+    return build_runtime_integrity_certification(_truth_or_empty(app_user_id))
+
+
+@router.get("/enterprise-integrity")
+def runtime_enterprise_integrity(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_integrity_certification import build_enterprise_runtime_integrity
+
+    return build_enterprise_runtime_integrity(_truth_or_empty(app_user_id))
+
+
+@router.get("/truth-integrity")
+def runtime_truth_integrity_route(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_truth_consistency import build_runtime_truth_integrity
+
+    return build_runtime_truth_integrity(_truth_or_empty(app_user_id))
+
+
+@router.get("/truth-consistency")
+def runtime_truth_consistency_route(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_truth_consistency import build_runtime_truth_consistency
+
+    return build_runtime_truth_consistency(_truth_or_empty(app_user_id))
+
+
+@router.get("/operator-confidence")
+def runtime_operator_confidence(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.operator_confidence_engine import build_operator_confidence
+
+    return build_operator_confidence(_truth_or_empty(app_user_id))
+
+

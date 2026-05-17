@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import Any
 
-MC_COMPATIBILITY_VERSION = "phase4_step21"
+MC_COMPATIBILITY_VERSION = "phase4_step22"
 
 _AVAILABLE_ROUTES: list[dict[str, str]] = [
     {"method": "GET", "path": "/api/v1/mission-control/state"},
@@ -93,6 +93,17 @@ _AVAILABLE_ROUTES: list[dict[str, str]] = [
     {"method": "GET", "path": "/api/v1/runtime/simplification-lock"},
     {"method": "GET", "path": "/api/v1/runtime/narrative-unification"},
     {"method": "GET", "path": "/api/v1/runtime/provider-routing-ux"},
+    {"method": "GET", "path": "/api/v1/runtime/status"},
+    {"method": "GET", "path": "/api/v1/runtime/health-summary"},
+    {"method": "GET", "path": "/api/v1/runtime/readiness-authority"},
+    {"method": "GET", "path": "/api/v1/runtime/operational-authority"},
+    {"method": "GET", "path": "/api/v1/runtime/recovery-history"},
+    {"method": "GET", "path": "/api/v1/runtime/recovery-integrity"},
+    {"method": "GET", "path": "/api/v1/runtime/integrity-certification"},
+    {"method": "GET", "path": "/api/v1/runtime/enterprise-integrity"},
+    {"method": "GET", "path": "/api/v1/runtime/truth-integrity"},
+    {"method": "GET", "path": "/api/v1/runtime/truth-consistency"},
+    {"method": "GET", "path": "/api/v1/runtime/operator-confidence"},
     {"method": "GET", "path": "/api/v1/health"},
 ]
 
@@ -149,6 +160,9 @@ def build_runtime_capabilities() -> dict[str, Any]:
             "phase4_step21": True,
             "enterprise_ux_completed": True,
             "operator_facing_branding_locked": True,
+            "phase4_step22": True,
+            "runtime_integrity_locked": True,
+            "enterprise_runtime_assurance": True,
         },
         "lazy_views": [
             "routing",
