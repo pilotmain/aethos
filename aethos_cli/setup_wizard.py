@@ -272,6 +272,26 @@ def run_setup_wizard(*, install_kind: str | None = None) -> int:
     resume_step = 0
     bag: dict = {}
     if not _noninteractive_setup():
+        from aethos_cli.setup_conversational import detect_runtime_operational, print_runtime_already_running_menu
+
+        if env_path.exists() and detect_runtime_operational():
+            running_action = print_runtime_already_running_menu()
+            if running_action == "open":
+                from aethos_cli.cli_open import cmd_open
+
+                cmd_open()
+                return 0
+            if running_action == "exit":
+                return 0
+            if running_action == "repair":
+                install_kind = "repair"
+            elif running_action == "restart":
+                from aethos_cli.runtime_process_cli import cmd_runtime_restart
+
+                cmd_runtime_restart(clean=False)
+                return 0
+            elif running_action == "review":
+                bag["review_each_section"] = True
         if env_path.exists() and not load_setup_state():
             from aethos_cli.setup_conversational import print_existing_routing_review, print_existing_setup_menu
 
@@ -344,7 +364,9 @@ def run_setup_wizard(*, install_kind: str | None = None) -> int:
                 else:
                     clear_setup_state()
 
-    print_header()
+    if not os.environ.get("AETHOS_SETUP_BANNER_SHOWN"):
+        print_header()
+        os.environ["AETHOS_SETUP_BANNER_SHOWN"] = "1"
     print_environment_tag(human_os_line(pinfo))
     from aethos_cli.setup_conversational import print_global_setup_commands, print_runtime_strategy_guidance, print_welcome_intro
 
@@ -611,9 +633,20 @@ def run_setup_wizard(*, install_kind: str | None = None) -> int:
                 startup_result = orchestrate_startup(choice=start_choice, repo_root=root)
                 bag["startup_result"] = startup_result
                 if startup_result.get("truly_operational"):
-                    print_success("AethOS is running. Mission Control is ready.")
+                    print_success("AethOS is operational. Mission Control is ready.")
                 else:
-                    print_info(startup_result.get("message") or "AethOS is preparing operational services.")
+                    print_info(startup_result.get("message") or "AethOS is preparing operational services…")
+
+            from aethos_cli.setup_completion_guidance import (
+                print_what_happens_next,
+                prompt_guided_first_run_tour,
+                try_open_mission_control,
+            )
+
+            operational = bool(startup_result.get("truly_operational"))
+            print_what_happens_next(operational=operational)
+            if operational and prompt_guided_first_run_tour():
+                try_open_mission_control()
 
         from aethos_cli.setup_enterprise import print_setup_final_summary
 

@@ -51,7 +51,18 @@ def _interactive_review(section_id: str, title: str, lines: list[str], bag: dict
 
 def _routing_summary_lines(repo_root: Path) -> list[str]:
     env = build_existing_config_summary(repo_root=repo_root)
-    return [line for line in env if line.startswith("Runtime") or line.startswith("Routing")]
+    return [line for line in env if line.startswith("Strategy") or line.startswith("Routing")]
+
+
+def _advanced_options_enabled(bag: dict[str, Any]) -> bool:
+    if "advanced_options" in bag:
+        return bool(bag["advanced_options"])
+    if not setup_interactive():
+        bag["advanced_options"] = False
+        return False
+    enabled = confirm("Advanced options? (LiteLLM, OpenRouter, custom gateways, deep governance)", default=False)
+    bag["advanced_options"] = enabled
+    return enabled
 
 
 def run_enterprise_setup_extensions(
@@ -85,7 +96,14 @@ def run_enterprise_setup_extensions(
         paid_ok = confirm("Require approval before paid provider fallback?", default=True)
         updates.update(build_routing_env_updates(mode, preference=pref, require_paid_fallback_approval=paid_ok))
         bag["routing_mode"] = mode
+        bag["routing_preference"] = pref
         bag["routing_summary"] = routing_summary(mode, pref)
+        from aethos_cli.setup_conversation_context import get_setup_conversation
+
+        conv = get_setup_conversation()
+        conv.record("routing_mode", mode)
+        conv.record("routing_preference", pref)
+        conv.print_continuity("routing")
         print_success(f"Routing: {bag['routing_summary']}")
 
     if _section_targeted(bag, "mission_control") and _interactive_review(
@@ -113,14 +131,14 @@ def run_enterprise_setup_extensions(
             ch = select("Channel", ch_opts, default_index=len(ch_opts) - 1)
             configure_channel_choice(ch, updates)
 
-    if _section_targeted(bag, "web_search"):
+    if _section_targeted(bag, "web_search") and _advanced_options_enabled(bag):
         if confirm("Configure a web search provider?", default=False):
             print_step("5e", "Web search")
             ws_opts = [(a, b, "") for a, b, _ in PROVIDERS]
             ws = select("Web search provider", ws_opts, default_index=len(ws_opts) - 1)
             configure_web_search(ws, updates)
 
-    if _section_targeted(bag, "integrations"):
+    if _section_targeted(bag, "integrations") and _advanced_options_enabled(bag):
         print_step("5f", "Provider integrations")
         integrations = detect_integrations()
         lines = [f"{'✓' if v else '○'} {k}" for k, v in integrations.get("installed", {}).items()]
@@ -210,5 +228,6 @@ def print_setup_final_summary(
         bag=bag,
         truly_operational=truly_operational,
         mission_control_expected=mission_control_expected,
+        startup_result=bag.get("startup_result"),
     )
     print_box(title, card_lines)

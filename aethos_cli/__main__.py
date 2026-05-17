@@ -233,12 +233,19 @@ def main() -> int:
     )
     sub = p.add_subparsers(dest="cmd", required=True)
 
-    sub.add_parser(
+    from aethos_cli.cli_parser_helpers import add_parser_once
+
+    _top_level_parser_names: set[str] = set()
+
+    def _cmd(name: str, **kwargs):
+        return add_parser_once(sub, _top_level_parser_names, name, **kwargs)
+
+    _cmd(
         "onboard",
         help="First-time operator onboarding (same as: aethos setup)",
     )
 
-    sp_gateway = sub.add_parser(
+    sp_gateway = _cmd(
         "gateway",
         help="Run the persistent AethOS HTTP gateway (same stack as: aethos serve)",
     )
@@ -252,7 +259,7 @@ def main() -> int:
     )
     sp_gateway.add_argument("--reload", action="store_true")
 
-    sp_message = sub.add_parser("message", help="Gateway message dispatch (AethOS runtime)")
+    sp_message = _cmd("message", help="Gateway message dispatch (AethOS runtime)")
     msg_sub = sp_message.add_subparsers(dest="message_cmd", required=True)
     sp_msg_send = msg_sub.add_parser("send", help="POST mission-control/gateway/run")
     sp_msg_send.add_argument("text", help="User message body")
@@ -274,12 +281,12 @@ def main() -> int:
         help="Print JSON only (no truncation banner).",
     )
 
-    sp_task = sub.add_parser("task", help="Runtime workflow task inspection")
+    sp_task = _cmd("task", help="Runtime workflow task inspection")
     task_sub = sp_task.add_subparsers(dest="task_cmd", required=True)
     sp_task_show = task_sub.add_parser("show", help="GET /api/v1/runtime/tasks/{task_id}")
     sp_task_show.add_argument("task_id")
 
-    sp_priv = sub.add_parser("privacy", help="Phase 2 privacy / PII API (HTTP)")
+    sp_priv = _cmd("privacy", help="Phase 2 privacy / PII API (HTTP)")
     priv_sub = sp_priv.add_subparsers(dest="privacy_cmd", required=True)
     priv_sub.add_parser("status", help="GET /api/v1/privacy/status")
     priv_sub.add_parser("audit", help="GET /api/v1/privacy/audit")
@@ -305,7 +312,7 @@ def main() -> int:
         help="Optional desired mode (not persisted; set AETHOS_PRIVACY_MODE and restart)",
     )
 
-    sp_prov = sub.add_parser("providers", help="Provider CLI inventory (Phase 2 Step 3)")
+    sp_prov = _cmd("providers", help="Provider CLI inventory (Phase 2 Step 3)")
     prov_sub = sp_prov.add_subparsers(dest="providers_cmd", required=True)
     prov_sub.add_parser("list", help="GET /api/v1/providers")
     prov_sub.add_parser("scan", help="POST /api/v1/providers/scan")
@@ -318,7 +325,7 @@ def main() -> int:
     prov_sub.add_parser("history", help="GET /api/v1/mission-control/providers/history")
     prov_sub.add_parser("overview", help="GET /api/v1/mission-control/providers/overview")
 
-    sp_proj = sub.add_parser("projects", help="Local project registry (Phase 2 Step 3)")
+    sp_proj = _cmd("projects", help="Local project registry (Phase 2 Step 3)")
     proj_sub = sp_proj.add_subparsers(dest="projects_cmd", required=True)
     proj_sub.add_parser("list", help="GET /api/v1/projects")
     proj_sub.add_parser("scan", help="POST /api/v1/projects/scan")
@@ -333,7 +340,7 @@ def main() -> int:
     sp_proj_conf = proj_sub.add_parser("confidence", help="GET /api/v1/projects/{id}/confidence")
     sp_proj_conf.add_argument("project_id")
 
-    sp_deploy = sub.add_parser("deploy", help="Provider-backed deploy operations (Phase 2 Step 4)")
+    sp_deploy = _cmd("deploy", help="Provider-backed deploy operations (Phase 2 Step 4)")
     dep_op = sp_deploy.add_subparsers(dest="deploy_cmd", required=True)
     sp_dr = dep_op.add_parser("restart", help="POST /api/v1/providers/vercel/restart")
     sp_dr.add_argument("project_id")
@@ -358,7 +365,7 @@ def main() -> int:
     sp_proj_lr = proj_sub.add_parser("latest-repair", help="GET /api/v1/projects/{id}/latest-repair")
     sp_proj_lr.add_argument("project_id")
 
-    sp_dep = sub.add_parser("deployments", help="Deployment runtime API")
+    sp_dep = _cmd("deployments", help="Deployment runtime API")
     dep_sub = sp_dep.add_subparsers(dest="dep_cmd", required=True)
     dep_sub.add_parser("list", help="GET /api/v1/deployments")
     sp_dep_show = dep_sub.add_parser("show", help="GET /api/v1/deployments/{id}")
@@ -371,14 +378,14 @@ def main() -> int:
     sp_dep_rb.add_argument("deployment_id")
     sp_dep_rb.add_argument("--reason", default="", help="Optional rollback reason")
 
-    sp_env = sub.add_parser("environments", help="Environment runtime API")
+    sp_env = _cmd("environments", help="Environment runtime API")
     env_sub = sp_env.add_subparsers(dest="env_cmd", required=True)
     env_sub.add_parser("list", help="GET /api/v1/environments")
     env_sub.add_parser("locks", help="GET /api/v1/environments/locks")
     sp_env_show = env_sub.add_parser("show", help="GET /api/v1/environments/{id}")
     sp_env_show.add_argument("environment_id")
 
-    sp_runtime = sub.add_parser("runtime", help="Unified runtime cohesion (Phase 3 Step 11–12)")
+    sp_runtime = _cmd("runtime", help="Unified runtime cohesion (Phase 3 Step 11–12)")
     rt_sub = sp_runtime.add_subparsers(dest="runtime_cmd", required=True)
     from aethos_cli.cli_parser_helpers import add_runtime_parser_once
 
@@ -529,11 +536,11 @@ def main() -> int:
     add_runtime_parser_once(
         rt_sub, _runtime_parser_names, "launch-experience", help="GET /api/v1/runtime/launch-experience"
     )
-    sp_ecosystem = sub.add_parser("ecosystem", help="Operational intelligence ecosystem (Phase 4 Step 3)")
+    sp_ecosystem = _cmd("ecosystem", help="Operational intelligence ecosystem (Phase 4 Step 3)")
     eco_sub = sp_ecosystem.add_subparsers(dest="ecosystem_cmd", required=True)
     eco_sub.add_parser("health", help="GET /api/v1/mission-control/ecosystem/health")
     eco_sub.add_parser("maturity", help="GET /api/v1/mission-control/ecosystem/maturity")
-    sp_enterprise = sub.add_parser("enterprise", help="Enterprise runtime evolution overview (Phase 4)")
+    sp_enterprise = _cmd("enterprise", help="Enterprise runtime evolution overview (Phase 4)")
     ent_sub = sp_enterprise.add_subparsers(dest="enterprise_cmd", required=True)
     ent_sub.add_parser("overview", help="GET /api/v1/mission-control/executive-overview (Step 9)")
     ent_sub.add_parser("strategy", help="GET /api/v1/mission-control/enterprise/strategy")
@@ -541,30 +548,30 @@ def main() -> int:
     ent_sub.add_parser("posture", help="GET /api/v1/mission-control/enterprise/posture (Phase 4 Step 5)")
     sp_ent_mem = ent_sub.add_parser("memory", help="Enterprise operational memory from runtime truth")
     sp_ent_mem.add_argument("--json", action="store_true", help="Raw JSON only")
-    sp_automation = sub.add_parser("automation", help="Automation effectiveness (Phase 4)")
+    sp_automation = _cmd("automation", help="Automation effectiveness (Phase 4)")
     auto_sub = sp_automation.add_subparsers(dest="automation_cmd", required=True)
     auto_sub.add_parser("effectiveness", help="GET /api/v1/mission-control/automation/effectiveness")
-    sp_op_ready = sub.add_parser("operational-readiness", help="Enterprise operational readiness bundle")
-    sp_rt_narr = sub.add_parser("operational-narrative", help="Operational narratives from runtime truth")
-    sp_exec_vis = sub.add_parser("execution", help="Execution visibility (Phase 3 Step 14)")
+    sp_op_ready = _cmd("operational-readiness", help="Enterprise operational readiness bundle")
+    sp_rt_narr = _cmd("operational-narrative", help="Operational narratives from runtime truth")
+    sp_exec_vis = _cmd("execution", help="Execution visibility (Phase 3 Step 14)")
     exec_sub = sp_exec_vis.add_subparsers(dest="execution_cmd", required=True)
     exec_sub.add_parser("visibility", help="GET /api/v1/mission-control/execution/visibility")
 
-    sp_opsum = sub.add_parser("operational", help="Operational summary (Phase 3 Step 11)")
+    sp_opsum = _cmd("operational", help="Operational summary (Phase 3 Step 11)")
     op_sub = sp_opsum.add_subparsers(dest="operational_cmd", required=True)
     op_sub.add_parser("summary", help="GET /api/v1/mission-control/operational-summary")
     op_sub.add_parser("trends", help="GET /api/v1/mission-control/runtime/trends")
     op_sub.add_parser("trajectory", help="GET /api/v1/mission-control/runtime/trajectory")
     op_sub.add_parser("memory", help="Enterprise operational memory from runtime truth")
 
-    sp_intel = sub.add_parser("intelligence", help="Operational intelligence (Phase 3 Step 10)")
+    sp_intel = _cmd("intelligence", help="Operational intelligence (Phase 3 Step 10)")
     intel_sub = sp_intel.add_subparsers(dest="intelligence_cmd", required=True)
     intel_sub.add_parser("summary", help="GET /api/v1/mission-control/operational-intelligence")
     intel_sub.add_parser("risks", help="GET /api/v1/mission-control/governance/risks")
     sp_intel_rec = intel_sub.add_parser("recommendations", help="GET …/runtime-recommendations")
     sp_intel_rec.add_argument("--json", action="store_true", help="Raw JSON only")
 
-    sp_gov = sub.add_parser("governance", help="Runtime governance (Phase 3 Step 10)")
+    sp_gov = _cmd("governance", help="Runtime governance (Phase 3 Step 10)")
     gov_sub = sp_gov.add_subparsers(dest="governance_cmd", required=True)
     gov_sub.add_parser("timeline", help="GET /api/v1/mission-control/governance")
     gov_sub.add_parser("risks", help="GET /api/v1/mission-control/governance/risks")
@@ -588,17 +595,17 @@ def main() -> int:
     )
     sp_tl_win.add_argument("--offset", type=int, default=0)
     sp_tl_win.add_argument("--limit", type=int, default=24)
-    sp_wk_sum = sub.add_parser("worker-summaries", help="Paginated worker summaries")
+    sp_wk_sum = _cmd("worker-summaries", help="Paginated worker summaries")
     sp_wk_sum.add_argument("--page", type=int, default=1)
 
-    sp_mkt = sub.add_parser("marketplace", help="Marketplace automation packs")
+    sp_mkt = _cmd("marketplace", help="Marketplace automation packs")
     mkt_sub = sp_mkt.add_subparsers(dest="marketplace_cmd", required=True)
     mkt_sub.add_parser("packs", help="GET /api/v1/mission-control/automation-packs")
     mkt_sub.add_parser("trust", help="GET /api/v1/mission-control/automation/trust")
     sp_mkt_run = mkt_sub.add_parser("run-pack", help="POST …/automation-packs/{id}/run")
     sp_mkt_run.add_argument("pack_id")
 
-    sp_workspace = sub.add_parser("workspace", help="Workspace intelligence (Phase 3 Step 9)")
+    sp_workspace = _cmd("workspace", help="Workspace intelligence (Phase 3 Step 9)")
     ws_sub = sp_workspace.add_subparsers(dest="workspace_cmd", required=True)
     ws_sub.add_parser("summary", help="GET /api/v1/mission-control/workspace-intelligence")
     ws_sub.add_parser("risks", help="GET /api/v1/mission-control/workspace-risks")
@@ -606,7 +613,7 @@ def main() -> int:
     sp_ws_chains = ws_sub.add_parser("research-chains", help="GET …/research-chains")
     sp_ws_chains.add_argument("--project-id", default=None, dest="project_id")
 
-    sp_workers = sub.add_parser("workers", help="Runtime worker detail (Phase 3 Step 8)")
+    sp_workers = _cmd("workers", help="Runtime worker detail (Phase 3 Step 8)")
     wk_sub = sp_workers.add_subparsers(dest="workers_cmd", required=True)
     wk_sub.add_parser("list", help="GET /api/v1/mission-control/runtime-workers")
     sp_wk_show = wk_sub.add_parser("show", help="GET /api/v1/mission-control/runtime-workers/{id}")
@@ -623,7 +630,7 @@ def main() -> int:
     sp_wk_cont = wk_sub.add_parser("continuity", help="GET …/operator-continuity + worker context")
     sp_wk_cont.add_argument("worker_id")
 
-    sp_dlv = sub.add_parser("deliverables", help="Worker deliverables (Phase 3 Step 8)")
+    sp_dlv = _cmd("deliverables", help="Worker deliverables (Phase 3 Step 8)")
     dlv_sub = sp_dlv.add_subparsers(dest="deliverables_cmd", required=True)
     dlv_sub.add_parser("list", help="GET /api/v1/mission-control/deliverables")
     sp_dlv_show = dlv_sub.add_parser("show", help="GET /api/v1/mission-control/deliverables/{id}")
@@ -635,7 +642,7 @@ def main() -> int:
     sp_dlv_cmp.add_argument("deliverable_id_a")
     sp_dlv_cmp.add_argument("deliverable_id_b")
 
-    sp_agents = sub.add_parser("agents", help="Coordination agent API (multi-agent parity)")
+    sp_agents = _cmd("agents", help="Coordination agent API (multi-agent parity)")
     ag_sub = sp_agents.add_subparsers(dest="agents_cmd", required=True)
     ag_sub.add_parser("list", help="GET /api/v1/runtime/agents/")
     sp_ag_show = ag_sub.add_parser("show", help="GET /api/v1/runtime/agents/{id}")
@@ -643,20 +650,20 @@ def main() -> int:
     sp_ag_tasks = ag_sub.add_parser("tasks", help="GET /api/v1/runtime/agents/{id}/tasks")
     sp_ag_tasks.add_argument("agent_id")
 
-    sp_planning = sub.add_parser("planning", help="Adaptive planning runtime API")
+    sp_planning = _cmd("planning", help="Adaptive planning runtime API")
     plan_sub = sp_planning.add_subparsers(dest="planning_cmd", required=True)
     plan_sub.add_parser("list", help="GET /api/v1/runtime/planning")
     sp_plan_show = plan_sub.add_parser("show", help="GET /api/v1/runtime/planning/{planning_id}")
     sp_plan_show.add_argument("planning_id")
 
-    sp_optimization = sub.add_parser(
+    sp_optimization = _cmd(
         "optimization",
         help="Runtime optimization snapshot (parity baseline; default: metrics)",
     )
     opt_sub = sp_optimization.add_subparsers(dest="optimization_cmd", required=False)
     opt_sub.add_parser("metrics", help="GET /api/v1/runtime/optimization")
 
-    sp_ops = sub.add_parser("operations", help="Operational workflow queue API")
+    sp_ops = _cmd("operations", help="Operational workflow queue API")
     ops_sub = sp_ops.add_subparsers(dest="ops_cmd", required=True)
     ops_sub.add_parser("list", help="GET /api/v1/operations")
     ops_sub.add_parser("supervisors", help="GET /api/v1/runtime/supervisors")
@@ -665,7 +672,7 @@ def main() -> int:
     sp_ops_run.add_argument("op_type", help="deploy | rollback | health_check | …")
     sp_ops_run.add_argument("--environment-id", default=None, dest="environment_id")
 
-    sp_logs = sub.add_parser(
+    sp_logs = _cmd(
         "logs",
         help="Tail logs: optional category gateway|agents|…|planning|reasoning|optimization|replanning|adaptive_execution|delegation_optimization|… (runtime = ~/.aethos/aethos.json)",
     )
@@ -678,25 +685,25 @@ def main() -> int:
     )
     sp_logs.add_argument("--lines", type=int, default=80, dest="log_lines")
 
-    sub.add_parser(
+    _cmd(
         "doctor",
         help="Diagnostics: compileall + optional API health",
     )
-    sub.add_parser(
+    _cmd(
         "repair",
         help="Repair runtime ownership, database coordination, and process conflicts",
     )
 
-    sp_state = sub.add_parser("state", help="GET mission-control/state")
+    sp_state = _cmd("state", help="GET mission-control/state")
     sp_state.add_argument("--mission-user", default=None, help="Query user_id scope")
 
-    sp_run = sub.add_parser("run", help="POST mission-control/gateway/run")
+    sp_run = _cmd("run", help="POST mission-control/gateway/run")
     sp_run.add_argument("text", help="Mission text")
 
-    sp_replay = sub.add_parser("replay", help="POST mission-control/replay/{mission_id}")
+    sp_replay = _cmd("replay", help="POST mission-control/replay/{mission_id}")
     sp_replay.add_argument("mission_id")
 
-    sp_settings = sub.add_parser("settings", help="User settings API")
+    sp_settings = _cmd("settings", help="User settings API")
     ss = sp_settings.add_subparsers(dest="settings_cmd", required=True)
     ss.add_parser("get", help="GET /api/v1/user/settings")
     sp_set = ss.add_parser("set", help="POST merged settings (key=value …)")
@@ -707,7 +714,7 @@ def main() -> int:
         help="e.g. privacy_mode=strict theme=dark auto_refresh=true",
     )
 
-    sp_soul = sub.add_parser(
+    sp_soul = _cmd(
         "soul",
         help="Soul versioning: snapshots under ~/.aethos/soul_history/<user>/ after soul edits",
     )
@@ -726,7 +733,7 @@ def main() -> int:
         help="Snapshot stem from `aethos soul history`",
     )
 
-    sp_dev = sub.add_parser("dev", help="POST /api/v1/dev/* (workspaces + runs)")
+    sp_dev = _cmd("dev", help="POST /api/v1/dev/* (workspaces + runs)")
     dev_sub = sp_dev.add_subparsers(dest="dev_cmd", required=True)
     sp_dws = dev_sub.add_parser("workspace-add", help="POST /dev/workspaces")
     sp_dws.add_argument("--name", required=True)
@@ -746,7 +753,7 @@ def main() -> int:
     sp_dsc.add_argument("--interval-seconds", type=int, default=None, dest="interval_seconds")
     sp_dsc.add_argument("--agent", default=None)
 
-    sp_skills = sub.add_parser("skills", help="Plugin skills registry (Phase 6)")
+    sp_skills = _cmd("skills", help="Plugin skills registry (Phase 6)")
     sk_sub = sp_skills.add_subparsers(dest="skills_cmd", required=True)
     sk_sub.add_parser("list", help="List registered plugin skills")
     sk_ins = sk_sub.add_parser("install", help="Install skill from file or URL")
@@ -775,7 +782,7 @@ def main() -> int:
     except ModuleNotFoundError:
         pass
 
-    sp_scrape = sub.add_parser(
+    sp_scrape = _cmd(
         "scrape",
         help="Phase 21 web scraping (local fetch/extract; subcommands: fetch, extract, paginate)",
     )
@@ -786,7 +793,7 @@ def main() -> int:
         help='e.g. fetch https://example.com  |  extract https://example.com --css "h1"',
     )
 
-    sp_cron = sub.add_parser("cron", help="Cron automation API (Phase 13; requires NEXA_CRON_API_TOKEN)")
+    sp_cron = _cmd("cron", help="Cron automation API (Phase 13; requires NEXA_CRON_API_TOKEN)")
     cr_sub = sp_cron.add_subparsers(dest="cron_cmd", required=True)
     cr_sub.add_parser("list", help="GET /cron/jobs")
     cr_add = cr_sub.add_parser("add", help="POST channel_message job")
@@ -799,9 +806,9 @@ def main() -> int:
     cr_res = cr_sub.add_parser("resume")
     cr_res.add_argument("job_id")
 
-    sub.add_parser("run-dev", help="Deprecated alias; use: aethos dev run …")
+    _cmd("run-dev", help="Deprecated alias; use: aethos dev run …")
 
-    sp_setup = sub.add_parser(
+    sp_setup = _cmd(
         "setup",
         help="Interactive enterprise setup wizard (writes .env keys; see docs/ENTERPRISE_SETUP.md)",
     )
@@ -820,7 +827,7 @@ def main() -> int:
     setup_sub.add_parser("operational-recovery", help="Setup operational recovery guidance")
     setup_sub.add_parser("first-impression", help="Mission Control first-impression bundle")
 
-    sp_restart = sub.add_parser("restart", help="Restart API, web, or bot processes")
+    sp_restart = _cmd("restart", help="Restart API, web, or bot processes")
     restart_sub = sp_restart.add_subparsers(dest="restart_cmd")
     restart_sub.add_parser("api", help="Restart API (uvicorn)")
     restart_sub.add_parser("web", help="Restart Mission Control (Next.js)")
@@ -829,15 +836,15 @@ def main() -> int:
     restart_sub.add_parser("runtime", help="Restart API, web, and refresh runtime connection")
     restart_sub.add_parser("all", help="Restart API and web (default)")
 
-    sp_connect = sub.add_parser("connect", help="Refresh Mission Control connection credentials")
-    sp_connection = sub.add_parser("connection", help="Mission Control connection profile")
+    sp_connect = _cmd("connect", help="Refresh Mission Control connection credentials")
+    sp_connection = _cmd("connection", help="Mission Control connection profile")
     conn_sub = sp_connection.add_subparsers(dest="connection_cmd", required=True)
     conn_sub.add_parser("show", help="Show redacted connection profile")
     conn_sub.add_parser("repair", help="Regenerate bearer token and repair creds")
     conn_sub.add_parser("diagnose", help="Diagnose API health and runtime capabilities")
     conn_sub.add_parser("reset", help="Reset connection profile and repair credentials")
 
-    sp_cloud = sub.add_parser("cloud", help="Manage ~/.aethos/clouds.yaml deploy providers")
+    sp_cloud = _cmd("cloud", help="Manage ~/.aethos/clouds.yaml deploy providers")
     cloud_sub = sp_cloud.add_subparsers(dest="cloud_cmd", required=True)
     cloud_sub.add_parser("list", help="List provider slugs")
     sp_cloud_add = cloud_sub.add_parser("add", help="Add or replace a provider")
@@ -851,17 +858,17 @@ def main() -> int:
     sp_cloud_rm = cloud_sub.add_parser("remove", help="Remove a provider by slug")
     sp_cloud_rm.add_argument("name")
 
-    sub.add_parser(
+    _cmd(
         "init-db",
         help="Ensure SQLite dir exists and apply schema (ensure_schema); same DB as API + Telegram bot",
     )
 
-    sub.add_parser(
+    _cmd(
         "unify-db",
         help="Phase 60 — merge legacy SQLite files into ~/.aethos/data/aethos.db and align DATABASE_URL",
     )
 
-    sp_mscopes = sub.add_parser(
+    sp_mscopes = _cmd(
         "migrate-scopes",
         help="Phase 61 — optional SQLite rewrite of bare tg_* parent_chat_id to web:tg_*:default (see --apply)",
     )
@@ -871,34 +878,34 @@ def main() -> int:
         help="Run UPDATE (default: dry-run listing only)",
     )
 
-    sub.add_parser(
+    _cmd(
         "configure-bot",
         help="Phase 62 — write ~/.aethos/.env with canonical DATABASE_URL + orchestration (matches API bot DB)",
     )
 
-    sub.add_parser(
+    _cmd(
+        "open",
+        help="Open Mission Control in browser (when running on :3000)",
+    )
+
+    _cmd(
         "start",
         help="Start AethOS (alias for: aethos runtime launch)",
     )
-    sub.add_parser(
+    _cmd(
         "stop",
         help="Stop AethOS runtime (alias for: aethos runtime stop)",
     )
-    sub.add_parser(
-        "restart",
-        help="Restart AethOS runtime (alias for: aethos runtime restart)",
-    )
-
-    sub.add_parser(
+    _cmd(
         "status",
         help="HTTP health checks against AETHOS_API_BASE / NEXA_API_BASE (default :8010)",
     )
-    sub.add_parser("features", help="Show enabled capability flags from repo .env")
+    _cmd("features", help="Show enabled capability flags from repo .env")
 
-    sp_conf = sub.add_parser("config", help="Print path to repo .env (optional --edit with $EDITOR)")
+    sp_conf = _cmd("config", help="Print path to repo .env (optional --edit with $EDITOR)")
     sp_conf.add_argument("--edit", action="store_true", help="Open in $EDITOR when set")
 
-    sp_pr = sub.add_parser(
+    sp_pr = _cmd(
         "pr",
         help="Automated GitHub PR review (Phase 23; requires GITHUB_TOKEN + NEXA_PR_REVIEW_ENABLED)",
     )
@@ -907,7 +914,7 @@ def main() -> int:
     sp_prev.add_argument("repo", help="owner/repo")
     sp_prev.add_argument("pr_number", type=int)
 
-    sp_serve = sub.add_parser(
+    sp_serve = _cmd(
         "serve",
         help="Run FastAPI locally via uvicorn (default port 8010; matches docker-compose host mapping)",
     )
@@ -2285,6 +2292,11 @@ def main() -> int:
 
         return configure_bot_env()
 
+    if args.cmd == "open":
+        from aethos_cli.cli_open import cmd_open
+
+        return cmd_open()
+
     if args.cmd == "start":
         from aethos_cli.runtime_launch_cli import cmd_runtime_launch
 
@@ -2294,11 +2306,6 @@ def main() -> int:
         from aethos_cli.runtime_process_cli import cmd_runtime_stop
 
         return cmd_runtime_stop()
-
-    if args.cmd == "restart":
-        from aethos_cli.runtime_process_cli import cmd_runtime_restart
-
-        return cmd_runtime_restart(clean=False)
 
     if args.cmd == "status":
         from aethos_cli.cli_status import cmd_status

@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
-"""CLI must build argparse without duplicate runtime subparser crashes."""
+"""CLI must build argparse without duplicate subparser crashes."""
 
 from __future__ import annotations
 
@@ -9,7 +9,11 @@ import subprocess
 import sys
 from pathlib import Path
 
-from aethos_cli.cli_parser_helpers import find_duplicate_runtime_parser_names
+from aethos_cli.cli_parser_helpers import (
+    add_parser_once,
+    find_duplicate_runtime_parser_names,
+    find_duplicate_top_level_parser_names,
+)
 
 
 def _repo_root() -> Path:
@@ -19,15 +23,26 @@ def _repo_root() -> Path:
 def test_runtime_parser_names_unique_in_source() -> None:
     src = (_repo_root() / "aethos_cli" / "__main__.py").read_text(encoding="utf-8")
     legacy = find_duplicate_runtime_parser_names(src)
-    assert legacy == [], f"duplicate rt_sub.add_parser names: {legacy}"
-    names = re.findall(
-        r"add_runtime_parser_once\(rt_sub, _runtime_parser_names,\s*[\"']([^\"']+)[\"']",
-        src,
-    )
-    from collections import Counter
+    assert legacy == [], f"duplicate runtime parser names: {legacy}"
 
-    dup = [n for n, c in Counter(names).items() if c > 1]
-    assert dup == [], f"duplicate add_runtime_parser_once names: {dup}"
+
+def test_top_level_parser_names_unique_in_source() -> None:
+    src = (_repo_root() / "aethos_cli" / "__main__.py").read_text(encoding="utf-8")
+    assert re.search(r"(?<![.\w])sub\.add_parser\(", src) is None, "use _cmd() for top-level parsers"
+    dup = find_duplicate_top_level_parser_names(src)
+    assert dup == [], f"duplicate top-level parser names: {dup}"
+
+
+def test_add_parser_once_idempotent() -> None:
+    import argparse
+
+    p = argparse.ArgumentParser()
+    sp = p.add_subparsers(dest="cmd")
+    names: set[str] = set()
+    p1 = add_parser_once(sp, names, "restart", help="first")
+    p2 = add_parser_once(sp, names, "restart", help="second")
+    assert p1 is p2
+    assert names == {"restart"}
 
 
 def test_cli_help_commands_do_not_crash() -> None:
@@ -35,6 +50,8 @@ def test_cli_help_commands_do_not_crash() -> None:
     root = _repo_root()
     cases = [
         ["--help"],
+        ["restart", "--help"],
+        ["start", "--help"],
         ["runtime", "--help"],
         ["doctor", "--help"],
         ["setup", "resume", "--help"],
@@ -55,6 +72,19 @@ def test_cli_help_commands_do_not_crash() -> None:
         combined = (proc.stderr or "") + (proc.stdout or "")
         assert "conflicting subparser" not in combined.lower()
         assert "ArgumentError" not in combined
+
+
+def test_setup_entrypoint_imports_without_argparse_crash() -> None:
+    """Simulates curl|bash path: aethos setup must not crash at parser build."""
+    proc = subprocess.run(
+        [sys.executable, "-m", "aethos_cli", "setup", "--help"],
+        cwd=str(_repo_root()),
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    assert proc.returncode == 0
+    assert "conflicting subparser" not in (proc.stderr + proc.stdout).lower()
 
 
 def test_build_runtime_subparsers_via_main_import() -> None:

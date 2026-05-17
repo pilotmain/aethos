@@ -7,8 +7,6 @@ from __future__ import annotations
 
 import os
 import socket
-import subprocess
-import sys
 import time
 from pathlib import Path
 from typing import Any
@@ -72,53 +70,10 @@ def prompt_startup_choice() -> str:
 
 
 def orchestrate_startup(*, choice: str, repo_root: Path | None = None) -> dict[str, Any]:
-    """Start services per installer choice; wait for health when starting."""
-    root = repo_root or Path(__file__).resolve().parents[2]
-    port = int(os.environ.get("AETHOS_SERVE_PORT") or os.environ.get("NEXA_SERVE_PORT") or "8010")
-    mc_port = 3000
-    if choice in ("save_only", "review"):
-        return {
-            "ok": True,
-            "started": False,
-            "choice": choice,
-            "message": "Configuration saved. Start later with `aethos runtime launch`.",
-        }
-    py = root / ".venv" / "bin" / "python"
-    if not py.is_file():
-        py = Path(sys.executable)
-    proc = None
-    try:
-        proc = subprocess.Popen(
-            [str(py), "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", str(port)],
-            cwd=str(root),
-            start_new_session=True,
-        )
-    except OSError as exc:
-        return {"ok": False, "started": False, "message": str(exc)[:120]}
-    deadline = time.monotonic() + 45.0
-    api_ok = False
-    while time.monotonic() < deadline:
-        if _health_ok(port):
-            api_ok = True
-            break
-        time.sleep(0.8)
-    mc_ok = _port_open(mc_port) if choice == "api_and_mission_control" else True
-    truly_ready = api_ok and (mc_ok or choice == "api_only")
-    return {
-        "ok": truly_ready,
-        "started": proc is not None,
-        "choice": choice,
-        "api_port": port,
-        "api_reachable": api_ok,
-        "mission_control_reachable": mc_ok,
-        "truly_operational": truly_ready,
-        "message": (
-            "Operational startup completed."
-            if truly_ready
-            else "AethOS is preparing operational services — check `aethos runtime startup-status`."
-        ),
-        "pid": proc.pid if proc else None,
-    }
+    """Progressive staged startup with coordination and honest readiness."""
+    from app.services.runtime.runtime_progressive_startup import orchestrate_progressive_startup
+
+    return orchestrate_progressive_startup(choice=choice, repo_root=repo_root)
 
 
 def build_runtime_startup_orchestration(truth: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -126,12 +81,13 @@ def build_runtime_startup_orchestration(truth: dict[str, Any] | None = None) -> 
     launch = truth.get("runtime_launch_integrity") or {}
     return {
         "runtime_startup_orchestration": {
-            "phase": "phase4_step28",
+            "phase": "phase4_step29",
             "options": [o[0] for o in _START_OPTIONS],
             "api_reachable": launch.get("api_reachable"),
             "mission_control_reachable": launch.get("mission_control_reachable"),
             "truly_operational": launch.get("coordination_complete"),
             "never_premature_ready": True,
+            "progressive_stages": 7,
             "bounded": True,
         }
     }

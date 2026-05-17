@@ -21,14 +21,60 @@ def _profile() -> dict[str, Any]:
         return {}
 
 
+def _tour_state() -> dict[str, Any]:
+    try:
+        from aethos_cli.setup_completion_guidance import load_tour_state
+
+        return load_tour_state()
+    except Exception:
+        path = Path.home() / ".aethos" / "mission_control_tour.json"
+        if not path.is_file():
+            return {}
+        try:
+            return json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return {}
+
+
+def mark_mission_control_tour_complete() -> None:
+    path = Path.home() / ".aethos" / "mission_control_tour.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    blob = {"requested": True, "completed": True, "dismissed": False}
+    path.write_text(json.dumps(blob, indent=2), encoding="utf-8")
+
+
+def mark_mission_control_tour_dismissed() -> None:
+    path = Path.home() / ".aethos" / "mission_control_tour.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    blob = {"requested": True, "completed": False, "dismissed": True}
+    path.write_text(json.dumps(blob, indent=2), encoding="utf-8")
+
+
 def build_mission_control_first_run(truth: dict[str, Any] | None = None) -> dict[str, Any]:
     truth = truth or {}
     profile = _profile()
+    tour = _tour_state()
     setup_complete = Path.home() / ".aethos" / "onboarding_profile.json"
+    tour_active = bool(tour.get("requested")) and not tour.get("completed") and not tour.get("dismissed")
     return {
         "mission_control_first_run": {
             "welcome": _welcome_message(profile),
+            "guided_tour": {
+                "active": tour_active,
+                "completed": bool(tour.get("completed")),
+                "dismissed": bool(tour.get("dismissed")),
+                "topics": [
+                    {"id": "office", "title": "Office — operational command center", "path": "/mission-control/office"},
+                    {"id": "runtime", "title": "Runtime — live orchestration state", "path": "/mission-control/runtime-overview"},
+                    {"id": "workers", "title": "Workers — agent ecosystem", "path": "/mission-control/workers"},
+                    {"id": "governance", "title": "Governance — policy and posture", "path": "/mission-control/governance"},
+                    {"id": "marketplace", "title": "Marketplace — plugins and skills", "path": "/mission-control/plugins"},
+                    {"id": "recovery", "title": "Recovery — calm operational repair", "path": "/mission-control/runtime-supervision"},
+                    {"id": "intelligence", "title": "Runtime intelligence — routing insight", "path": "/mission-control/runtime-intelligence"},
+                ],
+            },
             "steps": [
+                {"id": "office", "title": "Office", "path": "/mission-control/office"},
                 {"id": "runtime_overview", "title": "Runtime overview", "path": "/mission-control/runtime-overview"},
                 {"id": "providers", "title": "Provider setup", "path": "/mission-control/providers"},
                 {"id": "workspace", "title": "Workspace", "path": "/mission-control/workspace-intelligence"},
@@ -53,5 +99,12 @@ def build_mission_control_first_run(truth: dict[str, Any] | None = None) -> dict
 def _welcome_message(profile: dict[str, Any]) -> str:
     name = profile.get("display_name") or profile.get("user_address")
     if name:
-        return f"Welcome to AethOS, {name}. Your orchestrator is ready — calm, explainable, enterprise-grade."
-    return "Welcome to AethOS. Your orchestrator coordinates workers, providers, and governance from one place."
+        return f"Welcome to AethOS, {name}. Your orchestrator coordinates workers, providers, and governance from one calm surface."
+    return "Welcome to AethOS. Mission Control is your operational surface — Office, runtime, workers, and governance in one place."
+
+
+__all__ = [
+    "build_mission_control_first_run",
+    "mark_mission_control_tour_complete",
+    "mark_mission_control_tour_dismissed",
+]

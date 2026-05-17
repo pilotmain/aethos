@@ -35,7 +35,7 @@ def build_existing_config_summary(*, repo_root: Path) -> list[str]:
     from aethos_cli.setup_routing import canonical_routing_label, canonical_routing_summary
 
     lines = [
-        f"Runtime strategy: {canonical_routing_label(mode)}",
+        f"Strategy: {canonical_routing_label(mode)}",
         f"Routing: {canonical_routing_summary(mode, pref)}",
     ]
     local_model = env.get("NEXA_OLLAMA_MODEL") or env.get("OLLAMA_MODEL") or ""
@@ -56,22 +56,93 @@ def build_existing_config_summary(*, repo_root: Path) -> list[str]:
         if env.get(key):
             providers.append(label)
     if providers:
-        lines.append(f"Cloud providers: {', '.join(providers)} configured")
+        lines.append(f"Cloud providers: {', '.join(providers)}")
     else:
         lines.append("Cloud providers: not configured")
+    ws = env.get("NEXA_WORKSPACE_ROOT") or str(Path.home() / "aethos-workspace")
+    ws_path = Path(ws).expanduser()
+    ws_count = 0
+    if ws_path.is_dir():
+        try:
+            ws_count = sum(1 for p in ws_path.iterdir() if p.is_dir() and not p.name.startswith("."))
+        except OSError:
+            ws_count = 0
+    lines.append(f"Workspace: {ws} ({ws_count} project folder{'s' if ws_count != 1 else ''})")
     mc_token = env.get("AETHOS_WEB_API_TOKEN") or env.get("NEXA_WEB_API_TOKEN")
     lines.append("Mission Control: configured" if mc_token else "Mission Control: not configured")
-    ws = env.get("NEXA_WORKSPACE_ROOT") or str(Path.home() / "aethos-workspace")
-    lines.append(f"Workspace: {ws}")
+    if env.get("TELEGRAM_BOT_TOKEN"):
+        lines.append("Telegram: connected")
+    elif env.get("DISCORD_BOT_TOKEN"):
+        lines.append("Discord: connected")
+    else:
+        lines.append("Channels: Web UI only")
     from aethos_cli.setup_onboarding_profile import load_onboarding_profile
 
     profile = load_onboarding_profile()
     if profile:
         name = profile.get("display_name") or profile.get("assistant_name") or "saved"
         lines.append(f"Onboarding profile: {name}")
-    else:
-        lines.append("Onboarding profile: not configured")
+    lines.append(f"Runtime health: {detect_runtime_health_label()}")
     return lines
+
+
+def detect_runtime_operational(*, api_port: int = 8010) -> bool:
+    """True when API health endpoint responds."""
+    import socket
+
+    try:
+        with socket.create_connection(("127.0.0.1", api_port), timeout=0.4):
+            pass
+    except OSError:
+        return False
+    try:
+        import urllib.request
+
+        with urllib.request.urlopen(f"http://127.0.0.1:{api_port}/api/v1/health", timeout=2.0) as resp:
+            return resp.status == 200
+    except Exception:
+        return False
+
+
+def detect_runtime_health_label() -> str:
+    port = int(os.environ.get("AETHOS_SERVE_PORT") or os.environ.get("NEXA_SERVE_PORT") or "8010")
+    if detect_runtime_operational(api_port=port):
+        return "healthy"
+    if _port_in_use(port):
+        return "starting"
+    return "offline"
+
+
+def _port_in_use(port: int) -> bool:
+    import socket
+
+    try:
+        with socket.create_connection(("127.0.0.1", port), timeout=0.3):
+            return True
+    except OSError:
+        return False
+
+
+def print_runtime_already_running_menu() -> str:
+    """When runtime is already up. Returns: open | review | repair | restart | exit."""
+    print_box(
+        "AethOS is already running",
+        [
+            "Current environment is operational.",
+            "You can open Mission Control, review configuration, repair, or restart services.",
+        ],
+    )
+    return select(
+        "What would you like to do?",
+        [
+            ("Open Mission Control", "open", "Browser launch via aethos open"),
+            ("Review configuration", "review", "Step through setup sections"),
+            ("Repair setup", "repair", "Reinstall deps and repair core keys"),
+            ("Restart services", "restart", "Coordinate runtime restart"),
+            ("Exit", "exit", "Leave runtime as-is"),
+        ],
+        default_index=0,
+    )
 
 
 def print_welcome_intro() -> None:

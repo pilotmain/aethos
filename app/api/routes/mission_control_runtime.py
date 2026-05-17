@@ -621,6 +621,22 @@ def mc_first_run_onboarding(app_user_id: str = Depends(get_valid_web_user_id)) -
     return build_mission_control_first_run(t)
 
 
+@router.post("/onboarding/tour-dismiss")
+def mc_tour_dismiss(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.mission_control_first_run import mark_mission_control_tour_dismissed
+
+    mark_mission_control_tour_dismissed()
+    return {"ok": True, "dismissed": True}
+
+
+@router.post("/onboarding/tour-complete")
+def mc_tour_complete(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.mission_control_first_run import mark_mission_control_tour_complete
+
+    mark_mission_control_tour_complete()
+    return {"ok": True, "completed": True}
+
+
 @router.get("/runtime/posture")
 def mc_runtime_posture(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
     t = _truth_slice(app_user_id)

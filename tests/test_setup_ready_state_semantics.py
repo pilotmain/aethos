@@ -16,8 +16,8 @@ def test_not_ready_when_api_offline() -> None:
     state = evaluate_setup_readiness(health=health)
     assert state["may_claim_ready"] is False
     title, lines = build_setup_completion_card(health=health, api_base="http://127.0.0.1:8010", bag={})
-    assert title == "Configuration complete"
-    assert any("not running yet" in line.lower() for line in lines)
+    assert title == "Preparing operational services…"
+    assert any("not fully operational" in line.lower() for line in lines)
 
 
 def test_ready_when_api_and_mc_up() -> None:
@@ -34,5 +34,5 @@ def test_ready_when_api_and_mc_up() -> None:
         bag={"routing_summary": "Hybrid"},
         truly_operational=True,
     )
-    assert title == "AethOS is running"
+    assert title == "AethOS is operational"
     assert any("Mission Control is ready" in line for line in lines)
