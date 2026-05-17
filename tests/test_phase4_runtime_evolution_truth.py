@@ -29,4 +29,4 @@ def test_apply_runtime_evolution_truth_keys() -> None:
         "enterprise_overview",
     ):
         assert key in truth, key
-    assert truth.get("enterprise_overview", {}).get("phase") == "phase4_step19"
+    assert truth.get("enterprise_overview", {}).get("phase") == "phase4_step20"

@@ -449,3 +449,32 @@ def runtime_supervision(_: str = Depends(get_valid_web_user_id)) -> dict:
     from app.services.mission_control.runtime_supervision import build_runtime_supervision
 
     return build_runtime_supervision()
+
+
+@router.get("/hydration/diagnostics")
+def runtime_hydration_diagnostics(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    try:
+        t = _truth_slice(app_user_id)
+    except Exception:
+        t = {}
+    from app.services.mission_control.runtime_hydration_diagnostics import build_runtime_hydration_diagnostics
+
+    return build_runtime_hydration_diagnostics(t)
+
+
+@router.get("/certify")
+def runtime_certify(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    try:
+        t = _truth_slice(app_user_id)
+    except Exception:
+        t = {}
+    from app.services.setup.production_cut_certification import build_production_cut_certification
+
+    return build_production_cut_certification(truth=t)
+
+
+@router.get("/surface-map")
+def runtime_surface_map(_: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_surface_consolidation import build_runtime_surface_consolidation
+
+    return build_runtime_surface_consolidation()

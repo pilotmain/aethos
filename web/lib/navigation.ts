@@ -38,7 +38,7 @@ export const missionControlPrimaryNav: MissionControlNavItem[] = [
     name: "Runtime",
     href: "/mission-control/runtime-overview",
     icon: Activity,
-    description: "Unified runtime overview — trust, calmness, identity",
+    description: "Runtime health, readiness, and trust",
   },
   {
     name: "Deployments",
@@ -93,10 +93,23 @@ export const missionControlSecondaryNav: MissionControlNavItem[] = [
     description: "Workspace intelligence, risk, research continuity",
   },
   {
+    name: "Runtime supervision",
+    href: "/mission-control/runtime-supervision",
+    icon: ShieldCheck,
+    description: "Process ownership, SQLite, Telegram, hydration locks",
+  },
+  {
+    name: "Runtime recovery",
+    href: "/mission-control/runtime-recovery",
+    icon: Activity,
+    description: "Hydration recovery and degraded mode guidance",
+  },
+  {
     name: "Insights",
     href: "/mission-control/operational-insights",
     icon: Activity,
-    description: "Operational intelligence, recommendations, automation",
+    description: "Legacy — prefer Runtime overview and intelligence routes",
+    deprecated: true,
   },
   {
     name: "Welcome",

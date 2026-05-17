@@ -1,11 +1,16 @@
-# Legacy reference policy (Phase 4 Step 12)
+# Legacy reference policy
 
-## OpenClaw
+Severity: `critical` · `operator_visible` · `internal_only` · `allowed`
 
-Allowed: README *Inspired by OpenClaw.*; `docs/OPENCLAW_*`; `tests/test_openclaw_*`; differentiators comparison page.
+## Allowed
 
-## Nexa
+- `NEXA_*` compatibility env aliases
+- `docs/OPENCLAW_*` parity documentation
+- `tests/test_openclaw_*`
+- README inspiration line for OpenClaw
 
-Allowed: `NEXA_*` env aliases; `nexa-*` API paths; migration comments; `NexaWebConfig` type aliases.
+## Must replace (operator surfaces)
 
-Forbidden: user-visible UI, CLI help, operator error messages.
+Mission Control UI, CLI help, setup wizard, recovery/restart copy, marketplace user strings.
+
+Module: `app/services/setup/legacy_reference_policy.py`

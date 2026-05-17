@@ -1,24 +1,5 @@
-# Final runtime architecture (Phase 4 Step 13)
+# Final runtime architecture (Phase 4)
 
-```text
-Events → runtime_state → build_runtime_truth()
-         → hydrate_runtime_truth_incremental()
-         → apply_runtime_evolution (steps 1–13)
-         → enterprise_overview
-         → Mission Control / CLI / Telegram surfaces
-```
+Single orchestrator-owned truth pipeline: `build_runtime_truth` → evolution steps 1–20 → cached slices → Mission Control APIs.
 
-## Truth ownership
-
-| Concern | Owner |
-|--------|--------|
-| Raw events | `runtime_state` |
-| Hydrated truth | `build_runtime_truth` + cache |
-| Evolution bundle | `runtime_evolution.py` |
-| Launch lock | `runtime_evolution_step13.py` |
-| Recovery copy | `runtime_recovery_experience.py` |
-| Calmness metrics | `enterprise_calmness_metrics.py` |
-
-## Intentional duplicates
-
-Documented in `runtime_duplication_lock` on truth and [RUNTIME_DUPLICATION_LOCK.md](RUNTIME_DUPLICATION_LOCK.md).
+Surfaces: see `runtime_surface_consolidation.py` and `GET /api/v1/runtime/surface-map`.

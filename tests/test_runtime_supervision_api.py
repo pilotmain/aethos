@@ -10,4 +10,4 @@ def test_runtime_supervision_api(api_client: tuple[TestClient, str]) -> None:
     assert r.status_code == 200
     body = r.json()
     assert "runtime_supervision" in body
-    assert body["runtime_supervision"]["phase"] == "phase4_step19"
+    assert body["runtime_supervision"]["phase"] == "phase4_step20"

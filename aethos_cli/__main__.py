@@ -443,6 +443,7 @@ def main() -> int:
     sp_rt_takeover = rt_sub.add_parser("takeover", help="Force runtime ownership for this CLI session")
     sp_rt_takeover.add_argument("--yes", action="store_true", help="Confirm takeover without prompt")
     rt_sub.add_parser("release", help="Release runtime + telegram locks if owned")
+    rt_sub.add_parser("certify", help="Production cut certification bundle")
     sp_ecosystem = sub.add_parser("ecosystem", help="Operational intelligence ecosystem (Phase 4 Step 3)")
     eco_sub = sp_ecosystem.add_subparsers(dest="ecosystem_cmd", required=True)
     eco_sub.add_parser("health", help="GET /api/v1/mission-control/ecosystem/health")
@@ -720,7 +721,8 @@ def main() -> int:
     setup_sub.add_parser("doctor", help="Enterprise setup health + integration detection")
     setup_sub.add_parser("validate", help="Validate setup completeness (.env, auth, onboarding)")
     setup_sub.add_parser("onboarding", help="Orchestrator-first onboarding conversation")
-    setup_sub.add_parser("certify", help="One-curl + ready-state certification report")
+    setup_sub.add_parser("certify", help="One-curl + ready-state + production cut certification")
+    setup_sub.add_parser("coverage", help="Enterprise setup systems coverage report")
     setup_sub.add_parser("status", help="Setup completeness status")
     setup_sub.add_parser("continuity", help="Setup resume / continuity state")
     setup_sub.add_parser("first-impression", help="Mission Control first-impression bundle")
@@ -1323,6 +1325,14 @@ def main() -> int:
             from aethos_cli.runtime_process_cli import cmd_runtime_release
 
             return cmd_runtime_release()
+        if args.runtime_cmd == "certify":
+            import json
+            from app.services.setup.production_cut_certification import build_production_cut_certification
+
+            cert = build_production_cut_certification()
+            print(json.dumps(cert, indent=2, default=str)[:32000])
+            pc = cert.get("production_cut_certification") or {}
+            return 0 if pc.get("production_cut_ready") else 1
         if args.runtime_cmd == "recovery":
             code, body = _req("GET", "/api/v1/mission-control/runtime/recovery", uid=uid)
             print(body[:24000])
@@ -1893,9 +1903,20 @@ def main() -> int:
             return 0
         if sc == "certify":
             import json
+            from app.services.setup.production_cut_certification import build_production_cut_certification
             from app.services.setup.setup_ready_state_lock import build_setup_ready_state_lock
 
-            print(json.dumps(build_setup_ready_state_lock(), indent=2, default=str)[:24000])
+            out = {
+                "ready_state": build_setup_ready_state_lock(),
+                **build_production_cut_certification(),
+            }
+            print(json.dumps(out, indent=2, default=str)[:32000])
+            return 0
+        if sc == "coverage":
+            import json
+            from app.services.setup.setup_coverage import build_setup_coverage
+
+            print(json.dumps(build_setup_coverage(), indent=2, default=str)[:24000])
             return 0
         if sc == "status":
             import json

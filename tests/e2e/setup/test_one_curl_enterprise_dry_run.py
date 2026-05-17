@@ -12,4 +12,4 @@ def test_setup_certify_api(api_client: tuple[TestClient, str]) -> None:
         assert r.status_code == 200, path
     certify = client.get("/api/v1/setup/certify")
     assert certify.status_code == 200
-    assert certify.json().get("phase") == "phase4_step19"
+    assert certify.json().get("phase") == "phase4_step20"

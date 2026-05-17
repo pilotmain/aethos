@@ -20,6 +20,15 @@ HYDRATION_STAGES = (
     {"id": "ready", "label": "Runtime ready"},
 )
 
+ENTERPRISE_STARTUP_STAGES = (
+    {"id": "initializing", "label": "Initializing"},
+    {"id": "core_ready", "label": "Core ready"},
+    {"id": "office_ready", "label": "Office ready"},
+    {"id": "runtime_ready", "label": "Runtime ready"},
+    {"id": "intelligence_ready", "label": "Intelligence ready"},
+    {"id": "enterprise_ready", "label": "Enterprise ready"},
+)
+
 
 def build_runtime_startup_experience(truth: dict[str, Any] | None = None) -> dict[str, Any]:
     truth = truth or {}
@@ -29,9 +38,13 @@ def build_runtime_startup_experience(truth: dict[str, Any] | None = None) -> dic
     stage_idx = min(len(HYDRATION_STAGES) - 1, int(pct * (len(HYDRATION_STAGES) - 1)))
     current = HYDRATION_STAGES[stage_idx]
     partial = bool(progress.get("partial"))
+    ent_idx = min(len(ENTERPRISE_STARTUP_STAGES) - 1, int(pct * (len(ENTERPRISE_STARTUP_STAGES) - 1)))
+    enterprise_stage = ENTERPRISE_STARTUP_STAGES[ent_idx]
     return {
         "runtime_startup_experience": {
             "current_stage": current,
+            "enterprise_stage": enterprise_stage,
+            "enterprise_stages": ENTERPRISE_STARTUP_STAGES,
             "stages": HYDRATION_STAGES,
             "readiness_percent": pct,
             "partial_mode": partial,
