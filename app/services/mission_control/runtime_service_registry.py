@@ -10,6 +10,7 @@ import subprocess
 from typing import Any
 
 from app.services.mission_control.runtime_ownership_lock import record_process_lifecycle_event
+from app.services.mission_control.runtime_uvicorn_process import filter_api_process_rows
 
 
 def _pgrep(pattern: str) -> list[dict[str, Any]]:
@@ -40,12 +41,15 @@ def _pgrep(pattern: str) -> list[dict[str, Any]]:
 
 def build_runtime_service_registry() -> dict[str, Any]:
     api_port = os.environ.get("AETHOS_SERVE_PORT") or os.environ.get("NEXA_SERVE_PORT") or "8010"
+    api_raw = _pgrep("uvicorn app.main:app")
     services = {
-        "api": _pgrep("uvicorn app.main:app"),
+        "api": filter_api_process_rows(api_raw),
+        "api_all_detected": api_raw,
         "telegram_bot": _pgrep("app.bot.telegram_bot"),
         "mission_control_web": _pgrep("next dev"),
     }
     embedded = [p for p in services["api"] if "reload" in (p.get("command") or "")]
+    reloader_parents_filtered = max(0, len(api_raw) - len(services["api"]))
     standalone_bot = services["telegram_bot"]
     duplicate_poller = len(standalone_bot) > 0 and any(
         "embed" in (a.get("command") or "").lower() for a in services["api"]
@@ -58,6 +62,7 @@ def build_runtime_service_registry() -> dict[str, Any]:
             "telegram_instance_count": len(standalone_bot),
             "web_instance_count": len(services["mission_control_web"]),
             "embedded_api_detected": bool(embedded),
+            "reloader_parents_filtered": reloader_parents_filtered,
             "duplicate_telegram_poller_risk": duplicate_poller and len(standalone_bot) > 0,
             "recommended_action": None,
             "bounded": True,

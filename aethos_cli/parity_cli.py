@@ -393,6 +393,20 @@ def cmd_doctor(*, api_base: str) -> int:
     for ln in _runtime_doctor_messages():
         print(ln, file=sys.stderr)
 
+    try:
+        from app.services.mission_control.runtime_supervision import build_runtime_supervision
+
+        sup = build_runtime_supervision()
+        rs = sup.get("runtime_supervision") or {}
+        print(f"runtime_supervision: api_owner={rs.get('api_owner_status')} sqlite={rs.get('sqlite_status')}", file=sys.stderr)
+        print(f"telegram_mode: {rs.get('telegram_mode')}", file=sys.stderr)
+        for c in rs.get("recommended_repairs") or []:
+            print(f"  repair: {c}", file=sys.stderr)
+        for c in (sup.get("runtime_process_supervision") or {}).get("conflicts") or []:
+            print(f"process_conflict: {c}", file=sys.stderr)
+    except Exception as exc:
+        print(f"runtime_supervision: skip ({exc})", file=sys.stderr)
+
     base = (api_base or "").strip().rstrip("/")
     url = f"{base}/api/v1/health"
     try:

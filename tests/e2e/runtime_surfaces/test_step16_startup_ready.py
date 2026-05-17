@@ -17,4 +17,4 @@ def test_step16_startup_ready_bounded(api_client: tuple[TestClient, str]) -> Non
         r = client.get(path, headers=hdr, timeout=15.0)
         assert r.status_code == 200, path
     caps = client.get("/api/v1/runtime/capabilities", headers=hdr, timeout=10.0)
-    assert caps.json().get("mc_compatibility_version") == "phase4_step18"
+    assert caps.json().get("mc_compatibility_version") == "phase4_step19"

@@ -442,3 +442,10 @@ def runtime_startup_lock(_: str = Depends(get_valid_web_user_id)) -> dict:
     from app.services.mission_control.runtime_startup_coordination import build_startup_lock_status
 
     return build_startup_lock_status()
+
+
+@router.get("/supervision")
+def runtime_supervision(_: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_supervision import build_runtime_supervision
+
+    return build_runtime_supervision()

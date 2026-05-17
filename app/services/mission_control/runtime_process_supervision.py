@@ -40,7 +40,7 @@ def build_runtime_process_supervision() -> dict[str, Any]:
         **db,
         **startup,
         "runtime_process_supervision": {
-            "phase": "phase4_step18",
+            "phase": "phase4_step19",
             "process_supervision_locked": True,
             "observer_mode": own.get("observer_mode"),
             "conflicts": conflicts,

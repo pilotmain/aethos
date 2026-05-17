@@ -101,14 +101,34 @@ def cmd_restart(target: str = "all") -> int:
         print(f"Mission Control web {'started' if proc else 'skipped — no web/package.json'}")
         record_restart_event("web", ok=proc is not None)
     if target == "bot":
+        from app.core.config import get_settings
+        from app.services.mission_control.telegram_ownership_ux import build_telegram_ownership_status
+
+        settings = get_settings()
+        tg = build_telegram_ownership_status()["telegram_ownership"]
+        if settings.nexa_telegram_embed_with_api and tg.get("mode") in ("embedded_api", "embedded_expected"):
+            print(
+                "Telegram polling is managed by the embedded AethOS API runtime.\n"
+                "Restarting bot via API — run: aethos restart api  (or aethos restart runtime)\n"
+                "To use standalone bot only, set NEXA_TELEGRAM_EMBED_WITH_API=false in .env first."
+            )
+            record_restart_event("bot", ok=True, detail="embedded mode — use restart api/runtime")
+            return cmd_restart("api")
+        if tg.get("conflict"):
+            print(tg.get("message") or "Telegram ownership conflict.")
+            print("Next: aethos runtime services")
+            record_restart_event("bot", ok=False, detail="telegram conflict")
+            return 1
         proc = None
         py = repo / ".venv" / "bin" / "python"
+        _pkill_pattern("app.bot.telegram_bot")
+        time.sleep(0.5)
         if py.is_file():
             try:
                 proc = subprocess.Popen([str(py), "-m", "app.bot.telegram_bot"], cwd=str(repo), start_new_session=True)
             except OSError:
                 proc = None
-        print(f"Telegram bot {'started' if proc else 'failed'}")
+        print(f"Standalone Telegram bot {'started' if proc else 'failed'}")
         record_restart_event("bot", ok=proc is not None)
     if target == "connection":
         from aethos_cli.connection_cli import cmd_connection_repair

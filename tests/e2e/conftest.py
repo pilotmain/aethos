@@ -23,6 +23,8 @@ def _light_truth(_uid: str | None = None) -> dict[str, Any]:
         "release_candidate": True,
         "phase4_step17": True,
         "phase4_step18": True,
+        "phase4_step19": True,
+        "runtime_supervision_verified": True,
         "installer_interaction_locked": True,
         "process_supervision_locked": True,
     }

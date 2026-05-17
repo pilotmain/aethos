@@ -9,4 +9,4 @@ def test_setup_continuity() -> None:
     out = build_setup_continuity()
     c = out["setup_continuity"]
     assert "resume" in c["global_commands"]
-    assert c["phase"] == "phase4_step18"
+    assert c["phase"] == "phase4_step19"

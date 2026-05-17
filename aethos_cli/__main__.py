@@ -440,7 +440,8 @@ def main() -> int:
     rt_sub.add_parser("branding-audit", help="GET /api/v1/runtime/branding-audit")
     rt_sub.add_parser("ownership", help="Runtime ownership + telegram polling coordination")
     rt_sub.add_parser("services", help="Local API/web/bot process registry")
-    rt_sub.add_parser("takeover", help="Force runtime ownership for this CLI session")
+    sp_rt_takeover = rt_sub.add_parser("takeover", help="Force runtime ownership for this CLI session")
+    sp_rt_takeover.add_argument("--yes", action="store_true", help="Confirm takeover without prompt")
     rt_sub.add_parser("release", help="Release runtime + telegram locks if owned")
     sp_ecosystem = sub.add_parser("ecosystem", help="Operational intelligence ecosystem (Phase 4 Step 3)")
     eco_sub = sp_ecosystem.add_subparsers(dest="ecosystem_cmd", required=True)
@@ -1317,7 +1318,7 @@ def main() -> int:
         if args.runtime_cmd == "takeover":
             from aethos_cli.runtime_process_cli import cmd_runtime_takeover
 
-            return cmd_runtime_takeover()
+            return cmd_runtime_takeover(yes=bool(getattr(args, "yes", False)))
         if args.runtime_cmd == "release":
             from aethos_cli.runtime_process_cli import cmd_runtime_release
 

@@ -11,6 +11,6 @@ from app.services.mission_control.runtime_api_capabilities import (
 
 def test_capabilities_registry() -> None:
     caps = build_runtime_capabilities()
-    assert caps["mc_compatibility_version"] == "phase4_step18"
+    assert caps["mc_compatibility_version"] == "phase4_step19"
     assert caps["feature_flags"]["runtime_resilience"] is True
     assert route_available("GET", "/api/v1/mission-control/state")

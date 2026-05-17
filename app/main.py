@@ -99,7 +99,14 @@ from app.workers.followup_worker import process_due_checkins
 from app.workers.operator_supervisor import process_supervisor_cycle
 
 settings = get_settings()
-ensure_schema()
+try:
+    from app.services.mission_control.runtime_db_coordination import ensure_schema_with_recovery
+
+    _schema_status = ensure_schema_with_recovery()
+    if not _schema_status.get("ok"):
+        logging.getLogger("aethos").warning("schema_init: %s", _schema_status.get("message"))
+except Exception as exc:
+    logging.getLogger("aethos").warning("schema_init deferred: %s", str(exc)[:160])
 
 
 def _retention_sweep() -> None:
@@ -260,9 +267,12 @@ async def lifespan(app: FastAPI):
             from app.services.telegram_polling_lock import try_acquire_telegram_polling_lock
 
             if not try_acquire_telegram_polling_lock():
+                from app.services.mission_control.telegram_ownership_ux import build_telegram_ownership_status
+
+                tg_msg = build_telegram_ownership_status()["telegram_ownership"].get("message")
                 logging.getLogger("aethos").info(
-                    "skipping embedded Telegram bot — polling lock held by another process "
-                    "(run only one of: API embedded bot or python -m app.bot.telegram_bot)"
+                    "skipping embedded Telegram bot — %s",
+                    tg_msg or "polling lock held by another process",
                 )
             else:
                 from app.bot.telegram_bot import start_telegram_polling_daemon

@@ -79,6 +79,10 @@ def try_acquire_runtime_ownership(
     force: bool = False,
 ) -> bool:
     """Acquire exclusive runtime ownership for this machine (api/cli). Observer never acquires."""
+    from app.services.mission_control.runtime_uvicorn_process import detect_uvicorn_process_kind
+
+    if detect_uvicorn_process_kind() == "reloader_parent":
+        return False
     if role == "observer":
         return False
     path = ownership_lock_path()
@@ -95,11 +99,14 @@ def try_acquire_runtime_ownership(
             path.unlink(missing_ok=True)
         except OSError:
             pass
+    from app.services.mission_control.runtime_uvicorn_process import detect_uvicorn_process_kind
+
     payload = {
         "pid": mypid,
         "role": role,
         "port": port,
         "acquired_at": _utc_now(),
+        "uvicorn_kind": detect_uvicorn_process_kind(),
     }
     return _write_lock(path, payload)
 
@@ -163,11 +170,32 @@ def build_runtime_ownership_status() -> dict[str, Any]:
             "telegram_polling_pid": tg_pid if tg_alive else None,
             "telegram_polling_available": polling_available,
             "embedded_bot_safe": polling_available or i_own,
-            "phase": "phase4_step18",
+            "phase": "phase4_step19",
+            "stale_owner": bool(lock and not holder_alive),
             "bounded": True,
         },
         "process_lifecycle": lifecycle,
     }
+
+
+def format_runtime_ownership_summary() -> str:
+    """Human-readable summary for CLI and doctor."""
+    from app.services.mission_control.runtime_db_coordination import build_runtime_db_health
+    from app.services.mission_control.telegram_ownership_ux import build_telegram_ownership_status
+
+    st = build_runtime_ownership_status()["runtime_ownership"]
+    db = build_runtime_db_health()["runtime_db_health"]
+    tg = build_telegram_ownership_status()["telegram_ownership"]
+    owner = "active" if st.get("this_process_owns") else ("stale" if st.get("stale_owner") else "none")
+    lines = [
+        f"Runtime owner: {owner}",
+        f"PID: {st.get('holder_pid') or st.get('this_pid')}",
+        f"Mode: {st.get('holder_role') or 'observer'} runtime",
+        f"Telegram: {tg.get('mode', 'unknown')}",
+        f"SQLite: {'WAL healthy' if db.get('ok') else db.get('detail', 'degraded')}",
+        f"Next: {'aethos status' if owner == 'active' else 'aethos runtime takeover --yes'}",
+    ]
+    return "\n".join(lines)
 
 
 def load_process_lifecycle() -> dict[str, Any]:
