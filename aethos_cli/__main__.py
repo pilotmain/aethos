@@ -438,6 +438,10 @@ def main() -> int:
     rt_sub.add_parser("bootstrap", help="GET /api/v1/runtime/bootstrap MC payload")
     rt_sub.add_parser("compatibility", help="GET /api/v1/runtime/compatibility")
     rt_sub.add_parser("branding-audit", help="GET /api/v1/runtime/branding-audit")
+    rt_sub.add_parser("ownership", help="Runtime ownership + telegram polling coordination")
+    rt_sub.add_parser("services", help="Local API/web/bot process registry")
+    rt_sub.add_parser("takeover", help="Force runtime ownership for this CLI session")
+    rt_sub.add_parser("release", help="Release runtime + telegram locks if owned")
     sp_ecosystem = sub.add_parser("ecosystem", help="Operational intelligence ecosystem (Phase 4 Step 3)")
     eco_sub = sp_ecosystem.add_subparsers(dest="ecosystem_cmd", required=True)
     eco_sub.add_parser("health", help="GET /api/v1/mission-control/ecosystem/health")
@@ -1302,6 +1306,22 @@ def main() -> int:
             code, body = _req("GET", "/api/v1/runtime/branding-audit", uid=uid)
             print(body[:24000])
             return 0 if code == 200 else 1
+        if args.runtime_cmd == "ownership":
+            from aethos_cli.runtime_process_cli import cmd_runtime_ownership
+
+            return cmd_runtime_ownership()
+        if args.runtime_cmd == "services":
+            from aethos_cli.runtime_process_cli import cmd_runtime_services
+
+            return cmd_runtime_services()
+        if args.runtime_cmd == "takeover":
+            from aethos_cli.runtime_process_cli import cmd_runtime_takeover
+
+            return cmd_runtime_takeover()
+        if args.runtime_cmd == "release":
+            from aethos_cli.runtime_process_cli import cmd_runtime_release
+
+            return cmd_runtime_release()
         if args.runtime_cmd == "recovery":
             code, body = _req("GET", "/api/v1/mission-control/runtime/recovery", uid=uid)
             print(body[:24000])

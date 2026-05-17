@@ -60,6 +60,35 @@ def build_enterprise_setup_doctor(*, repo_root: Path | None = None) -> dict[str,
     except Exception as exc:
         checks.append({"name": "runtime_capabilities", "ok": False, "detail": str(exc)[:120], "area": "runtime"})
 
+    try:
+        from app.services.mission_control.runtime_process_supervision import build_runtime_process_supervision
+
+        sup = build_runtime_process_supervision()
+        own = sup.get("runtime_ownership") or {}
+        conflicts = (sup.get("runtime_process_supervision") or {}).get("conflicts") or []
+        checks.append(
+            {
+                "name": "runtime_ownership",
+                "ok": not conflicts,
+                "detail": "; ".join(conflicts) if conflicts else "no process conflicts",
+                "area": "runtime",
+            }
+        )
+        checks.append(
+            {
+                "name": "sqlite_db_health",
+                "ok": (sup.get("runtime_db_health") or {}).get("ok"),
+                "detail": (sup.get("runtime_db_health") or {}).get("detail"),
+                "area": "runtime",
+            }
+        )
+        if conflicts:
+            fixes.append("Run `aethos runtime takeover` or `aethos restart runtime` to resolve process conflicts")
+        if own.get("duplicate_ownership_risk"):
+            fixes.append("Stop duplicate Telegram pollers — use embedded API bot OR standalone bot only")
+    except Exception as exc:
+        checks.append({"name": "process_supervision", "ok": False, "detail": str(exc)[:120], "area": "runtime"})
+
     bootstrap_path = Path.home() / ".aethos" / "mc_browser_bootstrap.json"
     checks.append(
         {
@@ -82,7 +111,7 @@ def build_enterprise_setup_doctor(*, repo_root: Path | None = None) -> dict[str,
                 "aethos runtime bootstrap",
             ],
             "summary": f"{ok_count}/{len(checks)} checks passed",
-            "phase": "phase4_step17",
+            "phase": "phase4_step18",
             "bounded": True,
         }
     }

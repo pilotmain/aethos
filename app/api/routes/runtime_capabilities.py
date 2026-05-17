@@ -407,3 +407,38 @@ def runtime_branding_audit(_: str = Depends(get_valid_web_user_id)) -> dict:
     from app.services.mission_control.runtime_branding_audit import build_runtime_branding_audit
 
     return build_runtime_branding_audit()
+
+
+@router.get("/ownership")
+def runtime_ownership(_: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_ownership_lock import build_runtime_ownership_status
+
+    return build_runtime_ownership_status()
+
+
+@router.get("/services")
+def runtime_services(_: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_service_registry import build_runtime_service_registry
+
+    return build_runtime_service_registry()
+
+
+@router.get("/processes")
+def runtime_processes(_: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_service_registry import build_runtime_processes
+
+    return build_runtime_processes()
+
+
+@router.get("/db-health")
+def runtime_db_health(_: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_db_coordination import build_runtime_db_health
+
+    return build_runtime_db_health()
+
+
+@router.get("/startup-lock")
+def runtime_startup_lock(_: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_startup_coordination import build_startup_lock_status
+
+    return build_startup_lock_status()

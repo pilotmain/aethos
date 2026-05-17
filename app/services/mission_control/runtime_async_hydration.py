@@ -22,6 +22,17 @@ def hydrate_progressive_truth(
     max_tier: str = "advisory",
 ) -> dict[str, Any]:
     """Build truth incrementally by priority tier; merge persisted warm slices first."""
+    from app.services.mission_control.runtime_startup_coordination import serialized_hydration
+
+    with serialized_hydration(phase=f"hydration:{max_tier}"):
+        return _hydrate_progressive_truth_inner(user_id=user_id, max_tier=max_tier)
+
+
+def _hydrate_progressive_truth_inner(
+    *,
+    user_id: str | None = None,
+    max_tier: str = "advisory",
+) -> dict[str, Any]:
     from app.services.mission_control.runtime_hydration import (
         _build_core_slice,
         _build_derived_slice,

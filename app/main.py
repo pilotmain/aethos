@@ -162,6 +162,25 @@ async def lifespan(app: FastAPI):
     except Exception as exc:
         logging.getLogger("aethos").warning("lifespan_runtime_start failed: %s", exc)
     try:
+        import os
+
+        from app.services.mission_control.runtime_db_coordination import apply_sqlite_pragmas
+        from app.services.mission_control.runtime_ownership_lock import (
+            record_process_lifecycle_event,
+            try_acquire_runtime_ownership,
+        )
+
+        apply_sqlite_pragmas()
+        port = int(os.environ.get("AETHOS_SERVE_PORT") or os.environ.get("NEXA_SERVE_PORT") or "8010")
+        if try_acquire_runtime_ownership(role="api", port=port):
+            record_process_lifecycle_event("api_ownership_acquired", service="api")
+        else:
+            logging.getLogger("aethos").info(
+                "runtime ownership held by another process — API continues in observer-compatible mode"
+            )
+    except Exception as exc:
+        logging.getLogger("aethos").warning("runtime ownership coordination failed: %s", exc)
+    try:
         from app.orchestration.orchestration_integration import lifespan_orchestration_start
 
         lifespan_orchestration_start()

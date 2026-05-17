@@ -7,4 +7,4 @@ from app.services.setup.branding_convergence_final import build_branding_converg
 
 def test_branding_convergence_final() -> None:
     out = build_branding_convergence_final()
-    assert out["branding_convergence_final"]["phase"] == "phase4_step17"
+    assert out["branding_convergence_final"]["phase"] == "phase4_step18"

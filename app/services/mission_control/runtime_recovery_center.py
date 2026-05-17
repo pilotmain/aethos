@@ -50,8 +50,25 @@ def build_runtime_recovery_center(
     if recovery.get("degradation_signals") and status == "healthy":
         status = "recovering"
 
+    ownership_tools: dict[str, Any] = {}
+    try:
+        from app.services.mission_control.runtime_process_supervision import build_runtime_process_supervision
+
+        sup = build_runtime_process_supervision()
+        own = sup.get("runtime_ownership") or {}
+        ownership_tools = {
+            "conflicts": (sup.get("runtime_process_supervision") or {}).get("conflicts") or [],
+            "recovery_actions": (sup.get("runtime_process_supervision") or {}).get("recovery_actions") or [],
+            "this_process_owns": own.get("this_process_owns"),
+            "observer_mode": own.get("observer_mode"),
+            "telegram_polling_pid": own.get("telegram_polling_pid"),
+        }
+    except Exception:
+        ownership_tools = {"recovery_actions": ["aethos runtime ownership", "aethos restart runtime"]}
+
     return {
         "operational_status": status,
+        "ownership_tools": ownership_tools,
         "failed_slices": failed_slices[:8],
         "hydration_retries": int(hm.get("invalidation_rate") or 0) if isinstance(hm, dict) else 0,
         "stale_caches": bool(resilience.get("using_cached_truth")),

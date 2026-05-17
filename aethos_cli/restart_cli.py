@@ -60,8 +60,29 @@ def cmd_restart(target: str = "all") -> int:
     repo = _repo_root()
     target = (target or "all").lower()
     ok = True
-    if target in ("all", "runtime"):
-        target = "all"
+    if target == "runtime":
+        from app.services.mission_control.runtime_ownership_lock import (
+            record_process_lifecycle_event,
+            release_runtime_ownership_if_owner,
+            try_acquire_runtime_ownership,
+        )
+        from app.services.telegram_polling_lock import release_telegram_polling_lock_if_owner
+
+        release_runtime_ownership_if_owner()
+        release_telegram_polling_lock_if_owner()
+        _pkill_pattern("uvicorn app.main:app")
+        _pkill_pattern("app.bot.telegram_bot")
+        time.sleep(1.0)
+        port = int(os.environ.get("AETHOS_SERVE_PORT") or os.environ.get("NEXA_SERVE_PORT") or "8010")
+        try_acquire_runtime_ownership(role="cli", port=port, force=True)
+        proc = _start_api(repo)
+        ok = proc is not None
+        print(f"Runtime API {'started' if proc else 'failed'} (port {port})")
+        record_restart_event("runtime", ok=ok, detail="runtime supervision restart")
+        record_process_lifecycle_event("restart_runtime", service="api")
+        from aethos_cli.cli_status import cmd_status
+
+        return cmd_status()
     if target in ("all", "api"):
         _pkill_pattern("uvicorn app.main:app")
     if target in ("all", "web"):

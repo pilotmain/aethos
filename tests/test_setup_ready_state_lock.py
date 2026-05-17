@@ -7,5 +7,5 @@ from app.services.setup.setup_ready_state_lock import build_setup_ready_state_lo
 
 def test_setup_ready_state_lock_bundle() -> None:
     out = build_setup_ready_state_lock()
-    assert out["phase"] == "phase4_step17"
+    assert out["phase"] == "phase4_step18"
     assert "one_curl_certified" in out

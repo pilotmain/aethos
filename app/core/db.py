@@ -50,7 +50,10 @@ settings = get_settings()
 ensure_sqlite_parent_directory(settings.database_url)
 
 if settings.database_url.startswith("sqlite"):
-    _engine_kw: dict = {"connect_args": {"check_same_thread": False}, "future": True}
+    _engine_kw: dict = {
+        "connect_args": {"check_same_thread": False, "timeout": 30},
+        "future": True,
+    }
 else:
     # Postgres / other servers: keep long-lived API healthy behind load balancers.
     _engine_kw = {"future": True, "pool_pre_ping": True}
@@ -863,38 +866,51 @@ def _migrate_aethos_dev_steps_phase25() -> None:
 def ensure_schema() -> None:
     import app.models  # noqa: F401 — register all models (incl. TaskPattern) on Base.metadata
 
-    _migrate_rename_legacy_nexa_tables_to_aethos()
-    Base.metadata.create_all(bind=engine)
-    _seed_default_project()
-    _migrate_agent_key_overwhelm_reset_to_nexa()
-    _sync_agent_definitions_safe()
-    _migrate_users_is_new_column()
-    _migrate_users_v7_focus_and_interaction()
-    _migrate_agent_jobs_telegram_and_result_file()
-    _migrate_agent_jobs_hardening()
-    _migrate_conversation_context_topic_authority()
-    _migrate_conversation_context_pending_project()
-    _migrate_conversation_context_last_decision()
-    _migrate_conversation_context_suggested_actions()
-    _migrate_conversation_context_session_multiplex()
-    _migrate_projects_idea_workflow()
-    _migrate_projects_key_nexa_to_aethos()
-    _migrate_projects_dev_tool_columns()
-    _migrate_learning_event_status()
-    _migrate_access_permissions_last_used()
-    _migrate_users_governance()
-    _migrate_agent_organizations_governance_org()
-    _migrate_aethos_workspace_projects()
-    _migrate_conversation_context_blocked_host()
-    _migrate_conversation_context_simulate_execute_pending()
-    _migrate_conversation_context_sandbox_pending_plan()
-    _migrate_agent_jobs_simulation_result()
-    _migrate_aethos_missions_input_text()
-    _migrate_aethos_tasks_timing()
-    _migrate_aethos_dev_steps_phase25()
-    _migrate_nexa_long_running_phase44()
-    _migrate_nexa_autonomous_goal_id()
-    _migrate_agent_jobs_phase38_approval_persistence()
+    from app.services.mission_control.runtime_db_coordination import apply_sqlite_pragmas, sqlite_retry
+
+    def _run() -> None:
+        _migrate_rename_legacy_nexa_tables_to_aethos()
+        Base.metadata.create_all(bind=engine)
+
+    apply_sqlite_pragmas()
+
+    def _full() -> None:
+        _run()
+        _seed_default_project()
+        _migrate_agent_key_overwhelm_reset_to_nexa()
+        _sync_agent_definitions_safe()
+        _migrate_users_is_new_column()
+        _migrate_users_v7_focus_and_interaction()
+        _migrate_agent_jobs_telegram_and_result_file()
+        _migrate_agent_jobs_hardening()
+        _migrate_conversation_context_topic_authority()
+        _migrate_conversation_context_pending_project()
+        _migrate_conversation_context_last_decision()
+        _migrate_conversation_context_suggested_actions()
+        _migrate_conversation_context_session_multiplex()
+        _migrate_projects_idea_workflow()
+        _migrate_projects_key_nexa_to_aethos()
+        _migrate_projects_dev_tool_columns()
+        _migrate_learning_event_status()
+        _migrate_access_permissions_last_used()
+        _migrate_users_governance()
+        _migrate_agent_organizations_governance_org()
+        _migrate_aethos_workspace_projects()
+        _migrate_conversation_context_blocked_host()
+        _migrate_conversation_context_simulate_execute_pending()
+        _migrate_conversation_context_sandbox_pending_plan()
+        _migrate_agent_jobs_simulation_result()
+        _migrate_aethos_missions_input_text()
+        _migrate_aethos_tasks_timing()
+        _migrate_aethos_dev_steps_phase25()
+        _migrate_nexa_long_running_phase44()
+        _migrate_nexa_autonomous_goal_id()
+        _migrate_agent_jobs_phase38_approval_persistence()
+
+    if settings.database_url.startswith("sqlite"):
+        sqlite_retry(_full)
+    else:
+        _full()
 
 
 def get_db() -> Generator[Session, None, None]:
