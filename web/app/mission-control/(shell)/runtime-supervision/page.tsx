@@ -12,6 +12,8 @@ type SupervisionPayload = {
     telegram_mode?: string;
     hydration_lock_clear?: boolean;
     degraded_mode?: boolean;
+    ownership_authoritative?: boolean;
+    process_conflicts?: number;
     operator_summary?: string;
     recommended_repairs?: string[];
   };
@@ -66,6 +68,16 @@ export default function RuntimeSupervisionPage() {
         <div className="rounded-lg border border-border/50 px-4 py-3">
           <p className="text-xs uppercase text-muted-foreground">Hydration lock</p>
           <p className="mt-1 text-lg font-medium">{sup.hydration_lock_clear ? "clear" : "active"}</p>
+        </div>
+        <div className="rounded-lg border border-border/50 px-4 py-3">
+          <p className="text-xs uppercase text-muted-foreground">Ownership authority</p>
+          <p className="mt-1 text-lg font-medium">
+            {sup.ownership_authoritative ? "authoritative" : "coordinating"}
+          </p>
+        </div>
+        <div className="rounded-lg border border-border/50 px-4 py-3">
+          <p className="text-xs uppercase text-muted-foreground">Process conflicts</p>
+          <p className="mt-1 text-lg font-medium">{sup.process_conflicts ?? 0}</p>
         </div>
       </section>
       {sup.operator_summary ? (

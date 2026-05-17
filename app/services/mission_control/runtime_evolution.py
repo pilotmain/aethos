@@ -148,8 +148,10 @@ def apply_runtime_evolution_to_truth(truth: dict[str, Any], *, user_id: str | No
 
     apply_runtime_evolution_step23_to_truth(truth, user_id=user_id)
     from app.services.mission_control.runtime_evolution_step24 import apply_runtime_evolution_step24_to_truth
+    from app.services.mission_control.runtime_evolution_step25 import apply_runtime_evolution_step25_to_truth
 
     apply_runtime_evolution_step24_to_truth(truth, user_id=user_id)
+    apply_runtime_evolution_step25_to_truth(truth, user_id=user_id)
     truth["enterprise_overview"] = build_enterprise_overview(truth)
     return truth
 
@@ -172,7 +174,7 @@ def build_enterprise_overview(truth: dict[str, Any]) -> dict[str, Any]:
         "worker_ecosystem": (truth.get("worker_ecosystem_health") or {}).get("status"),
         "ecosystem_health": (truth.get("ecosystem_operational_health") or {}).get("status"),
         "optimization_quality": (truth.get("runtime_optimization_quality") or {}).get("score"),
-        "phase": "phase4_step24",
+        "phase": "phase4_step25",
         "enterprise_ux_completed": bool(truth.get("enterprise_ux_completed")),
         "operator_facing_branding_locked": bool(truth.get("operator_facing_branding_locked")),
         "runtime_integrity_locked": bool(truth.get("runtime_integrity_locked")),
@@ -180,6 +182,9 @@ def build_enterprise_overview(truth: dict[str, Any]) -> dict[str, Any]:
         "runtime_operationally_trusted": bool(truth.get("runtime_operationally_trusted")),
         "enterprise_production_certified": bool(truth.get("enterprise_production_certified")),
         "launch_stabilized": bool(truth.get("launch_stabilized")),
+        "runtime_ownership_authoritative": bool(truth.get("runtime_ownership_authoritative")),
+        "runtime_coordination_authoritative": bool(truth.get("runtime_coordination_authoritative")),
+        "enterprise_runtime_consolidated": bool(truth.get("enterprise_runtime_consolidated")),
         "enterprise_operationally_certified": bool(truth.get("enterprise_operationally_certified")),
         "enterprise_setup_finalized": bool(truth.get("enterprise_setup_finalized")),
         "installer_interaction_locked": bool(truth.get("installer_interaction_locked")),

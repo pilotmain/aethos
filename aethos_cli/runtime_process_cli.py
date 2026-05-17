@@ -67,3 +67,59 @@ def cmd_runtime_release() -> int:
     result = execute_runtime_release()
     _print_human([result.get("message") or "released", "", format_runtime_ownership_summary()])
     return 0
+
+
+def cmd_runtime_stop() -> int:
+    from app.services.runtime.runtime_process_group_manager import terminate_runtime_process_groups
+
+    result = terminate_runtime_process_groups(force=False)
+    _print_human([result.get("message") or "Runtime stopped.", f"PIDs: {len(result.get('terminated_pids') or [])}"])
+    return 0 if result.get("ok") else 1
+
+
+def cmd_runtime_restart(*, clean: bool = False) -> int:
+    from app.services.runtime.runtime_process_group_manager import restart_runtime_process_groups
+
+    result = restart_runtime_process_groups(clean=clean)
+    _print_human([result.get("message") or "Runtime restarted.", f"Port: {result.get('port', '—')}"])
+    return 0 if result.get("ok") else 1
+
+
+def cmd_runtime_recover() -> int:
+    from app.services.runtime.runtime_recovery_authority import execute_runtime_recovery
+
+    result = execute_runtime_recovery(clean=False, restart=True)
+    _print_human([result.get("message") or "Recovery complete."])
+    return 0 if result.get("ok") else 1
+
+
+def cmd_runtime_supervise() -> int:
+    from app.services.mission_control.runtime_supervision import build_runtime_supervision
+
+    sup = build_runtime_supervision().get("runtime_supervision") or {}
+    lines = [
+        f"API owner: {sup.get('api_owner_status', '—')}",
+        f"SQLite: {sup.get('sqlite_status', '—')}",
+        f"Ownership authoritative: {sup.get('ownership_authoritative', '—')}",
+        f"Conflicts: {sup.get('process_conflicts', 0)}",
+        sup.get("operator_summary") or "",
+    ]
+    repairs = sup.get("recommended_repairs") or []
+    if repairs:
+        lines.append("Repairs: " + ", ".join(str(r) for r in repairs[:4]))
+    _print_human([ln for ln in lines if ln])
+    if os.environ.get("AETHOS_RUNTIME_JSON"):
+        print(json.dumps(build_runtime_supervision(), indent=2, default=str)[:24000])
+    return 0
+
+
+def cmd_runtime_repair() -> int:
+    """Top-level calm repair — ownership + DB + process groups."""
+    from app.services.runtime.runtime_recovery_authority import execute_runtime_recovery
+
+    result = execute_runtime_recovery(clean=False, restart=False)
+    _print_human([
+        result.get("message") or "AethOS repaired runtime ownership conflicts successfully.",
+        "Runtime coordination recovered — run `aethos restart runtime` to bring API online.",
+    ])
+    return 0 if result.get("ok") else 1

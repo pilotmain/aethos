@@ -28,7 +28,18 @@ def run_setup_supervision_preflight() -> dict[str, Any]:
         ownership = build_runtime_ownership_status().get("runtime_ownership") or {}
     except Exception:
         ownership = {}
-    return {"ports": ports, "ownership": ownership, "any_conflict": any(ports.values()) or bool(ownership.get("held"))}
+    held = bool(ownership.get("holder_pid"))
+    return {"ports": ports, "ownership": ownership, "any_conflict": any(ports.values()) or held}
+
+
+def coordinate_runtime_for_setup(*, auto: bool = False) -> dict[str, Any]:
+    """Stop conflicting runtimes and repair DB coordination when installer requests takeover."""
+    try:
+        from app.services.runtime.runtime_recovery_authority import execute_runtime_recovery
+
+        return execute_runtime_recovery(clean=auto, restart=False)
+    except Exception as exc:
+        return {"ok": False, "message": str(exc)[:160]}
 
 
 def prompt_setup_supervision_if_needed() -> None:
@@ -37,21 +48,34 @@ def prompt_setup_supervision_if_needed() -> None:
         return
     ports = pre.get("ports") or {}
     lines = [
+        "AethOS detected an active runtime session.",
+        "",
         f"API port 8000: {'in use' if ports.get(8000) else 'free'}",
         f"API port 8010: {'in use' if ports.get(8010) else 'free'}",
         f"Mission Control 3000: {'in use' if ports.get(3000) else 'free'}",
+        "",
+        "Recommended action:",
+        "• Safely coordinate and restart the runtime",
     ]
     own = pre.get("ownership") or {}
-    if own.get("held"):
-        lines.append(f"Runtime ownership: held by {own.get('owner_pid') or 'another process'}")
-    print_box("Runtime supervision", lines + ["Setup can continue — choose how to proceed."])
-    select(
+    if own.get("holder_pid"):
+        lines.append(f"Runtime ownership: held by PID {own.get('holder_pid')}")
+    print_box("Runtime supervision", lines)
+    choice = select(
         "How should setup proceed?",
         [
-            ("Use existing runtime", "use", "Skip starting duplicate API processes"),
-            ("Restart runtime after setup", "restart", "Run aethos restart runtime when done"),
-            ("Continue setup only", "continue", "Configure files; validate later"),
+            ("Coordinate automatically (recommended)", "coordinate", "Stop conflicts and repair DB locks"),
+            ("Continue using current runtime", "use", "Skip process coordination"),
+            ("Enter advanced recovery mode", "advanced", "Full clean stop without auto-restart"),
         ],
         default_index=0,
     )
+    if choice == "coordinate":
+        result = coordinate_runtime_for_setup(auto=True)
+        print_info(result.get("message") or "Enterprise runtime coordination recovered successfully.")
+    elif choice == "advanced":
+        result = coordinate_runtime_for_setup(auto=True)
+        print_info(result.get("message") or "Advanced recovery complete — validate with `aethos doctor`.")
+    else:
+        print_info("Proceeding with existing runtime — duplicate processes may require `aethos runtime recover`.")
     print_info("Proceeding with enterprise setup.")

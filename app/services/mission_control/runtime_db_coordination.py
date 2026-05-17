@@ -29,6 +29,7 @@ _db_lock_state: dict[str, Any] = {
     "db_owner_hint": None,
     "db_last_error": None,
 }
+_db_recovery_cycles = 0
 
 
 def get_db_lock_state() -> dict[str, Any]:
@@ -152,6 +153,7 @@ def build_runtime_db_health() -> dict[str, Any]:
 
 def ensure_schema_with_recovery() -> dict[str, Any]:
     """Run ensure_schema with retries; return calm status for startup."""
+    global _db_recovery_cycles
     from app.core.db import ensure_schema
 
     try:
@@ -159,6 +161,7 @@ def ensure_schema_with_recovery() -> dict[str, Any]:
         clear_db_lock_state()
         return {"ok": True, "message": "schema ready"}
     except OperationalError as exc:
+        _db_recovery_cycles += 1
         _record_lock_wait(wait_ms=float(_db_lock_state.get("db_lock_wait_ms") or 0), retry=_DEFAULT_RETRIES, error=str(exc))
         return {
             "ok": False,
@@ -166,3 +169,49 @@ def ensure_schema_with_recovery() -> dict[str, Any]:
             "Stop duplicate API processes and run `aethos restart runtime`.",
             **get_db_lock_state(),
         }
+
+
+def build_database_integrity() -> dict[str, Any]:
+    """Database ownership and contention truth keys (Phase 4 Step 25)."""
+    health = build_runtime_db_health().get("runtime_db_health") or {}
+    lock_state = get_db_lock_state()
+    owner_hint = lock_state.get("db_owner_hint")
+    contention = bool(lock_state.get("db_lock_waiting") or health.get("recent_lock_errors"))
+    return {
+        "database_owner": {
+            "phase": "phase4_step25",
+            "holder_pid": owner_hint,
+            "backend": health.get("backend"),
+            "bounded": True,
+        },
+        "database_lock_chain": {
+            "phase": "phase4_step25",
+            "waiting": lock_state.get("db_lock_waiting"),
+            "wait_ms": lock_state.get("db_lock_wait_ms"),
+            "retry_count": lock_state.get("db_retry_count"),
+            "bounded": True,
+        },
+        "database_recovery_cycles": {
+            "phase": "phase4_step25",
+            "count": _db_recovery_cycles,
+            "bounded": True,
+        },
+        "database_runtime_integrity": {
+            "phase": "phase4_step25",
+            "ok": bool(health.get("ok")),
+            "wal_enabled": health.get("wal_enabled"),
+            "contention": contention,
+            "message": (
+                "AethOS detected an active runtime session and coordinated database ownership automatically."
+                if health.get("ok") and not contention
+                else "Database coordination is recovering — run `aethos runtime recover` if this persists."
+            ),
+            "bounded": True,
+        },
+        "database_contention_state": {
+            "phase": "phase4_step25",
+            "active": contention,
+            "last_error": lock_state.get("db_last_error"),
+            "bounded": True,
+        },
+    }

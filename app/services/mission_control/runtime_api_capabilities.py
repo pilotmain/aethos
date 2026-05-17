@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import Any
 
-MC_COMPATIBILITY_VERSION = "phase4_step24"
+MC_COMPATIBILITY_VERSION = "phase4_step25"
 
 _AVAILABLE_ROUTES: list[dict[str, str]] = [
     {"method": "GET", "path": "/api/v1/mission-control/state"},
@@ -86,6 +86,14 @@ _AVAILABLE_ROUTES: list[dict[str, str]] = [
     {"method": "GET", "path": "/api/v1/runtime/db-health"},
     {"method": "GET", "path": "/api/v1/runtime/startup-lock"},
     {"method": "GET", "path": "/api/v1/runtime/supervision"},
+    {"method": "GET", "path": "/api/v1/runtime/runtime-supervision"},
+    {"method": "GET", "path": "/api/v1/runtime/ownership-authority"},
+    {"method": "GET", "path": "/api/v1/runtime/process-integrity"},
+    {"method": "GET", "path": "/api/v1/runtime/database-integrity"},
+    {"method": "GET", "path": "/api/v1/runtime/recovery-authority"},
+    {"method": "GET", "path": "/api/v1/runtime/startup-integrity"},
+    {"method": "GET", "path": "/api/v1/runtime/truth-authority"},
+    {"method": "GET", "path": "/api/v1/runtime/runtime-integrity-final"},
     {"method": "GET", "path": "/api/v1/runtime/hydration/diagnostics"},
     {"method": "GET", "path": "/api/v1/runtime/certify"},
     {"method": "GET", "path": "/api/v1/runtime/surface-map"},
@@ -188,6 +196,10 @@ def build_runtime_capabilities() -> dict[str, Any]:
             "phase4_step24": True,
             "launch_stabilized": True,
             "enterprise_operationally_certified": True,
+            "phase4_step25": True,
+            "runtime_ownership_authoritative": True,
+            "runtime_coordination_authoritative": True,
+            "enterprise_runtime_consolidated": True,
         },
         "lazy_views": [
             "routing",

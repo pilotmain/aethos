@@ -459,7 +459,7 @@ def main() -> int:
     rt_sub.add_parser("memory-discipline", help="Operational memory discipline")
     rt_sub.add_parser("degraded", help="Degraded mode finalization")
     rt_sub.add_parser("continuity-confidence", help="Operator continuity confidence")
-    rt_sub.add_parser("responsiveness", help="Enterprise responsiveness guarantees")
+    rt_sub.add_parser("responsiveness-guarantees", help="Enterprise responsiveness guarantees")
     rt_sub.add_parser("freeze", help="Runtime release freeze lock")
     rt_sub.add_parser("enterprise-cert", help="Final enterprise operational certification")
     rt_sub.add_parser("operational-story-final", help="Unified operational story final")
@@ -614,6 +614,10 @@ def main() -> int:
     sub.add_parser(
         "doctor",
         help="Diagnostics: compileall + optional API health",
+    )
+    sub.add_parser(
+        "repair",
+        help="Repair runtime ownership, database coordination, and process conflicts",
     )
 
     sp_state = sub.add_parser("state", help="GET mission-control/state")
@@ -1207,7 +1211,7 @@ def main() -> int:
             return _rt_print("/api/v1/runtime/degraded-mode")
         if args.runtime_cmd == "continuity-confidence":
             return _rt_print("/api/v1/runtime/continuity-confidence")
-        if args.runtime_cmd == "responsiveness":
+        if args.runtime_cmd == "responsiveness-guarantees":
             return _rt_print("/api/v1/runtime/responsiveness")
         if args.runtime_cmd == "freeze":
             return _rt_print("/api/v1/runtime/release-freeze")
@@ -1428,6 +1432,36 @@ def main() -> int:
             from aethos_cli.runtime_process_cli import cmd_runtime_release
 
             return cmd_runtime_release()
+        if args.runtime_cmd == "stop":
+            from aethos_cli.runtime_process_cli import cmd_runtime_stop
+
+            return cmd_runtime_stop()
+        if args.runtime_cmd == "restart":
+            from aethos_cli.runtime_process_cli import cmd_runtime_restart
+
+            return cmd_runtime_restart(clean=bool(getattr(args, "clean", False)))
+        if args.runtime_cmd == "recover":
+            from aethos_cli.runtime_process_cli import cmd_runtime_recover
+
+            return cmd_runtime_recover()
+        if args.runtime_cmd == "supervise":
+            from aethos_cli.runtime_process_cli import cmd_runtime_supervise
+
+            return cmd_runtime_supervise()
+        if args.runtime_cmd == "ownership-authority":
+            return _rt_print("/api/v1/runtime/ownership-authority")
+        if args.runtime_cmd == "process-integrity":
+            return _rt_print("/api/v1/runtime/process-integrity")
+        if args.runtime_cmd == "database-integrity":
+            return _rt_print("/api/v1/runtime/database-integrity")
+        if args.runtime_cmd == "recovery-authority":
+            return _rt_print("/api/v1/runtime/recovery-authority")
+        if args.runtime_cmd == "startup-integrity":
+            return _rt_print("/api/v1/runtime/startup-integrity")
+        if args.runtime_cmd == "truth-authority":
+            return _rt_print("/api/v1/runtime/truth-authority")
+        if args.runtime_cmd == "integrity-final":
+            return _rt_print("/api/v1/runtime/runtime-integrity-final")
         if args.runtime_cmd == "certify":
             import json
             from app.services.setup.production_cut_certification import build_production_cut_certification
@@ -1849,6 +1883,11 @@ def main() -> int:
         ent = build_enterprise_setup_doctor()
         print(json.dumps(ent, indent=2, default=str)[:12000])
         return cmd_doctor(api_base=_base_url())
+
+    if args.cmd == "repair":
+        from aethos_cli.runtime_process_cli import cmd_runtime_repair
+
+        return cmd_runtime_repair()
 
     if args.cmd == "state":
         q = f"?user_id={urllib.parse.quote(args.mission_user)}" if args.mission_user else ""

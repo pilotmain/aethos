@@ -742,3 +742,63 @@ def runtime_operational_story_final_route(app_user_id: str = Depends(get_valid_w
     return build_runtime_operational_story_final(_truth_or_empty(app_user_id))
 
 
+@router.get("/ownership-authority")
+def runtime_ownership_authority_route(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.runtime.runtime_ownership_authority import build_runtime_ownership_authority
+
+    return build_runtime_ownership_authority(_truth_or_empty(app_user_id))
+
+
+@router.get("/process-integrity")
+def runtime_process_integrity(_: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.runtime.runtime_ownership_authority import build_runtime_ownership_authority
+
+    blob = build_runtime_ownership_authority()
+    return {
+        "runtime_process_integrity": blob.get("runtime_process_integrity"),
+        "runtime_process_conflicts": blob.get("runtime_process_conflicts"),
+    }
+
+
+@router.get("/database-integrity")
+def runtime_database_integrity(_: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_db_coordination import build_database_integrity
+
+    return build_database_integrity()
+
+
+@router.get("/recovery-authority")
+def runtime_recovery_authority_route(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.runtime.runtime_recovery_authority import build_runtime_recovery_authority
+
+    return build_runtime_recovery_authority(_truth_or_empty(app_user_id))
+
+
+@router.get("/startup-integrity")
+def runtime_startup_integrity_route(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_startup_coordination import build_runtime_startup_integrity
+
+    return build_runtime_startup_integrity(_truth_or_empty(app_user_id))
+
+
+@router.get("/truth-authority")
+def runtime_truth_authority_route(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.runtime.runtime_truth_ownership_lock import build_runtime_truth_authority
+
+    return build_runtime_truth_authority(_truth_or_empty(app_user_id))
+
+
+@router.get("/runtime-integrity-final")
+def runtime_integrity_final_route(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.runtime.enterprise_runtime_integrity_final import build_enterprise_runtime_integrity_final
+
+    return build_enterprise_runtime_integrity_final(_truth_or_empty(app_user_id))
+
+
+@router.get("/runtime-supervision")
+def runtime_supervision_authority(_: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_supervision import build_runtime_supervision
+
+    return build_runtime_supervision()
+
+

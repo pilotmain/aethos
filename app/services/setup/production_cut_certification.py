@@ -75,6 +75,14 @@ def build_production_cut_certification(*, repo_root: Path | None = None, truth: 
         if not categories["launch_stabilization"]:
             blockers.append("enterprise launch stabilization incomplete")
 
+    if truth:
+        from app.services.runtime.enterprise_runtime_integrity_final import build_enterprise_runtime_integrity_final
+
+        rt_final = build_enterprise_runtime_integrity_final(truth)["enterprise_runtime_integrity_final"]
+        categories["runtime_ownership"] = bool(rt_final.get("runtime_coordination_authoritative"))
+        if not categories["runtime_ownership"]:
+            blockers.append("runtime ownership not authoritative")
+
     enterprise_grade = all(categories.values()) and len(blockers) == 0
     production_cut_ready = enterprise_grade or (len(blockers) <= 1 and categories.get("supervision"))
 
@@ -85,7 +93,7 @@ def build_production_cut_certification(*, repo_root: Path | None = None, truth: 
             "categories": categories,
             "blockers": blockers[:12],
             "truth_contract_version": RUNTIME_TRUTH_CONTRACT_VERSION,
-            "phase": "phase4_step24",
+            "phase": "phase4_step25",
             "bounded": True,
         },
         "production_cut_readiness": build_production_cut_readiness(),

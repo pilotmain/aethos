@@ -15,6 +15,12 @@ from app.services.mission_control.runtime_uvicorn_process import detect_uvicorn_
 
 
 def build_runtime_supervision() -> dict[str, Any]:
+    try:
+        from app.services.runtime.runtime_ownership_authority import build_runtime_ownership_authority
+
+        authority = build_runtime_ownership_authority()
+    except Exception:
+        authority = {}
     sup = build_runtime_process_supervision()
     tg = build_telegram_ownership_status()
     db_state = get_db_lock_state()
@@ -24,6 +30,10 @@ def build_runtime_supervision() -> dict[str, Any]:
     startup = sup.get("runtime_startup_lock") or {}
     conflicts = list((sup.get("runtime_process_supervision") or {}).get("conflicts") or [])
 
+    own_auth = authority.get("runtime_ownership_authority") or {}
+    if own_auth.get("conflicts"):
+        conflicts = list(conflicts) + list(own_auth.get("conflicts") or [])
+
     api_owner = "healthy" if own.get("this_process_owns") or own.get("holder_pid") else "observer"
     if conflicts:
         api_owner = "conflict"
@@ -31,8 +41,9 @@ def build_runtime_supervision() -> dict[str, Any]:
     return {
         **sup,
         **tg,
+        **authority,
         "runtime_supervision": {
-            "phase": "phase4_step19",
+            "phase": "phase4_step25",
             "supervision_verified": True,
             "api_owner_status": api_owner,
             "sqlite_status": "healthy" if db.get("ok") else "degraded",
@@ -43,7 +54,10 @@ def build_runtime_supervision() -> dict[str, Any]:
             "degraded_mode": bool(conflicts) or not db.get("ok"),
             "uvicorn_process_kind": detect_uvicorn_process_kind(),
             "operator_summary": format_runtime_ownership_summary(),
-            "recommended_repairs": (sup.get("runtime_process_supervision") or {}).get("recovery_actions") or [],
+            "ownership_authoritative": bool(own_auth.get("authoritative")),
+            "process_conflicts": len(own_auth.get("conflicts") or []),
+            "recommended_repairs": (sup.get("runtime_process_supervision") or {}).get("recovery_actions")
+            or ["aethos runtime recover", "aethos runtime restart --clean"],
             "db_lock_state": db_state,
             "bounded": True,
         },

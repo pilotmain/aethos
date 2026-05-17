@@ -105,6 +105,41 @@ def build_startup_lock_status() -> dict[str, Any]:
     }
 
 
+OWNERSHIP_STARTUP_STATES = (
+    "ownership_coordination",
+    "database_verification",
+    "runtime_recovery",
+    "hydration_initialization",
+    "office_activation",
+    "enterprise_ready",
+)
+
+
+def build_runtime_startup_integrity(truth: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Startup discipline truth for Step 25."""
+    truth = truth or {}
+    lock = build_startup_lock_status().get("runtime_startup_lock") or {}
+    from app.services.mission_control.runtime_db_coordination import build_database_integrity
+
+    db = build_database_integrity()
+    pct = float((truth.get("runtime_startup_experience") or {}).get("readiness_percent") or 0.4)
+    idx = min(len(OWNERSHIP_STARTUP_STATES) - 1, int(pct * (len(OWNERSHIP_STARTUP_STATES) - 1)))
+    current = OWNERSHIP_STARTUP_STATES[idx]
+    serialized = lock.get("holder_pid") is None or lock.get("holder_pid") == os.getpid()
+    score = 0.9 if serialized and (db.get("database_runtime_integrity") or {}).get("ok") else 0.65
+    return {
+        "runtime_startup_integrity": {
+            "phase": "phase4_step25",
+            "current_state": current,
+            "states": OWNERSHIP_STARTUP_STATES,
+            "ownership_before_hydration": serialized,
+            "parallel_hydration_prevented": serialized,
+            "score": score,
+            "bounded": True,
+        }
+    }
+
+
 @contextmanager
 def serialized_hydration(*, phase: str = "hydration") -> Iterator[bool]:
     """Process-wide mutex + file lock for progressive truth hydration."""
