@@ -24,7 +24,7 @@ def _light_truth(_uid: str | None = None) -> dict[str, Any]:
         "phase4_step17": True,
         "phase4_step18": True,
         "phase4_step19": True,
-        "phase4_step23": True,
+        "phase4_step24": True,
         "enterprise_runtime_consolidated": True,
         "runtime_supervision_verified": True,
         "installer_interaction_locked": True,

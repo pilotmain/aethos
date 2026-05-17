@@ -66,6 +66,14 @@ def build_production_cut_certification(*, repo_root: Path | None = None, truth: 
         categories["operator_trust"] = bool(prod.get("runtime_operationally_trusted"))
         if not categories["runtime_production"]:
             blockers.append("runtime production certification incomplete")
+        from app.services.mission_control.enterprise_operational_certification_final import (
+            build_enterprise_operational_certification_final,
+        )
+
+        ent = build_enterprise_operational_certification_final(truth)["enterprise_operational_certification_final"]
+        categories["launch_stabilization"] = bool(ent.get("launch_stabilized"))
+        if not categories["launch_stabilization"]:
+            blockers.append("enterprise launch stabilization incomplete")
 
     enterprise_grade = all(categories.values()) and len(blockers) == 0
     production_cut_ready = enterprise_grade or (len(blockers) <= 1 and categories.get("supervision"))
@@ -77,7 +85,7 @@ def build_production_cut_certification(*, repo_root: Path | None = None, truth: 
             "categories": categories,
             "blockers": blockers[:12],
             "truth_contract_version": RUNTIME_TRUTH_CONTRACT_VERSION,
-            "phase": "phase4_step23",
+            "phase": "phase4_step24",
             "bounded": True,
         },
         "production_cut_readiness": build_production_cut_readiness(),

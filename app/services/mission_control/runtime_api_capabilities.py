@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import Any
 
-MC_COMPATIBILITY_VERSION = "phase4_step23"
+MC_COMPATIBILITY_VERSION = "phase4_step24"
 
 _AVAILABLE_ROUTES: list[dict[str, str]] = [
     {"method": "GET", "path": "/api/v1/mission-control/state"},
@@ -113,6 +113,16 @@ _AVAILABLE_ROUTES: list[dict[str, str]] = [
     {"method": "GET", "path": "/api/v1/runtime/operator-trust"},
     {"method": "GET", "path": "/api/v1/runtime/enterprise-readiness"},
     {"method": "GET", "path": "/api/v1/runtime/operational-story"},
+    {"method": "GET", "path": "/api/v1/runtime/stability"},
+    {"method": "GET", "path": "/api/v1/runtime/long-session"},
+    {"method": "GET", "path": "/api/v1/runtime/office-authority"},
+    {"method": "GET", "path": "/api/v1/runtime/memory-discipline"},
+    {"method": "GET", "path": "/api/v1/runtime/degraded-mode"},
+    {"method": "GET", "path": "/api/v1/runtime/continuity-confidence"},
+    {"method": "GET", "path": "/api/v1/runtime/responsiveness"},
+    {"method": "GET", "path": "/api/v1/runtime/release-freeze"},
+    {"method": "GET", "path": "/api/v1/runtime/enterprise-certification"},
+    {"method": "GET", "path": "/api/v1/runtime/operational-story-final"},
     {"method": "GET", "path": "/api/v1/health"},
 ]
 
@@ -172,6 +182,12 @@ def build_runtime_capabilities() -> dict[str, Any]:
             "phase4_step22": True,
             "runtime_integrity_locked": True,
             "enterprise_runtime_assurance": True,
+            "phase4_step23": True,
+            "enterprise_production_certified": True,
+            "runtime_operationally_trusted": True,
+            "phase4_step24": True,
+            "launch_stabilized": True,
+            "enterprise_operationally_certified": True,
         },
         "lazy_views": [
             "routing",

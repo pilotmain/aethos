@@ -453,6 +453,16 @@ def main() -> int:
     rt_sub.add_parser("persistence", help="Runtime persistence health")
     rt_sub.add_parser("production-cert", help="Runtime production certification")
     rt_sub.add_parser("operational-story", help="Coherent operational narratives")
+    rt_sub.add_parser("stability", help="Runtime stability coordination")
+    rt_sub.add_parser("long-session", help="Long-session reliability certification")
+    rt_sub.add_parser("office", help="Office operational authority")
+    rt_sub.add_parser("memory-discipline", help="Operational memory discipline")
+    rt_sub.add_parser("degraded", help="Degraded mode finalization")
+    rt_sub.add_parser("continuity-confidence", help="Operator continuity confidence")
+    rt_sub.add_parser("responsiveness", help="Enterprise responsiveness guarantees")
+    rt_sub.add_parser("freeze", help="Runtime release freeze lock")
+    rt_sub.add_parser("enterprise-cert", help="Final enterprise operational certification")
+    rt_sub.add_parser("operational-story-final", help="Unified operational story final")
     rt_sub.add_parser("certify", help="Production cut certification bundle")
     sp_ecosystem = sub.add_parser("ecosystem", help="Operational intelligence ecosystem (Phase 4 Step 3)")
     eco_sub = sp_ecosystem.add_subparsers(dest="ecosystem_cmd", required=True)
@@ -1185,6 +1195,26 @@ def main() -> int:
             return _rt_print("/api/v1/runtime/production-certification")
         if args.runtime_cmd == "operational-story":
             return _rt_print("/api/v1/runtime/operational-story")
+        if args.runtime_cmd == "stability":
+            return _rt_print("/api/v1/runtime/stability")
+        if args.runtime_cmd == "long-session":
+            return _rt_print("/api/v1/runtime/long-session")
+        if args.runtime_cmd == "office":
+            return _rt_print("/api/v1/runtime/office-authority")
+        if args.runtime_cmd == "memory-discipline":
+            return _rt_print("/api/v1/runtime/memory-discipline")
+        if args.runtime_cmd == "degraded":
+            return _rt_print("/api/v1/runtime/degraded-mode")
+        if args.runtime_cmd == "continuity-confidence":
+            return _rt_print("/api/v1/runtime/continuity-confidence")
+        if args.runtime_cmd == "responsiveness":
+            return _rt_print("/api/v1/runtime/responsiveness")
+        if args.runtime_cmd == "freeze":
+            return _rt_print("/api/v1/runtime/release-freeze")
+        if args.runtime_cmd == "enterprise-cert":
+            return _rt_print("/api/v1/runtime/enterprise-certification")
+        if args.runtime_cmd == "operational-story-final":
+            return _rt_print("/api/v1/runtime/operational-story-final")
         if args.runtime_cmd == "timeline":
             code, body = _req("GET", "/api/v1/mission-control/runtime/timeline", uid=uid)
             print(body[:24000])

@@ -670,3 +670,75 @@ def runtime_operational_story(app_user_id: str = Depends(get_valid_web_user_id))
     return build_runtime_operational_story_engine(_truth_or_empty(app_user_id))
 
 
+@router.get("/stability")
+def runtime_stability_route(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_stability_coordinator import build_runtime_stability_coordinator
+
+    return build_runtime_stability_coordinator(_truth_or_empty(app_user_id))
+
+
+@router.get("/long-session")
+def runtime_long_session(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_long_session_reliability import build_runtime_long_session_reliability
+
+    return build_runtime_long_session_reliability(_truth_or_empty(app_user_id))
+
+
+@router.get("/office-authority")
+def runtime_office_authority(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.office_operational_authority import build_office_operational_authority
+
+    return build_office_operational_authority(_truth_or_empty(app_user_id))
+
+
+@router.get("/memory-discipline")
+def runtime_memory_discipline(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_operational_memory_discipline import build_runtime_operational_memory_discipline
+
+    return build_runtime_operational_memory_discipline(_truth_or_empty(app_user_id))
+
+
+@router.get("/degraded-mode")
+def runtime_degraded_mode(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_degraded_mode_finalization import build_runtime_degraded_mode_finalization
+
+    return build_runtime_degraded_mode_finalization(_truth_or_empty(app_user_id))
+
+
+@router.get("/continuity-confidence")
+def runtime_continuity_confidence(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_operator_continuity_confidence import build_runtime_operator_continuity_confidence
+
+    return build_runtime_operator_continuity_confidence(_truth_or_empty(app_user_id))
+
+
+@router.get("/responsiveness")
+def runtime_responsiveness_guarantees_route(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_responsiveness_guarantees import build_runtime_responsiveness_guarantees
+
+    return build_runtime_responsiveness_guarantees(_truth_or_empty(app_user_id))
+
+
+@router.get("/release-freeze")
+def runtime_release_freeze(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_release_freeze_lock import build_runtime_release_freeze_lock
+
+    return build_runtime_release_freeze_lock(_truth_or_empty(app_user_id))
+
+
+@router.get("/enterprise-certification")
+def runtime_enterprise_certification(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.enterprise_operational_certification_final import (
+        build_enterprise_operational_certification_final,
+    )
+
+    return build_enterprise_operational_certification_final(_truth_or_empty(app_user_id))
+
+
+@router.get("/operational-story-final")
+def runtime_operational_story_final_route(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_operational_story_engine import build_runtime_operational_story_final
+
+    return build_runtime_operational_story_final(_truth_or_empty(app_user_id))
+
+
