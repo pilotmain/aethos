@@ -521,6 +521,14 @@ def main() -> int:
     add_runtime_parser_once(
         rt_sub, _runtime_parser_names, "finalization-cert", help="GET /api/v1/runtime/finalization-certification"
     )
+    add_runtime_parser_once(rt_sub, _runtime_parser_names, "launch", help="Enterprise runtime launch orchestration")
+    add_runtime_parser_once(rt_sub, _runtime_parser_names, "startup-status", help="GET /api/v1/runtime/startup-status")
+    add_runtime_parser_once(
+        rt_sub, _runtime_parser_names, "startup-recovery", help="GET /api/v1/runtime/startup-recovery"
+    )
+    add_runtime_parser_once(
+        rt_sub, _runtime_parser_names, "launch-experience", help="GET /api/v1/runtime/launch-experience"
+    )
     sp_ecosystem = sub.add_parser("ecosystem", help="Operational intelligence ecosystem (Phase 4 Step 3)")
     eco_sub = sp_ecosystem.add_subparsers(dest="ecosystem_cmd", required=True)
     eco_sub.add_parser("health", help="GET /api/v1/mission-control/ecosystem/health")
@@ -808,6 +816,8 @@ def main() -> int:
     setup_sub.add_parser("coverage", help="Enterprise setup systems coverage report")
     setup_sub.add_parser("status", help="Setup completeness status")
     setup_sub.add_parser("continuity", help="Setup resume / continuity state")
+    setup_sub.add_parser("startup", help="Enterprise startup orchestration from setup")
+    setup_sub.add_parser("operational-recovery", help="Setup operational recovery guidance")
     setup_sub.add_parser("first-impression", help="Mission Control first-impression bundle")
 
     sp_restart = sub.add_parser("restart", help="Restart API, web, or bot processes")
@@ -1350,6 +1360,22 @@ def main() -> int:
             return _rt_print("/api/v1/runtime/enterprise-confidence")
         if args.runtime_cmd == "finalization-cert":
             return _rt_print("/api/v1/runtime/finalization-certification")
+        if args.runtime_cmd == "launch":
+            from aethos_cli.runtime_launch_cli import cmd_runtime_launch
+
+            return cmd_runtime_launch()
+        if args.runtime_cmd == "startup-status":
+            from aethos_cli.runtime_launch_cli import cmd_runtime_startup_status
+
+            return cmd_runtime_startup_status()
+        if args.runtime_cmd == "startup-recovery":
+            from aethos_cli.runtime_launch_cli import cmd_runtime_startup_recovery
+
+            return cmd_runtime_startup_recovery()
+        if args.runtime_cmd == "launch-experience":
+            from aethos_cli.runtime_launch_cli import cmd_runtime_launch_experience
+
+            return cmd_runtime_launch_experience()
         if args.runtime_cmd == "accountability":
             code, body = _req("GET", "/api/v1/mission-control/runtime/accountability", uid=uid)
             print(body[:24000])
@@ -2167,6 +2193,14 @@ def main() -> int:
 
             print(json.dumps({**build_setup_continuity(), "setup_progress": build_progress_status()}, indent=2, default=str)[:24000])
             return 0
+        if sc == "startup":
+            from aethos_cli.runtime_launch_cli import cmd_runtime_launch
+
+            return cmd_runtime_launch()
+        if sc == "operational-recovery":
+            from aethos_cli.runtime_launch_cli import cmd_runtime_startup_recovery
+
+            return cmd_runtime_startup_recovery()
         if sc == "resume":
             from aethos_cli.setup_progress_state import load_setup_progress
 

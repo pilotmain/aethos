@@ -8,6 +8,31 @@ from __future__ import annotations
 from aethos_cli.ui import confirm, print_box, print_info, select
 
 
+def print_existing_routing_review(*, mode: str, preference: str, mission_control: bool = False) -> str:
+    """When routing already configured. Returns: keep | adjust | rebuild."""
+    from aethos_cli.setup_routing import canonical_routing_label, canonical_routing_summary
+
+    lines = [
+        "AethOS already configured your local runtime routing.",
+        "",
+        "Current strategy:",
+        f"• {canonical_routing_label(mode)}",
+        f"• {canonical_routing_summary(mode, preference)}",
+    ]
+    if mission_control:
+        lines.append("• Mission Control linked")
+    print_box("Existing configuration", lines)
+    return select(
+        "Would you like to:",
+        [
+            ("Keep this configuration", "keep", "Continue setup with current routing"),
+            ("Improve or adjust it", "adjust", "Re-run routing section"),
+            ("Rebuild setup from scratch", "rebuild", "Clear wizard state"),
+        ],
+        default_index=0,
+    )
+
+
 def print_existing_setup_menu() -> str:
     """When install already exists. Returns: continue | review | section | restart."""
     print_box(

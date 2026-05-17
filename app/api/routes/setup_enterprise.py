@@ -82,3 +82,10 @@ def setup_first_impression() -> dict:
         **build_setup_first_impression(repo_root=Path.cwd()),
         **build_first_impression_certification(repo_root=Path.cwd()),
     }
+
+
+@router.get("/operational-recovery")
+def setup_operational_recovery() -> dict:
+    from app.services.setup.setup_operational_recovery import build_setup_operational_recovery
+
+    return build_setup_operational_recovery(repo_root=str(Path.cwd()))

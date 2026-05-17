@@ -250,8 +250,19 @@ def run_setup_wizard(*, install_kind: str | None = None) -> int:
     bag: dict = {}
     if not _noninteractive_setup():
         if env_path.exists() and not load_setup_state():
-            from aethos_cli.setup_conversational import print_existing_setup_menu
+            from aethos_cli.setup_conversational import print_existing_routing_review, print_existing_setup_menu
 
+            mode = os.environ.get("AETHOS_ROUTING_MODE", "hybrid")
+            pref = os.environ.get("AETHOS_ROUTING_PREFERENCE", "balanced")
+            routing_action = print_existing_routing_review(
+                mode=mode,
+                preference=pref,
+                mission_control=bool(os.environ.get("AETHOS_WEB_API_TOKEN") or os.environ.get("NEXA_WEB_API_TOKEN")),
+            )
+            if routing_action == "rebuild":
+                clear_setup_state()
+            elif routing_action == "adjust":
+                bag["section_rerun"] = "runtime_strategy"
             existing_action = print_existing_setup_menu()
             if existing_action == "review":
                 from aethos_cli.setup_doctor import cmd_setup_validate
@@ -522,6 +533,17 @@ def run_setup_wizard(*, install_kind: str | None = None) -> int:
         from aethos_cli.setup_enterprise import print_setup_final_summary
 
         print_setup_final_summary(repo_root=root, api_base=api_base.rstrip("/"), bag=bag)
+
+        if not _noninteractive_setup():
+            from app.services.runtime.runtime_startup_orchestration import orchestrate_startup, prompt_startup_choice
+
+            start_choice = prompt_startup_choice()
+            if start_choice != "review":
+                result = orchestrate_startup(choice=start_choice, repo_root=root)
+                if result.get("truly_operational"):
+                    print_success("Operational startup completed.")
+                else:
+                    print_info(result.get("message") or "AethOS is preparing operational services.")
 
         try:
             from aethos_cli.cli_status import try_post_install_health_hint

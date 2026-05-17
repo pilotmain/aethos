@@ -41,16 +41,15 @@ def build_provider_routing_ux(truth: dict[str, Any] | None = None) -> dict[str, 
             "explanations": explanations,
             "routing_visibility": build_routing_explanations(truth),
             "local_vs_cloud_summary": _local_cloud_summary(truth),
-            "phase": "phase4_step21",
+            "phase": "phase4_step28",
             "bounded": True,
         }
     }
 
 
 def _local_cloud_summary(truth: dict[str, Any]) -> str:
+    from aethos_cli.setup_routing import canonical_routing_summary, canonical_routing_label
+
     mode = str(truth.get("AETHOS_ROUTING_MODE") or truth.get("routing_mode") or "hybrid")
-    if mode == "local_only":
-        return "Local-only routing — cloud providers are not used unless you change strategy."
-    if mode == "cloud_only":
-        return "Cloud provider routing — local models are not the default path."
-    return "Hybrid routing — AethOS prefers local models when healthy, with cloud fallback when needed."
+    pref = str(truth.get("AETHOS_ROUTING_PREFERENCE") or truth.get("routing_preference") or "balanced")
+    return f"{canonical_routing_label(mode)} — {canonical_routing_summary(mode, pref)}"

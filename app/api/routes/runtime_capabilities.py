@@ -923,3 +923,39 @@ def runtime_finalization_certification_route(app_user_id: str = Depends(get_vali
     return build_enterprise_runtime_finalization_certification(_truth_or_empty(app_user_id))
 
 
+@router.get("/launch-experience")
+def runtime_launch_experience_route(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.runtime.runtime_launch_experience import build_runtime_launch_experience
+
+    return build_runtime_launch_experience(_truth_or_empty(app_user_id))
+
+
+@router.get("/startup-status")
+def runtime_startup_status_route(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.runtime.runtime_startup_visibility import build_runtime_startup_status
+
+    return build_runtime_startup_status(_truth_or_empty(app_user_id))
+
+
+@router.get("/startup-visibility")
+def runtime_startup_visibility_route(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.runtime.runtime_startup_visibility import build_runtime_startup_visibility
+
+    return build_runtime_startup_visibility(_truth_or_empty(app_user_id))
+
+
+@router.get("/startup-recovery")
+def runtime_startup_recovery_route(_: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.setup.setup_operational_recovery import build_setup_operational_recovery
+
+    return build_setup_operational_recovery()
+
+
+@router.get("/launch-integrity")
+def runtime_launch_integrity_route(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.runtime.runtime_launch_experience import build_runtime_launch_experience
+
+    blob = build_runtime_launch_experience(_truth_or_empty(app_user_id))
+    return {"runtime_launch_integrity": blob.get("runtime_launch_integrity")}
+
+

@@ -151,11 +151,13 @@ def apply_runtime_evolution_to_truth(truth: dict[str, Any], *, user_id: str | No
     from app.services.mission_control.runtime_evolution_step25 import apply_runtime_evolution_step25_to_truth
     from app.services.mission_control.runtime_evolution_step26 import apply_runtime_evolution_step26_to_truth
     from app.services.mission_control.runtime_evolution_step27 import apply_runtime_evolution_step27_to_truth
+    from app.services.mission_control.runtime_evolution_step28 import apply_runtime_evolution_step28_to_truth
 
     apply_runtime_evolution_step24_to_truth(truth, user_id=user_id)
     apply_runtime_evolution_step25_to_truth(truth, user_id=user_id)
     apply_runtime_evolution_step26_to_truth(truth, user_id=user_id)
     apply_runtime_evolution_step27_to_truth(truth, user_id=user_id)
+    apply_runtime_evolution_step28_to_truth(truth, user_id=user_id)
     truth["enterprise_overview"] = build_enterprise_overview(truth)
     return truth
 
@@ -178,7 +180,7 @@ def build_enterprise_overview(truth: dict[str, Any]) -> dict[str, Any]:
         "worker_ecosystem": (truth.get("worker_ecosystem_health") or {}).get("status"),
         "ecosystem_health": (truth.get("ecosystem_operational_health") or {}).get("status"),
         "optimization_quality": (truth.get("runtime_optimization_quality") or {}).get("score"),
-        "phase": "phase4_step27",
+        "phase": "phase4_step28",
         "enterprise_ux_completed": bool(truth.get("enterprise_ux_completed")),
         "operator_facing_branding_locked": bool(truth.get("operator_facing_branding_locked")),
         "runtime_integrity_locked": bool(truth.get("runtime_integrity_locked")),
@@ -196,8 +198,9 @@ def build_enterprise_overview(truth: dict[str, Any]) -> dict[str, Any]:
         "enterprise_operational_command_locked": bool(truth.get("enterprise_operational_command_locked")),
         "runtime_governance_converged": bool(truth.get("runtime_governance_converged")),
         "runtime_enterprise_grade_verified": bool(truth.get("runtime_enterprise_grade_verified")),
-        "enterprise_operationally_certified": bool(truth.get("enterprise_operationally_certified")),
+        "runtime_launch_finalized": bool(truth.get("runtime_launch_finalized")),
         "enterprise_setup_finalized": bool(truth.get("enterprise_setup_finalized")),
+        "enterprise_operationally_certified": bool(truth.get("enterprise_operationally_certified")),
         "installer_interaction_locked": bool(truth.get("installer_interaction_locked")),
         "process_supervision_locked": bool(truth.get("process_supervision_locked")),
         "runtime_supervision_verified": bool(truth.get("runtime_supervision_verified")),

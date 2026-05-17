@@ -107,7 +107,7 @@ def build_production_cut_certification(*, repo_root: Path | None = None, truth: 
             "categories": categories,
             "blockers": blockers[:12],
             "truth_contract_version": RUNTIME_TRUTH_CONTRACT_VERSION,
-            "phase": "phase4_step27",
+            "phase": "phase4_step28",
             "bounded": True,
         },
         "production_cut_readiness": build_production_cut_readiness(),

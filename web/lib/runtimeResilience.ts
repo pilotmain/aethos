@@ -41,7 +41,7 @@ export function formatOperationalError(message: string): string {
     return m;
   }
   if (/Cannot reach API/i.test(m)) {
-    return "AethOS runtime connection is not available yet. The API may still be starting, or connection settings may need repair.";
+    return "AethOS is preparing operational services. Enterprise runtime startup may still be in progress.";
   }
   if (/unknown provider/i.test(m)) {
     return "This provider is not available in the current AethOS runtime configuration.";

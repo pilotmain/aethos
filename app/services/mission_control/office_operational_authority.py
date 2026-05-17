@@ -51,9 +51,11 @@ def build_office_operational_authority(truth: dict[str, Any] | None = None) -> d
         "office_operational_readiness": {
             "ready": not partial or "office" in unlocked,
             "confidence_summary": confidence["operator_confidence"]["summary"],
+            "primary_entrypoint": True,
+            "summarizes": ["readiness", "routing", "governance", "runtime_trust", "continuity", "operational_state"],
             "bounded": True,
         },
         "office_operational_priority_stream": stream,
-        "phase": "phase4_step27",
+        "phase": "phase4_step28",
         "bounded": True,
     }

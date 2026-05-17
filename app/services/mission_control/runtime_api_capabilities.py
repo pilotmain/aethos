@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import Any
 
-MC_COMPATIBILITY_VERSION = "phase4_step27"
+MC_COMPATIBILITY_VERSION = "phase4_step28"
 
 _AVAILABLE_ROUTES: list[dict[str, str]] = [
     {"method": "GET", "path": "/api/v1/mission-control/state"},
@@ -111,6 +111,12 @@ _AVAILABLE_ROUTES: list[dict[str, str]] = [
     {"method": "GET", "path": "/api/v1/runtime/governance-consolidation"},
     {"method": "GET", "path": "/api/v1/runtime/enterprise-confidence"},
     {"method": "GET", "path": "/api/v1/runtime/finalization-certification"},
+    {"method": "GET", "path": "/api/v1/runtime/launch-experience"},
+    {"method": "GET", "path": "/api/v1/runtime/startup-status"},
+    {"method": "GET", "path": "/api/v1/runtime/startup-visibility"},
+    {"method": "GET", "path": "/api/v1/runtime/startup-recovery"},
+    {"method": "GET", "path": "/api/v1/runtime/launch-integrity"},
+    {"method": "GET", "path": "/api/v1/setup/operational-recovery"},
     {"method": "GET", "path": "/api/v1/runtime/hydration/diagnostics"},
     {"method": "GET", "path": "/api/v1/runtime/certify"},
     {"method": "GET", "path": "/api/v1/runtime/surface-map"},
@@ -226,6 +232,9 @@ def build_runtime_capabilities() -> dict[str, Any]:
             "enterprise_operational_command_locked": True,
             "runtime_governance_converged": True,
             "runtime_enterprise_grade_verified": True,
+            "phase4_step28": True,
+            "enterprise_setup_finalized": True,
+            "runtime_launch_finalized": True,
         },
         "lazy_views": [
             "routing",

@@ -5,7 +5,43 @@
 
 from __future__ import annotations
 
-from typing import Any
+CANONICAL_ROUTING_MODES = {
+    "local_only": {
+        "label": "Local-first",
+        "summary": "Local-first — Ollama and private models preferred on your machine.",
+        "tradeoff": "Best privacy; requires local runtime health.",
+    },
+    "cloud_only": {
+        "label": "Cloud-first",
+        "summary": "Cloud-first — API providers when keys are configured.",
+        "tradeoff": "Highest capability; uses external providers.",
+    },
+    "hybrid": {
+        "label": "Hybrid",
+        "summary": "Hybrid — local when healthy, calm cloud fallback when needed.",
+        "tradeoff": "Balanced privacy and capability (recommended).",
+    },
+    "later": {
+        "label": "Manual routing",
+        "summary": "Manual routing — configure strategy after operational bootstrap.",
+        "tradeoff": "Fastest setup; routing deferred.",
+    },
+}
+
+
+def canonical_routing_label(mode: str) -> str:
+    return CANONICAL_ROUTING_MODES.get(mode, {}).get("label") or "Hybrid"
+
+
+def canonical_routing_summary(mode: str, preference: str = "balanced") -> str:
+    base = CANONICAL_ROUTING_MODES.get(mode, CANONICAL_ROUTING_MODES["hybrid"])["summary"]
+    if preference and preference != "balanced":
+        return f"{base} Preference: {preference.replace('_', ' ')}."
+    return base
+
+
+def routing_summary(mode: str, preference: str) -> str:
+    return canonical_routing_summary(mode, preference)
 
 
 def build_routing_env_updates(
@@ -40,7 +76,3 @@ def build_routing_env_updates(
     else:
         updates["AETHOS_ROUTING_DEFERRED"] = "true"
     return updates
-
-
-def routing_summary(mode: str, preference: str) -> str:
-    return f"{mode.replace('_', ' ')} · {preference.replace('_', ' ')}"
