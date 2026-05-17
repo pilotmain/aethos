@@ -39,7 +39,7 @@ export default function DifferentiatorsPage() {
       <header className="border-b border-border/60 pb-6">
         <h1 className="text-xl font-semibold tracking-tight">AethOS advantages</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Runtime-backed differentiators — OpenClaw-compatible where it matters, better where it counts.
+          Runtime-backed differentiators — parity-tested where it matters, better where it counts.
         </p>
       </header>
 

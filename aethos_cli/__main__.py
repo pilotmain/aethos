@@ -564,7 +564,7 @@ def main() -> int:
 
     sp_optimization = sub.add_parser(
         "optimization",
-        help="Runtime optimization snapshot (OpenClaw parity; default: metrics)",
+        help="Runtime optimization snapshot (parity baseline; default: metrics)",
     )
     opt_sub = sp_optimization.add_subparsers(dest="optimization_cmd", required=False)
     opt_sub.add_parser("metrics", help="GET /api/v1/runtime/optimization")

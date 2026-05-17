@@ -20,7 +20,7 @@ def build_enterprise_explainability_final(truth: dict[str, Any] | None = None) -
     return {
         "enterprise_explainability_final": {
             "why_routing": _first_reason(center, "routing") or "Advisory routing under orchestrator authority.",
-            "why_fallback": "Provider fallback active — inspect routing explanations."
+            "why_fallback": "AethOS temporarily used an alternate provider — see routing explanations."
             if fallback
             else "No provider fallback — primary route in use.",
             "why_degradation": "Runtime resilience reduced — recovery center explains continuity."

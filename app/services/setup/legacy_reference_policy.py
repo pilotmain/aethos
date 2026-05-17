@@ -36,7 +36,7 @@ def build_legacy_reference_policy(*, repo_root: Path | None = None) -> dict[str,
             "rules": CLASSIFICATION_RULES,
             "preserved": ["NEXA_* env aliases", "parity tests", "README inspiration line"],
             "document": "docs/LEGACY_REFERENCE_POLICY.md",
-            "phase": "phase4_step20",
+            "phase": "phase4_step21",
             "bounded": True,
         }
     }

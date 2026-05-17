@@ -154,4 +154,52 @@ def _handle_command(
     return "continue"
 
 
-__all__ = ["prompt_setup", "set_prompt_context", "SetupPromptContext"]
+def prompt_select(
+    prompt: str,
+    options: list[tuple[str, str, str]],
+    *,
+    default_index: int = 1,
+) -> str:
+    """Menu select with global setup commands on each line."""
+    import sys
+
+    from aethos_cli.ui import _cli_noninteractive
+
+    if _cli_noninteractive() or not sys.stdin.isatty():
+        di = default_index if 1 <= default_index <= len(options) else 1
+        return options[di - 1][1]
+
+    print(f"\n   {prompt}")
+    for i, (label, _value, desc) in enumerate(options, 1):
+        extra = f" — {desc}" if desc else ""
+        print(f"   [{i}] {label}{extra}")
+    print_info("Commands: " + " · ".join(SETUP_GLOBAL_COMMANDS))
+    while True:
+        raw = prompt_setup(f"Choice (default {default_index})", str(default_index), allow_skip=False)
+        if raw.isdigit():
+            idx = int(raw)
+            if 1 <= idx <= len(options):
+                return options[idx - 1][1]
+            print_warn(f"Enter a number from 1 to {len(options)}.")
+            continue
+        if not raw.strip():
+            di = default_index if 1 <= default_index <= len(options) else 1
+            return options[di - 1][1]
+
+
+def prompt_confirm(question: str, default: bool = True) -> bool:
+    from aethos_cli.ui import confirm as _confirm
+
+    while True:
+        raw = prompt_setup(f"{question} (y/n)", "y" if default else "n", allow_skip=False)
+        low = raw.strip().lower()
+        if low in ("y", "yes", "1", "true"):
+            return True
+        if low in ("n", "no", "0", "false"):
+            return False
+        if not raw.strip():
+            return _confirm(question, default=default)
+        print_warn("Answer y or n, or use help.")
+
+
+__all__ = ["prompt_setup", "prompt_select", "prompt_confirm", "set_prompt_context", "SetupPromptContext"]

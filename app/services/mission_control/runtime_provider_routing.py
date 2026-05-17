@@ -33,10 +33,16 @@ def build_routing_decision_explanations(truth: dict[str, Any] | None = None) -> 
     routing = truth.get("routing_summary") or {}
     explanations: list[dict[str, str]] = []
     if routing.get("fallback_used"):
+        from app.services.mission_control.provider_routing_ux import format_calm_fallback_message
+
+        prov = routing.get("fallback_provider") or routing.get("selected_provider") or "an alternate provider"
         explanations.append(
             {
                 "decision": "fallback",
-                "reason": routing.get("reason") or "Primary provider unavailable — chain advanced.",
+                "reason": format_calm_fallback_message(
+                    provider=str(prov),
+                    reason=routing.get("reason"),
+                ),
             }
         )
     mode = truth.get("AETHOS_ROUTING_MODE") or "hybrid"

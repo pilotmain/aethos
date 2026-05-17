@@ -131,12 +131,15 @@ def runtime_summaries(app_user_id: str = Depends(get_valid_web_user_id)) -> dict
 @router.get("/calmness-lock")
 def runtime_calmness_lock(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
     from app.services.mission_control.runtime_calmness_integrity import build_runtime_calmness_integrity
+    from app.services.mission_control.runtime_calmness_lock import build_runtime_calmness_lock
 
     try:
         t = _truth_slice(app_user_id)
     except Exception:
         t = {}
-    return build_runtime_calmness_integrity(t)
+    out = build_runtime_calmness_integrity(t)
+    out.update(build_runtime_calmness_lock(t))
+    return out
 
 
 @router.get("/routing")
@@ -478,3 +481,45 @@ def runtime_surface_map(_: str = Depends(get_valid_web_user_id)) -> dict:
     from app.services.mission_control.runtime_surface_consolidation import build_runtime_surface_consolidation
 
     return build_runtime_surface_consolidation()
+
+
+@router.get("/branding-convergence")
+def runtime_branding_convergence(_: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.setup.final_branding_convergence_audit import build_final_branding_convergence_audit
+
+    return build_final_branding_convergence_audit()
+
+
+@router.get("/simplification-lock")
+def runtime_simplification_lock(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    try:
+        t = _truth_slice(app_user_id)
+    except Exception:
+        t = {}
+    from app.services.mission_control.runtime_simplification_lock import build_runtime_simplification_lock
+
+    return build_runtime_simplification_lock(t)
+
+
+@router.get("/narrative-unification")
+def runtime_narrative_unification(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    try:
+        t = _truth_slice(app_user_id)
+    except Exception:
+        t = {}
+    from app.services.mission_control.runtime_narrative_unification import build_runtime_narrative_unification
+
+    return build_runtime_narrative_unification(t)
+
+
+@router.get("/provider-routing-ux")
+def runtime_provider_routing_ux(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    try:
+        t = _truth_slice(app_user_id)
+    except Exception:
+        t = {}
+    from app.services.mission_control.provider_routing_ux import build_provider_routing_ux
+
+    return build_provider_routing_ux(t)
+
+

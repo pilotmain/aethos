@@ -216,7 +216,7 @@ export type OrchestrationSummary = {
     status: string;
     spawn_group_id?: string | null;
     input_json?: Record<string, unknown> | null;
-    /** Cursor Cloud Agents (when assignment ran via Nexa → Cursor). */
+    /** Cursor Cloud Agents (when assignment ran via AethOS → Cursor). */
     cursor_run_id?: string | null;
     cursor_status?: string | null;
     cursor_repo?: string | null;

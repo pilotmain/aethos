@@ -14,7 +14,7 @@ export type MissionControlMaintenanceControlsProps = {
 };
 
 /**
- * Nexa-Next maintenance entry point (reset / purge / dev SQL erase) without legacy dashboard UI.
+ * AethOS maintenance entry point (reset / purge / dev SQL erase) without legacy dashboard UI.
  */
 export function MissionControlMaintenanceControls({
   shellLight,

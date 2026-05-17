@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import Any
 
-MC_COMPATIBILITY_VERSION = "phase4_step20"
+MC_COMPATIBILITY_VERSION = "phase4_step21"
 
 _AVAILABLE_ROUTES: list[dict[str, str]] = [
     {"method": "GET", "path": "/api/v1/mission-control/state"},
@@ -89,6 +89,10 @@ _AVAILABLE_ROUTES: list[dict[str, str]] = [
     {"method": "GET", "path": "/api/v1/runtime/hydration/diagnostics"},
     {"method": "GET", "path": "/api/v1/runtime/certify"},
     {"method": "GET", "path": "/api/v1/runtime/surface-map"},
+    {"method": "GET", "path": "/api/v1/runtime/branding-convergence"},
+    {"method": "GET", "path": "/api/v1/runtime/simplification-lock"},
+    {"method": "GET", "path": "/api/v1/runtime/narrative-unification"},
+    {"method": "GET", "path": "/api/v1/runtime/provider-routing-ux"},
     {"method": "GET", "path": "/api/v1/health"},
 ]
 
@@ -142,6 +146,9 @@ def build_runtime_capabilities() -> dict[str, Any]:
             "phase4_step20": True,
             "enterprise_runtime_consolidated": True,
             "production_cut_certified": True,
+            "phase4_step21": True,
+            "enterprise_ux_completed": True,
+            "operator_facing_branding_locked": True,
         },
         "lazy_views": [
             "routing",

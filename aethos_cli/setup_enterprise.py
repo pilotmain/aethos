@@ -15,7 +15,8 @@ from aethos_cli.setup_mission_control import seed_mission_control_connection
 from aethos_cli.setup_onboarding_profile import run_onboarding_profile_questions, save_onboarding_profile
 from aethos_cli.setup_routing import build_routing_env_updates, routing_summary
 from aethos_cli.setup_web_search import PROVIDERS, configure_web_search
-from aethos_cli.ui import confirm, print_box, print_info, print_step, print_success, select
+from aethos_cli.setup_prompt_runtime import prompt_confirm as confirm, prompt_select as select
+from aethos_cli.ui import print_box, print_info, print_step, print_success
 
 
 def run_enterprise_setup_extensions(

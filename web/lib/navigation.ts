@@ -145,7 +145,7 @@ export const missionControlSecondaryNav: MissionControlNavItem[] = [
     name: "Advantages",
     href: "/mission-control/differentiators",
     icon: Star,
-    description: "Why AethOS vs OpenClaw",
+    description: "Why AethOS for operational intelligence",
   },
   {
     name: "CEO (legacy)",

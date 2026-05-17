@@ -42,5 +42,5 @@ def _needs_attention(truth: dict[str, Any]) -> list[str]:
     if esc:
         items.append(f"{esc} escalation(s) visible on governance timeline")
     if (truth.get("routing_summary") or {}).get("fallback_used"):
-        items.append("Provider fallback active — review routing explanations")
+        items.append("AethOS routed through an alternate provider — review routing explanations")
     return items[:6]

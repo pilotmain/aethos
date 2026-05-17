@@ -138,6 +138,9 @@ def apply_runtime_evolution_to_truth(truth: dict[str, Any], *, user_id: str | No
     from app.services.mission_control.runtime_evolution_step20 import apply_runtime_evolution_step20_to_truth
 
     apply_runtime_evolution_step20_to_truth(truth, user_id=user_id)
+    from app.services.mission_control.runtime_evolution_step21 import apply_runtime_evolution_step21_to_truth
+
+    apply_runtime_evolution_step21_to_truth(truth, user_id=user_id)
     truth["enterprise_overview"] = build_enterprise_overview(truth)
     return truth
 
@@ -160,7 +163,9 @@ def build_enterprise_overview(truth: dict[str, Any]) -> dict[str, Any]:
         "worker_ecosystem": (truth.get("worker_ecosystem_health") or {}).get("status"),
         "ecosystem_health": (truth.get("ecosystem_operational_health") or {}).get("status"),
         "optimization_quality": (truth.get("runtime_optimization_quality") or {}).get("score"),
-        "phase": "phase4_step20",
+        "phase": "phase4_step21",
+        "enterprise_ux_completed": bool(truth.get("enterprise_ux_completed")),
+        "operator_facing_branding_locked": bool(truth.get("operator_facing_branding_locked")),
         "enterprise_setup_finalized": bool(truth.get("enterprise_setup_finalized")),
         "installer_interaction_locked": bool(truth.get("installer_interaction_locked")),
         "process_supervision_locked": bool(truth.get("process_supervision_locked")),
