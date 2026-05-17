@@ -394,7 +394,7 @@ def main() -> int:
     add_runtime_parser_once(rt_sub, _runtime_parser_names, "latency", help="Operational responsiveness summary")
     add_runtime_parser_once(rt_sub, _runtime_parser_names, "scalability", help="GET /api/v1/mission-control/runtime/scalability")
     add_runtime_parser_once(rt_sub, _runtime_parser_names, "payload-discipline", help="Payload discipline metrics (local)")
-    add_runtime_parser_once(rt_sub, _runtime_parser_names, "pressure", help="Operational pressure overview")
+    add_runtime_parser_once(rt_sub, _runtime_parser_names, "pressure-overview", help="Operational pressure overview (MC scalability)")
     add_runtime_parser_once(rt_sub, _runtime_parser_names, "accountability", help="GET /api/v1/mission-control/runtime/accountability")
     add_runtime_parser_once(rt_sub, _runtime_parser_names, "escalations", help="GET /api/v1/mission-control/runtime/escalations")
     add_runtime_parser_once(rt_sub, _runtime_parser_names, "overview", help="GET /api/v1/mission-control/runtime/overview")
@@ -486,6 +486,41 @@ def main() -> int:
     add_runtime_parser_once(rt_sub, _runtime_parser_names, "enterprise-cert", help="Final enterprise operational certification")
     add_runtime_parser_once(rt_sub, _runtime_parser_names, "operational-story-final", help="Unified operational story final")
     add_runtime_parser_once(rt_sub, _runtime_parser_names, "certify", help="Production cut certification bundle")
+    add_runtime_parser_once(rt_sub, _runtime_parser_names, "governance", help="GET /api/v1/runtime/governance-authority")
+    add_runtime_parser_once(
+        rt_sub, _runtime_parser_names, "autonomous-coordination", help="GET /api/v1/runtime/autonomous-coordination"
+    )
+    add_runtime_parser_once(
+        rt_sub, _runtime_parser_names, "governance-timeline", help="GET /api/v1/runtime/governance-timeline"
+    )
+    add_runtime_parser_once(rt_sub, _runtime_parser_names, "pressure", help="GET /api/v1/runtime/pressure-governance")
+    add_runtime_parser_once(rt_sub, _runtime_parser_names, "enterprise-safety", help="GET /api/v1/runtime/enterprise-safety")
+    add_runtime_parser_once(
+        rt_sub, _runtime_parser_names, "trust-finalization", help="GET /api/v1/runtime/trust-finalization"
+    )
+    add_runtime_parser_once(rt_sub, _runtime_parser_names, "truth-governance", help="GET /api/v1/runtime/truth-governance")
+    add_runtime_parser_once(rt_sub, _runtime_parser_names, "final-cert", help="GET /api/v1/runtime/final-certification")
+    add_runtime_parser_once(rt_sub, _runtime_parser_names, "command-authority", help="GET /api/v1/runtime/command-authority")
+    add_runtime_parser_once(rt_sub, _runtime_parser_names, "unified-narrative", help="GET /api/v1/runtime/unified-narrative")
+    add_runtime_parser_once(rt_sub, _runtime_parser_names, "visibility", help="GET /api/v1/runtime/visibility-authority")
+    add_runtime_parser_once(
+        rt_sub, _runtime_parser_names, "readiness-convergence", help="GET /api/v1/runtime/readiness-convergence"
+    )
+    add_runtime_parser_once(
+        rt_sub, _runtime_parser_names, "stability-finalization", help="GET /api/v1/runtime/stability-finalization"
+    )
+    add_runtime_parser_once(
+        rt_sub, _runtime_parser_names, "recovery-experience", help="GET /api/v1/runtime/recovery-experience"
+    )
+    add_runtime_parser_once(
+        rt_sub, _runtime_parser_names, "governance-consolidation", help="GET /api/v1/runtime/governance-consolidation"
+    )
+    add_runtime_parser_once(
+        rt_sub, _runtime_parser_names, "enterprise-confidence", help="GET /api/v1/runtime/enterprise-confidence"
+    )
+    add_runtime_parser_once(
+        rt_sub, _runtime_parser_names, "finalization-cert", help="GET /api/v1/runtime/finalization-certification"
+    )
     sp_ecosystem = sub.add_parser("ecosystem", help="Operational intelligence ecosystem (Phase 4 Step 3)")
     eco_sub = sp_ecosystem.add_subparsers(dest="ecosystem_cmd", required=True)
     eco_sub.add_parser("health", help="GET /api/v1/mission-control/ecosystem/health")
@@ -1277,10 +1312,44 @@ def main() -> int:
             code, body = _req("GET", "/api/v1/runtime/throttling", uid=uid)
             print(body[:24000])
             return 0 if code == 200 else 1
-        if args.runtime_cmd == "pressure":
+        if args.runtime_cmd == "pressure-overview":
             code, body = _req("GET", "/api/v1/mission-control/runtime/scalability", uid=uid)
             print(body[:24000])
             return 0 if code == 200 else 1
+        if args.runtime_cmd == "pressure":
+            return _rt_print("/api/v1/runtime/pressure-governance")
+        if args.runtime_cmd == "governance":
+            return _rt_print("/api/v1/runtime/governance-authority")
+        if args.runtime_cmd == "autonomous-coordination":
+            return _rt_print("/api/v1/runtime/autonomous-coordination")
+        if args.runtime_cmd == "governance-timeline":
+            return _rt_print("/api/v1/runtime/governance-timeline")
+        if args.runtime_cmd == "enterprise-safety":
+            return _rt_print("/api/v1/runtime/enterprise-safety")
+        if args.runtime_cmd == "trust-finalization":
+            return _rt_print("/api/v1/runtime/trust-finalization")
+        if args.runtime_cmd == "truth-governance":
+            return _rt_print("/api/v1/runtime/truth-governance")
+        if args.runtime_cmd == "final-cert":
+            return _rt_print("/api/v1/runtime/final-certification")
+        if args.runtime_cmd == "command-authority":
+            return _rt_print("/api/v1/runtime/command-authority")
+        if args.runtime_cmd == "unified-narrative":
+            return _rt_print("/api/v1/runtime/unified-narrative")
+        if args.runtime_cmd == "visibility":
+            return _rt_print("/api/v1/runtime/visibility-authority")
+        if args.runtime_cmd == "readiness-convergence":
+            return _rt_print("/api/v1/runtime/readiness-convergence")
+        if args.runtime_cmd == "stability-finalization":
+            return _rt_print("/api/v1/runtime/stability-finalization")
+        if args.runtime_cmd == "recovery-experience":
+            return _rt_print("/api/v1/runtime/recovery-experience")
+        if args.runtime_cmd == "governance-consolidation":
+            return _rt_print("/api/v1/runtime/governance-consolidation")
+        if args.runtime_cmd == "enterprise-confidence":
+            return _rt_print("/api/v1/runtime/enterprise-confidence")
+        if args.runtime_cmd == "finalization-cert":
+            return _rt_print("/api/v1/runtime/finalization-certification")
         if args.runtime_cmd == "accountability":
             code, body = _req("GET", "/api/v1/mission-control/runtime/accountability", uid=uid)
             print(body[:24000])

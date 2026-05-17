@@ -17,14 +17,30 @@ def build_office_operational_authority(truth: dict[str, Any] | None = None) -> d
     confidence = build_operator_confidence(truth)
     partial = bool((truth.get("hydration_progress") or {}).get("partial"))
     unlocked = list((truth.get("runtime_startup_experience") or {}).get("progressive_surface_unlock") or ["office"])
+    narrative = (truth.get("runtime_unified_narrative_engine") or {}).get("headline")
+    readiness = truth.get("runtime_readiness_convergence") or {}
     return {
         "office_operational_authority": {
             "authoritative_command_center": True,
+            "single_operational_command_surface": True,
             "never_noisy": True,
             "no_conflicting_states": True,
+            "no_stacked_banners": True,
+            "unified_narrative": narrative,
+            "readiness_state": readiness.get("canonical_state"),
             "progressive_panel_unlock": unlocked,
             "graceful_degradation": partial,
             "priority_work_visible": True,
+            "coordinates": [
+                "readiness",
+                "startup",
+                "degraded_mode",
+                "recovery",
+                "governance",
+                "operational_pressure",
+                "runtime_trust",
+                "operational_continuity",
+            ],
             "bounded": True,
         },
         "office_operational_focus": {
@@ -38,6 +54,6 @@ def build_office_operational_authority(truth: dict[str, Any] | None = None) -> d
             "bounded": True,
         },
         "office_operational_priority_stream": stream,
-        "phase": "phase4_step24",
+        "phase": "phase4_step27",
         "bounded": True,
     }

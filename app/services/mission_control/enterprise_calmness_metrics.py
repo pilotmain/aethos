@@ -18,6 +18,7 @@ def build_runtime_calmness_metrics(truth: dict[str, Any] | None = None) -> dict[
     lock = build_calmness_lock(truth)
     integrity = build_runtime_calmness_integrity(truth)
     noise = float(lock.get("operational_noise_reduction") or 0.5)
+    pressure = truth.get("runtime_pressure_health") or {}
     return {
         "calmness_score": calm.get("calm_score"),
         "operational_clarity_score": calm.get("quality_score") or integrity.get("event_signal_quality"),
@@ -25,6 +26,10 @@ def build_runtime_calmness_metrics(truth: dict[str, Any] | None = None) -> dict[
         "signal_prioritization_effectiveness": round(min(1.0, noise + 0.15), 3),
         "feels_calm": calm.get("feels_calm"),
         "under_pressure": (truth.get("operational_pressure") or {}).get("level") not in (None, "low"),
+        "governance_calm": bool((truth.get("runtime_governance_authority") or {}).get("authoritative")),
+        "pressure_level": pressure.get("level"),
+        "office_priority_preserved": pressure.get("office_responsive", True),
+        "phase": "phase4_step26" if truth.get("phase4_step26") else "phase4_step13",
         "bounded": True,
     }
 

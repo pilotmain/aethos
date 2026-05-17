@@ -33,6 +33,12 @@ def build_runtime_calmness_lock(truth: dict[str, Any] | None = None) -> dict[str
         narrative = "Mission Control is operating in partial readiness while runtime intelligence stabilizes."
     if truth.get("db_lock_waiting"):
         narrative = "AethOS is waiting for database coordination — other panels may still be available."
+    if truth.get("phase4_step26") or truth.get("enterprise_runtime_governed"):
+        narrative = (
+            "AethOS is maintaining operational continuity while enterprise synchronization completes."
+        )
+    if truth.get("runtime_recovery_certified"):
+        narrative = "Operational recovery completed successfully."
     return {
         "runtime_calmness_lock": {
             "calm_narrative": narrative,
@@ -46,7 +52,7 @@ def build_runtime_calmness_lock(truth: dict[str, Any] | None = None) -> dict[str
             ],
             "status": status,
             "locked": True,
-            "phase": "phase4_step21",
+            "phase": "phase4_step26" if truth.get("phase4_step26") else "phase4_step21",
             "bounded": True,
         }
     }

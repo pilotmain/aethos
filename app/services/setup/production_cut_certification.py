@@ -82,6 +82,20 @@ def build_production_cut_certification(*, repo_root: Path | None = None, truth: 
         categories["runtime_ownership"] = bool(rt_final.get("runtime_coordination_authoritative"))
         if not categories["runtime_ownership"]:
             blockers.append("runtime ownership not authoritative")
+        from app.services.runtime.enterprise_runtime_final_certification import build_enterprise_runtime_final_certification
+
+        gov_final = build_enterprise_runtime_final_certification(truth)["enterprise_runtime_final_certification"]
+        categories["runtime_governance"] = bool(gov_final.get("enterprise_runtime_governed"))
+        if not categories["runtime_governance"]:
+            blockers.append("enterprise runtime governance incomplete")
+        from app.services.runtime.enterprise_runtime_finalization_certification import (
+            build_enterprise_runtime_finalization_certification,
+        )
+
+        fin = build_enterprise_runtime_finalization_certification(truth)["enterprise_runtime_finalization_certification"]
+        categories["operational_command"] = bool(fin.get("enterprise_operational_command_locked"))
+        if not categories["operational_command"]:
+            blockers.append("operational command not finalized")
 
     enterprise_grade = all(categories.values()) and len(blockers) == 0
     production_cut_ready = enterprise_grade or (len(blockers) <= 1 and categories.get("supervision"))
@@ -93,7 +107,7 @@ def build_production_cut_certification(*, repo_root: Path | None = None, truth: 
             "categories": categories,
             "blockers": blockers[:12],
             "truth_contract_version": RUNTIME_TRUTH_CONTRACT_VERSION,
-            "phase": "phase4_step25",
+            "phase": "phase4_step27",
             "bounded": True,
         },
         "production_cut_readiness": build_production_cut_readiness(),

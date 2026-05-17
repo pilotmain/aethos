@@ -802,3 +802,124 @@ def runtime_supervision_authority(_: str = Depends(get_valid_web_user_id)) -> di
     return build_runtime_supervision()
 
 
+@router.get("/governance-authority")
+def runtime_governance_authority_route(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.runtime.runtime_governance_authority import build_runtime_governance_authority
+
+    return build_runtime_governance_authority(_truth_or_empty(app_user_id))
+
+
+@router.get("/autonomous-coordination")
+def runtime_autonomous_coordination_route(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.runtime.runtime_autonomous_coordination import build_runtime_autonomous_coordination
+
+    return build_runtime_autonomous_coordination(_truth_or_empty(app_user_id))
+
+
+@router.get("/governance-timeline")
+def runtime_governance_timeline_route(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.runtime.runtime_operational_governance_timeline import build_runtime_operational_governance_timeline
+
+    return build_runtime_operational_governance_timeline(_truth_or_empty(app_user_id))
+
+
+@router.get("/pressure-governance")
+def runtime_pressure_governance_route(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.runtime.runtime_pressure_governance import build_runtime_pressure_governance
+
+    return build_runtime_pressure_governance(_truth_or_empty(app_user_id))
+
+
+@router.get("/enterprise-safety")
+def runtime_enterprise_safety_route(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.runtime.runtime_enterprise_safety_lock import build_runtime_enterprise_safety_lock
+
+    return build_runtime_enterprise_safety_lock(_truth_or_empty(app_user_id))
+
+
+@router.get("/trust-finalization")
+def runtime_trust_finalization_route(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.runtime.runtime_trust_finalization import build_runtime_trust_finalization
+
+    return build_runtime_trust_finalization(_truth_or_empty(app_user_id))
+
+
+@router.get("/truth-governance")
+def runtime_truth_governance_route(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.runtime.runtime_truth_governance_lock import build_runtime_truth_governance_lock
+
+    return build_runtime_truth_governance_lock(_truth_or_empty(app_user_id))
+
+
+@router.get("/final-certification")
+def runtime_final_certification_route(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.runtime.enterprise_runtime_final_certification import build_enterprise_runtime_final_certification
+
+    return build_enterprise_runtime_final_certification(_truth_or_empty(app_user_id))
+
+
+@router.get("/command-authority")
+def runtime_command_authority_route(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.runtime.enterprise_operational_command_authority import build_enterprise_operational_command_authority
+
+    return build_enterprise_operational_command_authority(_truth_or_empty(app_user_id))
+
+
+@router.get("/unified-narrative")
+def runtime_unified_narrative_route(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.runtime.runtime_unified_narrative_engine import build_runtime_unified_narrative_engine
+
+    return build_runtime_unified_narrative_engine(_truth_or_empty(app_user_id))
+
+
+@router.get("/visibility-authority")
+def runtime_visibility_authority_route(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.runtime.runtime_visibility_authority import build_runtime_visibility_authority
+
+    return build_runtime_visibility_authority(_truth_or_empty(app_user_id))
+
+
+@router.get("/readiness-convergence")
+def runtime_readiness_convergence_route(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.runtime.runtime_readiness_convergence import build_runtime_readiness_convergence
+
+    return build_runtime_readiness_convergence(_truth_or_empty(app_user_id))
+
+
+@router.get("/stability-finalization")
+def runtime_stability_finalization_route(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.runtime.runtime_operational_stability_finalization import build_runtime_operational_stability_finalization
+
+    return build_runtime_operational_stability_finalization(_truth_or_empty(app_user_id))
+
+
+@router.get("/recovery-experience")
+def runtime_recovery_experience_route(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.runtime.runtime_recovery_experience_finalization import build_runtime_recovery_experience_finalization
+
+    return build_runtime_recovery_experience_finalization(_truth_or_empty(app_user_id))
+
+
+@router.get("/governance-consolidation")
+def runtime_governance_consolidation_route(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.runtime.runtime_governance_consolidation import build_runtime_governance_consolidation
+
+    return build_runtime_governance_consolidation(_truth_or_empty(app_user_id))
+
+
+@router.get("/enterprise-confidence")
+def runtime_enterprise_confidence_route(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.runtime.runtime_enterprise_confidence_engine import build_runtime_enterprise_confidence_engine
+
+    return build_runtime_enterprise_confidence_engine(_truth_or_empty(app_user_id))
+
+
+@router.get("/finalization-certification")
+def runtime_finalization_certification_route(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.runtime.enterprise_runtime_finalization_certification import (
+        build_enterprise_runtime_finalization_certification,
+    )
+
+    return build_enterprise_runtime_finalization_certification(_truth_or_empty(app_user_id))
+
+

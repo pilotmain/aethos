@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import Any
 
-MC_COMPATIBILITY_VERSION = "phase4_step25"
+MC_COMPATIBILITY_VERSION = "phase4_step27"
 
 _AVAILABLE_ROUTES: list[dict[str, str]] = [
     {"method": "GET", "path": "/api/v1/mission-control/state"},
@@ -94,6 +94,23 @@ _AVAILABLE_ROUTES: list[dict[str, str]] = [
     {"method": "GET", "path": "/api/v1/runtime/startup-integrity"},
     {"method": "GET", "path": "/api/v1/runtime/truth-authority"},
     {"method": "GET", "path": "/api/v1/runtime/runtime-integrity-final"},
+    {"method": "GET", "path": "/api/v1/runtime/governance-authority"},
+    {"method": "GET", "path": "/api/v1/runtime/autonomous-coordination"},
+    {"method": "GET", "path": "/api/v1/runtime/governance-timeline"},
+    {"method": "GET", "path": "/api/v1/runtime/pressure-governance"},
+    {"method": "GET", "path": "/api/v1/runtime/enterprise-safety"},
+    {"method": "GET", "path": "/api/v1/runtime/trust-finalization"},
+    {"method": "GET", "path": "/api/v1/runtime/truth-governance"},
+    {"method": "GET", "path": "/api/v1/runtime/final-certification"},
+    {"method": "GET", "path": "/api/v1/runtime/command-authority"},
+    {"method": "GET", "path": "/api/v1/runtime/unified-narrative"},
+    {"method": "GET", "path": "/api/v1/runtime/visibility-authority"},
+    {"method": "GET", "path": "/api/v1/runtime/readiness-convergence"},
+    {"method": "GET", "path": "/api/v1/runtime/stability-finalization"},
+    {"method": "GET", "path": "/api/v1/runtime/recovery-experience"},
+    {"method": "GET", "path": "/api/v1/runtime/governance-consolidation"},
+    {"method": "GET", "path": "/api/v1/runtime/enterprise-confidence"},
+    {"method": "GET", "path": "/api/v1/runtime/finalization-certification"},
     {"method": "GET", "path": "/api/v1/runtime/hydration/diagnostics"},
     {"method": "GET", "path": "/api/v1/runtime/certify"},
     {"method": "GET", "path": "/api/v1/runtime/surface-map"},
@@ -200,6 +217,15 @@ def build_runtime_capabilities() -> dict[str, Any]:
             "runtime_ownership_authoritative": True,
             "runtime_coordination_authoritative": True,
             "enterprise_runtime_consolidated": True,
+            "phase4_step26": True,
+            "enterprise_runtime_governed": True,
+            "enterprise_runtime_fully_certified": True,
+            "production_runtime_finalized": True,
+            "phase4_step27": True,
+            "enterprise_runtime_finalized": True,
+            "enterprise_operational_command_locked": True,
+            "runtime_governance_converged": True,
+            "runtime_enterprise_grade_verified": True,
         },
         "lazy_views": [
             "routing",

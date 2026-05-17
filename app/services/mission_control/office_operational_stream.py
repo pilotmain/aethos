@@ -13,6 +13,7 @@ def build_office_operational_stream(truth: dict[str, Any] | None = None) -> dict
     pressure = truth.get("operational_pressure") or {}
     throttling = truth.get("runtime_operational_throttling") or {}
     partial = bool((truth.get("hydration_progress") or {}).get("partial"))
+    narrative = (truth.get("runtime_unified_narrative_engine") or {}).get("headline")
     return {
         "staggered_refresh_ms": {
             "orchestrator": 0,
@@ -33,6 +34,8 @@ def build_office_operational_stream(truth: dict[str, Any] | None = None) -> dict
         "advisory_deferred": throttling.get("advisory_deferred", False),
         "progressive_hydration": partial,
         "runtime_confidence_calm": (truth.get("operator_confidence") or {}).get("summary"),
-        "phase": "phase4_step24",
+        "unified_operational_narrative": narrative,
+        "command_surface_finalized": bool(truth.get("enterprise_operational_command_locked")),
+        "phase": "phase4_step27",
         "bounded": True,
     }
