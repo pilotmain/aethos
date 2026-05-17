@@ -167,6 +167,7 @@ def build_runtime_ownership_status() -> dict[str, Any]:
             "this_process_owns": i_own,
             "observer_mode": not i_own and not holder_alive,
             "duplicate_ownership_risk": duplicate_risk,
+            "conflict_detected": duplicate_risk or bool(lock and not holder_alive),
             "telegram_polling_pid": tg_pid if tg_alive else None,
             "telegram_polling_available": polling_available,
             "embedded_bot_safe": polling_available or i_own,

@@ -68,10 +68,9 @@ def _db_healthy() -> bool:
 
 def _ownership_healthy() -> bool:
     try:
-        from app.services.mission_control.runtime_ownership_lock import build_runtime_ownership_status
+        from app.services.runtime.runtime_health_authority import build_canonical_runtime_health
 
-        own = build_runtime_ownership_status().get("runtime_ownership") or {}
-        return not own.get("conflict_detected")
+        return bool(build_canonical_runtime_health()["runtime_health_authority"].get("ownership_valid"))
     except Exception:
         return True
 
@@ -100,14 +99,21 @@ def _print_stage(index: int, total: int, label: str) -> None:
 
 def _coordinate_before_start() -> dict[str, Any]:
     try:
+        from app.services.runtime.runtime_health_authority import build_canonical_runtime_health, is_stale_runtime_session
         from aethos_cli.setup_supervision_preflight import coordinate_runtime_for_setup, run_setup_supervision_preflight
 
+        ha = build_canonical_runtime_health()["runtime_health_authority"]
+        if ha.get("operational"):
+            return {"ok": True, "message": "Existing operational runtime detected."}
         pre = run_setup_supervision_preflight()
-        if pre.get("any_conflict"):
+        if pre.get("needs_recovery") or is_stale_runtime_session():
+            from aethos_cli.ui import print_info
+
+            print_info("AethOS detected an older runtime session. Coordinating recovery…")
             return coordinate_runtime_for_setup(auto=True)
         return {"ok": True, "message": "No runtime conflicts detected."}
     except Exception as exc:
-        return {"ok": False, "message": str(exc)[:120]}
+        return {"ok": False, "message": build_startup_recovery_copy(issue=str(exc)[:120])}
 
 
 def _hydration_partial(status_blob: dict[str, Any]) -> bool:
@@ -179,6 +185,9 @@ def orchestrate_progressive_startup(
     emit(4, total, PROGRESSIVE_STARTUP_STAGES[3][1])
     if not _api_health(port):
         try:
+            from app.services.mission_control.runtime_ownership_lock import try_acquire_runtime_ownership
+
+            try_acquire_runtime_ownership(role="cli", port=port, force=True)
             api_proc = subprocess.Popen(
                 [str(py), "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", str(port)],
                 cwd=str(root),
@@ -243,8 +252,15 @@ def orchestrate_progressive_startup(
     stages_done.append("workspace")
 
     emit(8, total, PROGRESSIVE_STARTUP_STAGES[7][1])
-    db_ok = _db_healthy()
-    own_ok = _ownership_healthy()
+    from app.services.runtime.runtime_health_authority import build_canonical_runtime_health
+
+    health = build_canonical_runtime_health(api_port=port)
+    ha = health["runtime_health_authority"]
+    db_ok = bool(ha.get("database_healthy"))
+    own_ok = bool(ha.get("ownership_valid"))
+    mc_ok = bool(ha.get("mission_control_reachable")) if choice == "api_and_mission_control" else mc_ok
+    api_ok = bool(ha.get("api_reachable")) or api_ok
+    hydration_partial = not bool(ha.get("hydration_active"))
     stages_done.append("readiness")
 
     visibility = build_startup_health_dashboard(
@@ -253,25 +269,20 @@ def orchestrate_progressive_startup(
         api_reachable=api_ok,
         mc_reachable=mc_ok,
     )
-    readiness_state = derive_operator_readiness_state(
+    readiness_state = str(ha.get("readiness_state") or derive_operator_readiness_state(
         api_reachable=api_ok,
         mc_reachable=mc_ok,
         db_healthy=db_ok,
         ownership_healthy=own_ok,
         hydration_partial=hydration_partial,
-    )
-    truly = (
-        api_ok
-        and (mc_ok or choice == "api_only")
-        and db_ok
-        and own_ok
-        and env_ok
-        and readiness_state == "operational"
-    )
+    ))
+    truly = bool(ha.get("operational")) and (mc_ok or choice == "api_only")
     if not truly and api_ok:
         message = "AethOS is preparing operational services…"
     elif truly:
         message = "AethOS is operational."
+    elif bool(ha.get("stale_session")):
+        message = "AethOS detected an incomplete or stale runtime session."
     else:
         message = build_startup_recovery_copy()
 

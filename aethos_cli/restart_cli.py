@@ -62,6 +62,14 @@ def cmd_restart(target: str = "all") -> int:
     repo = _repo_root()
     target = (target or "all").lower()
     ok = True
+
+    def _release_coordination_locks() -> None:
+        from app.services.mission_control.runtime_ownership_lock import release_runtime_ownership_if_owner
+        from app.services.telegram_polling_lock import release_telegram_polling_lock_if_owner
+
+        release_runtime_ownership_if_owner()
+        release_telegram_polling_lock_if_owner()
+
     if target == "runtime":
         from app.services.mission_control.runtime_ownership_lock import (
             record_process_lifecycle_event,
@@ -86,6 +94,7 @@ def cmd_restart(target: str = "all") -> int:
 
         return cmd_status()
     if target in ("all", "api"):
+        _release_coordination_locks()
         _pkill_pattern("uvicorn app.main:app")
     if target in ("all", "web"):
         _pkill_pattern("next dev")
@@ -95,7 +104,14 @@ def cmd_restart(target: str = "all") -> int:
     if target in ("all", "api"):
         proc = _start_api(repo)
         ok = ok and proc is not None
-        print(f"API {'started' if proc else 'failed'} (port {os.environ.get('AETHOS_SERVE_PORT', '8010')})")
+        port = int(os.environ.get("AETHOS_SERVE_PORT") or os.environ.get("NEXA_SERVE_PORT") or "8010")
+        try:
+            from app.services.mission_control.runtime_ownership_lock import try_acquire_runtime_ownership
+
+            try_acquire_runtime_ownership(role="cli", port=port, force=True)
+        except Exception:
+            pass
+        print(f"API {'started' if proc else 'failed'} (port {port})")
         record_restart_event("api", ok=proc is not None)
     if target in ("all", "web"):
         proc = _start_web(repo)

@@ -86,28 +86,37 @@ def build_existing_config_summary(*, repo_root: Path) -> list[str]:
     return lines
 
 
-def detect_runtime_operational(*, api_port: int = 8010) -> bool:
-    """True when API health endpoint responds."""
-    import socket
+def detect_runtime_operational(*, api_port: int | None = None) -> bool:
+    """True when API and Mission Control are both healthy."""
+    from app.services.runtime.runtime_health_authority import is_runtime_truly_operational
 
-    try:
-        with socket.create_connection(("127.0.0.1", api_port), timeout=0.4):
-            pass
-    except OSError:
-        return False
-    try:
-        import urllib.request
+    return is_runtime_truly_operational(api_port=api_port)
 
-        with urllib.request.urlopen(f"http://127.0.0.1:{api_port}/api/v1/health", timeout=2.0) as resp:
-            return resp.status == 200
-    except Exception:
-        return False
+
+def detect_runtime_partial(*, api_port: int | None = None) -> bool:
+    from app.services.runtime.runtime_health_authority import build_canonical_runtime_health
+
+    ha = build_canonical_runtime_health(api_port=api_port)["runtime_health_authority"]
+    return bool(ha.get("partially_operational"))
+
+
+def detect_runtime_stale(*, api_port: int | None = None) -> bool:
+    from app.services.runtime.runtime_health_authority import is_stale_runtime_session
+
+    return is_stale_runtime_session(api_port=api_port)
 
 
 def detect_runtime_health_label() -> str:
-    port = int(os.environ.get("AETHOS_SERVE_PORT") or os.environ.get("NEXA_SERVE_PORT") or "8010")
-    if detect_runtime_operational(api_port=port):
+    from app.services.runtime.runtime_health_authority import build_canonical_runtime_health
+
+    ha = build_canonical_runtime_health()["runtime_health_authority"]
+    if ha.get("operational"):
         return "healthy"
+    if ha.get("stale_session"):
+        return "stale"
+    if ha.get("partially_operational"):
+        return "warming"
+    port = int(os.environ.get("AETHOS_SERVE_PORT") or os.environ.get("NEXA_SERVE_PORT") or "8010")
     if _port_in_use(port):
         return "starting"
     return "offline"
@@ -125,11 +134,32 @@ def _port_in_use(port: int) -> bool:
 
 def print_runtime_already_running_menu() -> str:
     """When runtime is already up. Returns: open | review | repair | restart | exit."""
+    from app.services.runtime.runtime_health_authority import build_canonical_runtime_health
+
+    ha = build_canonical_runtime_health()["runtime_health_authority"]
+    if ha.get("stale_session"):
+        print_box(
+            "AethOS detected an incomplete or stale runtime session",
+            [
+                "AethOS can coordinate recovery automatically.",
+                "Recommended: restart services to restore Mission Control.",
+            ],
+        )
+        return select(
+            "How should AethOS recover?",
+            [
+                ("Coordinate recovery and restart", "restart", "Stop stale processes and restart"),
+                ("Repair setup", "repair", "Reinstall deps and repair core keys"),
+                ("Review configuration", "review", "Step through setup sections"),
+                ("Exit", "exit", "Leave as-is"),
+            ],
+            default_index=0,
+        )
     print_box(
-        "AethOS is already running",
+        "AethOS is already operational",
         [
-            "Current environment is operational.",
-            "You can open Mission Control, review configuration, repair, or restart services.",
+            "Current environment is coordinated and reachable.",
+            "Open Mission Control, review configuration, repair, or restart services.",
         ],
     )
     return select(

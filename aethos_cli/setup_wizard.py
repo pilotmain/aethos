@@ -272,9 +272,13 @@ def run_setup_wizard(*, install_kind: str | None = None) -> int:
     resume_step = 0
     bag: dict = {}
     if not _noninteractive_setup():
-        from aethos_cli.setup_conversational import detect_runtime_operational, print_runtime_already_running_menu
+        from aethos_cli.setup_conversational import (
+            detect_runtime_operational,
+            detect_runtime_stale,
+            print_runtime_already_running_menu,
+        )
 
-        if env_path.exists() and detect_runtime_operational():
+        if env_path.exists() and (detect_runtime_operational() or detect_runtime_stale()):
             running_action = print_runtime_already_running_menu()
             if running_action == "open":
                 from aethos_cli.cli_open import cmd_open
@@ -625,13 +629,28 @@ def run_setup_wizard(*, install_kind: str | None = None) -> int:
         )
 
         startup_result: dict = {}
-        if not _noninteractive_setup():
-            from app.services.runtime.runtime_startup_orchestration import orchestrate_startup, prompt_startup_choice
+        start_choice = "review"
+        from app.services.runtime.runtime_startup_orchestration import orchestrate_startup, prompt_startup_choice
+        from aethos_cli.setup_conversational import detect_runtime_stale
+        from aethos_cli.setup_interactive_mode import setup_interactive as _setup_interactive
 
+        if _noninteractive_setup():
+            if os.environ.get("NEXA_SETUP_FROM_INSTALLER") == "1":
+                start_choice = "api_and_mission_control"
+                startup_result = orchestrate_startup(choice=start_choice, repo_root=root)
+                bag["startup_result"] = startup_result
+        else:
             start_choice = prompt_startup_choice()
             if start_choice != "review":
                 startup_result = orchestrate_startup(choice=start_choice, repo_root=root)
                 bag["startup_result"] = startup_result
+                if not startup_result.get("truly_operational") and detect_runtime_stale():
+                    from aethos_cli.setup_supervision_preflight import coordinate_runtime_for_setup
+
+                    print_info("Recovering stale runtime session and retrying startup…")
+                    coordinate_runtime_for_setup(auto=True)
+                    startup_result = orchestrate_startup(choice=start_choice, repo_root=root)
+                    bag["startup_result"] = startup_result
                 if startup_result.get("truly_operational"):
                     print_success("AethOS is operational. Mission Control is ready.")
                 else:
@@ -640,13 +659,30 @@ def run_setup_wizard(*, install_kind: str | None = None) -> int:
             from aethos_cli.setup_completion_guidance import (
                 print_what_happens_next,
                 prompt_guided_first_run_tour,
-                try_open_mission_control,
             )
+            from app.services.runtime.runtime_launch_orchestration import finalize_first_launch_experience
 
             operational = bool(startup_result.get("truly_operational"))
             print_what_happens_next(operational=operational)
-            if operational and prompt_guided_first_run_tour():
+            if startup_result and start_choice != "review":
+                finalize_first_launch_experience(
+                    startup_result,
+                    interactive=_setup_interactive(),
+                    auto_open=start_choice == "api_and_mission_control",
+                )
+            elif operational and prompt_guided_first_run_tour():
+                from aethos_cli.setup_completion_guidance import try_open_mission_control
+
                 try_open_mission_control()
+
+        if startup_result and start_choice != "review" and _noninteractive_setup():
+            from app.services.runtime.runtime_launch_orchestration import finalize_first_launch_experience
+
+            finalize_first_launch_experience(
+                startup_result,
+                interactive=False,
+                auto_open=os.environ.get("NEXA_SETUP_FROM_INSTALLER") == "1",
+            )
 
         from aethos_cli.setup_enterprise import print_setup_final_summary
 

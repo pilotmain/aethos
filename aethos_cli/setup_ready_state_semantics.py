@@ -90,8 +90,8 @@ def build_setup_completion_card(
         "Repair: aethos setup repair",
         "Docs: docs/ENTERPRISE_SETUP.md",
     ]
-    if sr.get("api_reachable") and not sr.get("mission_control_reachable"):
-        lines.insert(1, "AethOS could not reach Mission Control yet — attempting recovery with `aethos restart`.")
+    if sr.get("stale_session") or (sr.get("api_reachable") and not sr.get("mission_control_reachable")):
+        lines.insert(1, "AethOS detected an incomplete or stale runtime session — recovery runs automatically with `aethos start`.")
     return title, lines
 
 
