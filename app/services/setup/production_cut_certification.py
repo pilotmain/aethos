@@ -58,6 +58,15 @@ def build_production_cut_certification(*, repo_root: Path | None = None, truth: 
     categories["recovery_ux"] = True
     categories["operator_language"] = True
 
+    if truth:
+        from app.services.mission_control.runtime_production_certification import build_runtime_production_certification
+
+        prod = build_runtime_production_certification(truth)["runtime_production_certification"]
+        categories["runtime_production"] = bool(prod.get("production_grade"))
+        categories["operator_trust"] = bool(prod.get("runtime_operationally_trusted"))
+        if not categories["runtime_production"]:
+            blockers.append("runtime production certification incomplete")
+
     enterprise_grade = all(categories.values()) and len(blockers) == 0
     production_cut_ready = enterprise_grade or (len(blockers) <= 1 and categories.get("supervision"))
 
@@ -68,7 +77,7 @@ def build_production_cut_certification(*, repo_root: Path | None = None, truth: 
             "categories": categories,
             "blockers": blockers[:12],
             "truth_contract_version": RUNTIME_TRUTH_CONTRACT_VERSION,
-            "phase": "phase4_step20",
+            "phase": "phase4_step23",
             "bounded": True,
         },
         "production_cut_readiness": build_production_cut_readiness(),

@@ -60,6 +60,13 @@ def build_runtime_recovery_integrity(truth: dict[str, Any] | None = None) -> dic
         "hydration_recovery": not bool((truth.get("hydration_progress") or {}).get("partial")),
         "ownership_recovery": not bool((truth.get("runtime_ownership") or {}).get("conflict")),
     }
+    recovery_ux = []
+    if categories.get("provider_failover"):
+        recovery_ux.append(
+            "AethOS restored runtime coordination after a temporary provider interruption."
+        )
+    if not categories.get("hydration_recovery"):
+        recovery_ux.append("AethOS resumed enterprise intelligence after recovering hydration state.")
     return {
         "runtime_recovery_integrity": {
             "categories_tracked": list(categories.keys()),
@@ -68,7 +75,10 @@ def build_runtime_recovery_integrity(truth: dict[str, Any] | None = None) -> dic
             "operator_visibility": "full",
             "stable": hist.get("stable_now"),
             "operator_action_required": hist.get("operator_action_required"),
-            "phase": "phase4_step22",
+            "recovery_ux_messages": recovery_ux,
+            "confidence_updates_readiness": True,
+            "mission_control_reflects_stabilized": hist.get("stable_now"),
+            "phase": "phase4_step23",
             "bounded": True,
         }
     }

@@ -448,6 +448,11 @@ def main() -> int:
     rt_sub.add_parser("integrity", help="Runtime integrity certification")
     rt_sub.add_parser("confidence", help="Operator confidence summary")
     rt_sub.add_parser("truth", help="Truth integrity and consistency")
+    rt_sub.add_parser("assurance", help="Enterprise runtime assurance bundle")
+    rt_sub.add_parser("continuity-cert", help="Runtime continuity certification")
+    rt_sub.add_parser("persistence", help="Runtime persistence health")
+    rt_sub.add_parser("production-cert", help="Runtime production certification")
+    rt_sub.add_parser("operational-story", help="Coherent operational narratives")
     rt_sub.add_parser("certify", help="Production cut certification bundle")
     sp_ecosystem = sub.add_parser("ecosystem", help="Operational intelligence ecosystem (Phase 4 Step 3)")
     eco_sub = sp_ecosystem.add_subparsers(dest="ecosystem_cmd", required=True)
@@ -1170,6 +1175,16 @@ def main() -> int:
             return _rt_print("/api/v1/runtime/operator-confidence")
         if args.runtime_cmd == "truth":
             return _rt_print("/api/v1/runtime/truth-consistency")
+        if args.runtime_cmd == "assurance":
+            return _rt_print("/api/v1/runtime/assurance")
+        if args.runtime_cmd == "continuity-cert":
+            return _rt_print("/api/v1/runtime/continuity-certification")
+        if args.runtime_cmd == "persistence":
+            return _rt_print("/api/v1/runtime/persistence-health")
+        if args.runtime_cmd == "production-cert":
+            return _rt_print("/api/v1/runtime/production-certification")
+        if args.runtime_cmd == "operational-story":
+            return _rt_print("/api/v1/runtime/operational-story")
         if args.runtime_cmd == "timeline":
             code, body = _req("GET", "/api/v1/mission-control/runtime/timeline", uid=uid)
             print(body[:24000])
@@ -1221,6 +1236,9 @@ def main() -> int:
             print(body[:24000])
             return 0 if code == 200 else 1
         if args.runtime_cmd == "trust":
+            code, body = _req("GET", "/api/v1/runtime/operator-trust", uid=uid)
+            if code == 200:
+                return _rt_print("/api/v1/runtime/operator-trust")
             code, body = _req("GET", "/api/v1/mission-control/governance/trust", uid=uid)
             print(body[:24000])
             return 0 if code == 200 else 1
@@ -1229,6 +1247,9 @@ def main() -> int:
             print(body[:24000])
             return 0 if code == 200 else 1
         if args.runtime_cmd == "readiness":
+            code, body = _req("GET", "/api/v1/runtime/readiness-authority", uid=uid)
+            if code == 200:
+                return _rt_print("/api/v1/runtime/readiness-authority")
             code, body = _req("GET", "/api/v1/mission-control/runtime/readiness", uid=uid)
             print(body[:24000])
             return 0 if code == 200 else 1
@@ -1299,6 +1320,9 @@ def main() -> int:
             print(body[:24000])
             return 0 if code == 200 else 1
         if args.runtime_cmd == "explainability":
+            code, body = _req("GET", "/api/v1/runtime/explainability", uid=uid)
+            if code == 200:
+                return _rt_print("/api/v1/runtime/explainability")
             code, body = _req("GET", "/api/v1/mission-control/explainability", uid=uid)
             print(body[:24000])
             return 0 if code == 200 else 1

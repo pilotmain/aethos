@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import Any
 
-MC_COMPATIBILITY_VERSION = "phase4_step22"
+MC_COMPATIBILITY_VERSION = "phase4_step23"
 
 _AVAILABLE_ROUTES: list[dict[str, str]] = [
     {"method": "GET", "path": "/api/v1/mission-control/state"},
@@ -104,6 +104,15 @@ _AVAILABLE_ROUTES: list[dict[str, str]] = [
     {"method": "GET", "path": "/api/v1/runtime/truth-integrity"},
     {"method": "GET", "path": "/api/v1/runtime/truth-consistency"},
     {"method": "GET", "path": "/api/v1/runtime/operator-confidence"},
+    {"method": "GET", "path": "/api/v1/runtime/state-machine"},
+    {"method": "GET", "path": "/api/v1/runtime/assurance"},
+    {"method": "GET", "path": "/api/v1/runtime/continuity-certification"},
+    {"method": "GET", "path": "/api/v1/runtime/persistence-health"},
+    {"method": "GET", "path": "/api/v1/runtime/explainability"},
+    {"method": "GET", "path": "/api/v1/runtime/production-certification"},
+    {"method": "GET", "path": "/api/v1/runtime/operator-trust"},
+    {"method": "GET", "path": "/api/v1/runtime/enterprise-readiness"},
+    {"method": "GET", "path": "/api/v1/runtime/operational-story"},
     {"method": "GET", "path": "/api/v1/health"},
 ]
 

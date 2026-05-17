@@ -607,3 +607,66 @@ def runtime_operator_confidence(app_user_id: str = Depends(get_valid_web_user_id
     return build_operator_confidence(_truth_or_empty(app_user_id))
 
 
+@router.get("/state-machine")
+def runtime_state_machine(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_operational_state_machine import build_runtime_operational_state_machine
+
+    return build_runtime_operational_state_machine(_truth_or_empty(app_user_id))
+
+
+@router.get("/assurance")
+def runtime_assurance(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_assurance_engine import build_runtime_assurance_engine
+
+    return build_runtime_assurance_engine(_truth_or_empty(app_user_id))
+
+
+@router.get("/continuity-certification")
+def runtime_continuity_certification_route(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_continuity_certification import build_runtime_continuity_certification
+
+    return build_runtime_continuity_certification(_truth_or_empty(app_user_id))
+
+
+@router.get("/persistence-health")
+def runtime_persistence_health(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_continuity_certification import build_runtime_persistence_health
+
+    return build_runtime_persistence_health(_truth_or_empty(app_user_id))
+
+
+@router.get("/explainability")
+def runtime_explainability_final(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_explainability_finalization import build_runtime_explainability_finalization
+
+    return build_runtime_explainability_finalization(_truth_or_empty(app_user_id))
+
+
+@router.get("/production-certification")
+def runtime_production_certification_route(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_production_certification import build_runtime_production_certification
+
+    return build_runtime_production_certification(_truth_or_empty(app_user_id))
+
+
+@router.get("/operator-trust")
+def runtime_operator_trust_route(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_production_certification import build_runtime_operator_trust
+
+    return build_runtime_operator_trust(_truth_or_empty(app_user_id))
+
+
+@router.get("/enterprise-readiness")
+def runtime_enterprise_readiness_route(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_production_certification import build_runtime_enterprise_readiness
+
+    return build_runtime_enterprise_readiness(_truth_or_empty(app_user_id))
+
+
+@router.get("/operational-story")
+def runtime_operational_story(app_user_id: str = Depends(get_valid_web_user_id)) -> dict:
+    from app.services.mission_control.runtime_operational_story_engine import build_runtime_operational_story_engine
+
+    return build_runtime_operational_story_engine(_truth_or_empty(app_user_id))
+
+

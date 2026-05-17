@@ -21,11 +21,20 @@ HYDRATION_STAGES = (
 )
 
 ENTERPRISE_STARTUP_STAGES = (
+    {"id": "initializing_runtime", "label": "Initializing runtime"},
+    {"id": "loading_operational_memory", "label": "Loading operational memory"},
+    {"id": "restoring_worker_context", "label": "Restoring worker context"},
+    {"id": "warming_enterprise_intelligence", "label": "Warming enterprise intelligence"},
+    {"id": "synchronizing_runtime_state", "label": "Synchronizing runtime state"},
+    {"id": "finalizing_operational_surfaces", "label": "Finalizing operational surfaces"},
+    {"id": "enterprise_ready", "label": "Enterprise ready"},
+)
+
+# Legacy aliases for MC clients on earlier step contracts
+ENTERPRISE_STARTUP_STAGES_LEGACY = (
     {"id": "initializing", "label": "Initializing"},
-    {"id": "core_ready", "label": "Core ready"},
     {"id": "office_ready", "label": "Office ready"},
     {"id": "runtime_ready", "label": "Runtime ready"},
-    {"id": "intelligence_ready", "label": "Intelligence ready"},
     {"id": "enterprise_ready", "label": "Enterprise ready"},
 )
 
@@ -40,19 +49,34 @@ def build_runtime_startup_experience(truth: dict[str, Any] | None = None) -> dic
     partial = bool(progress.get("partial"))
     ent_idx = min(len(ENTERPRISE_STARTUP_STAGES) - 1, int(pct * (len(ENTERPRISE_STARTUP_STAGES) - 1)))
     enterprise_stage = ENTERPRISE_STARTUP_STAGES[ent_idx]
+    unlocked = ["office", "runtime_overview", "recovery"]
+    if pct >= 0.5:
+        unlocked.append("runtime_supervision")
+    if pct >= 0.75:
+        unlocked.extend(["governance", "runtime_intelligence"])
+    if not partial:
+        unlocked.extend(["marketplace", "providers", "executive_overview"])
     return {
         "runtime_startup_experience": {
             "current_stage": current,
             "enterprise_stage": enterprise_stage,
             "enterprise_stages": ENTERPRISE_STARTUP_STAGES,
+            "enterprise_stages_legacy": ENTERPRISE_STARTUP_STAGES_LEGACY,
             "stages": HYDRATION_STAGES,
             "readiness_percent": pct,
             "partial_mode": partial,
+            "progressive_surface_unlock": unlocked,
+            "alive_progressive_operational": True,
             "degraded_mode": (truth.get("runtime_resilience") or {}).get("status") not in (None, "healthy"),
             "cached_snapshot_fallback": bool((truth.get("runtime_resilience") or {}).get("using_cached_truth")),
-            "partial_availability_notice": "Summaries available while full intelligence hydrates." if partial else None,
+            "partial_availability_notice": (
+                "Core orchestration is available while enterprise intelligence finishes loading."
+                if partial
+                else None
+            ),
             "no_white_screen": True,
             "tiers_complete": tiers,
+            "phase": "phase4_step23",
             "bounded": True,
         }
     }
