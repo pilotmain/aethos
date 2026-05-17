@@ -42,6 +42,21 @@ def _health_ok(port: int) -> bool:
 
 
 def prompt_startup_choice() -> str:
+    from aethos_cli.setup_interactive_mode import setup_interactive
+
+    if setup_interactive():
+        from aethos_cli.setup_prompt_runtime import prompt_select
+
+        return prompt_select(
+            "Would you like to start AethOS now?",
+            [
+                ("Start API + Mission Control", "api_and_mission_control", "Recommended"),
+                ("Start API only", "api_only", "Mission Control separately"),
+                ("Save configuration only", "save_only", "Start later with aethos runtime launch"),
+                ("Review setup", "review", "Inspect configuration before starting"),
+            ],
+            default_index=0,
+        )
     from aethos_cli.ui import select
 
     return select(

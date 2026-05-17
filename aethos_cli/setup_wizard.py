@@ -98,8 +98,27 @@ STEP_AFTER_KEYS = 3
 STEP_AFTER_FEATURES = 4
 
 
+def _load_existing_env_for_wizard(env_path: Path) -> tuple[dict[str, str], Path, str, str, list[str]]:
+    """Load saved .env into wizard-shaped state for keep-and-start flows."""
+    from aethos_cli.setup_conversational import _read_env_file
+
+    updates = _read_env_file(env_path)
+    workspace_s = updates.get("NEXA_WORKSPACE_ROOT") or str(Path.home() / "aethos-workspace")
+    ws_path = Path(workspace_s).expanduser().resolve()
+    api_base = updates.get("API_BASE_URL") or updates.get("NEXA_API_BASE") or "http://127.0.0.1:8010"
+    llm = updates.get("NEXA_LLM_PROVIDER") or "configure later"
+    chosen: list[str] = []
+    if updates.get("NEXA_BROWSER_ENABLED", "").lower() in ("1", "true", "yes"):
+        chosen.append("browser")
+    if updates.get("NEXA_HOST_EXECUTOR_ENABLED", "").lower() in ("1", "true", "yes"):
+        chosen.append("git")
+    return updates, ws_path, api_base, llm, chosen
+
+
 def _noninteractive_setup() -> bool:
-    return (os.environ.get("NEXA_NONINTERACTIVE") or "").strip().lower() in ("1", "true", "yes")
+    from aethos_cli.setup_interactive_mode import noninteractive_setup
+
+    return noninteractive_setup()
 
 
 def save_setup_state(step: int, data: dict) -> None:
@@ -235,6 +254,9 @@ def run_setup_wizard(*, install_kind: str | None = None) -> int:
     Interactive progress is saved under ``~/.aethos/.setup_state.json`` so you can resume after Ctrl+C
     or a dropped connection. Non-interactive installs (``NEXA_NONINTERACTIVE``) ignore saved state.
     """
+    from aethos_cli.setup_interactive_mode import initialize_setup_interactive
+
+    mode = initialize_setup_interactive(install_kind=install_kind)
     if install_kind is None:
         install_kind = (os.environ.get("NEXA_SETUP_KIND") or "").strip() or None
     if install_kind and install_kind not in ("fresh", "update", "repair"):
@@ -246,16 +268,17 @@ def run_setup_wizard(*, install_kind: str | None = None) -> int:
     pinfo = detect()
     ok_o, _omsg, omodels = _ollama_status()
 
+    skip_wizard_body = False
     resume_step = 0
     bag: dict = {}
     if not _noninteractive_setup():
         if env_path.exists() and not load_setup_state():
             from aethos_cli.setup_conversational import print_existing_routing_review, print_existing_setup_menu
 
-            mode = os.environ.get("AETHOS_ROUTING_MODE", "hybrid")
+            mode_r = os.environ.get("AETHOS_ROUTING_MODE", "hybrid")
             pref = os.environ.get("AETHOS_ROUTING_PREFERENCE", "balanced")
             routing_action = print_existing_routing_review(
-                mode=mode,
+                mode=mode_r,
                 preference=pref,
                 mission_control=bool(os.environ.get("AETHOS_WEB_API_TOKEN") or os.environ.get("NEXA_WEB_API_TOKEN")),
             )
@@ -263,8 +286,13 @@ def run_setup_wizard(*, install_kind: str | None = None) -> int:
                 clear_setup_state()
             elif routing_action == "adjust":
                 bag["section_rerun"] = "runtime_strategy"
-            existing_action = print_existing_setup_menu()
-            if existing_action == "review":
+            existing_action = print_existing_setup_menu(repo_root=root)
+            if existing_action == "continue_review":
+                bag["review_each_section"] = True
+            elif existing_action == "keep_start":
+                skip_wizard_body = True
+                bag["keep_existing_config"] = True
+            elif existing_action == "review":
                 from aethos_cli.setup_doctor import cmd_setup_validate
 
                 cmd_setup_validate()
@@ -272,6 +300,9 @@ def run_setup_wizard(*, install_kind: str | None = None) -> int:
                     return 0
             elif existing_action == "restart":
                 clear_setup_state()
+            elif existing_action == "repair":
+                install_kind = "repair"
+                kind = "repair"
             elif existing_action == "section":
                 from aethos_cli.setup_conversational import print_change_one_section_menu
 
@@ -284,10 +315,15 @@ def run_setup_wizard(*, install_kind: str | None = None) -> int:
             if d.get("repo_root") == str(root):
                 from aethos_cli.setup_conversational import print_welcome_back_resume
 
-                action = print_welcome_back_resume()
-                if action == "continue":
+                action = print_welcome_back_resume(repo_root=root)
+                if action == "continue_review":
                     resume_step = int(raw_state.get("step", 0))
                     bag = dict(d)
+                    bag["review_each_section"] = True
+                elif action == "keep_start":
+                    skip_wizard_body = True
+                    bag = dict(d)
+                    bag["keep_existing_config"] = True
                 elif action == "review":
                     print_info(f"Saved step {raw_state.get('step')} — LLM: {d.get('llm', '—')}, kind: {d.get('kind', '—')}")
                     if confirm("Continue setup now?", default=True):
@@ -303,13 +339,16 @@ def run_setup_wizard(*, install_kind: str | None = None) -> int:
                         bag["section_rerun"] = section
                     resume_step = int(raw_state.get("step", 0))
                     bag.update(dict(d))
+                elif action == "repair":
+                    install_kind = "repair"
                 else:
                     clear_setup_state()
 
     print_header()
     print_environment_tag(human_os_line(pinfo))
-    from aethos_cli.setup_conversational import print_global_setup_commands, print_runtime_strategy_guidance
+    from aethos_cli.setup_conversational import print_global_setup_commands, print_runtime_strategy_guidance, print_welcome_intro
 
+    print_welcome_intro()
     print_global_setup_commands()
     print_runtime_strategy_guidance()
     set_prompt_context(section="welcome")
@@ -323,7 +362,21 @@ def run_setup_wizard(*, install_kind: str | None = None) -> int:
     kind: str = install_kind or str(bag.get("kind") or "fresh")
 
     try:
-        if resume_step < STEP_AFTER_KIND:
+        if skip_wizard_body:
+            if env_path.exists():
+                updates, ws_path, api_base, llm_summary, chosen = _load_existing_env_for_wizard(env_path)
+                bag["updates"] = updates
+                bag["workspace_s"] = str(ws_path)
+                bag["api_base"] = api_base
+                bag["llm_summary"] = llm_summary
+                bag["chosen"] = chosen
+                bag["enterprise_extensions_done"] = True
+                print_info("Keeping existing configuration — offering startup next.")
+            else:
+                print_warn("No .env found — running full setup instead.")
+                skip_wizard_body = False
+
+        if not skip_wizard_body and resume_step < STEP_AFTER_KIND:
             if not from_installer:
                 # --- Step 1/6 ---
                 print_step("1/6", "Checking prerequisites")
@@ -389,7 +442,7 @@ def run_setup_wizard(*, install_kind: str | None = None) -> int:
             kind = str(bag.get("kind", kind))
             print_info("Resuming setup — skipping completed early steps.")
 
-        if resume_step < STEP_AFTER_LLM:
+        if not skip_wizard_body and resume_step < STEP_AFTER_LLM:
             print_step("3/6", "Select LLM provider")
             prov_opts: list[tuple[str, str, str]] = []
             if ok_o and omodels:
@@ -414,7 +467,7 @@ def run_setup_wizard(*, install_kind: str | None = None) -> int:
             llm = str(bag.get("llm", "skip"))
             print_info(f"Resuming with LLM provider choice: {llm}")
 
-        if resume_step < STEP_AFTER_KEYS:
+        if not skip_wizard_body and resume_step < STEP_AFTER_KEYS:
             print_step("4/6", "Configure API keys")
             updates, llm_summary = _configure_primary_llm(llm, omodels=omodels, ok_o=ok_o)
             _optional_extra_provider_keys(updates, llm)
@@ -425,7 +478,7 @@ def run_setup_wizard(*, install_kind: str | None = None) -> int:
             updates = dict(bag.get("updates") or {})
             llm_summary = str(bag.get("llm_summary") or "configure later")
 
-        if resume_step < STEP_AFTER_FEATURES:
+        if not skip_wizard_body and resume_step < STEP_AFTER_FEATURES:
             print_step("5/6", "Workspace & features")
             default_ws = str(Path.home() / "aethos-workspace")
             workspace_s = get_input("Workspace directory for projects", default_ws) or default_ws
@@ -476,7 +529,7 @@ def run_setup_wizard(*, install_kind: str | None = None) -> int:
                 pass
             print_info("Resuming — applying saved workspace, features, and API URL.")
 
-        if not bag.get("enterprise_extensions_done"):
+        if not bag.get("enterprise_extensions_done") and (not skip_wizard_body or bag.get("review_each_section")):
             from aethos_cli.setup_enterprise import run_enterprise_setup_extensions
 
             run_enterprise_setup_extensions(
@@ -490,36 +543,54 @@ def run_setup_wizard(*, install_kind: str | None = None) -> int:
             save_setup_state(STEP_AFTER_FEATURES, bag)
 
         # --- Save ---
-        print_step("6/6", "Saving configuration")
-        print_progress_bar("Writing environment", 40)
-        if kind == "repair":
-            print_info("Repair: reinstalling Python dependencies…")
-            print_progress_bar("pip install", 55)
-            rc1 = subprocess.run(
-                [sys.executable, "-m", "pip", "install", "--upgrade", "pip"],
-                cwd=str(root),
-                timeout=180,
-            ).returncode
-            rc2 = subprocess.run(
-                [sys.executable, "-m", "pip", "install", "-r", "requirements.txt"],
-                cwd=str(root),
-                timeout=900,
-            ).returncode
-            if rc1 != 0 or rc2 != 0:
-                print_warn(f"pip returned non-zero ({rc1}, {rc2}) — check output above.")
-            print_progress_bar("pip install", 100)
+        if not skip_wizard_body:
+            print_step("6/6", "Saving configuration")
+            print_progress_bar("Writing environment", 40)
+            if kind == "repair":
+                print_info("Repair: reinstalling Python dependencies…")
+                print_progress_bar("pip install", 55)
+                rc1 = subprocess.run(
+                    [sys.executable, "-m", "pip", "install", "--upgrade", "pip"],
+                    cwd=str(root),
+                    timeout=180,
+                ).returncode
+                rc2 = subprocess.run(
+                    [sys.executable, "-m", "pip", "install", "-r", "requirements.txt"],
+                    cwd=str(root),
+                    timeout=900,
+                ).returncode
+                if rc1 != 0 or rc2 != 0:
+                    print_warn(f"pip returned non-zero ({rc1}, {rc2}) — check output above.")
+                print_progress_bar("pip install", 100)
 
-        backup = env_path.with_name(env_path.name + ".bak")
-        if env_path.exists():
-            try:
-                backup.write_text(env_path.read_text(encoding="utf-8"), encoding="utf-8")
-                print_success(f"Backed up .env → {backup.name}")
-            except OSError as exc:
-                print_warn(f"Could not backup .env: {exc}")
+            backup = env_path.with_name(env_path.name + ".bak")
+            if env_path.exists():
+                try:
+                    backup.write_text(env_path.read_text(encoding="utf-8"), encoding="utf-8")
+                    print_success(f"Backed up .env → {backup.name}")
+                except OSError as exc:
+                    print_warn(f"Could not backup .env: {exc}")
 
-        upsert_env_file(env_path, updates)
-        print_progress_bar("Writing environment", 100)
-        clear_setup_state()
+            upsert_env_file(env_path, updates)
+            print_progress_bar("Writing environment", 100)
+            clear_setup_state()
+        else:
+            updates = dict(bag.get("updates") or {})
+            api_base = str(bag.get("api_base") or "http://127.0.0.1:8010")
+            workspace_s = str(bag.get("workspace_s") or str(Path.home() / "aethos-workspace"))
+            ws_path = Path(workspace_s).expanduser().resolve()
+            llm_summary = str(bag.get("llm_summary") or "configured")
+            chosen = list(bag.get("chosen") or [])
+
+        rc_db = run_database_setup()
+        if rc_db != 0:
+            from aethos_cli.setup_interactive_mode import setup_interactive
+
+            if setup_interactive():
+                from aethos_cli.setup_actionable_recovery import handle_db_lock_recovery, prompt_db_lock_recovery
+
+                action = prompt_db_lock_recovery()
+                handle_db_lock_recovery(action, repo_root=root)
 
         feat_labels = _feat_human(chosen)
         print_welcome_screen(
@@ -528,22 +599,30 @@ def run_setup_wizard(*, install_kind: str | None = None) -> int:
             llm_summary=llm_summary,
             feature_labels=feat_labels,
             api_base=api_base.rstrip("/"),
+            configuration_only=True,
         )
 
-        from aethos_cli.setup_enterprise import print_setup_final_summary
-
-        print_setup_final_summary(repo_root=root, api_base=api_base.rstrip("/"), bag=bag)
-
+        startup_result: dict = {}
         if not _noninteractive_setup():
             from app.services.runtime.runtime_startup_orchestration import orchestrate_startup, prompt_startup_choice
 
             start_choice = prompt_startup_choice()
             if start_choice != "review":
-                result = orchestrate_startup(choice=start_choice, repo_root=root)
-                if result.get("truly_operational"):
-                    print_success("Operational startup completed.")
+                startup_result = orchestrate_startup(choice=start_choice, repo_root=root)
+                bag["startup_result"] = startup_result
+                if startup_result.get("truly_operational"):
+                    print_success("AethOS is running. Mission Control is ready.")
                 else:
-                    print_info(result.get("message") or "AethOS is preparing operational services.")
+                    print_info(startup_result.get("message") or "AethOS is preparing operational services.")
+
+        from aethos_cli.setup_enterprise import print_setup_final_summary
+
+        print_setup_final_summary(
+            repo_root=root,
+            api_base=api_base.rstrip("/"),
+            bag=bag,
+            truly_operational=startup_result.get("truly_operational"),
+        )
 
         try:
             from aethos_cli.cli_status import try_post_install_health_hint
@@ -551,10 +630,6 @@ def run_setup_wizard(*, install_kind: str | None = None) -> int:
             try_post_install_health_hint()
         except Exception:
             pass
-
-        rc_db = run_database_setup()
-        if rc_db != 0:
-            print_warn("Database init failed — fix errors above, then run: aethos init-db")
 
         return 0
     except KeyboardInterrupt:

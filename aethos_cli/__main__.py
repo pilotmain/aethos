@@ -803,7 +803,7 @@ def main() -> int:
 
     sp_setup = sub.add_parser(
         "setup",
-        help="Interactive native setup wizard (writes .env keys; see docs/NATIVE_SETUP.md)",
+        help="Interactive enterprise setup wizard (writes .env keys; see docs/ENTERPRISE_SETUP.md)",
     )
     setup_sub = sp_setup.add_subparsers(dest="setup_cmd")
     setup_sub.add_parser("resume", help="Resume incomplete setup from saved state")
@@ -874,6 +874,19 @@ def main() -> int:
     sub.add_parser(
         "configure-bot",
         help="Phase 62 — write ~/.aethos/.env with canonical DATABASE_URL + orchestration (matches API bot DB)",
+    )
+
+    sub.add_parser(
+        "start",
+        help="Start AethOS (alias for: aethos runtime launch)",
+    )
+    sub.add_parser(
+        "stop",
+        help="Stop AethOS runtime (alias for: aethos runtime stop)",
+    )
+    sub.add_parser(
+        "restart",
+        help="Restart AethOS runtime (alias for: aethos runtime restart)",
     )
 
     sub.add_parser(
@@ -2271,6 +2284,21 @@ def main() -> int:
         from aethos_cli.bot_config import configure_bot_env
 
         return configure_bot_env()
+
+    if args.cmd == "start":
+        from aethos_cli.runtime_launch_cli import cmd_runtime_launch
+
+        return cmd_runtime_launch()
+
+    if args.cmd == "stop":
+        from aethos_cli.runtime_process_cli import cmd_runtime_stop
+
+        return cmd_runtime_stop()
+
+    if args.cmd == "restart":
+        from aethos_cli.runtime_process_cli import cmd_runtime_restart
+
+        return cmd_runtime_restart(clean=False)
 
     if args.cmd == "status":
         from aethos_cli.cli_status import cmd_status

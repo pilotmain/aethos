@@ -118,7 +118,16 @@ def print_warn(message: str) -> None:
 
 
 def _cli_noninteractive() -> bool:
-    return (os.environ.get("NEXA_NONINTERACTIVE") or "").strip().lower() in ("1", "true", "yes")
+    if (os.environ.get("NEXA_NONINTERACTIVE") or "").strip().lower() in ("1", "true", "yes"):
+        return True
+    try:
+        from aethos_cli.setup_interactive_mode import noninteractive_setup, setup_interactive
+
+        if noninteractive_setup():
+            return True
+        return not setup_interactive()
+    except Exception:
+        return (os.environ.get("NEXA_NONINTERACTIVE") or "").strip().lower() in ("1", "true", "yes")
 
 
 def confirm(question: str, default: bool = True) -> bool:

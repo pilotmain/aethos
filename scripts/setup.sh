@@ -43,6 +43,11 @@ if [[ -f requirements.txt ]]; then
 fi
 pip install -q -e . 2>/dev/null || true
 
+# Reattach TTY for piped one-curl so aethos setup can prompt interactively
+if [[ ! -t 0 ]] && [[ -c /dev/tty ]]; then
+  exec </dev/tty
+fi
+
 export NEXA_SETUP_FROM_INSTALLER=1
 export AETHOS_SETUP_FROM_INSTALLER=1
 

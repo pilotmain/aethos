@@ -142,7 +142,13 @@ def _handle_command(
         print_info("No recommendation — try default or enter manually.")
         return "continue"
     if cmd == "repair":
-        print_info("Run: aethos setup repair  or  aethos doctor")
+        try:
+            from aethos_cli.setup_wizard import run_setup_wizard
+
+            print_info("Starting setup repair…")
+            run_setup_wizard(install_kind="repair")
+        except Exception:
+            print_info("Run: aethos setup repair  or  aethos doctor")
         return "continue"
     if cmd == "back":
         print_info("Back is limited in this wizard — use quit and `aethos setup resume`.")
@@ -163,9 +169,9 @@ def prompt_select(
     """Menu select with global setup commands on each line."""
     import sys
 
-    from aethos_cli.ui import _cli_noninteractive
+    from aethos_cli.setup_interactive_mode import noninteractive_setup, setup_interactive
 
-    if _cli_noninteractive() or not sys.stdin.isatty():
+    if noninteractive_setup() or not (sys.stdin.isatty() or setup_interactive()):
         di = default_index if 1 <= default_index <= len(options) else 1
         return options[di - 1][1]
 

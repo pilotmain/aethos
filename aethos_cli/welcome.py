@@ -18,17 +18,19 @@ def print_welcome_screen(
     llm_summary: str,
     feature_labels: list[str],
     api_base: str,
+    configuration_only: bool = False,
 ) -> None:
-    """Large framed success message with quick start commands."""
+    """Framed completion message with honest next steps."""
     green = Colors.GREEN if supports_color() else ""
     cyan = Colors.CYAN if supports_color() else ""
     reset = Colors.RESET if supports_color() else ""
     feat = ", ".join(feature_labels) if feature_labels else "(defaults)"
 
+    headline = "Configuration complete" if configuration_only else "AethOS installed successfully"
     banner = f"""{green}
 ╔══════════════════════════════════════════════════════════════════════════════╗
 ║                                                                              ║
-║   ✅ AethOS installed successfully!                                         ║
+║   ✅ {headline:<68}║
 ║                                                                              ║
 ╚══════════════════════════════════════════════════════════════════════════════╝{reset}
 """
@@ -37,17 +39,19 @@ def print_welcome_screen(
     print(f"   🤖 LLM:           {llm_summary}")
     print(f"   🔧 Features:      {feat}")
     print(f"   📊 Workspace:    {workspace}")
+    if configuration_only:
+        print("\n   ℹ️  Configuration saved. AethOS is not running until you start services.")
     print(f"\n   🚀 Quick start:")
-    print(
-        "      python -m aethos_cli serve          # API (default :8010); Telegram bot polls in-process if TELEGRAM_BOT_TOKEN is set"
-    )
-    print("      python -m aethos_cli status         # Health checks")
-    print("\n   🌐 After `serve`, open API docs at:")
+    print("      aethos start                          # Start API + Mission Control (recommended)")
+    print("      aethos runtime launch                 # Same as aethos start")
+    print("      python -m aethos_cli serve            # API only (default :8010)")
+    print("      python -m aethos_cli status           # Health checks")
+    print("\n   🌐 After services start, open API docs at:")
     print(f"      {api_base.rstrip('/')}/docs")
     print("\n   🖥️  Full stack + Next.js Mission Control:")
-    print("      docs/NATIVE_SETUP.md — local stack (shell orchestration under scripts/)")
+    print("      docs/ENTERPRISE_SETUP.md — enterprise setup and launch")
     print("\n   📱 Mobile app: point API_BASE_URL at your machine (LAN IP + port).")
-    print(f"\n{cyan}   Docs: docs/NATIVE_SETUP.md{reset}\n")
+    print(f"\n{cyan}   Docs: docs/ENTERPRISE_SETUP.md{reset}\n")
 
 
 __all__ = ["print_welcome_screen"]

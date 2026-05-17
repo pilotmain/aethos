@@ -5,7 +5,99 @@
 
 from __future__ import annotations
 
+import os
+from pathlib import Path
+
 from aethos_cli.ui import confirm, print_box, print_info, select
+
+
+def _read_env_file(env_path: Path) -> dict[str, str]:
+    out: dict[str, str] = {}
+    if not env_path.is_file():
+        return out
+    try:
+        for line in env_path.read_text(encoding="utf-8").splitlines():
+            s = line.strip()
+            if not s or s.startswith("#") or "=" not in s:
+                continue
+            key, _, val = s.partition("=")
+            out[key.strip()] = val.strip().strip('"').strip("'")
+    except OSError:
+        pass
+    return out
+
+
+def build_existing_config_summary(*, repo_root: Path) -> list[str]:
+    """Human-readable summary of saved configuration."""
+    env = _read_env_file(repo_root / ".env")
+    mode = env.get("AETHOS_ROUTING_MODE") or os.environ.get("AETHOS_ROUTING_MODE") or "hybrid"
+    pref = env.get("AETHOS_ROUTING_PREFERENCE") or "balanced"
+    from aethos_cli.setup_routing import canonical_routing_label, canonical_routing_summary
+
+    lines = [
+        f"Runtime strategy: {canonical_routing_label(mode)}",
+        f"Routing: {canonical_routing_summary(mode, pref)}",
+    ]
+    local_model = env.get("NEXA_OLLAMA_MODEL") or env.get("OLLAMA_MODEL") or ""
+    if local_model:
+        lines.append(f"Local model: {local_model}")
+    elif env.get("NEXA_OLLAMA_ENABLED", "").lower() in ("1", "true", "yes"):
+        lines.append("Local model: Ollama enabled")
+    providers: list[str] = []
+    for key, label in (
+        ("OPENAI_API_KEY", "OpenAI"),
+        ("ANTHROPIC_API_KEY", "Anthropic"),
+        ("GEMINI_API_KEY", "Gemini"),
+        ("OPENROUTER_API_KEY", "OpenRouter"),
+        ("DEEPSEEK_API_KEY", "DeepSeek"),
+        ("GROQ_API_KEY", "Groq"),
+        ("MISTRAL_API_KEY", "Mistral"),
+    ):
+        if env.get(key):
+            providers.append(label)
+    if providers:
+        lines.append(f"Cloud providers: {', '.join(providers)} configured")
+    else:
+        lines.append("Cloud providers: not configured")
+    mc_token = env.get("AETHOS_WEB_API_TOKEN") or env.get("NEXA_WEB_API_TOKEN")
+    lines.append("Mission Control: configured" if mc_token else "Mission Control: not configured")
+    ws = env.get("NEXA_WORKSPACE_ROOT") or str(Path.home() / "aethos-workspace")
+    lines.append(f"Workspace: {ws}")
+    from aethos_cli.setup_onboarding_profile import load_onboarding_profile
+
+    profile = load_onboarding_profile()
+    if profile:
+        name = profile.get("display_name") or profile.get("assistant_name") or "saved"
+        lines.append(f"Onboarding profile: {name}")
+    else:
+        lines.append("Onboarding profile: not configured")
+    return lines
+
+
+def print_welcome_intro() -> None:
+    print_box(
+        "Welcome — I am AethOS",
+        [
+            "I am your orchestrator — not the thinking model itself.",
+            "I will help you configure runtime, providers, Mission Control, workspace, and first-run preferences.",
+            "Setup usually takes a few minutes.",
+            "At any prompt you can type: help · why · back · status · repair · quit",
+        ],
+    )
+
+
+def prompt_section_review(section_title: str, configured_lines: list[str]) -> str:
+    """Return keep | change | skip."""
+    print_box(f"Configured — {section_title}", configured_lines or ["(not configured yet)"])
+    return select(
+        f"Keep this {section_title.lower()} section?",
+        [
+            ("Keep", "keep", "Continue without changes"),
+            ("Change", "change", "Reconfigure this section"),
+            ("Skip for now", "skip", "Defer this section"),
+        ],
+        default_index=0,
+    )
 
 
 def print_existing_routing_review(*, mode: str, preference: str, mission_control: bool = False) -> str:
@@ -33,33 +125,39 @@ def print_existing_routing_review(*, mode: str, preference: str, mission_control
     )
 
 
-def print_existing_setup_menu() -> str:
-    """When install already exists. Returns: continue | review | section | restart."""
-    print_box(
-        "AethOS found an existing setup",
-        [
-            "What would you like to do?",
-            "Continue — resume saved progress",
-            "Review — inspect current configuration",
-            "Change one section — adjust routing, providers, Mission Control, …",
-            "Restart — clear wizard state and run fresh",
-        ],
-    )
+def print_existing_setup_menu(*, repo_root: Path | None = None) -> str:
+    """
+    When install already exists.
+
+    Returns: continue_review | keep_start | section | restart | repair
+    """
+    summary: list[str] = []
+    if repo_root is not None:
+        summary = build_existing_config_summary(repo_root=repo_root)
+    body = ["AethOS found an existing setup.", ""]
+    if summary:
+        body.append("Current configuration:")
+        body.extend(f"• {line}" for line in summary)
+        body.append("")
+    body.append("What would you like to do?")
+    print_box("Existing setup", body)
     return select(
         "How would you like to proceed?",
         [
-            ("Continue where I left off", "continue", "Recommended"),
-            ("Review current configuration", "review", "Read-only summary"),
+            ("Continue and review each section", "continue_review", "Step through setup interactively"),
+            ("Keep current config and start AethOS", "keep_start", "Skip reconfiguration; offer startup"),
             ("Change one section", "section", "Pick a section to reconfigure"),
-            ("Restart setup", "restart", "Clears saved wizard state"),
+            ("Restart setup from scratch", "restart", "Clears saved wizard state"),
+            ("Repair setup", "repair", "Reinstall deps and repair core keys"),
         ],
         default_index=0,
     )
 
 
-def print_welcome_back_resume() -> str:
-    """Ask how to continue after interruption. Returns: continue | review | section | restart."""
-    return print_existing_setup_menu()
+def print_welcome_back_resume(*, repo_root: Path | None = None) -> str:
+    """Ask how to continue after interruption."""
+    print_info("Welcome back — setup was interrupted.")
+    return print_existing_setup_menu(repo_root=repo_root)
 
 
 def print_change_one_section_menu() -> str | None:
@@ -148,7 +246,19 @@ def handle_setup_global_command(cmd: str) -> bool:
         print_info("Recommended: hybrid routing, seed Mission Control, calm operational defaults.")
         return True
     if c == "repair":
-        print_info("Run: aethos setup repair (after this wizard if needed)")
+        try:
+            from aethos_cli.setup_wizard import run_setup_wizard
+
+            print_info("Starting setup repair…")
+            run_setup_wizard(install_kind="repair")
+        except Exception:
+            print_info("Run: aethos setup repair")
+        return True
+    if c == "back":
+        print_info("Back is limited in this wizard — use quit and `aethos setup resume`.")
+        return True
+    if c == "skip":
+        print_info("Use skip at individual prompts where allowed.")
         return True
     return False
 
